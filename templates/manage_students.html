@@ -1,0 +1,643 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Students{% endblock %}
+
+{% block content %}
+
+<!-- 1. HEADER -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1">Student Masterlist</h1>
+        <p class="text-muted small mb-0">Manage enrolled students and their block section assignments.</p>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importStudentsModal">
+            <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+            <span>Import Excel</span>
+        </button>
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+            <i class="bi bi-plus-lg"></i>
+            <span>New Student</span>
+        </button>
+    </div>
+</div>
+
+<!-- 2. SEARCH & FILTER TOOLBAR -->
+<div class="row mb-4 position-relative align-items-center" style="height: 50px;">
+
+    <!-- A. BULK ACTION BAR (Overlay) -->
+    <div class="bulk-action-bar" id="bulkActionBar">
+        <div class="d-flex align-items-center">
+            <button class="btn-icon" onclick="deselectAll()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <span class="bulk-count ms-2"><span id="selectedCount">0</span> selected</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="bulk-btn" title="Mark as Irregular"
+                onclick="bulkMarkIrreg()">
+                <i class="bi bi-person-exclamation"></i>
+            </button>
+            <button type="button" class="bulk-btn delete-icon" data-bs-toggle="modal"
+                data-bs-target="#bulkArchiveModal">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- B. SEARCH INPUT -->
+    <div class="col h-100">
+        <form action="{{ url_for('manage_students') }}" method="GET" class="h-100 w-100">
+            <input type="hidden" name="sort" value="{{ current_sort }}">
+            <input type="hidden" name="filter_by" value="{{ current_filter_by }}">
+            <input type="hidden" name="filter_val" value="{{ current_filter_val }}">
+            <div class="google-search-bar d-flex align-items-center h-100 w-100">
+                <i class="bi bi-search text-secondary me-3"></i>
+                <input type="text" name="search" class="google-search-input"
+                    placeholder="Search by name or student ID..." id="liveSearchInput"
+                    value="{{ search_query }}" autocomplete="off" onchange="this.form.submit()">
+            </div>
+        </form>
+    </div>
+
+    <!-- C. SORT & FILTER GROUP -->
+    <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end gap-2">
+
+        <!-- Filter Dropdown -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button"
+                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                <i class="bi bi-funnel me-2"></i>
+                {% if current_filter_by == 'year' %}Year: {{ current_filter_val }}
+                {% elif current_filter_by == 'section' %}Section Filter
+                {% else %}Filter{% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
+                <li>
+                    <a class="dropdown-item text-danger"
+                        href="{{ url_for('manage_students', sort=current_sort, search=search_query) }}">
+                        <i class="bi bi-x-circle me-2"></i>Clear Filter
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <!-- Year Level Filter -->
+                <li class="dropdown-submenu">
+                    <a class="dropdown-item" href="javascript:void(0);">Year Level</a>
+                    <ul class="dropdown-menu">
+                        {% for year in unique_years %}
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == year|string %}active{% endif %}"
+                                href="{{ url_for('manage_students', sort=current_sort, search=search_query, filter_by='year', filter_val=year) }}">
+                                {% if year == 1 %}1st Year
+                                {% elif year == 2 %}2nd Year
+                                {% elif year == 3 %}3rd Year
+                                {% elif year == 4 %}4th Year
+                                {% else %}{{ year }}{% endif %}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+                <!-- Section Filter -->
+                <li class="dropdown-submenu">
+                    <a class="dropdown-item" href="javascript:void(0);">Section</a>
+                    <ul class="dropdown-menu" style="max-height: 250px; overflow-y: auto;">
+                        {% for sec in all_sections %}
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == sec.id|string and current_filter_by == 'section' %}active{% endif %}"
+                                href="{{ url_for('manage_students', sort=current_sort, search=search_query, filter_by='section', filter_val=sec.id) }}">
+                                {{ sec.section_name }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Sort Dropdown -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                {% if current_sort == 'name-asc' %}Name (A-Z)
+                {% elif current_sort == 'name-desc' %}Name (Z-A)
+                {% elif current_sort == 'id-asc' %}ID (Asc)
+                {% elif current_sort == 'id-desc' %}ID (Desc)
+                {% elif current_sort == 'section' %}Section
+                {% else %}Sort By{% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
+                <li><a class="dropdown-item google-sort-item {% if current_sort == 'name-asc' %}active{% endif %}"
+                    href="{{ url_for('manage_students', sort='name-asc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">Name (A-Z)</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_sort == 'name-desc' %}active{% endif %}"
+                    href="{{ url_for('manage_students', sort='name-desc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">Name (Z-A)</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item google-sort-item {% if current_sort == 'id-asc' %}active{% endif %}"
+                    href="{{ url_for('manage_students', sort='id-asc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">Student ID (Asc)</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_sort == 'id-desc' %}active{% endif %}"
+                    href="{{ url_for('manage_students', sort='id-desc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">Student ID (Desc)</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item google-sort-item {% if current_sort == 'section' %}active{% endif %}"
+                    href="{{ url_for('manage_students', sort='section', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">By Section</a></li>
+            </ul>
+        </div>
+    </div>
+
+</div>
+
+<!-- 3. TABLE -->
+<form id="bulkActionForm" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div id="mainContentArea">
+        <div class="bg-white rounded border shadow-sm overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="select-cell text-center" style="width: 40px;">
+                                <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                            </th>
+                            <th style="width: 14%;">STUDENT ID</th>
+                            <th style="width: 24%;">FULL NAME</th>
+                            <th style="width: 9%;" class="text-center">YEAR</th>
+                            <th style="width: 16%;">SECTION</th>
+                            <th style="width: 16%;">EMAIL</th>
+                            <th style="width: 7%;" class="text-center">STATUS</th>
+                            <th style="width: 14%;" class="text-center">ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr class="student-row" data-id="{{ student.id }}" data-irregular="{{ '1' if student.is_irregular else '0' }}">
+                            <td class="select-cell text-center">
+                                <input class="form-check-input row-checkbox" type="checkbox"
+                                    name="row_ids" value="{{ student.id }}">
+                            </td>
+                            <td class="fw-bold text-black font-monospace">{{ student.student_id }}</td>
+                            <td class="fw-bold text-dark">{{ student.full_name }}</td>
+                            <td class="text-center">
+                                <span class="badge-clean">
+                                    {% if student.year_level == 1 %}1st
+                                    {% elif student.year_level == 2 %}2nd
+                                    {% elif student.year_level == 3 %}3rd
+                                    {% elif student.year_level == 4 %}4th
+                                    {% else %}{{ student.year_level }}{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                {% if student.section %}
+                                <span class="badge-clean">{{ student.section.section_name }}</span>
+                                {% else %}
+                                <span class="text-muted small fst-italic">Unassigned</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted small">
+                                {% if student.email %}{{ student.email }}{% else %}—{% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if student.is_irregular %}
+                                <span class="badge" style="background:#7c3aed;font-size:0.68rem;">IRREG</span>
+                                {% else %}
+                                <span class="text-muted small">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center" onclick="event.stopPropagation()">
+                                <button type="button" class="btn-icon view"
+                                    onclick="viewSchedule('student', {{ student.id }})" title="View Schedule">
+                                    <i class="bi bi-calendar-week"></i>
+                                </button>
+                                <button type="button" class="btn-icon"
+                                    onclick="toggleIrreg({{ student.id }}, this)"
+                                    title="{% if student.is_irregular %}Remove Irregular Flag{% else %}Mark as Irregular{% endif %}"
+                                    style="color:{% if student.is_irregular %}#7c3aed{% else %}#9aa0a6{% endif %};">
+                                    <i class="bi bi-person-exclamation"></i>
+                                </button>
+                                {% if student.is_irregular %}
+                                <a href="{{ url_for('irregular_pathfinder', student_id=student.id) }}"
+                                   class="btn-icon" title="Open Schedule Finder">
+                                    <i class="bi bi-puzzle"></i>
+                                </a>
+                                {% endif %}
+                                <button type="button" class="btn-icon edit" title="Edit"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editStudentModal{{ student.id }}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" class="btn-icon delete" title="Move to Recycle Bin"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#archiveModal{{ student.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">No students found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PAGINATION -->
+        <div class="mt-3 pb-5">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mb-2">
+                    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                        <a class="page-link"
+                            href="{{ url_for('manage_students', page=pagination.prev_num, sort=current_sort, search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                            <i class="bi bi-chevron-left"></i></a>
+                    </li>
+                    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                    {% if page_num %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link"
+                            href="{{ url_for('manage_students', page=page_num, sort=current_sort, search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">{{ page_num }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>
+                    {% endif %}
+                    {% endfor %}
+                    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                        <a class="page-link"
+                            href="{{ url_for('manage_students', page=pagination.next_num, sort=current_sort, search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                            <i class="bi bi-chevron-right"></i></a>
+                    </li>
+                </ul>
+            </nav>
+            {% if pagination.pages > 1 %}
+            <div class="d-flex align-items-center justify-content-center gap-2 text-muted" style="font-size:0.85rem;">
+                <span>Jump to:</span>
+                <input type="number" id="pageJumpInput" class="form-control form-control-sm text-center"
+                    style="width:70px;" min="1" max="{{ pagination.pages }}" placeholder="1–{{ pagination.pages }}">
+                <button class="btn btn-sm btn-outline-secondary px-3" onclick="jumpToPage()">Go</button>
+                <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i
+                        class="bi bi-arrow-right-short"></i> arrow keys</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</form>
+
+<!-- ================= MODALS ================= -->
+
+<!-- ADD STUDENT MODAL -->
+<div class="modal fade" id="addStudentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <form action="{{ url_for('add_student') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Student</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Student ID <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="student_id"
+                            placeholder="e.g. 2023-0001" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="full_name"
+                            placeholder="Last Name, First Name M.I." required>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold">Year Level <span class="text-danger">*</span></label>
+                            <select class="form-select" name="year_level" required>
+                                <option value="">Select...</option>
+                                <option value="1">1st Year</option>
+                                <option value="2">2nd Year</option>
+                                <option value="3">3rd Year</option>
+                                <option value="4">4th Year</option>
+                            </select>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label fw-bold">Section</label>
+                            <select class="form-select" name="section_id">
+                                <option value="">Unassigned</option>
+                                {% for sec in all_sections %}
+                                <option value="{{ sec.id }}">{{ sec.section_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label fw-bold">Email <span class="text-muted small fw-normal">(optional)</span></label>
+                        <input type="email" class="form-control" name="email"
+                            placeholder="student@example.com">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Add Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- BULK ARCHIVE MODAL -->
+<div class="modal fade" id="bulkArchiveModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Move to Recycle Bin?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                Move <span id="bulkArchiveCount" class="fw-bold text-danger">0</span> student(s) to Recycle Bin?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger px-4"
+                    onclick="document.getElementById('bulkActionForm').action='{{ url_for('bulk_archive_students') }}'; document.getElementById('bulkActionForm').submit();">
+                    Yes, Move
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT MODALS (per student) -->
+{% for student in students %}
+<div class="modal fade" id="editStudentModal{{ student.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <form action="{{ url_for('update_student', student_pk=student.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Student</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Student ID <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="student_id"
+                            value="{{ student.student_id }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="full_name"
+                            value="{{ student.full_name }}" required>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold">Year Level <span class="text-danger">*</span></label>
+                            <select class="form-select" name="year_level" required>
+                                {% for yr in [1, 2, 3, 4] %}
+                                <option value="{{ yr }}" {% if student.year_level == yr %}selected{% endif %}>
+                                    {% if yr == 1 %}1st Year{% elif yr == 2 %}2nd Year{% elif yr == 3 %}3rd Year{% else %}4th Year{% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label fw-bold">Section</label>
+                            <select class="form-select" name="section_id">
+                                <option value="">Unassigned</option>
+                                {% for sec in all_sections %}
+                                <option value="{{ sec.id }}" {% if student.section_id == sec.id %}selected{% endif %}>
+                                    {{ sec.section_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label fw-bold">Email</label>
+                        <input type="email" class="form-control" name="email"
+                            value="{{ student.email or '' }}" placeholder="student@example.com">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ARCHIVE MODAL (per student) -->
+<div class="modal fade" id="archiveModal{{ student.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Move to Recycle Bin?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p>Move <strong>{{ student.full_name }}</strong> to Recycle Bin?</p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('archive_student', student_pk=student.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger px-4">Yes, Move</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- IRREGULAR CONFIRM MODAL -->
+<div class="modal fade" id="irregConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title">
+                    <i class="bi bi-person-exclamation me-2" style="color:#7c3aed;"></i>
+                    Confirm Action
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <p id="irregConfirmMsg" class="mb-2">Are you sure?</p>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="suppressIrregModal">
+                    <label class="form-check-label text-muted small" for="suppressIrregModal">
+                        Don't show this confirmation for 5 minutes
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary px-4" onclick="doIrregConfirm()">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- IMPORT EXCEL MODAL -->
+<div class="modal fade" id="importStudentsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <form action="{{ url_for('import_students_xlsx') }}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-file-earmark-spreadsheet-fill text-success me-2"></i>Import Students from Excel</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-light border small mb-3 py-2">
+                        <div class="fw-bold mb-1">Required column format:</div>
+                        <div class="font-monospace" style="font-size:0.78rem; line-height:1.8;">
+                            A — Student ID &nbsp;<span class="text-muted">(e.g. 2024-00001)</span><br>
+                            B — Full Name &nbsp;<span class="text-muted">(e.g. Dela Cruz, Juan A.)</span><br>
+                            C — Year Level &nbsp;<span class="text-muted">(1, 2, 3, or 4)</span><br>
+                            D — Section Name &nbsp;<span class="text-muted">(must match existing section exactly)</span><br>
+                            E — Email &nbsp;<span class="text-muted">(optional)</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <a href="{{ url_for('download_student_template') }}"
+                            class="btn btn-outline-success btn-sm rounded-pill px-3">
+                            <i class="bi bi-download me-1"></i> Download Template
+                        </a>
+                        <span class="text-muted small ms-2">Get the pre-formatted Excel template</span>
+                    </div>
+                    <div>
+                        <label class="form-label fw-bold small">SELECT EXCEL FILE (.xlsx)</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success px-4">
+                        <i class="bi bi-upload me-1"></i> Import
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const rowCheckboxes     = document.querySelectorAll('.row-checkbox');
+    const bulkActionBar     = document.getElementById('bulkActionBar');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const bulkArchiveCount  = document.getElementById('bulkArchiveCount');
+
+    function updateSelectionState() {
+        let count = 0;
+        rowCheckboxes.forEach(cb => {
+            const row = cb.closest('tr');
+            if (cb.checked) { count++; row.classList.add('selected'); }
+            else { row.classList.remove('selected'); }
+        });
+        selectedCountSpan.textContent = count;
+        if (bulkArchiveCount) bulkArchiveCount.textContent = count;
+        if (count > 0) bulkActionBar.classList.add('active');
+        else bulkActionBar.classList.remove('active');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked       = (count === rowCheckboxes.length && count > 0);
+            selectAllCheckbox.indeterminate = (count > 0 && count < rowCheckboxes.length);
+        }
+    }
+
+    document.querySelectorAll('.student-row').forEach(row => {
+        row.addEventListener('click', function (e) {
+            if (e.target.closest('button') || e.target.closest('.form-check-input')) return;
+            const cb = this.querySelector('.row-checkbox');
+            cb.checked = !cb.checked;
+            updateSelectionState();
+        });
+    });
+    rowCheckboxes.forEach(cb => cb.addEventListener('change', updateSelectionState));
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function () {
+            rowCheckboxes.forEach(cb => { cb.checked = this.checked; });
+            updateSelectionState();
+        });
+    }
+
+    window.deselectAll = function () {
+        rowCheckboxes.forEach(cb => cb.checked = false);
+        updateSelectionState();
+    };
+});
+
+// ── 5-minute suppress helpers ────────────────────────────────────────────────
+const SUPPRESS_KEY = 'irreg_modal_suppress_until';
+
+function isSuppressed() {
+    const v = localStorage.getItem(SUPPRESS_KEY);
+    if (!v) return false;
+    if (Date.now() < parseInt(v)) return true;
+    localStorage.removeItem(SUPPRESS_KEY);
+    return false;
+}
+
+function maybeSuppressFor5Min() {
+    if (document.getElementById('suppressIrregModal').checked) {
+        localStorage.setItem(SUPPRESS_KEY, Date.now() + 5 * 60 * 1000);
+    }
+}
+
+// ── Per-row toggle ────────────────────────────────────────────────────────────
+let _pendingIrregIds = [];
+let _pendingIrregMsg = '';
+
+function toggleIrreg(studentId, btn) {
+    const name = btn.closest('tr').querySelector('td:nth-child(3)').textContent.trim();
+    _pendingIrregIds = [studentId];
+    _pendingIrregMsg = `Mark "${name}" as an irregular student?`;
+    if (isSuppressed()) { executeIrregApi(_pendingIrregIds); return; }
+    document.getElementById('irregConfirmMsg').textContent = _pendingIrregMsg;
+    new bootstrap.Modal(document.getElementById('irregConfirmModal')).show();
+}
+
+// ── Bulk mark as irregular ────────────────────────────────────────────────────
+function bulkMarkIrreg() {
+    const checkboxes = Array.from(document.querySelectorAll('.row-checkbox:checked'));
+    if (!checkboxes.length) return;
+
+    const ids = checkboxes.map(cb => cb.value);
+    const irregCount   = checkboxes.filter(cb => cb.closest('tr').dataset.irregular === '1').length;
+    const regularCount = ids.length - irregCount;
+
+    let msg;
+    if (irregCount === 0) {
+        msg = `Mark ${ids.length} selected student(s) as irregular?`;
+    } else if (regularCount === 0) {
+        msg = `Remove the irregular flag from ${ids.length} student(s)?`;
+    } else {
+        msg = `Toggle irregular flag for ${ids.length} student(s): `
+            + `${regularCount} will be marked irregular, `
+            + `${irregCount} will have the flag removed.`;
+    }
+
+    _pendingIrregIds = ids;
+    _pendingIrregMsg = msg;
+    if (isSuppressed()) { executeIrregApi(ids); return; }
+    document.getElementById('irregConfirmMsg').textContent = msg;
+    new bootstrap.Modal(document.getElementById('irregConfirmModal')).show();
+}
+
+function doIrregConfirm() {
+    maybeSuppressFor5Min();
+    bootstrap.Modal.getInstance(document.getElementById('irregConfirmModal')).hide();
+    executeIrregApi(_pendingIrregIds);
+}
+
+async function executeIrregApi(ids) {
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    for (const id of ids) {
+        await fetch(`/manage/student/toggle-irregular/${id}`, {
+            method: 'POST', headers: {'X-CSRFToken': csrfToken}
+        });
+    }
+    location.reload();
+}
+</script>
+{% endblock %}

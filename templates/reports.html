@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Reports & Export{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1">Reports & Analytics</h1>
+        <p class="text-muted small mb-0">System performance and resource utilization analysis.</p>
+    </div>
+</div>
+
+<!-- STAT CARDS ROW -->
+<div class="row g-4 mb-4">
+    <div class="col-md-2">
+        <div class="card border shadow-sm h-100 p-3">
+            <div class="d-flex align-items-center mb-3">
+                <div class="stat-icon-bg bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+                    <i class="bi bi-calendar-check"></i>
+                </div>
+                <h6 class="text-secondary mb-0 fw-bold ms-3">CLASSES</h6>
+            </div>
+            <h2 class="display-6 fw-bold text-dark mb-0" id="stat-classes">—</h2>
+            <small class="text-muted">Total Scheduled</small>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card border shadow-sm h-100 p-3">
+            <div class="d-flex align-items-center mb-3">
+                <div class="stat-icon-bg bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
+                    <i class="bi bi-building-check"></i>
+                </div>
+                <h6 class="text-secondary mb-0 fw-bold ms-3">UTILIZATION</h6>
+            </div>
+            <h2 class="display-6 fw-bold text-dark mb-0" id="stat-utilization">—</h2>
+            <small class="text-muted">Room Occupancy</small>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card border shadow-sm h-100 px-4 py-3 d-flex flex-column justify-content-center">
+            <div class="d-flex align-items-center mb-2">
+                <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center me-2" style="width:32px;height:32px;flex-shrink:0;">
+                    <i class="bi bi-file-earmark-excel"></i>
+                </div>
+                <h6 class="text-secondary mb-0 fw-bold">BULK EXPORT</h6>
+                <small class="text-muted ms-2">— Download Excel schedules per semester</small>
+            </div>
+            <form action="{{ url_for('export_excel_bulk') }}" method="GET">
+                <div class="d-flex gap-2 align-items-center">
+                    <select name="semester" class="form-select form-select-sm border-secondary bg-light fw-bold" style="width:145px;flex-shrink:0;">
+                        {% for sem in available_semesters %}
+                        <option value="{{ sem }}">{{ sem }}</option>
+                        {% else %}
+                        <option value="1st Semester">1st Semester</option>
+                        {% endfor %}
+                    </select>
+                    <select name="type" class="form-select form-select-sm border-secondary" style="flex:1;">
+                        <option value="section">All Section Schedules (By Block)</option>
+                        <option value="faculty">All Faculty Loads (By Instructor)</option>
+                        <option value="room">All Room Utilizations (By Room)</option>
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-success px-3 text-nowrap" style="flex-shrink:0;">
+                        <i class="bi bi-download me-1"></i> Download
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ROOM UTILIZATION TABLE -->
+<div class="card border shadow-sm mb-4">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 fw-bold text-primary"><i class="bi bi-building me-2"></i>Room Utilization Breakdown</h6>
+        <small class="text-muted" id="util-subtitle">Loading…</small>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 small">
+                <thead class="table-light">
+                    <tr>
+                        <th>Room</th>
+                        <th>Building</th>
+                        <th>Hours Used</th>
+                        <th>Available</th>
+                        <th style="width:200px;">Utilization</th>
+                        <th class="text-end">%</th>
+                    </tr>
+                </thead>
+                <tbody id="util-table-body">
+                    <tr><td colspan="6" class="text-center text-muted py-4">Loading utilization data…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<script>
+(function () {
+    fetch('/api/room-utilization')
+        .then(r => r.json())
+        .then(data => {
+            // Overall stat card
+            document.getElementById('stat-utilization').textContent = data.overall_utilization + '%';
+
+            // Subtitle
+            const s = data.settings;
+            document.getElementById('util-subtitle').textContent =
+                `Operating hours: ${s.start_hour}:00–${s.end_hour}:00 · ${s.active_days} days/week (${s.day_hours}h/day per room)`;
+
+            // Classes stat (count rows)
+            document.getElementById('stat-classes').textContent = data.rooms.reduce((a, r) => a + (r.class_count || 0), 0);
+
+            // Table
+            const tbody = document.getElementById('util-table-body');
+            if (!data.rooms || data.rooms.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No scheduled classes found.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.rooms.map(r => {
+                const pct = r.utilization;
+                const barColor = pct >= 80 ? 'bg-danger' : pct >= 50 ? 'bg-warning' : 'bg-success';
+                return `<tr>
+                    <td class="fw-semibold">${r.room_name}</td>
+                    <td class="text-muted">${r.building}</td>
+                    <td>${r.used_hours}h</td>
+                    <td class="text-muted">${r.avail_hours}h</td>
+                    <td>
+                        <div class="progress" style="height:8px;">
+                            <div class="progress-bar ${barColor}" style="width:${pct}%"></div>
+                        </div>
+                    </td>
+                    <td class="text-end fw-bold">${pct}%</td>
+                </tr>`;
+            }).join('');
+        })
+        .catch(err => {
+            console.error('Room utilization API error:', err);
+            document.getElementById('stat-utilization').textContent = 'N/A';
+            document.getElementById('util-table-body').innerHTML =
+                '<tr><td colspan="6" class="text-center text-danger py-4">Failed to load utilization data.</td></tr>';
+        });
+})();
+</script>
+{% endblock %}

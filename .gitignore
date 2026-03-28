@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+instance/
+site.db
+*.db
+.env
+venv/
+env/
+*.log
+.DS_Store
+Thumbs.db
+uploads/
+static/profile_pics/

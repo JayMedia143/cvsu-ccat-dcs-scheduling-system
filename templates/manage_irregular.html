@@ -1,0 +1,729 @@
+{% extends "base.html" %}
+{% block title %}Irregular Students{% endblock %}
+{% block content %}
+<style>
+/* Ghost cancel button — plain, green on hover */
+.modal-cancel-btn {
+    background: none;
+    border: none;
+    color: #5f6368;
+    padding: 6px 16px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+.modal-cancel-btn:hover {
+    background: #e6f4ea;
+    color: #188038;
+}
+/* Nav-tab buttons: override Bootstrap active blue */
+#addIrregTabs .nav-link {
+    color: #5f6368;
+}
+#addIrregTabs .nav-link.active {
+    color: #3c4043;
+    font-weight: 500;
+}
+</style>
+
+<!-- ══════════ HEADER ══════════ -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1">Irregular Students</h1>
+        <p class="text-muted small mb-0">Manage irregular students and assign conflict-free schedules from the master schedule.</p>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addIrregStudentModal">
+            <i class="bi bi-plus-lg"></i>
+            <span>Add Irregular Student</span>
+        </button>
+    </div>
+</div>
+
+<!-- ══════════ SEARCH + FILTER + SORT TOOLBAR ══════════ -->
+<div class="row mb-4 position-relative align-items-center" style="height:50px;">
+
+    <!-- BULK ACTION BAR (overlay) -->
+    <div class="bulk-action-bar" id="bulkActionBar">
+        <div class="d-flex align-items-center">
+            <button class="btn-icon" onclick="deselectAll()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <span class="bulk-count ms-2"><span id="selectedCount">0</span> selected</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="bulk-btn" title="Batch Schedule Finder"
+                onclick="openBatchModal()">
+                <i class="bi bi-puzzle"></i>
+            </button>
+            <button type="button" class="bulk-btn delete-icon" title="Remove Irregular Flag"
+                onclick="bulkRemoveIrreg()">
+                <i class="bi bi-person-dash"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="col h-100">
+        <form action="{{ url_for('manage_irregular') }}" method="GET" class="h-100 w-100">
+            <input type="hidden" name="sort" value="{{ current_sort }}">
+            <input type="hidden" name="filter_by" value="{{ current_filter_by }}">
+            <input type="hidden" name="filter_val" value="{{ current_filter_val }}">
+            <div class="google-search-bar d-flex align-items-center h-100 w-100">
+                <i class="bi bi-search text-secondary me-3"></i>
+                <input type="text" name="search" class="google-search-input"
+                    placeholder="Search by name or student ID..."
+                    value="{{ search_query }}" autocomplete="off" onchange="this.form.submit()">
+            </div>
+        </form>
+    </div>
+
+    <!-- FILTER + SORT -->
+    <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end gap-2">
+
+        <!-- Filter -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button"
+                data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                <i class="bi bi-funnel me-2"></i>
+                {% if current_filter_by == 'year' %}Year: {{ current_filter_val }}
+                {% elif current_filter_by == 'section' %}Section Filter
+                {% else %}Filter{% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
+                <li>
+                    <a class="dropdown-item text-danger"
+                        href="{{ url_for('manage_irregular', sort=current_sort, search=search_query) }}">
+                        <i class="bi bi-x-circle me-2"></i>Clear Filter
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li class="dropdown-submenu">
+                    <a class="dropdown-item" href="javascript:void(0);">Year Level</a>
+                    <ul class="dropdown-menu">
+                        {% for year in unique_years %}
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == year|string %}active{% endif %}"
+                                href="{{ url_for('manage_irregular', sort=current_sort, search=search_query, filter_by='year', filter_val=year) }}">
+                                {% if year == 1 %}1st Year
+                                {% elif year == 2 %}2nd Year
+                                {% elif year == 3 %}3rd Year
+                                {% elif year == 4 %}4th Year
+                                {% else %}{{ year }}{% endif %}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+                <li class="dropdown-submenu">
+                    <a class="dropdown-item" href="javascript:void(0);">Section</a>
+                    <ul class="dropdown-menu" style="max-height:250px;overflow-y:auto;">
+                        {% for sec in all_sections %}
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == sec.id|string %}active{% endif %}"
+                                href="{{ url_for('manage_irregular', sort=current_sort, search=search_query, filter_by='section', filter_val=sec.id) }}">
+                                {{ sec.section_name }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Sort -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button"
+                data-bs-toggle="dropdown">
+                <i class="bi bi-sort-alpha-down me-2"></i>
+                {% if current_sort == 'name-asc' %}Name A–Z
+                {% elif current_sort == 'name-desc' %}Name Z–A
+                {% elif current_sort == 'id-asc' %}ID (Asc)
+                {% elif current_sort == 'id-desc' %}ID (Desc)
+                {% elif current_sort == 'section' %}Section
+                {% else %}Sort{% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
+                {% for val, label in [('name-asc','Name A–Z'),('name-desc','Name Z–A'),('id-asc','ID (Asc)'),('id-desc','ID (Desc)'),('section','Section')] %}
+                <li>
+                    <a class="dropdown-item {% if current_sort == val %}active{% endif %}"
+                        href="{{ url_for('manage_irregular', sort=val, search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        {{ label }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════ TABLE ══════════ -->
+<form id="bulkForm">
+    <div class="bg-white rounded border shadow-sm overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" style="font-size:0.9rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:40px;" class="text-center border-bottom">
+                            <input class="form-check-input" type="checkbox" id="selectAllChk"
+                                onchange="toggleSelectAll(this)">
+                        </th>
+                        <th class="border-bottom" style="width:14%;">STUDENT ID</th>
+                        <th class="border-bottom" style="width:26%;">FULL NAME</th>
+                        <th class="border-bottom text-center" style="width:9%;">YEAR</th>
+                        <th class="border-bottom" style="width:16%;">HOME SECTION</th>
+                        <th class="border-bottom" style="width:14%;">SUBJECTS</th>
+                        <th class="border-bottom" style="width:10%;">SEMESTER</th>
+                        <th class="border-bottom text-center" style="width:11%;">ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    {% set a = assignments.get(student.id) %}
+                    <tr class="irreg-row" data-id="{{ student.id }}" style="cursor:pointer;">
+                        <td class="text-center" onclick="event.stopPropagation()">
+                            <input class="form-check-input row-checkbox" type="checkbox"
+                                value="{{ student.id }}" onchange="updateSelection()">
+                        </td>
+                        <td class="fw-bold font-monospace">{{ student.student_id }}</td>
+                        <td class="fw-bold text-dark">
+                            {{ student.full_name }}
+                            <span class="badge ms-1" style="background:#7c3aed;font-size:0.62rem;">IRREG</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge-clean">
+                                {% if student.year_level == 1 %}1st
+                                {% elif student.year_level == 2 %}2nd
+                                {% elif student.year_level == 3 %}3rd
+                                {% elif student.year_level == 4 %}4th
+                                {% else %}{{ student.year_level }}{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            {% if student.section %}
+                            <span class="badge-clean">{{ student.section.section_name }}</span>
+                            {% else %}
+                            <span class="text-muted small fst-italic">Unassigned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if a and a.assignments_json and a.assignments_json != '[]' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">Assigned</span>
+                            {% else %}
+                            <span class="text-muted small fst-italic">Not set</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted small">
+                            {% if a %}{{ a.semester }}{% else %}—{% endif %}
+                        </td>
+                        <td class="text-center" onclick="event.stopPropagation()">
+                            <button type="button" class="btn-icon view"
+                                onclick="viewSchedule('student', {{ student.id }})" title="View Schedule">
+                                <i class="bi bi-calendar-week"></i>
+                            </button>
+                            <a href="{{ url_for('irregular_pathfinder', student_id=student.id) }}"
+                               class="btn-icon" title="Open Schedule Finder">
+                                <i class="bi bi-puzzle"></i>
+                            </a>
+                            <button type="button" class="btn-icon delete" title="Remove Irregular Flag"
+                                onclick="removeIrreg({{ student.id }}, '{{ student.full_name | e }}')">
+                                <i class="bi bi-person-dash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-person-exclamation fs-2 d-block mb-2 opacity-25"></i>
+                            No irregular students found.
+                            {% if search_query or current_filter_by %}
+                            <a href="{{ url_for('manage_irregular') }}" class="ms-1">Clear filters</a>
+                            {% else %}
+                            Go to <a href="{{ url_for('manage_students') }}">Manage Students</a>
+                            and click <i class="bi bi-person-exclamation"></i> to mark a student as irregular.
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- PAGINATION -->
+    <div class="mt-3 pb-5">
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center mb-2">
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link"
+                        href="{{ url_for('manage_irregular', page=pagination.prev_num, sort=current_sort, search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        <i class="bi bi-chevron-left"></i></a>
+                </li>
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if page_num %}
+                <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                    <a class="page-link"
+                        href="{{ url_for('manage_irregular', page=page_num, sort=current_sort, search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">{{ page_num }}</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>
+                {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link"
+                        href="{{ url_for('manage_irregular', page=pagination.next_num, sort=current_sort, search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        <i class="bi bi-chevron-right"></i></a>
+                </li>
+            </ul>
+        </nav>
+        {% if pagination.pages > 1 %}
+        <div class="d-flex align-items-center justify-content-center gap-2 text-muted" style="font-size:0.85rem;">
+            <span>Jump to:</span>
+            <input type="number" id="pageJumpInput" class="form-control form-control-sm text-center"
+                style="width:70px;" min="1" max="{{ pagination.pages }}" placeholder="1–{{ pagination.pages }}">
+            <button class="btn btn-sm btn-outline-secondary px-3" onclick="jumpToPage()">Go</button>
+            <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i class="bi bi-arrow-right-short"></i> arrow keys</span>
+        </div>
+        {% endif %}
+    </div>
+</form>
+
+
+<!-- ══════════ MODALS ══════════ -->
+
+<!-- ADD IRREGULAR STUDENT MODAL -->
+<div class="modal fade" id="addIrregStudentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-below-nav">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-plus me-2" style="color:#7c3aed;"></i>Add Irregular Student</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Tabs -->
+                <ul class="nav nav-tabs mb-3" id="addIrregTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabExisting">
+                            <i class="bi bi-person-check me-1"></i>Existing Student
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabNew">
+                            <i class="bi bi-person-plus me-1"></i>Create New
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content">
+                    <!-- Tab: Select existing -->
+                    <div class="tab-pane fade show active" id="tabExisting">
+                        <p class="text-muted small mb-3">Select a regular student to mark as irregular.</p>
+                        <input type="text" class="form-control mb-2" id="existingSearch"
+                            placeholder="Search by name or ID..." oninput="filterExisting()">
+                        <div id="existingList" style="max-height:280px;overflow-y:auto;border:1px solid #dee2e6;border-radius:8px;">
+                            {% for s in regular_students %}
+                            <label class="existing-item d-flex align-items-center gap-3 p-2 border-bottom"
+                                style="cursor:pointer;font-size:0.88rem;"
+                                data-name="{{ s.full_name | lower }}"
+                                data-sid="{{ s.student_id | lower }}">
+                                <input type="radio" name="existingStudentId" value="{{ s.id }}"
+                                    data-name="{{ s.full_name }}" class="form-check-input flex-shrink-0">
+                                <span>
+                                    <span class="fw-bold">{{ s.full_name }}</span>
+                                    <span class="text-muted small ms-2">{{ s.student_id }}</span>
+                                    {% if s.section %}
+                                    <span class="badge-clean ms-1">{{ s.section.section_name }}</span>
+                                    {% endif %}
+                                </span>
+                            </label>
+                            {% else %}
+                            <p class="text-muted small text-center p-3">All students are already marked as irregular.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <!-- Tab: Create new -->
+                    <div class="tab-pane fade" id="tabNew">
+                        <p class="text-muted small mb-3">Create a brand-new student directly as irregular.</p>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Student ID <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="newStudentId" placeholder="e.g. 2023-0001">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="newStudentName" placeholder="Last Name, First Name M.I.">
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <label class="form-label fw-bold">Year Level <span class="text-danger">*</span></label>
+                                <select class="form-select" id="newStudentYear">
+                                    <option value="">Select...</option>
+                                    <option value="1">1st Year</option>
+                                    <option value="2">2nd Year</option>
+                                    <option value="3">3rd Year</option>
+                                    <option value="4">4th Year</option>
+                                </select>
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label fw-bold">Section <span class="text-muted fw-normal small">(optional)</span></label>
+                                <select class="form-select" id="newStudentSection">
+                                    <option value="">Unassigned</option>
+                                    {% for sec in all_sections %}
+                                    <option value="{{ sec.id }}">{{ sec.section_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="form-label fw-bold">Email <span class="text-muted fw-normal small">(optional)</span></label>
+                            <input type="text" class="form-control" id="newStudentEmail" placeholder="student@email.com">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-cancel-btn" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitAddIrreg()">
+                    <i class="bi bi-person-exclamation me-1"></i>Mark as Irregular
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- IRREGULAR CONFIRM MODAL (with 5-min suppress) -->
+<div class="modal fade" id="irregConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title">
+                    <i class="bi bi-person-exclamation me-2" style="color:#7c3aed;"></i>Confirm Action
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <p id="irregConfirmMsg" class="mb-3">Are you sure you want to mark this student as irregular?</p>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="suppressIrregModal">
+                    <label class="form-check-label text-muted small" for="suppressIrregModal">
+                        Don't show this confirmation for 5 minutes
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="modal-cancel-btn" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="doIrregConfirm()">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BATCH MODAL -->
+<div class="modal fade" id="batchModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-puzzle me-2"></i>Batch Schedule Finder</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <div class="col-md-5">
+                        <div class="mb-3">
+                            <label class="fw-bold small text-uppercase text-muted mb-1">Semester</label>
+                            <select class="form-select" id="batchSemesterModal">
+                                {% for s in semesters %}
+                                <option value="{{ s }}">{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <input type="text" class="form-control mb-2" id="batchSearch"
+                            placeholder="Search courses..." oninput="filterBatchCourses()">
+                        <div id="batchCourseList" style="max-height:400px;overflow-y:auto;border:1px solid #dee2e6;border-radius:8px;padding:8px;">
+                            {% set ns = namespace(last_yr=None) %}
+                            {% for c in courses %}
+                            {% if c.year_level != ns.last_yr %}
+                            {% set ns.last_yr = c.year_level %}
+                            <div class="text-muted fw-bold px-1 mb-1 mt-2"
+                                style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em;">
+                                {% if not c.year_level %}No Year Level
+                                {% elif c.year_level == 1 %}1st Year
+                                {% elif c.year_level == 2 %}2nd Year
+                                {% elif c.year_level == 3 %}3rd Year
+                                {% elif c.year_level == 4 %}4th Year
+                                {% else %}Year {{ c.year_level }}{% endif %}
+                            </div>
+                            {% endif %}
+                            <label class="d-flex align-items-start gap-2 p-1 rounded batch-course-item"
+                                style="cursor:pointer;font-size:0.85rem;"
+                                data-code="{{ c.course_code | lower }}"
+                                data-name="{{ c.course_name | lower }}">
+                                <input type="checkbox" class="form-check-input mt-1 batch-course-chk"
+                                    value="{{ c.id }}" onchange="updateBatchCount()">
+                                <span><span class="fw-bold">{{ c.course_code }}</span>
+                                <span class="text-muted"> — {{ c.course_name }}</span></span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        <div class="mt-2 small text-muted">Selected: <span id="batchSelectedCount" class="fw-bold">0</span> courses</div>
+                    </div>
+                    <div class="col-md-7" id="batchResultsPanel">
+                        <p class="text-muted small mt-2">Select courses and click Run to find schedules for all selected students.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="runBatch()">
+                    <i class="bi bi-play-fill me-1"></i>Run for All Selected
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+const CSRF_TOKEN      = "{{ csrf_token() }}";
+const SUPPRESS_KEY    = 'irreg_modal_suppress_until';
+let pendingAction     = null;  // {type: 'toggle'|'bulk-remove', ids: [...], name: '...'}
+
+// ── Selection ────────────────────────────────────────────────
+function toggleSelectAll(chk) {
+    document.querySelectorAll('.row-checkbox').forEach(c => c.checked = chk.checked);
+    updateSelection();
+}
+
+function updateSelection() {
+    const checked = document.querySelectorAll('.row-checkbox:checked');
+    const count   = checked.length;
+    const bar     = document.getElementById('bulkActionBar');
+    document.getElementById('selectedCount').textContent = count;
+    if (count > 0) bar.classList.add('active'); else bar.classList.remove('active');
+    const all = document.getElementById('selectAllChk');
+    if (all) {
+        const total = document.querySelectorAll('.row-checkbox').length;
+        all.checked       = (count === total && total > 0);
+        all.indeterminate = (count > 0 && count < total);
+    }
+    // Green highlight
+    document.querySelectorAll('.irreg-row').forEach(row => {
+        const cb = row.querySelector('.row-checkbox');
+        if (cb && cb.checked) row.classList.add('selected'); else row.classList.remove('selected');
+    });
+}
+
+function deselectAll() {
+    document.querySelectorAll('.row-checkbox').forEach(c => c.checked = false);
+    updateSelection();
+}
+
+// Row click = select
+document.querySelectorAll('.irreg-row').forEach(row => {
+    row.addEventListener('click', function(e) {
+        if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.form-check-input')) return;
+        const cb = this.querySelector('.row-checkbox');
+        cb.checked = !cb.checked;
+        updateSelection();
+    });
+});
+
+// ── Suppress logic ────────────────────────────────────────────
+function isSuppressed() {
+    const v = localStorage.getItem(SUPPRESS_KEY);
+    if (!v) return false;
+    if (Date.now() < parseInt(v)) return true;
+    localStorage.removeItem(SUPPRESS_KEY);
+    return false;
+}
+function maybeSuppressFor5Min() {
+    if (document.getElementById('suppressIrregModal').checked) {
+        localStorage.setItem(SUPPRESS_KEY, Date.now() + 5 * 60 * 1000);
+    }
+}
+
+// ── Toggle single student ─────────────────────────────────────
+function removeIrreg(id, name) {
+    pendingAction = {type: 'toggle', ids: [id]};
+    if (isSuppressed()) { executeAction(); return; }
+    document.getElementById('irregConfirmMsg').textContent =
+        `Remove the irregular flag from "${name}"? They will become a regular student.`;
+    document.getElementById('suppressIrregModal').checked = false;
+    new bootstrap.Modal(document.getElementById('irregConfirmModal')).show();
+}
+
+// ── Bulk remove ───────────────────────────────────────────────
+function bulkRemoveIrreg() {
+    const ids = [...document.querySelectorAll('.row-checkbox:checked')].map(c => parseInt(c.value));
+    if (!ids.length) return;
+    pendingAction = {type: 'bulk-toggle', ids};
+    if (isSuppressed()) { executeAction(); return; }
+    document.getElementById('irregConfirmMsg').textContent =
+        `Remove the irregular flag from ${ids.length} selected student(s)?`;
+    document.getElementById('suppressIrregModal').checked = false;
+    new bootstrap.Modal(document.getElementById('irregConfirmModal')).show();
+}
+
+function doIrregConfirm() {
+    maybeSuppressFor5Min();
+    bootstrap.Modal.getInstance(document.getElementById('irregConfirmModal')).hide();
+    executeAction();
+}
+
+async function executeAction() {
+    if (!pendingAction) return;
+    if (pendingAction.type === 'toggle' || pendingAction.type === 'bulk-toggle') {
+        for (const id of pendingAction.ids) {
+            await fetch(`/manage/student/toggle-irregular/${id}`, {
+                method: 'POST', headers: {'X-CSRFToken': CSRF_TOKEN}
+            });
+        }
+        location.reload();
+    }
+}
+
+// ── Add Irregular Student ─────────────────────────────────────
+function filterExisting() {
+    const q = document.getElementById('existingSearch').value.toLowerCase();
+    document.querySelectorAll('.existing-item').forEach(el => {
+        el.style.display = (!q || el.dataset.name.includes(q) || el.dataset.sid.includes(q)) ? '' : 'none';
+    });
+}
+
+function showAddIrregError(msg) {
+    let el = document.getElementById('addIrregErrorMsg');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'addIrregErrorMsg';
+        el.className = 'alert alert-danger py-2 small mb-3';
+        const tabContent = document.querySelector('#tabNew');
+        tabContent.insertBefore(el, tabContent.firstChild);
+    }
+    el.textContent = msg;
+    el.style.display = '';
+}
+
+async function submitAddIrreg() {
+    const activeTab = document.querySelector('#addIrregTabs .nav-link.active');
+    const isNew     = activeTab.dataset.bsTarget === '#tabNew';
+
+    if (isNew) {
+        // Hide any previous error
+        const prevErr = document.getElementById('addIrregErrorMsg');
+        if (prevErr) prevErr.style.display = 'none';
+
+        const sid    = document.getElementById('newStudentId').value.trim();
+        const name   = document.getElementById('newStudentName').value.trim();
+        const year   = document.getElementById('newStudentYear').value;
+        const secId  = document.getElementById('newStudentSection').value;
+        const email  = document.getElementById('newStudentEmail').value.trim();
+        if (!sid || !name || !year) { showAddIrregError('Please fill in all required fields.'); return; }
+
+        const fd = new FormData();
+        fd.append('csrf_token', CSRF_TOKEN);
+        fd.append('student_id', sid);
+        fd.append('full_name', name);
+        fd.append('year_level', year);
+        if (secId) fd.append('section_id', secId);
+        if (email) fd.append('email', email);
+        fd.append('is_irregular', '1');
+
+        const res = await fetch('/manage/student/add', {method:'POST', body: fd});
+        if (!res.ok) {
+            const d = await res.json().catch(() => ({}));
+            showAddIrregError(d.error || 'Failed to create student.');
+            return;
+        }
+        window.location.href = '{{ url_for("manage_irregular") }}';
+    } else {
+        const radio = document.querySelector('input[name="existingStudentId"]:checked');
+        if (!radio) { alert('Please select a student.'); return; }
+        const id   = parseInt(radio.value);
+        const name = radio.dataset.name;
+        pendingAction = {type: 'toggle', ids: [id]};
+        bootstrap.Modal.getInstance(document.getElementById('addIrregStudentModal')).hide();
+        if (isSuppressed()) { executeAction(); return; }
+        document.getElementById('irregConfirmMsg').textContent =
+            `Mark "${name}" as an irregular student? They will appear in the Irregular Students list.`;
+        document.getElementById('suppressIrregModal').checked = false;
+        setTimeout(() => new bootstrap.Modal(document.getElementById('irregConfirmModal')).show(), 300);
+    }
+}
+
+// ── Batch ─────────────────────────────────────────────────────
+function filterBatchCourses() {
+    const q = document.getElementById('batchSearch').value.toLowerCase();
+    document.querySelectorAll('.batch-course-item').forEach(el => {
+        el.style.display = (!q || el.dataset.code.includes(q) || el.dataset.name.includes(q)) ? '' : 'none';
+    });
+}
+function updateBatchCount() {
+    document.getElementById('batchSelectedCount').textContent =
+        document.querySelectorAll('.batch-course-chk:checked').length;
+}
+function openBatchModal() {
+    const modal = new bootstrap.Modal(document.getElementById('batchModal'));
+    modal.show();
+}
+
+async function runBatch() {
+    const studentIds = [...document.querySelectorAll('.row-checkbox:checked')].map(c => parseInt(c.value));
+    const courseIds  = [...document.querySelectorAll('.batch-course-chk:checked')].map(c => parseInt(c.value));
+    const semester   = document.getElementById('batchSemesterModal').value;
+    if (!studentIds.length) { alert('No students selected.'); return; }
+    if (!courseIds.length)  { alert('Select at least one course.'); return; }
+
+    const panel = document.getElementById('batchResultsPanel');
+    panel.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Finding schedules...</p></div>';
+
+    const res  = await fetch('/api/irregular-batch', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRFToken': CSRF_TOKEN},
+        body: JSON.stringify({student_ids: studentIds, course_ids: courseIds, semester})
+    });
+    const data = await res.json();
+    if (!res.ok) { panel.innerHTML = `<div class="alert alert-danger">${data.error}</div>`; return; }
+
+    let html = '';
+    data.results.forEach(r => {
+        const st    = r.result;
+        const found = st.total_found;
+        const icon  = found > 0 ? '<i class="bi bi-check-circle-fill text-success me-2"></i>' :
+            (st.deadlock_courses.length ? '<i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>' :
+             '<i class="bi bi-x-circle-fill text-danger me-2"></i>');
+        html += `<div class="border rounded-3 p-3 mb-2">
+            <div class="fw-bold mb-1">${icon}${r.student_name} <span class="text-muted small font-monospace">${r.student_sid}</span></div>`;
+        if (found > 0) {
+            const anchor = st.anchor;
+            html += `<div class="small text-muted">Anchor: <strong>${anchor ? anchor.section_name : '—'}</strong> · ${found} combination(s) found</div>`;
+            html += `<a href="/irregular-pathfinder/${r.student_id}" class="btn btn-sm btn-outline-primary mt-2" style="font-size:0.78rem;">Open Schedule Finder</a>`;
+        } else if (st.deadlock_courses.length) {
+            html += `<div class="small text-warning">No offerings for: ${st.deadlock_courses.map(d=>d.course_code||d).join(', ')}</div>`;
+        } else {
+            html += `<div class="small text-danger">No valid combination found.</div>`;
+        }
+        html += '</div>';
+    });
+    panel.innerHTML = html || '<p class="text-muted">No results.</p>';
+}
+
+// ── Pagination jump ───────────────────────────────────────────
+function jumpToPage() {
+    const v = parseInt(document.getElementById('pageJumpInput').value);
+    const max = {{ pagination.pages }};
+    if (v >= 1 && v <= max) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('page', v);
+        window.location.href = url.toString();
+    }
+}
+document.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === 'ArrowRight' && {{ 'true' if pagination.has_next else 'false' }}) {
+        window.location.href = "{{ url_for('manage_irregular', page=pagination.next_num, sort=current_sort, search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}";
+    }
+    if (e.key === 'ArrowLeft' && {{ 'true' if pagination.has_prev else 'false' }}) {
+        window.location.href = "{{ url_for('manage_irregular', page=pagination.prev_num, sort=current_sort, search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}";
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

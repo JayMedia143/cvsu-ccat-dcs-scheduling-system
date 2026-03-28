@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Clean Archives{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1">Clean Archives (Historical Records)</h1>
+        <p class="text-muted small mb-0">Immutable snapshots of finalized schedules from past semesters.</p>
+    </div>
+    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#archiveSemesterModal">
+        <i class="bi bi-camera-fill me-2"></i> Archive Current Semester
+    </button>
+</div>
+
+<!-- DATA TABLE -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="archivesTable" style="width:100%">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="text-secondary fw-semibold small px-4 py-3 border-bottom-0">ACADEMIC YEAR</th>
+                        <th class="text-secondary fw-semibold small py-3 border-bottom-0">SEMESTER</th>
+                        <th class="text-secondary fw-semibold small py-3 border-bottom-0">SUBJECT / SECTION</th>
+                        <th class="text-secondary fw-semibold small py-3 border-bottom-0">FACULTY</th>
+                        <th class="text-secondary fw-semibold small py-3 border-bottom-0">ROOM</th>
+                        <th class="text-secondary fw-semibold small py-3 border-bottom-0">SCHEDULE</th>
+                        <th class="text-secondary fw-semibold small px-4 py-3 border-bottom-0 text-end">ARCHIVED ON</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in history %}
+                    <tr>
+                        <td class="px-4 text-dark fw-medium">{{ item.academic_year }}</td>
+                        <td class="text-muted">{{ item.semester }}</td>
+                        <td>
+                            <div class="fw-bold text-dark">{{ item.subject_title or item.subject_code or 'Unknown
+                                Subject' }}</div>
+                            <div class="small text-muted">{{ item.section_name or item.course_code }}</div>
+                        </td>
+                        <td>
+                            {% if item.faculty_name == 'T.B.A.' %}
+                            <span class="badge bg-light text-secondary border">T.B.A.</span>
+                            {% else %}
+                            <span class="text-dark">{{ item.faculty_name }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.room_name == 'T.B.A.' %}
+                            <span class="badge bg-light text-secondary border">T.B.A.</span>
+                            {% else %}
+                            <span class="fw-medium text-dark">{{ item.room_name }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="text-dark">{{ item.day }}</div>
+                            <div class="small text-muted">{{ item.start_time }} - {{ item.end_time }}</div>
+                        </td>
+                        <td class="px-4 text-end">
+                            <div class="text-muted small">{{ item.archived_at.strftime('%Y-%m-%d') }}</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">by {{ item.archived_by }}</div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-3 text-secondary opacity-50"></i>
+                            <h5 class="fw-light text-dark">No historical schedules found</h5>
+                            <p class="small mb-0">Use "Archive Current Semester" when the semester ends to save a
+                                snapshot here.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ARCHIVE MODAL -->
+<div class="modal fade" id="archiveSemesterModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom-0 bg-primary bg-opacity-10 py-4">
+                <div class="d-flex align-items-center">
+                    <div class="bg-white rounded-circle d-flex align-items-center justify-content-center shadow-sm me-3"
+                        style="width: 48px; height: 48px;">
+                        <i class="bi bi-camera-fill text-primary fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-1">Archive Semester Snapshot</h5>
+                        <p class="mb-0 text-muted small">Save a permanent, read-only copy of active schedules.</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="text-muted mb-4">
+                    This will copy all <strong>Approved Schedules</strong> into the Clean Archives. Archiving protects
+                    the data from accidental changes if Teachers or Rooms are deleted later.
+                </p>
+                <form action="{{ url_for('archive_semester') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="row g-3 mb-4 text-start">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-secondary">Academic Year</label>
+                            <input type="text" class="form-control bg-light" name="academic_year" value="2024-2025"
+                                required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-secondary">Semester</label>
+                            <select class="form-select bg-light" name="semester" required>
+                                <option value="1st Semester">1st Semester</option>
+                                <option value="2nd Semester">2nd Semester</option>
+                                <option value="Midyear">Midyear</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary py-2 fw-semibold">Take Snapshot</button>
+                        <button type="button" class="btn btn-light py-2" data-bs-dismiss="modal">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- DataTables Script -->
+<script>
+    $(document).ready(function () {
+        $('#archivesTable').DataTable({
+            "order": [[6, "desc"]], /* order by archived_at desc */
+            "pageLength": 25,
+            "language": {
+                "search": "",
+                "searchPlaceholder": "Search historical records..."
+            },
+            "dom": "<'row mb-3 align-items-center'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6 d-flex justify-content-end'f>>" +
+                "<'row'<'col-sm-12'tr>>" +
+                "<'row border-top pt-3 mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>"
+        });
+        $('.dataTables_filter input').addClass('form-control form-control-sm border-secondary').css('border-radius', '20px').css('padding', '6px 15px');
+    });
+</script>
+{% endblock %}

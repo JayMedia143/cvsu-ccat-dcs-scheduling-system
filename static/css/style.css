@@ -1,0 +1,2475 @@
+/* =================================================================== */
+/*           GOOGLE SHEETS THEME (Compact Horizontal Layout)           */
+/* =================================================================== */
+
+/* ------------------------------------------------------------------- */
+/*  1. GENERAL BODY & LAYOUT                                           */
+/* ------------------------------------------------------------------- */
+
+body {
+    background-color: #f9fbfd;
+    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    padding-top: 80px;
+    color: #202124;
+}
+
+.main-content {
+    margin-left: 0;
+    padding: 2rem;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+/* ------------------------------------------------------------------- */
+/*  2. TOP HEADER (Row 1: Logo & Title)                                */
+/* ------------------------------------------------------------------- */
+
+.sheets-header {
+    background-color: #ffffff;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    border-bottom: 1px solid #dadce0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1060;
+}
+
+.sheets-icon {
+    color: #188038;
+    /* Google Green */
+    font-size: 1.8rem;
+    margin-right: 15px;
+}
+
+.sheets-title {
+    font-size: 1.3rem;
+    color: #444;
+    font-weight: 500;
+}
+
+/* Sign Out Button Style */
+.btn-signout {
+    color: #5f6368;
+    background-color: #ffffff;
+    border: 1px solid #dadce0;
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 4px;
+    /* Rounded corners */
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-signout:hover {
+    background-color: #fce8e6;
+    /* Light Red tint background */
+    color: #d93025;
+    /* Red Text */
+    border-color: #d93025;
+    /* Red Border */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.btn-signout i {
+    margin-right: 8px;
+    font-size: 1rem;
+}
+
+/* ------------------------------------------------------------------- */
+/*  3. MENU BAR (Row 2: Nav Links + Compact Filter)                    */
+/* ------------------------------------------------------------------- */
+
+.sheets-menubar {
+    background-color: #ffffff;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 1px solid #e0e0e0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1055;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* ------------------------------------------------------------------- */
+/*  Profile Dropdown                                                    */
+/* ------------------------------------------------------------------- */
+
+/* Profile trigger button */
+.profile-btn {
+    text-decoration: none;
+    background: none;
+    line-height: 1;
+}
+
+.profile-btn:focus {
+    box-shadow: none;
+}
+
+/* Icon wrapper — relative so the badge can be positioned */
+.profile-icon-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-icon-wrap .bi-person-circle {
+    font-size: 1.5rem;
+    color: #5f6368;
+}
+
+/* Small caret badge — bottom-right, bottom edge flush with profile icon bottom */
+.profile-caret-badge {
+    position: absolute;
+    bottom: 0;
+    right: -4px;
+    font-size: 0.4rem;
+    color: #fff;
+    background: #5f6368;
+    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    padding-top: 5px;
+    box-shadow: 0 0 0 2px #fff;
+    line-height: 1;
+    overflow: hidden;
+    transition: transform 0.25s ease;
+}
+
+.profile-caret-badge i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    line-height: 1;
+}
+
+/* Rotate caret when dropdown is open */
+.dropdown.show .profile-caret-badge {
+    transform: rotate(180deg);
+}
+
+/* Animate dropdown: slide + fade on open */
+.profile-dropdown-menu.show {
+    animation: profileMenuIn 0.18s ease forwards;
+    /* Force it below the navbar at all times */
+    position: fixed !important;
+    top: 40px !important;
+    right: 10px !important;
+}
+
+@keyframes profileMenuIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Left Side: Menu Links Wrapper */
+.menu-links {
+    display: flex;
+    align-items: center;
+}
+
+/* Menu Items */
+.menu-item {
+    color: #3c4043;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+    margin-right: 5px;
+    transition: background-color 0.1s;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+}
+
+.menu-item:hover {
+    background-color: #f1f3f4;
+    color: #202124;
+}
+
+.menu-item.active {
+    color: #188038;
+    background-color: #e6f4ea;
+    font-weight: 600;
+}
+
+/* Push modals below fixed navbar */
+.modal-dialog-below-nav {
+    margin-top: 70px;
+}
+
+/* Plain checkbox style (neutral dark instead of blue) */
+.plain-check:checked {
+    background-color: #495057;
+    border-color: #495057;
+}
+
+/* Dropdown Styles */
+.dropdown-menu {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    margin-top: 5px;
+    z-index: 1070;
+}
+
+.dropdown-item {
+    font-size: 0.9rem;
+    padding: 8px 20px;
+    color: #3c4043;
+}
+
+.dropdown-item:hover {
+    background-color: #e6f4ea;
+    color: #188038;
+}
+
+.dropdown-item.active {
+    background-color: #188038;
+    color: white;
+}
+
+/* Right Side: Compact Semester Filter */
+.sem-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background-color: #f1f3f4;
+    padding: 3px 6px;
+    border-radius: 8px;
+    border: 1px solid #dadce0;
+}
+
+.sem-label {
+    font-size: 0.68rem;
+    color: #5f6368;
+    font-weight: 700;
+    margin-right: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.sem-btn-tool {
+    border: none;
+    background: transparent;
+    color: #5f6368;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.sem-btn-tool:hover {
+    background-color: #e2e6ea;
+    color: #202124;
+}
+
+.sem-btn-tool.active {
+    background-color: #198754;
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(25,135,84,0.3);
+}
+
+/* ------------------------------------------------------------------- */
+/*  4. DASHBOARD & GENERAL COMPONENTS                                  */
+/* ------------------------------------------------------------------- */
+
+/* Stat Cards */
+.stat-card {
+    border: 1px solid #dee2e6;
+    border-left: 5px solid #188038;
+    background-color: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.card-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.card-link .stat-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card-link:hover .stat-card {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Flash Messages */
+.alert {
+    position: relative;
+    z-index: 1050;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: none;
+}
+.alert-dismissible .btn-close {
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Scrollable Lists */
+.course-list-sm {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 10px;
+    border: 1px solid #eee;
+    border-radius: 5px;
+}
+
+.section-list-group {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+/* ------------------------------------------------------------------- */
+/*  5. AUTH (LOGIN / SIGNUP) PAGE STYLES                               */
+/* ------------------------------------------------------------------- */
+
+.auth-page {
+    display: flex;
+    min-height: 100vh;
+    padding-top: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ---- Right branded panel (dark showcase) ---- */
+.auth-left {
+    width: 55%;
+    background: linear-gradient(160deg, #0a0f0b 0%, #0f1a11 60%, #0a0f0b 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 3.5rem 2rem 3rem;
+    color: #fff;
+}
+
+/* Dot grid overlay */
+.auth-left::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 26px 26px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Diagonal light streak */
+.auth-left::after {
+    content: '';
+    position: absolute;
+    top: -120px;
+    left: -80px;
+    width: 260px;
+    height: 600px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 60%);
+    transform: rotate(-15deg);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Floating background circles */
+.auth-circle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+}
+.auth-circle-1 {
+    width: 300px;
+    height: 300px;
+    top: -90px;
+    right: -70px;
+    background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+}
+.auth-circle-2 {
+    width: 200px;
+    height: 200px;
+    bottom: 30px;
+    right: 10px;
+    background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+}
+.auth-circle-3 {
+    width: 120px;
+    height: 120px;
+    bottom: 120px;
+    left: -40px;
+    background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+}
+
+.auth-brand-group {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1.25rem;
+    position: relative;
+    z-index: 1;
+    padding-bottom: 0.5rem;
+}
+
+.auth-brand-text {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+}
+
+.auth-card-zone {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+    padding-bottom: 0;
+    padding-top: 0;
+    width: 100%;
+}
+
+.auth-glow {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 120px;
+    background: radial-gradient(ellipse 80% 100% at 40% 100%, rgba(24, 128, 56, 0.28) 0%, transparent 70%);
+    filter: blur(16px);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.auth-brand-icon {
+    margin-bottom: 0;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.auth-icon-wrap {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(4px);
+}
+
+.auth-accent-line {
+    width: 36px;
+    height: 3px;
+    border-radius: 2px;
+    background: #34d768;
+    margin-bottom: 1rem;
+    opacity: 0.9;
+    position: relative;
+    z-index: 1;
+}
+
+.auth-right .auth-accent-line {
+    background: #188038;
+    opacity: 1;
+}
+
+.auth-brand-title {
+    font-size: 1.7rem;
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 0.4rem;
+    position: relative;
+    z-index: 1;
+    letter-spacing: -0.025em;
+}
+
+.auth-brand-subtitle {
+    font-size: 0.92rem;
+    opacity: 0.7;
+    position: relative;
+    z-index: 1;
+    line-height: 1.6;
+}
+
+.auth-brand-footer {
+    font-size: 0.75rem;
+    opacity: 0.35;
+    z-index: 1;
+    letter-spacing: 0.03em;
+    position: relative;
+}
+
+/* ---- 3D Floating Schedule Card ---- */
+.auth-3d-card {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 0.75rem 1rem 0.75rem;
+    position: relative;
+    width: 100%;
+    max-width: 680px;
+    margin-top: 0;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transform: perspective(900px) rotateX(8deg) rotateY(-12deg) rotateZ(-1deg);
+    box-shadow:
+        0 32px 64px rgba(0, 0, 0, 0.5),
+        0 8px 20px rgba(0, 0, 0, 0.3),
+        0 0 60px rgba(24, 128, 56, 0.2),
+        0 0 0 1px rgba(255, 255, 255, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    animation: floatCard 5s ease-in-out infinite;
+    z-index: 2;
+    overflow: hidden;
+}
+
+.auth-card-chrome {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 0.35rem;
+    margin-bottom: 0.35rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+.auth-chrome-dots {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.chrome-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.chrome-red   { background: #ff5f57; }
+.chrome-yellow { background: #ffbd2e; }
+.chrome-green  { background: #28c940; }
+
+.auth-chrome-title {
+    font-size: 0.68rem;
+    font-weight: 600;
+    opacity: 0.5;
+    letter-spacing: 0.04em;
+    margin-left: auto;
+}
+
+.auth-3d-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, transparent 50%);
+    border-radius: 16px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.auth-3d-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes floatCard {
+    0%, 100% {
+        transform: perspective(900px) rotateX(8deg) rotateY(-12deg) rotateZ(-1deg) translateY(0px);
+    }
+    50% {
+        transform: perspective(900px) rotateX(5deg) rotateY(-10deg) rotateZ(-0.5deg) translateY(-12px);
+    }
+}
+
+
+.auth-card-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 5px;
+}
+
+.auth-time-row {
+    margin-bottom: 3px;
+}
+
+.auth-time-label {
+    flex: 1;
+    font-size: 0.55rem;
+    font-weight: 600;
+    opacity: 0.3;
+    text-align: center;
+    letter-spacing: 0.03em;
+}
+
+.auth-card-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    opacity: 0.45;
+    width: 26px;
+    text-align: right;
+    padding-right: 5px;
+    flex-shrink: 0;
+    letter-spacing: 0.04em;
+}
+
+.auth-card-slot {
+    flex: 1;
+    height: 40px;
+    border-radius: 6px;
+    font-size: 0.55rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.03em;
+}
+
+.slot-green { background: rgba(24, 128, 56, 0.6); color: #b6f5cc; }
+.slot-teal  { background: rgba(13, 148, 136, 0.5); color: #99f6e4; }
+.slot-lime  { background: rgba(101, 163, 13, 0.5); color: #d9f99d; }
+.slot-blue  { background: rgba(37, 99, 235, 0.45); color: #bfdbfe; }
+.slot-empty { background: rgba(255, 255, 255, 0.05); }
+
+/* ---- Form panel (background image) ---- */
+.auth-right {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2.5rem;
+    background: url("../assets/login.png") center/cover no-repeat;
+    position: relative;
+}
+
+.auth-right::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 0;
+}
+
+/* Auth page loader overlay */
+#auth-loader {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #ffffff;
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+#auth-loader img {
+    width: 150px;
+    height: 150px;
+}
+html.login-loading #page-loader { display: flex !important; }
+
+.auth-form-box {
+    width: 100%;
+    max-width: 420px;
+    background: #fff;
+    border-radius: 18px;
+    padding: 2.75rem 2.75rem;
+    box-shadow: 0 8px 50px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-top: 3px solid #188038;
+    position: relative;
+    z-index: 1;
+}
+
+.auth-system-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #f0faf4;
+    color: #188038;
+    border: 1px solid #c3e6cb;
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 1.2rem;
+    letter-spacing: 0.03em;
+}
+
+.auth-badge-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #188038;
+    display: inline-block;
+    flex-shrink: 0;
+    animation: pulseDot 2.2s ease-in-out infinite;
+}
+
+@keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.55; transform: scale(0.8); }
+}
+
+.auth-form-heading {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #0d0d0d;
+    margin-bottom: 0.4rem;
+    letter-spacing: -0.03em;
+}
+
+.auth-form-subtext {
+    font-size: 0.9rem;
+    color: #999;
+    margin-bottom: 1.25rem;
+    line-height: 1.5;
+}
+
+.auth-form-divider {
+    border: none;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #dde8e2 40%, #dde8e2 60%, transparent);
+    margin: 0 0 1.25rem 0;
+}
+
+/* Input label */
+.auth-input-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #444;
+    margin-bottom: 8px;
+    display: block;
+    letter-spacing: 0.01em;
+}
+
+/* Input group with icon */
+.auth-input-group {
+    position: relative;
+    margin-bottom: 1.25rem;
+}
+
+.auth-input-group .input-icon {
+    position: absolute;
+    left: 15px;
+    top: calc(50% + 14px);
+    transform: translateY(-50%);
+    color: #ccc;
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 2;
+    transition: color 0.2s;
+}
+
+.auth-input-group:focus-within .input-icon {
+    color: #188038;
+}
+
+.auth-input-group input {
+    padding-left: 2.6rem;
+    border-radius: 10px;
+    border: 1.5px solid #e8e8e8;
+    height: 52px;
+    font-size: 0.93rem;
+    color: #1a1a1a;
+    background: #f8f8f8;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    width: 100%;
+    font-family: inherit;
+}
+
+.auth-input-group input:focus {
+    border-color: #188038;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(24, 128, 56, 0.1);
+    outline: none;
+}
+
+.auth-input-group input::placeholder {
+    color: #ccc;
+    font-weight: 400;
+}
+
+/* Submit button */
+.btn-auth {
+    background: linear-gradient(135deg, #1a9640 0%, #146c30 100%);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    height: 52px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    width: 100%;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.12s, box-shadow 0.2s;
+    margin-top: 0.25rem;
+    letter-spacing: 0.03em;
+    font-family: inherit;
+    box-shadow: 0 4px 16px rgba(24, 128, 56, 0.3);
+}
+
+.btn-auth:hover {
+    background: linear-gradient(135deg, #1cb048 0%, #115a28 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(24, 128, 56, 0.45);
+    color: #fff;
+}
+
+.btn-auth:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.auth-link {
+    color: #188038;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.auth-link:hover {
+    text-decoration: underline;
+    color: #146c30;
+}
+
+.auth-forgot {
+    font-size: 0.82rem;
+    color: #bbb;
+    text-decoration: none;
+}
+
+.auth-forgot:hover {
+    color: #188038;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .auth-page {
+        flex-direction: column;
+    }
+
+    .auth-left {
+        width: 100%;
+        padding: 2.5rem 2rem 3rem;
+        min-height: auto;
+        align-items: center;
+        text-align: center;
+        justify-content: flex-start;
+        gap: 0;
+    }
+
+    .auth-card-zone {
+        flex: none;
+        display: flex;
+        justify-content: center;
+        padding-top: 1.5rem;
+        width: 100%;
+    }
+
+    .auth-brand-subtitle {
+        max-width: 100%;
+    }
+
+    .auth-brand-footer {
+        display: none;
+    }
+
+    .auth-right {
+        width: 100%;
+        padding: 2rem 1.25rem;
+    }
+
+    .auth-form-box {
+        padding: 2rem 1.5rem;
+        border-radius: 14px;
+    }
+
+    .auth-3d-card {
+        width: 100%;
+        max-width: 270px;
+        margin: 0 auto;
+        transform: perspective(600px) rotateX(5deg) rotateY(8deg) rotateZ(0.5deg);
+    }
+
+    .auth-card-row {
+        margin-bottom: 6px;
+    }
+
+    .auth-card-slot {
+        height: 36px;
+    }
+}
+
+/* ------------------------------------------------------------------- */
+/*  6. FORMAL TIMETABLE STYLE                                          */
+/* ------------------------------------------------------------------- */
+/* 6. FORMAL TIMETABLE STYLE (STRICT FIXED BLACK - COMPACT VERSION) */
+
+.timetable-container {
+    background-color: white;
+    padding: 10px;
+    /* Reduced padding */
+    border: 1px solid #ccc;
+    overflow-x: auto;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* Force Fixed Layout */
+.formal-timetable {
+    width: 100%;
+    min-width: 1000px;
+    table-layout: fixed;
+    /* Importante ito para pantay-pantay ang columns */
+    border-collapse: collapse;
+    font-family: 'Arial', sans-serif;
+    color: #000000;
+    table-layout: fixed;
+}
+
+/* Border at Cells - DITO NATIN LILIITAN */
+.formal-timetable th,
+.formal-timetable td {
+    border: 1px solid #000000;
+    text-align: center;
+    padding: 0;
+    /* Tinanggal ang padding para tipid sa space */
+    vertical-align: middle;
+    height: 25px;
+    /* <--- FROM 45px TO 25px (Compact Height) */
+    overflow: hidden;
+    /* Itago ang excess content */
+    word-wrap: break-word;
+    color: #000000;
+}
+
+/* Header */
+.formal-timetable thead th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    /* Smaller header font */
+    height: 30px;
+    /* Smaller header height */
+    color: #000000;
+}
+
+/* Time Column */
+.time-col {
+    width: 80px;
+    /* Mas manipis na time column */
+    font-size: 0.65rem;
+    /* Smaller time font */
+    font-weight: bold;
+    background-color: #f8f9fa;
+    color: #000000;
+}
+
+/* Day Columns */
+.formal-timetable th:not(.time-col),
+.formal-timetable td:not(.time-col) {
+    width: calc((100% - 80px) / 6);
+}
+
+/* Content sa loob ng Cell */
+.formal-class-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    line-height: 1;
+    /* Mas dikit na lines */
+    overflow: hidden;
+}
+
+/* Font Styles - Adjusted for Compact Size */
+.formal-course {
+    font-weight: 900;
+    font-size: 0.75rem;
+    /* Smaller */
+    color: #000000 !important;
+    text-transform: uppercase;
+    margin-bottom: 1px;
+}
+
+.formal-room {
+    font-weight: bold;
+    font-size: 0.7rem;
+    /* Smaller */
+    color: #000000 !important;
+}
+
+.formal-teacher {
+    text-transform: uppercase;
+    font-size: 0.6rem;
+    /* Smaller */
+    font-style: italic;
+    color: #000000 !important;
+    margin-top: 1px;
+}
+
+/* =================================================================== */
+/*           GLOBAL THEME OVERRIDES (Google Sheets Green)              */
+/* =================================================================== */
+
+/* 1. PRIMARY BUTTONS (Override Bootstrap Blue to Green) */
+.btn-primary {
+    background-color: #188038 !important;
+    /* Sheets Green */
+    border-color: #188038 !important;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #137333 !important;
+    /* Darker Green hover */
+    border-color: #137333 !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* 2. OUTLINE BUTTONS (Green Outline) */
+.btn-outline-primary {
+    color: #188038 !important;
+    border-color: #dadce0 !important;
+    /* Gray border like Google */
+    background-color: transparent;
+}
+
+.btn-outline-primary:hover {
+    background-color: #e6f4ea !important;
+    /* Light Green tint */
+    color: #137333 !important;
+    border-color: #188038 !important;
+}
+
+/* 3. MODAL HEADERS (Green Top) */
+.modal-header {
+    border-bottom: 1px solid #dadce0;
+    background-color: #f8f9fa;
+}
+
+.modal-title {
+    color: #202124;
+    font-weight: 500;
+}
+
+.modal-content {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* =================================================================== */
+/*           GOOGLE SHEETS CLEAN TABLE STYLE (UPDATED)                 */
+/* =================================================================== */
+
+/* 1. Base Table Reset */
+.table {
+    font-size: 0.85rem;
+    /* Standard Google font size */
+    color: #202124;
+    border-collapse: collapse;
+    /* Ensure borders are merged */
+}
+
+/* 2. Compact Table Cells */
+.table th,
+.table td {
+    padding: 8px 12px !important;
+    /* Compact padding */
+    vertical-align: middle;
+    border-bottom: 1px solid #e0e0e0;
+    /* Subtle border */
+    white-space: nowrap;
+    /* Prevent wrapping for clean look */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 3. Header Style (Clean White & Green Line) */
+.table thead th {
+    background-color: #ffffff;
+    color: #5f6368;
+    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 0.75rem;
+    border-bottom: 2px solid #188038;
+    /* Green Line Header */
+    height: 40px;
+}
+
+/* 4. Row Hover Effect (Subtle Gray) */
+.table-hover tbody tr:hover {
+    background-color: #f1f3f4;
+}
+
+/* 5. Clean Badges (Gray Background, Dark Text) */
+.badge-clean {
+    background-color: #f1f3f4;
+    color: #3c4043;
+    border: 1px solid #dadce0;
+    font-weight: 500;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+/* 6. Minimal Buttons (Green & Outline) */
+.btn-sheet-primary {
+    background-color: #188038;
+    color: white;
+    border: none;
+    font-weight: 500;
+    padding: 6px 16px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.btn-sheet-primary:hover {
+    background-color: #137333;
+    color: white;
+}
+
+.btn-sheet-outline {
+    background-color: white;
+    color: #5f6368;
+    border: 1px solid #dadce0;
+    font-weight: 500;
+    padding: 6px 16px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.btn-sheet-outline:hover {
+    background-color: #f1f3f4;
+    color: #202124;
+}
+
+.btn-sheet-danger-text {
+    background: none;
+    border: none;
+    color: #d93025;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.btn-sheet-danger-text:hover {
+    background-color: #fce8e6;
+}
+
+/* 7. Column Width Specifics (Optional for Section Table) */
+.section-name-col {
+    width: 250px;
+    font-weight: 500;
+    color: #000000;
+}
+
+/* 5. SEARCH BARS (Google Style) */
+.input-group-text {
+    background-color: white;
+    border-right: none;
+    border-color: #dadce0;
+    color: #5f6368;
+}
+
+.form-control {
+    border-color: #dadce0;
+    color: #202124;
+}
+
+.form-control:focus {
+    border-color: #188038;
+    /* Green focus border */
+    box-shadow: 0 0 0 0.2rem rgba(24, 128, 56, 0.15);
+    /* Green glow */
+}
+
+/* Search Input Specific */
+#liveSearchInput {
+    border-left: none;
+    /* Connect to icon */
+}
+
+/* 6. CARD CONTAINERS (Clean White) */
+.card {
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    box-shadow: none;
+}
+
+/* 7. BADGES (Subtle Colors) */
+.badge {
+    font-weight: 500;
+    border-radius: 4px;
+}
+
+.bg-success {
+    background-color: #e6f4ea !important;
+    color: #137333 !important;
+}
+
+/* Green Text/Light Bg */
+.bg-warning {
+    background-color: #fef7e0 !important;
+    color: #b06000 !important;
+}
+
+/* Yellow Text/Light Bg */
+.bg-danger {
+    background-color: #fce8e6 !important;
+    color: #c5221f !important;
+}
+
+/* Red Text/Light Bg */
+.bg-info {
+    background-color: #e8f0fe !important;
+    color: #1967d2 !important;
+}
+
+/* Blue Text/Light Bg */
+.bg-secondary {
+    background-color: #f1f3f4 !important;
+    color: #5f6368 !important;
+}
+
+/* Gray Text/Light Bg */
+
+/* --- DASHBOARD POLISH --- */
+
+/* Quick Action Container */
+.quick-actions-card {
+    background-color: #ffffff;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.quick-actions-title {
+    font-size: 1.1rem;
+    color: #5f6368;
+    font-weight: 500;
+    margin-bottom: 20px;
+}
+
+/* Specific Fix for Outline Button Hover (View Schedule) */
+.btn-outline-secondary {
+    color: #5f6368;
+    border-color: #dadce0;
+    background-color: white;
+}
+
+.btn-outline-secondary:hover {
+    color: #202124 !important;
+    /* Dark Text on hover */
+    background-color: #f1f3f4 !important;
+    /* Light Gray Bg */
+    border-color: #dadce0 !important;
+}
+
+/* Generate Button (Green) */
+.btn-generate {
+    background-color: #188038;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    transition: all 0.2s;
+}
+
+.btn-generate:hover {
+    background-color: #137333;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+    color: white;
+}
+
+/* Stat Cards Polish */
+.stat-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #dadce0;
+    border-left: 4px solid #188038 !important;
+    /* Force Green Border */
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon-bg {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #e6f4ea;
+    /* Light Green Circle */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+}
+
+.stat-icon-bg i {
+    color: #188038;
+    font-size: 1.2rem;
+}
+
+/* --- GOOGLE STYLE ACTION BUTTONS --- */
+
+/* General Icon Button (No Border, Round Hover) */
+.btn-icon {
+    border: none;
+    background: transparent;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #5f6368;
+    /* Default Google Gray */
+    transition: all 0.2s ease;
+    margin: 0 2px;
+}
+
+.btn-icon:hover {
+    background-color: #f1f3f4;
+    /* Light Gray Circle on Hover */
+}
+
+/* Specific Colors on Hover */
+.btn-icon.view:hover {
+    color: #1967d2;
+    background-color: #e8f0fe;
+}
+
+/* Blue */
+.btn-icon.edit:hover {
+    color: #188038;
+    background-color: #e6f4ea;
+}
+
+/* Green */
+.btn-icon.delete:hover {
+    color: #d93025;
+    background-color: #fce8e6;
+}
+
+/* Red */
+
+/* Search Bar Polish */
+.google-search-bar {
+    background-color: #f1f3f4;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 10px 15px;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.google-search-bar:focus-within {
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    border-color: transparent;
+}
+
+.google-search-input {
+    border: none;
+    background: transparent;
+    width: 100%;
+    outline: none;
+    color: #3c4043;
+}
+
+/* =================================================================== */
+/*           GOOGLE DRIVE-STYLE SELECTION (ANIMATED & POSITIONED)      */
+/* =================================================================== */
+
+/* 1. ROW STYLING (High Specificity) */
+.course-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.table-hover tbody tr.course-row:hover {
+    background-color: #f1f3f4;
+}
+
+/* SELECTED STATE - FORCE GREEN */
+table.table tbody tr.course-row.selected td,
+table.table tbody tr.section-row.selected td,
+table.table tbody tr.faculty-row.selected td {
+    background-color: #e6f4ea !important;
+    /* Light Green */
+    transition: background-color 0.2s ease;
+}
+
+/* Ensure hover doesn't remove the selection color */
+table.table tbody tr.course-row.selected:hover td,
+table.table tbody tr.section-row.selected:hover td,
+table.table tbody tr.faculty-row.selected:hover td {
+    background-color: #dcece0 !important;
+    /* Slightly darker green on hover */
+}
+
+table.table tbody tr.student-row.selected td,
+table.table tbody tr.irreg-row.selected td {
+    background-color: #e6f4ea !important;
+    transition: background-color 0.2s ease;
+}
+table.table tbody tr.student-row.selected:hover td,
+table.table tbody tr.irreg-row.selected:hover td {
+    background-color: #dcece0 !important;
+}
+
+/* 2. HIDE CHECKBOXES */
+.row-checkbox {
+    display: none;
+}
+
+.select-cell {
+    width: 40px;
+    text-align: center;
+    padding-left: 15px !important;
+}
+
+/* =================================================================== */
+/*    3. BULK ACTION BAR (Perfect Overlay Fix)                         */
+/* =================================================================== */
+
+.bulk-action-bar {
+    /* Initial State: Hidden */
+    display: flex;
+    visibility: hidden;
+    opacity: 0;
+
+    /* POSITIONING - COVER PARENT EXACTLY */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Kukunin nito ang height ng Search Bar row */
+
+    /* APPEARANCE */
+    background-color: #e6f4ea;
+    /* Light Green */
+    z-index: 1050;
+    /* Nasa ibabaw ng inputs */
+    padding: 0 20px;
+    /* Spacing sa gilid */
+    align-items: center;
+    justify-content: space-between;
+
+    /* Rounded corners para match sa Search input style */
+    border-radius: 4px;
+
+    /* ANIMATION (Simple Fade In) */
+    transition: all 0.2s ease-in-out;
+    pointer-events: none;
+}
+
+/* ACTIVE STATE */
+.bulk-action-bar.active {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Text Styling */
+.bulk-count {
+    font-size: 1rem;
+    color: #188038;
+    /* Green Text */
+    font-weight: 500;
+}
+
+/* Close (X) Button */
+.bulk-action-bar .btn-icon {
+    color: #188038;
+    margin-right: 10px;
+    font-size: 1.1rem;
+    border: none;
+    background: none;
+    transition: transform 0.2s;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.bulk-action-bar .btn-icon:hover {
+    background-color: rgba(24, 128, 56, 0.1);
+}
+
+/* Base style for ALL bulk action buttons (no-class fallback) */
+.bulk-btn {
+    border: none;
+    background: transparent;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #5f6368;
+    transition: background 0.2s, color 0.2s;
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+.bulk-btn:hover {
+    background-color: #f1f3f4;
+    color: #3c4043;
+}
+
+/* Trash Icon Container */
+.bulk-btn.delete-icon {
+    border: none;
+    background: transparent;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #5f6368;
+    transition: background 0.2s, color 0.2s;
+    font-size: 1.1rem;
+}
+
+.bulk-btn.delete-icon:hover {
+    background-color: #fce8e6;
+    /* Light Red BG */
+    color: #d93025;
+    /* Red Icon */
+}
+
+/* 5. MODAL STYLING (Kapareho ng screenshot mo) */
+.modal-content {
+    border: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    border-radius: 8px;
+}
+
+.modal-header {
+    border-bottom: none;
+    padding: 24px 24px 0 24px;
+}
+
+.modal-title {
+    font-size: 1.2rem;
+    color: #202124;
+    font-weight: 400;
+}
+
+.modal-body {
+    padding: 10px 24px 24px 24px;
+    color: #5f6368;
+    font-size: 1rem;
+}
+
+.modal-footer {
+    border-top: none;
+    padding: 8px 24px 24px 24px;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* Archive/Delete Confirm Button (Red) */
+.btn-archive-confirm {
+    background-color: #d93025;
+    color: white;
+    font-weight: 500;
+    border: none;
+    padding: 8px 24px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.btn-archive-confirm:hover {
+    background-color: #b31412;
+}
+
+/* Cancel Button */
+.btn-archive-cancel {
+    color: #5f6368;
+    font-weight: 500;
+    background: white;
+    border: 1px solid #dadce0;
+    padding: 8px 24px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.btn-archive-cancel:hover {
+    background-color: #f1f3f4;
+    color: #202124;
+}
+
+/* =================================================================== */
+/*           GOOGLE STYLE CONTROLS (Checkbox & Pagination)             */
+/* =================================================================== */
+
+/* 1. GOOGLE STYLE CHECKBOXES (Fixed Green Dash) */
+.form-check-input {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #5f6368;
+    /* Default Gray Border */
+    border-radius: 2px;
+    /* Slight rounded corners */
+    background-color: white;
+    margin-top: 0.2rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+/* When Checked (Checkmark): Google Green */
+.form-check-input:checked {
+    background-color: #188038 !important;
+    border-color: #188038 !important;
+}
+
+/* When Indeterminate (Dash): FORCE Google Green */
+.form-check-input:indeterminate {
+    background-color: #188038 !important;
+    /* Green Background */
+    border-color: #188038 !important;
+    /* Green Border */
+    /* Ensure the dash remains white */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10h8'/%3e%3c/svg%3e") !important;
+}
+
+/* Focus State (Green Glow instead of Blue) */
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.25rem rgba(24, 128, 56, 0.15) !important;
+    border-color: #188038 !important;
+}
+
+
+/* 2. GOOGLE STYLE PAGINATION (Flat & Clean) */
+.pagination {
+    gap: 5px;
+    /* Space between numbers */
+}
+
+.page-link {
+    border: none;
+    /* Remove borders */
+    color: #3c4043;
+    /* Dark Gray Text */
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 4px;
+    /* Rounded corners */
+    padding: 8px 12px;
+    background-color: transparent;
+    transition: background-color 0.2s;
+}
+
+/* Hover State */
+.page-link:hover {
+    background-color: #f1f3f4;
+    /* Light Gray Hover */
+    color: #202124;
+}
+
+/* Active State (Current Page) */
+.page-item.active .page-link {
+    background-color: #e6f4ea;
+    /* Light Green Background */
+    color: #188038;
+    /* Green Text */
+    font-weight: bold;
+    box-shadow: none;
+}
+
+/* Disabled State */
+.page-item.disabled .page-link {
+    background-color: transparent;
+    color: #dadce0;
+    /* Very light gray */
+}
+
+/* Remove default focus blue outline */
+.page-link:focus {
+    box-shadow: 0 0 0 0.2rem rgba(24, 128, 56, 0.1);
+}
+
+/* =================================================================== */
+/*           GOOGLE STYLE SORT DROPDOWN (Fixed Width & Spacing)        */
+/* =================================================================== */
+
+/* 1. The Trigger Button (Fixed Width) */
+.google-sort-toggle {
+    border: 1px solid transparent;
+    background-color: transparent;
+    color: #5f6368;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 8px 16px;
+    /* Added vertical padding */
+    border-radius: 4px;
+    transition: all 0.2s;
+
+    /* WIDTH FIX: Fixed width and space-between layout */
+    min-width: 220px;
+    /* Sapat na lapad para sa text */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    /* Text sa kaliwa, Arrow sa kanan */
+}
+
+.google-sort-toggle:hover,
+.google-sort-toggle[aria-expanded="true"] {
+    background-color: #f1f3f4;
+    color: #202124;
+}
+
+/* Custom Arrow (Optional: keeps bootstrap default but positioned right) */
+.google-sort-toggle::after {
+    margin-left: 10px;
+    opacity: 0.6;
+}
+
+/* 2. The Dropdown Menu (Container) */
+.google-sort-menu {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 8px 0;
+
+    /* WIDTH FIX: Match the button width exactly */
+    width: 100%;
+    min-width: 220px;
+    /* Same as button min-width */
+
+    /* POSITIONING FIX (From previous request) */
+    position: absolute !important;
+    top: 100% !important;
+    margin-top: 4px !important;
+    /* Dikit ng konti pero may gap */
+    left: 0 !important;
+    right: 0 !important;
+
+    background-color: white;
+    z-index: 1000;
+
+    animation: googleDropdownFade 0.2s ease-out forwards;
+    transform-origin: top center;
+}
+
+@keyframes googleDropdownFade {
+    0% {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* 3. The Items (Options with Breathing Room) */
+.google-sort-item {
+    /* SPACING FIX: Malaking padding-left para sa Checkmark */
+    padding: 10px 20px 10px 45px;
+
+    font-size: 0.9rem;
+    color: #3c4043;
+    transition: background-color 0.1s;
+    cursor: pointer;
+    text-decoration: none;
+    display: block;
+    position: relative;
+    /* For absolute positioning of checkmark */
+    white-space: nowrap;
+    /* Prevent text wrap */
+}
+
+/* Hover State */
+.google-sort-item:hover {
+    background-color: #f1f3f4;
+    color: #202124;
+}
+
+/* Active/Selected State */
+.google-sort-item.active {
+    background-color: #e6f4ea !important;
+    /* Green BG */
+    color: #188038 !important;
+    /* Green Text */
+    font-weight: 500;
+}
+
+/* 4. Checkmark Styling (Dito inusog ang check) */
+.google-sort-item.active::before {
+    content: "✓";
+    position: absolute;
+
+    /* POSITION: Usog sa kaliwa pero may space sa text */
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    /* Center vertically */
+
+    font-weight: bold;
+    font-size: 1rem;
+    color: #188038;
+}
+
+/* style.css */
+
+/* ... (existing codes) ... */
+
+/* New Style for Assign Curriculum (Simple Text + Icon) */
+.btn-simple-assign {
+    background: transparent;
+    border: none;
+    color: #5f6368;
+    /* Standard Dark Gray */
+    font-weight: 500;
+    font-size: 0.9rem;
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
+}
+
+/* Hover Effect: Light Green */
+.btn-simple-assign:hover {
+    background-color: #e6f4ea;
+    /* Light Green Background */
+    color: #188038;
+    /* Dark Green Text */
+}
+
+/* Ensure Trash Icon Style matches Manage Courses (re-verifying) */
+.bulk-btn.delete-icon {
+    border: none;
+    background: transparent;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #5f6368;
+    transition: background 0.2s, color 0.2s;
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+.bulk-btn.delete-icon:hover {
+    background-color: #fce8e6;
+    /* Light Red BG */
+    color: #d93025;
+    /* Red Icon */
+}
+
+.btn-clean-primary {
+    background-color: #188038;
+    /* Google Green */
+    color: #ffffff;
+    border: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    padding: 8px 20px;
+    /* Mas maluwag na padding */
+    border-radius: 8px;
+    /* Mas rounded corners */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    /* Subtle shadow para umangat */
+    transition: all 0.2s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    /* Space between icon and text */
+}
+
+.btn-clean-primary:hover {
+    background-color: #137333;
+    /* Darker green on hover */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+    /* Lift effect */
+    transform: translateY(-1px);
+    color: #ffffff;
+}
+
+/* 2. Secondary/Ghost Button (Deleted Courses) */
+/* Walang border, text at icon lang, gray hover effect */
+.btn-clean-secondary {
+    background-color: transparent;
+    color: #5f6368;
+    /* Google Gray text */
+    border: 1px solid #dadce0;
+    /* Napakanipis na border */
+    font-weight: 500;
+    font-size: 0.9rem;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.2s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-clean-secondary:hover {
+    background-color: #f1f3f4;
+    /* Light gray background on hover */
+    color: #202124;
+    /* Darker text */
+    border-color: #dadce0;
+    text-decoration: none;
+}
+
+/* Optional: Icon adjustment inside buttons */
+.btn-clean-primary i,
+.btn-clean-secondary i {
+    font-size: 1.1rem;
+}
+
+/* style.css */
+
+/* ... (existing codes) ... */
+
+/* =================================================================== */
+/*           NESTED DROPDOWN (Google Sheets Style)                     */
+/* =================================================================== */
+
+.dropdown-submenu {
+    position: relative;
+}
+
+/* Submenu positioning (Sa kanan lalabas) */
+.dropdown-submenu .dropdown-menu {
+    top: 0;
+    left: 100%;
+    /* I-push sa kanan ng parent menu */
+    margin-top: -5px;
+    /* Konting adjustment para pantay */
+    margin-left: 0;
+    display: none;
+    /* Hidden by default */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: none;
+    border-radius: 4px;
+    min-width: 180px;
+}
+
+/* Show submenu on hover */
+.dropdown-submenu:hover>.dropdown-menu {
+    display: block;
+}
+
+/* Arrow indicator for submenu */
+.dropdown-submenu>.dropdown-item::after {
+    content: "›";
+    /* Right arrow symbol */
+    float: right;
+    font-weight: bold;
+    margin-left: 10px;
+    font-size: 1.2rem;
+    line-height: 1;
+    color: #5f6368;
+}
+
+/* Hover style for items */
+.dropdown-item:hover {
+    background-color: #f1f3f4;
+    color: #202124;
+}
+
+/* style.css */
+
+/* --- Google Style Action Button (Neutral Default -> Green Hover) --- */
+.btn-google-action {
+    background-color: transparent;
+    border: 1px solid transparent;
+    color: #5f6368;
+    /* Default Gray text */
+    font-weight: 500;
+    font-size: 0.9rem;
+    padding: 8px 16px;
+    border-radius: 4px;
+    transition: all 0.2s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    /* In case gamitin sa anchor tag */
+}
+
+/* Icon style - Inherit color from parent para sumabay sa text */
+.btn-google-action i {
+    color: inherit;
+    font-size: 1.1rem;
+}
+
+/* HOVER STATE: Dito lang magiging Green */
+.btn-google-action:hover {
+    background-color: #e6f4ea;
+    /* Light Green background */
+    color: #188038;
+    /* Google Green text & icon */
+}
+
+/* style.css */
+
+/* --- Luxury Accordion for Recycle Bin --- */
+.luxury-accordion-btn {
+    width: 100%;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+    text-decoration: none;
+}
+
+.luxury-accordion-btn:hover {
+    background-color: #fcfcfc;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+    border-color: #d1d1d1;
+}
+
+/* Header Text Styles */
+.luxury-title {
+    font-weight: 600;
+    color: #444;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Icon Styles */
+.luxury-icon {
+    color: #d93025;
+    /* Red for trash */
+    font-size: 1.1rem;
+    background-color: #fce8e6;
+    padding: 6px;
+    border-radius: 6px;
+}
+
+/* Chevron Rotation Animation */
+.luxury-chevron {
+    transition: transform 0.3s ease;
+    color: #888;
+}
+
+.luxury-accordion-btn[aria-expanded="true"] .luxury-chevron {
+    transform: rotate(180deg);
+}
+
+/* The Content Area */
+.luxury-content {
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    margin-top: -5px;
+    /* Pull up to connect */
+    padding: 15px;
+}
+
+/* Individual Link Items */
+.luxury-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    background: white;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    text-decoration: none;
+    color: #555;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.luxury-item:last-child {
+    margin-bottom: 0;
+}
+
+.luxury-item:hover {
+    background-color: #ffffff;
+    border-color: #188038;
+    /* Green border on hover */
+    color: #188038;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.luxury-item i {
+    margin-right: 12px;
+    font-size: 1rem;
+    opacity: 0.7;
+}
+
+/* DAGDAG MO ITO SA CSS */
+.btn-outline {
+    background: white;
+    color: #5f6368;
+    border: 1px solid #dadce0;
+    padding: 12px;
+    width: 100%;
+    /* Hahatiin natin sila sa HTML */
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: 0.2s;
+}
+
+.btn-outline:hover {
+    background: #f1f3f4;
+    color: #202124;
+    border-color: #c6c6c6;
+}
+
+/* Container para magkatabi ang buttons */
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* 1. Force Fixed Layout */
+.formal-timetable {
+    table-layout: fixed !important;
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* 2. Strict Cell Height */
+/* Ang height na ito (hal. 25px) ay dapat mag-match sa 30-min slot mo */
+.formal-timetable td,
+.formal-timetable th {
+    height: 28px !important;
+    /* FIXED HEIGHT */
+    padding: 0 !important;
+    overflow: hidden;
+    border: 1px solid #000;
+}
+
+/* 3. Class Content Box */
+.formal-class-content {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.75rem;
+    line-height: 1;
+    background-color: #f0fdf4;
+    /* Light Excel Green */
+}
+
+.course-readable-card label {
+    border-color: #dee2e6 !important;
+    border-radius: 6px;
+    border-left: 4px solid transparent !important;
+}
+
+/* Siguraduhin na ang label ang nasasalo ng click */
+.course-readable-card label {
+    position: relative;
+    z-index: 1;
+}
+
+/* Iwasan ang text-selection block */
+.course-readable-card label * {
+    pointer-events: none;
+}
+
+.course-readable-card input:checked+label {
+    background-color: #e6f4ea !important;
+    border-color: #188038 !important;
+    border-left: 4px solid #188038 !important;
+}
+
+.assignment-row input[type="checkbox"]:checked+label {
+    background-color: #e6f4ea !important;
+    border-left: 3px solid #188038 !important;
+}
+
+.badge-selection {
+    font-size: 0.85rem;
+    font-weight: bold;
+    background: #fff;
+    border: 1px solid #ced4da;
+    color: #188038;
+    padding: 4px 10px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+/* =====================================================================
+   MODULE 3: SCHEDULE EDITOR — sched-block states, draft bar, lock badge
+   ===================================================================== */
+
+/* Lock badge in the nav bar */
+.lock-badge-nav {
+    background: #fce8e6;
+    color: #c5221f;
+    font-size: 0.72rem;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Draft mode indicator bar shown above the editor grid */
+.draft-mode-bar {
+    background: #e8f0fe;
+    border-bottom: 2px solid #1a73e8;
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    color: #1967d2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Schedule Editor grid container */
+.editor-grid-wrap {
+    overflow: auto;
+    position: relative;
+}
+
+.editor-grid {
+    display: grid;
+    /* columns set inline by JS based on allowed_days count */
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    min-width: 700px;
+    user-select: none;
+}
+
+.grid-header-cell {
+    background: #f8f9fa;
+    border-right: 1px solid #e0e0e0;
+    border-bottom: 2px solid #dadce0;
+    padding: 6px 4px;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #5f6368;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.grid-time-cell {
+    background: #f8f9fa;
+    border-right: 1px solid #e0e0e0;
+    border-bottom: 1px solid #f1f3f4;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    color: #80868b;
+    text-align: right;
+    white-space: nowrap;
+    vertical-align: top;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+}
+
+.grid-cell {
+    border-right: 1px solid #f1f3f4;
+    border-bottom: 1px solid #f1f3f4;
+    min-height: 20px;
+    position: relative;
+    transition: background 0.1s;
+    cursor: pointer;
+}
+
+.grid-cell:hover { background: #f0f9f0; }
+.grid-cell.drag-over { background: #e6f4ea; outline: 2px dashed #188038; }
+.grid-cell.conflict-target {
+    background: #fce8e6 !important;
+    outline: 2px dashed #c5221f !important;
+}
+
+/* Schedule blocks inside grid cells */
+.sched-block {
+    position: absolute;
+    left: 2px; right: 2px;
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-size: 0.72rem;
+    line-height: 1.3;
+    overflow: hidden;
+    cursor: grab;
+    z-index: 1;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    transition: box-shadow 0.15s, opacity 0.15s;
+}
+.sched-block:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.sched-block:active { cursor: grabbing; opacity: 0.7; }
+
+/* GA-finalized entry — green, solid left border */
+.sched-block.source-ga {
+    background: #e6f4ea;
+    border-left: 4px solid #188038;
+    color: #137333;
+}
+/* Draft entry — blue, dashed border */
+.sched-block.source-manual.is-draft {
+    background: #e8f4fd;
+    border: 2px dashed #1a73e8;
+    color: #1a73e8;
+}
+/* Manual master entry — purple, solid left border */
+.sched-block.source-manual:not(.is-draft) {
+    background: #f3e8fd;
+    border-left: 4px solid #7c3aed;
+    color: #6d28d9;
+}
+/* Conflict marker overlay */
+.sched-block.has-conflict {
+    background: #fce8e6 !important;
+    border-color: #c5221f !important;
+    color: #c5221f !important;
+    animation: conflictPulse 0.4s ease;
+}
+
+@keyframes conflictPulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.5; }
+}
+
+/* GA locked icon overlay */
+.sched-block.source-ga .lock-icon {
+    float: right;
+    font-size: 0.65rem;
+    opacity: 0.6;
+}
+
+/* Editor left panel */
+.editor-left-panel {
+    width: 240px;
+    flex-shrink: 0;
+    border-right: 1px solid #e0e0e0;
+    background: #fafafa;
+    padding: 12px;
+    overflow-y: auto;
+}
+
+/* Draft version badge */
+.draft-version-badge {
+    background: #e8f0fe;
+    color: #1967d2;
+    border: 1px solid #c5d8f6;
+    font-size: 0.75rem;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+.draft-version-badge.published {
+    background: #e6f4ea;
+    color: #137333;
+    border-color: #b7dfb8;
+}
+
+/* Conflict tooltip */
+.conflict-tooltip {
+    position: absolute;
+    background: #c5221f;
+    color: #fff;
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    z-index: 100;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Legend row for the editor */
+.editor-legend {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    padding: 6px 12px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+}
+.legend-swatch {
+    width: 14px; height: 14px;
+    border-radius: 2px;
+    display: inline-block;
+    vertical-align: middle;
+}
+.legend-ga    { background: #e6f4ea; border-left: 3px solid #188038; }
+.legend-draft { background: #e8f4fd; border: 2px dashed #1a73e8; }
+.legend-manual{ background: #f3e8fd; border-left: 3px solid #7c3aed; }

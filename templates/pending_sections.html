@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% block title %}Pending Sections{% endblock %}
+
+{% block content %}
+
+<!-- 1. HEADER -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1">Pending Sections</h1>
+        <p class="text-muted small mb-0">Reassign scheduled classes whose section was permanently deleted.</p>
+    </div>
+</div>
+
+<!-- Flash messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<!-- SEARCH BAR + SORT -->
+<div class="row mb-4 position-relative align-items-center" style="height: 50px;">
+    <div class="col h-100">
+        <div class="google-search-bar d-flex align-items-center h-100 w-100">
+            <i class="bi bi-search text-secondary me-3"></i>
+            <input type="text" class="google-search-input" placeholder="Search by course, faculty, room..." id="liveSearchInput">
+        </div>
+    </div>
+    <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end">
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                {% if current_sort == 'course-asc' %}
+                    Sort by: Course (A-Z)
+                {% elif current_sort == 'course-desc' %}
+                    Sort by: Course (Z-A)
+                {% else %}
+                    Sort by: Default
+                {% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'course-asc' %}active{% endif %}"
+                       href="{{ url_for('pending_sections', sort='course-asc') }}">
+                       Sort by: Course (A-Z)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'course-desc' %}active{% endif %}"
+                       href="{{ url_for('pending_sections', sort='course-desc') }}">
+                       Sort by: Course (Z-A)
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>Confirm Section Assignments
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-muted pt-2">
+                <p>You are about to assign sections for <strong>{{ orphaned_scs|length }}</strong> class(es).</p>
+                <p class="mb-0 p-3 rounded" style="background: #fff3cd; color: #856404; border: 1px solid #ffc107;">
+                    <strong>⚠ This action cannot be undone.</strong><br>
+                    The schedule will be updated immediately. Please double-check before proceeding.
+                </p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-success px-4" id="confirmBtn">
+                    <i class="bi bi-check-lg me-1"></i> Confirm & Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN FORM -->
+<div id="formContainer">
+    <form action="{{ url_for('run_pending_sections') }}" method="POST" id="pendingForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="bg-white rounded border shadow-sm overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4" style="width: 25%;">Course Details</th>
+                            <th style="width: 20%;">Faculty</th>
+                            <th style="width: 25%;">Schedule Info</th>
+                            <th class="text-center" style="width: 30%;">Assign Section</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pendingTableBody">
+                        {% for sc in orphaned_scs %}
+                        <tr class="pending-row data-row">
+                            <!-- Course Info -->
+                            <td class="ps-4 search-target">
+                                <div class="d-flex flex-column">
+                                    <span class="fw-bold text-dark">{{ sc.course.course_code if sc.course else '—' }}</span>
+                                    <span class="text-muted small">{{ sc.course.course_name if sc.course else '—' }}</span>
+                                    <span class="text-muted" style="font-size: 0.7rem; margin-top: 2px;">
+                                        <i class="bi bi-building me-1"></i>{{ sc.course.department if sc.course else '—' }}
+                                    </span>
+                                </div>
+                            </td>
+
+                            <!-- Faculty -->
+                            <td class="search-target">
+                                <span class="{% if sc.faculty %}fw-medium text-dark{% else %}text-muted fst-italic{% endif %}">
+                                    {{ sc.faculty.full_name if sc.faculty else 'T.B.A.' }}
+                                </span>
+                            </td>
+
+                            <!-- Schedule Info -->
+                            <td>
+                                <div class="d-flex align-items-center text-muted small">
+                                    <i class="bi bi-calendar3 me-2"></i>
+                                    <div>
+                                        <span class="d-block text-dark fw-medium">
+                                            {{ sc.day }}, {{ sc.start_time }}–{{ sc.end_time }}
+                                        </span>
+                                        <span>{{ sc.room.room_name if sc.room else '—' }}</span>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Section Dropdown -->
+                            <td class="pe-4">
+                                <select class="form-select form-select-sm border-secondary" name="assignment_{{ sc.id }}" required>
+                                    <option value="" selected disabled>-- Select Section --</option>
+                                    {% for section in all_sections %}
+                                    <option value="{{ section.id }}">{{ section.section_name }} (Yr {{ section.year_level }})</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5">
+                                <div class="text-success opacity-75">
+                                    <i class="bi bi-check-circle-fill display-4 d-block mb-2"></i>
+                                    <h5>All classes have sections assigned.</h5>
+                                    <p class="text-muted small">No pending section assignments.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PAGINATION CONTROLS -->
+        {% if orphaned_scs %}
+        <div id="paginationControls" class="mt-3 pb-5" style="display:none;">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mb-2" id="pageList"></ul>
+            </nav>
+            <div class="d-flex align-items-center justify-content-center gap-2 text-muted" style="font-size:0.85rem;">
+                <span>Jump to:</span>
+                <input type="number" id="pageJumpInput" class="form-control form-control-sm text-center" style="width:70px;" min="1" placeholder="1–1">
+                <button class="btn btn-sm btn-outline-secondary px-3" id="jumpGoBtn">Go</button>
+                <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i class="bi bi-arrow-right-short"></i> arrow keys</span>
+            </div>
+        </div>
+        {% endif %}
+
+    </form>
+</div>
+
+<!-- FLOATING SAVE BUTTON -->
+{% if orphaned_scs %}
+<button type="button" id="floatSaveBtn"
+    style="position: fixed; bottom: 2rem; right: 2rem; z-index: 1050;"
+    class="btn btn-success rounded-pill px-4 shadow"
+    data-bs-toggle="modal" data-bs-target="#confirmModal">
+    <i class="bi bi-check-lg me-1"></i> Save
+</button>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const PAGE_SIZE = 15;
+    let currentPage = 1;
+    const allRows = Array.from(document.querySelectorAll('.data-row'));
+
+    function applyVisibility() {
+        allRows.forEach(row => {
+            const sh = row.dataset.searchHidden === '1';
+            const ph = row.dataset.paginationHidden === '1';
+            row.style.display = (sh || ph) ? 'none' : '';
+        });
+    }
+
+    function buildPageRange(current, total) {
+        const pages = [];
+        let prev = null;
+        for (let i = 1; i <= total; i++) {
+            const show = i <= 1 || i >= total || (i >= current - 2 && i <= current + 2);
+            if (show) { if (prev !== null && i > prev + 1) pages.push(null); pages.push(i); prev = i; }
+        }
+        return pages;
+    }
+
+    function renderPagination() {
+        const visibleRows = allRows.filter(r => r.dataset.searchHidden !== '1');
+        const totalPages = Math.max(1, Math.ceil(visibleRows.length / PAGE_SIZE));
+        if (currentPage > totalPages) currentPage = totalPages;
+        allRows.forEach(r => r.dataset.paginationHidden = '1');
+        visibleRows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+            .forEach(r => r.dataset.paginationHidden = '0');
+        applyVisibility();
+
+        const paginationEl = document.getElementById('paginationControls');
+        if (!paginationEl) return;
+        if (totalPages <= 1) { paginationEl.style.display = 'none'; return; }
+        paginationEl.style.display = '';
+
+        const pageList = document.getElementById('pageList');
+        const jumpInput = document.getElementById('pageJumpInput');
+        if (jumpInput) { jumpInput.max = totalPages; jumpInput.placeholder = `1–${totalPages}`; }
+
+        const pages = buildPageRange(currentPage, totalPages);
+        pageList.innerHTML = '';
+        pageList.innerHTML += `<li class="page-item ${currentPage<=1?'disabled':''}"><a class="page-link" href="#" data-p="${currentPage-1}"><i class="bi bi-chevron-left"></i></a></li>`;
+        pages.forEach(p => {
+            if (p === null) {
+                pageList.innerHTML += `<li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>`;
+            } else {
+                pageList.innerHTML += `<li class="page-item ${p===currentPage?'active':''}"><a class="page-link" href="#" data-p="${p}">${p}</a></li>`;
+            }
+        });
+        pageList.innerHTML += `<li class="page-item ${currentPage>=totalPages?'disabled':''}"><a class="page-link" href="#" data-p="${currentPage+1}"><i class="bi bi-chevron-right"></i></a></li>`;
+
+        pageList.querySelectorAll('a[data-p]').forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                const p = parseInt(a.dataset.p);
+                if (p >= 1 && p <= totalPages) { currentPage = p; renderPagination(); }
+            });
+        });
+    }
+
+    // Live Search
+    const searchInput = document.getElementById('liveSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function () {
+            const filterText = this.value.toLowerCase();
+            allRows.forEach(row => {
+                let rowText = '';
+                row.querySelectorAll('.search-target').forEach(el => { rowText += el.textContent.toLowerCase() + ' '; });
+                row.dataset.searchHidden = rowText.includes(filterText) ? '0' : '1';
+            });
+            currentPage = 1;
+            renderPagination();
+        });
+    }
+
+    // Jump to + Go
+    document.getElementById('jumpGoBtn')?.addEventListener('click', () => {
+        const input = document.getElementById('pageJumpInput');
+        const n = parseInt(input?.value);
+        const total = Math.max(1, Math.ceil(allRows.filter(r => r.dataset.searchHidden !== '1').length / PAGE_SIZE));
+        if (!isNaN(n) && n >= 1 && n <= total) { currentPage = n; renderPagination(); }
+    });
+
+    // Arrow keys
+    document.addEventListener('keydown', e => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        if (document.querySelector('.modal.show')) return;
+        const tag = document.activeElement?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        const total = Math.max(1, Math.ceil(allRows.filter(r => r.dataset.searchHidden !== '1').length / PAGE_SIZE));
+        if (e.key === 'ArrowLeft' && currentPage > 1) { currentPage--; renderPagination(); }
+        if (e.key === 'ArrowRight' && currentPage < total) { currentPage++; renderPagination(); }
+    });
+
+    // Confirm modal → submit
+    const confirmBtn = document.getElementById('confirmBtn');
+    const pendingForm = document.getElementById('pendingForm');
+    if (confirmBtn && pendingForm) {
+        confirmBtn.addEventListener('click', function () {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+            if (modal) modal.hide();
+            pendingForm.submit();
+        });
+    }
+
+    renderPagination();
+});
+</script>
+{% endblock %}

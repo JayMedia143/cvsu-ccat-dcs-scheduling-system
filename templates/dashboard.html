@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Page Title -->
+<div class="mb-4">
+    <h1 class="h3 text-gray-800 fw-light">Dashboard Overview</h1>
+    <p class="text-muted small">Welcome back, Admin. Here's the summary of your department data.</p>
+</div>
+
+<!-- Stat Cards Row -->
+<div class="row g-4 mb-5">
+    <!-- Courses -->
+    <div class="col-md-3">
+        <a href="{{ url_for('manage_courses') }}" class="text-decoration-none">
+            <div class="card stat-card h-100 p-3">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="stat-icon-bg">
+                        <i class="bi bi-book"></i>
+                    </div>
+                    <h6 class="text-secondary mb-0 fw-bold">COURSES</h6>
+                </div>
+                <h2 class="display-6 fw-bold text-dark mb-0">{{ stats.courses }}</h2>
+                <small class="text-muted">Active subjects</small>
+            </div>
+        </a>
+    </div>
+
+    <!-- Sections -->
+    <div class="col-md-3">
+        <a href="{{ url_for('manage_sections') }}" class="text-decoration-none">
+            <div class="card stat-card h-100 p-3">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="stat-icon-bg">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <h6 class="text-secondary mb-0 fw-bold">SECTIONS</h6>
+                </div>
+                <h2 class="display-6 fw-bold text-dark mb-0">{{ stats.sections }}</h2>
+                <small class="text-muted">Student blocks</small>
+            </div>
+        </a>
+    </div>
+
+    <!-- Faculty -->
+    <div class="col-md-3">
+        <a href="{{ url_for('manage_faculty') }}" class="text-decoration-none">
+            <div class="card stat-card h-100 p-3">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="stat-icon-bg">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                    <h6 class="text-secondary mb-0 fw-bold">FACULTY</h6>
+                </div>
+                <h2 class="display-6 fw-bold text-dark mb-0">{{ stats.faculty }}</h2>
+                <small class="text-muted">Instructors</small>
+            </div>
+        </a>
+    </div>
+
+    <!-- Rooms -->
+    <div class="col-md-3">
+        <a href="{{ url_for('manage_rooms') }}" class="text-decoration-none">
+            <div class="card stat-card h-100 p-3">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="stat-icon-bg">
+                        <i class="bi bi-door-open"></i>
+                    </div>
+                    <h6 class="text-secondary mb-0 fw-bold">ROOMS</h6>
+                </div>
+                <h2 class="display-6 fw-bold text-dark mb-0">{{ stats.rooms }}</h2>
+                <small class="text-muted">Available labs/rooms</small>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- IDAGDAG ITO SA ILALIM NG MGA STAT CARDS MO -->
+<div class="card border shadow-sm mb-5">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-end mb-2">
+            <div>
+                <h5 class="fw-bold text-dark mb-0">Schedule Completion Status</h5>
+                <p class="text-muted small mb-0">{{ stats.scheduled }} out of {{ stats.needed }} classes plotted</p>
+                <p class="text-muted small mb-0">
+                    <i class="bi bi-funnel-fill me-1"></i>
+                    {% for dept in stats.selected_depts %}
+                        <span class="badge bg-secondary fw-normal me-1">{{ dept }}</span>
+                    {% endfor %}
+                </p>
+            </div>
+            <h3 class="fw-bold text-success mb-0">{{ stats.completion_rate }}%</h3>
+        </div>
+        <div class="progress" style="height: 20px; border-radius: 10px;">
+            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar"
+                style="width: {{ stats.completion_rate }}%;" aria-valuenow="{{ stats.completion_rate }}"
+                aria-valuemin="0" aria-valuemax="100">
+            </div>
+        </div>
+        {% if stats.completion_rate < 100 %} <div class="mt-3 text-end">
+            <a href="{{ url_for('generate_page') }}" class="btn btn-sm btn-primary rounded-pill px-3">
+                <i class="bi bi-cpu me-1"></i> Run Optimization Engine
+            </a>
+    </div>
+    {% endif %}
+</div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,478 @@
+{% extends "base.html" %}
+{% block title %}Constraint Checker{% endblock %}
+
+{% block content %}
+
+<!-- 1. HEADER -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1">Constraint Checker</h1>
+        <p class="text-muted small mb-0">Audit the current schedule against all 40 constraints (HC, SC-I, SC-II).</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('generate_page') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-arrow-repeat me-2"></i> Re-Generate
+        </a>
+        <a href="{{ url_for('view_timetable') }}" class="btn btn-primary btn-sm rounded-pill px-3">
+            <i class="bi bi-calendar3 me-2"></i> View Timetable
+        </a>
+    </div>
+</div>
+
+<!-- 2. SUMMARY CARDS (wrapped so AJAX can refresh the counts) -->
+<div id="summaryCards">
+<div class="row mb-4 g-4">
+
+    <!-- Status card -->
+    <div class="col-md-5">
+        <div class="card border shadow-sm h-100">
+            <div class="card-body d-flex align-items-center p-4">
+                {% if hard_count == 0 and soft_count == 0 %}
+                    <div class="rounded-circle d-flex align-items-center justify-content-center me-4 bg-success bg-opacity-10 text-success" style="width:60px;height:60px;font-size:1.8rem;">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-1 fw-bold text-success">Fully Compliant</h4>
+                        <p class="text-muted mb-0">No hard or soft constraint violations.</p>
+                    </div>
+                {% elif hard_count == 0 %}
+                    <div class="rounded-circle d-flex align-items-center justify-content-center me-4 bg-warning bg-opacity-10 text-warning" style="width:60px;height:60px;font-size:1.8rem;">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-1 fw-bold text-warning">Soft Warnings</h4>
+                        <p class="text-muted mb-0">No hard conflicts, but <strong>{{ soft_count }}</strong> soft preference(s) unmet.</p>
+                    </div>
+                {% else %}
+                    <div class="rounded-circle d-flex align-items-center justify-content-center me-4 bg-danger bg-opacity-10 text-danger" style="width:60px;height:60px;font-size:1.8rem;">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-1 fw-bold text-danger">Attention Needed</h4>
+                        <p class="text-muted mb-0">Found <strong>{{ hard_count }}</strong> hard and <strong>{{ soft_count }}</strong> soft violation(s).</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Counts card -->
+    <div class="col-md-7">
+        <div class="card border shadow-sm h-100">
+            <div class="card-body p-0">
+                <div class="row text-center h-100 g-0 align-items-center">
+                    <div class="col border-end py-4">
+                        <h2 class="mb-0 fw-bold text-danger display-6" id="cntHard">{{ hard_count }}</h2>
+                        <small class="text-uppercase fw-bold text-muted" style="font-size:0.7rem;letter-spacing:1px;">HC Violations</small>
+                        <div><span class="badge bg-danger mt-1" style="font-size:0.65rem;">Hard</span></div>
+                    </div>
+                    <div class="col border-end py-4">
+                        <h2 class="mb-0 fw-bold text-warning display-6" id="cntSc1">{{ sc1_count }}</h2>
+                        <small class="text-uppercase fw-bold text-muted" style="font-size:0.7rem;letter-spacing:1px;">SC-I Violations</small>
+                        <div><span class="badge bg-warning text-dark mt-1" style="font-size:0.65rem;">Soft I</span></div>
+                    </div>
+                    <div class="col py-4">
+                        <h2 class="mb-0 fw-bold text-info display-6" id="cntSc2">{{ sc2_count }}</h2>
+                        <small class="text-uppercase fw-bold text-muted" style="font-size:0.7rem;letter-spacing:1px;">SC-II Violations</small>
+                        <div><span class="badge bg-info text-dark mt-1" style="font-size:0.65rem;">Soft II</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div><!-- end #summaryCards -->
+
+<!-- 3. SEARCH & SORT TOOLBAR -->
+<div class="row mb-2 position-relative align-items-center" style="height: 50px;">
+    <div class="col h-100">
+        <div class="google-search-bar d-flex align-items-center h-100 w-100">
+            <i class="bi bi-search text-secondary me-3"></i>
+            <input type="text" class="google-search-input" placeholder="Search violations (e.g., 'Room Conflict', 'BSCoS 101')..." id="liveSearchInput" value="{{ search_query }}">
+        </div>
+    </div>
+    <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end gap-2">
+
+        <!-- Sort dropdown -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortToggleBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-arrow-down-up me-2"></i>{% if sort_by == 'rule-desc' %}Rule (Z-A){% else %}Rule Name{% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
+                <li>
+                    <a class="dropdown-item google-sort-item {% if sort_by == 'rule-asc' or not sort_by %}active{% endif %}"
+                       href="#" data-sort="rule-asc" onclick="setSort('rule-asc'); return false;">Rule Name (A-Z)</a>
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if sort_by == 'rule-desc' %}active{% endif %}"
+                       href="#" data-sort="rule-desc" onclick="setSort('rule-desc'); return false;">Rule Name (Z-A)</a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Filter dropdown (multi-select checkboxes) -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="filterToggleBtn"
+                    data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                <i class="bi bi-funnel me-2"></i><span id="filterBtnLabel">Filter</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" style="min-width:230px;padding:6px 0;">
+
+                <!-- Constraint Type group -->
+                <li><h6 class="dropdown-header px-3 mb-0" style="font-size:0.68rem;letter-spacing:.06em;color:#888;">CONSTRAINT TYPE</h6></li>
+                <li>
+                    <label class="dropdown-item d-flex align-items-center gap-2 py-2 px-3" style="cursor:pointer;font-size:.9rem;">
+                        <input type="checkbox" class="form-check-input flex-shrink-0 m-0 filter-type-cb" value="HC"
+                               {% if 'HC' in selected_types %}checked{% endif %}> Hard Constraint
+                    </label>
+                </li>
+                <li>
+                    <label class="dropdown-item d-flex align-items-center gap-2 py-2 px-3" style="cursor:pointer;font-size:.9rem;">
+                        <input type="checkbox" class="form-check-input flex-shrink-0 m-0 filter-type-cb" value="SC1"
+                               {% if 'SC1' in selected_types %}checked{% endif %}> Soft Constraint I
+                    </label>
+                </li>
+                <li>
+                    <label class="dropdown-item d-flex align-items-center gap-2 py-2 px-3" style="cursor:pointer;font-size:.9rem;">
+                        <input type="checkbox" class="form-check-input flex-shrink-0 m-0 filter-type-cb" value="SC2"
+                               {% if 'SC2' in selected_types %}checked{% endif %}> Soft Constraint II
+                    </label>
+                </li>
+
+                <li><hr class="dropdown-divider mx-3 my-1"></li>
+
+                <!-- Department group -->
+                <li><h6 class="dropdown-header px-3 mb-0" style="font-size:0.68rem;letter-spacing:.06em;color:#888;">DEPARTMENT</h6></li>
+                {% for dept in all_depts %}
+                <li>
+                    <label class="dropdown-item d-flex align-items-center gap-2 py-2 px-3" style="cursor:pointer;font-size:.9rem;">
+                        <input type="checkbox" class="form-check-input flex-shrink-0 m-0 filter-dept-cb"
+                               value="{{ dept }}" {% if dept in selected_depts %}checked{% endif %}>
+                        {{ dept | replace('Department of ', '') }}
+                    </label>
+                </li>
+                {% endfor %}
+
+            </ul>
+        </div>
+
+    </div>
+</div>
+
+<!-- DYNAMIC CONTENT AREA -->
+<div id="mainContentArea">
+
+    <!-- 4. VIOLATIONS LIST -->
+    <div class="card border shadow-sm">
+        <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-secondary">Detailed Report</h6>
+            {% if total_pages > 1 %}
+            <small class="text-muted">Page {{ current_page }} of {{ total_pages }}</small>
+            {% endif %}
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4" style="width: 14%;">Type</th>
+                        <th style="width: 24%;">Rule Violated</th>
+                        <th style="width: 62%;">Conflict Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in violations %}
+                    {% if v.type == 'HC' %}
+                        {% set row_bg = '#fce8e6' %}
+                        {% set badge_html = '<span class="badge bg-danger rounded-pill px-3">HARD</span>' %}
+                        {% set rule_class = 'text-danger' %}
+                        {% set card_border = 'border-danger' %}
+                    {% elif v.type == 'SC1' %}
+                        {% set row_bg = '#fef7e0' %}
+                        {% set badge_html = '<span class="badge bg-warning text-dark rounded-pill px-3">SOFT I</span>' %}
+                        {% set rule_class = 'text-warning' %}
+                        {% set card_border = 'border-warning' %}
+                    {% else %}
+                        {% set row_bg = '#e8f4fd' %}
+                        {% set badge_html = '<span class="badge bg-info text-dark rounded-pill px-3">SOFT II</span>' %}
+                        {% set rule_class = 'text-info' %}
+                        {% set card_border = 'border-info' %}
+                    {% endif %}
+                    <tr style="background-color: {{ row_bg }};">
+                        <td class="ps-4">{{ badge_html | safe }}</td>
+                        <td class="fw-bold {{ rule_class }}">{{ v.rule }}</td>
+                        <td>
+                            <div class="d-flex flex-column py-2">
+                                <span class="text-dark mb-2"><i class="bi bi-info-circle me-2"></i>{{ v.desc }}</span>
+                                <div class="d-flex gap-3 flex-wrap">
+                                    <!-- Class A -->
+                                    <div class="card flex-fill {{ card_border }} bg-white shadow-sm" style="min-width:250px;">
+                                        <div class="card-body p-2">
+                                            <div class="d-flex justify-content-between">
+                                                <small class="text-muted text-uppercase fw-bold" style="font-size:0.65rem;">Class A</small>
+                                                <span class="badge bg-light text-dark border">{{ v.class_a.section.section_name }}</span>
+                                            </div>
+                                            <div class="mt-1"><strong>{{ v.class_a.course.course_code }}</strong></div>
+                                            <small class="text-muted d-block mt-1">
+                                                <i class="bi bi-geo-alt"></i> {{ v.class_a.room.room_name }}
+                                                <span class="mx-1">•</span>
+                                                <i class="bi bi-clock"></i> {{ v.class_a.day }} {{ v.class_a.start_time }}–{{ v.class_a.end_time }}
+                                            </small>
+                                        </div>
+                                    </div>
+
+                                    {% if v.class_b %}
+                                    <div class="align-self-center text-secondary d-none d-md-block">
+                                        <i class="bi bi-x-lg fs-5"></i>
+                                    </div>
+                                    <!-- Class B -->
+                                    <div class="card flex-fill {{ card_border }} bg-white shadow-sm" style="min-width:250px;">
+                                        <div class="card-body p-2">
+                                            <div class="d-flex justify-content-between">
+                                                <small class="text-muted text-uppercase fw-bold" style="font-size:0.65rem;">Class B</small>
+                                                <span class="badge bg-light text-dark border">{{ v.class_b.section.section_name }}</span>
+                                            </div>
+                                            <div class="mt-1"><strong>{{ v.class_b.course.course_code }}</strong></div>
+                                            <small class="text-muted d-block mt-1">
+                                                <i class="bi bi-geo-alt"></i> {{ v.class_b.room.room_name }}
+                                                <span class="mx-1">•</span>
+                                                <i class="bi bi-clock"></i> {{ v.class_b.day }} {{ v.class_b.start_time }}–{{ v.class_b.end_time }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="text-center py-5">
+                            <div class="text-success opacity-75">
+                                <i class="bi bi-check-circle-fill display-3"></i>
+                                <h4 class="mt-3">No Violations Found!</h4>
+                                <p class="text-muted">The generated schedule satisfies all constraints.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 5. COMPACT PAGINATION + JUMP TO PAGE -->
+    {% if total_pages > 1 %}
+    <div class="mt-3 pb-2">
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center mb-2">
+
+                <!-- Previous -->
+                <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+                    <a class="page-link" href="#" onclick="applyFilters({page:{{ current_page - 1 }}}); return false;">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+
+                <!-- Compact page numbers with ellipsis -->
+                {% set ns = namespace(last=0) %}
+                {% for p in range(1, total_pages + 1) %}
+                    {% if p <= 2 or p >= total_pages - 1 or (p >= current_page - 1 and p <= current_page + 1) %}
+                        {% if ns.last and p - ns.last > 1 %}
+                        <li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>
+                        {% endif %}
+                        <li class="page-item {% if p == current_page %}active{% endif %}">
+                            <a class="page-link" href="#" onclick="applyFilters({page:{{ p }}}); return false;">{{ p }}</a>
+                        </li>
+                        {% set ns.last = p %}
+                    {% endif %}
+                {% endfor %}
+
+                <!-- Next -->
+                <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
+                    <a class="page-link" href="#" onclick="applyFilters({page:{{ current_page + 1 }}}); return false;">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+
+            </ul>
+        </nav>
+
+        <!-- Jump to page -->
+        <div class="d-flex align-items-center justify-content-center gap-2 text-muted" style="font-size:0.85rem;">
+            <span>Jump to:</span>
+            <input type="number" id="pageJumpInput" class="form-control form-control-sm text-center"
+                   style="width:70px;" min="1" max="{{ total_pages }}" data-total="{{ total_pages }}" placeholder="1–{{ total_pages }}">
+            <button class="btn btn-sm btn-outline-secondary px-3" onclick="jumpToPage()">Go</button>
+            <span class="text-muted" style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i class="bi bi-arrow-right-short"></i> arrow keys</span>
+        </div>
+    </div>
+    {% endif %}
+
+</div><!-- end #mainContentArea -->
+
+<div style="height:60px;"></div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    let currentSort = "{{ sort_by }}";
+    let debounceTimer;
+
+    // ── Checkbox helpers ─────────────────────────────────────────────────
+    function getCheckedValues(selector) {
+        return Array.from(document.querySelectorAll(selector + ':checked')).map(function (cb) { return cb.value; });
+    }
+
+    function updateFilterBtnLabel() {
+        const depts = getCheckedValues('.filter-dept-cb');
+        const types = getCheckedValues('.filter-type-cb');
+        const total = depts.length + types.length;
+        const label = document.getElementById('filterBtnLabel');
+        if (label) label.textContent = total > 0 ? 'Filter (' + total + ')' : 'Filter';
+    }
+
+    // ── URL builder ──────────────────────────────────────────────────────
+    function buildUrl(overrides) {
+        overrides = overrides || {};
+        const url = new URL(window.location.pathname, window.location.origin);
+        const searchEl = document.getElementById('liveSearchInput');
+        url.searchParams.set('search', overrides.search !== undefined ? overrides.search : (searchEl ? searchEl.value : ''));
+        url.searchParams.set('sort', overrides.sort !== undefined ? overrides.sort : currentSort);
+        url.searchParams.set('page', overrides.page !== undefined ? String(overrides.page) : '1');
+
+        const depts = overrides.depts !== undefined ? overrides.depts : getCheckedValues('.filter-dept-cb');
+        url.searchParams.delete('dept');
+        depts.forEach(function (d) { url.searchParams.append('dept', d); });
+
+        const types = overrides.types !== undefined ? overrides.types : getCheckedValues('.filter-type-cb');
+        url.searchParams.delete('types');
+        types.forEach(function (t) { url.searchParams.append('types', t); });
+
+        return url.toString();
+    }
+
+    function fetchAndUpdate(url) {
+        window.history.pushState({}, '', url);
+        fetch(url)
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+
+                const newMain = doc.getElementById('mainContentArea');
+                if (newMain) document.getElementById('mainContentArea').innerHTML = newMain.innerHTML;
+
+                const newSummary = doc.getElementById('summaryCards');
+                if (newSummary) document.getElementById('summaryCards').innerHTML = newSummary.innerHTML;
+
+                // Update sort button
+                const newSortParam = new URL(url).searchParams.get('sort') || 'rule-asc';
+                currentSort = newSortParam;
+                const sortBtn = document.getElementById('sortToggleBtn');
+                if (sortBtn) sortBtn.innerHTML = '<i class="bi bi-arrow-down-up me-2"></i>' + (newSortParam === 'rule-desc' ? 'Rule (Z-A)' : 'Rule Name');
+                document.querySelectorAll('[data-sort]').forEach(function (el) {
+                    el.classList.toggle('active', el.dataset.sort === newSortParam);
+                });
+
+                updateFilterBtnLabel();
+                bindJumpInput();
+            })
+            .catch(function (err) { console.error('Fetch failed:', err); });
+    }
+
+    // ── Public functions ─────────────────────────────────────────────────
+    window.applyFilters = function (overrides) {
+        fetchAndUpdate(buildUrl(overrides || {}));
+    };
+
+    window.setSort = function (s) {
+        currentSort = s;
+        applyFilters({ sort: s, page: 1 });
+    };
+
+    window.jumpToPage = function () {
+        const input = document.getElementById('pageJumpInput');
+        if (!input) return;
+        const p = parseInt(input.value);
+        const total = parseInt(input.getAttribute('data-total') || input.max || '1');
+        if (!isNaN(p) && p >= 1 && p <= total) {
+            applyFilters({ page: p });
+        } else {
+            input.classList.add('is-invalid');
+            setTimeout(function () { input.classList.remove('is-invalid'); }, 1500);
+        }
+    };
+
+    function bindJumpInput() {
+        const jumpInput = document.getElementById('pageJumpInput');
+        if (jumpInput) {
+            const fresh = jumpInput.cloneNode(true);
+            jumpInput.parentNode.replaceChild(fresh, jumpInput);
+            fresh.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') window.jumpToPage();
+            });
+        }
+    }
+
+    // ── Filter persistence (localStorage) ───────────────────────────────
+    var FILTER_KEY = 'cc_filters';
+
+    function saveFilters() {
+        var state = {
+            depts: getCheckedValues('.filter-dept-cb'),
+            types: getCheckedValues('.filter-type-cb')
+        };
+        try { localStorage.setItem(FILTER_KEY, JSON.stringify(state)); } catch(e) {}
+    }
+
+    function restoreFilters() {
+        var urlParams = new URLSearchParams(window.location.search);
+        var hasDept  = urlParams.has('dept');
+        var hasTypes = urlParams.has('types');
+        // Only restore from localStorage if URL has no filter params
+        if (!hasDept && !hasTypes) {
+            try {
+                var saved = JSON.parse(localStorage.getItem(FILTER_KEY) || 'null');
+                if (saved && (saved.depts.length > 0 || saved.types.length > 0)) {
+                    document.querySelectorAll('.filter-dept-cb').forEach(function(cb) {
+                        cb.checked = saved.depts.indexOf(cb.value) !== -1;
+                    });
+                    document.querySelectorAll('.filter-type-cb').forEach(function(cb) {
+                        cb.checked = saved.types.indexOf(cb.value) !== -1;
+                    });
+                    updateFilterBtnLabel();
+                    applyFilters({ page: 1 });
+                }
+            } catch(e) {}
+        }
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+        updateFilterBtnLabel();
+
+        // Checkbox change → save + apply immediately
+        document.querySelectorAll('.filter-dept-cb, .filter-type-cb').forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                updateFilterBtnLabel();
+                saveFilters();
+                applyFilters({ page: 1 });
+            });
+        });
+
+        restoreFilters();
+
+        const searchInput = document.getElementById('liveSearchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(function () { applyFilters({ page: 1 }); }, 300);
+            });
+        }
+
+        bindJumpInput();
+    });
+})();
+</script>
+{% endblock %}

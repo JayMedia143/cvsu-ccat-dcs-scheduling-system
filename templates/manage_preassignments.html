@@ -1,0 +1,509 @@
+{% extends "base.html" %}
+{% block title %}Manage Pre-assignments{% endblock %}
+
+{% block content %}
+
+<!-- 1. HEADER -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1">Locked Schedules</h1>
+        <p class="text-muted small mb-0">Manage fixed classes (e.g., minor subjects, pre-plotted loads).</p>
+    </div>
+
+    <div class="d-flex align-items-center gap-3">
+        <!-- New Locked Schedule (Clean Style) -->
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addPreAssignmentModal">
+            <i class="bi bi-plus-lg"></i>
+            <span>Add Locked Schedule</span>
+        </button>
+    </div>
+</div>
+
+<!-- 2. SEARCH & FILTER TOOLBAR -->
+<div class="row mb-4 position-relative align-items-center" style="height: 50px;">
+
+    <!-- A. BULK ACTION BAR -->
+    <div class="bulk-action-bar" id="bulkActionBar">
+        <div class="d-flex align-items-center">
+            <button class="btn-icon" onclick="deselectAll()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <span class="bulk-count ms-2"><span id="selectedCount">0</span> selected</span>
+        </div>
+
+        <!-- Trash Icon -->
+        <button type="button" class="bulk-btn delete-icon" data-bs-toggle="modal" data-bs-target="#bulkArchiveModal"
+            title="Move to Recycle Bin">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+
+    <!-- B. SEARCH INPUT -->
+    <div class="col h-100">
+        <!-- Optional: Kung gusto mo lagyan ng form wrapper for future filtering functionality -->
+        <div class="google-search-bar d-flex align-items-center h-100 w-100">
+            <i class="bi bi-search text-secondary me-3"></i>
+            <input type="text" class="google-search-input" placeholder="Search by Course, Section, or Faculty..."
+                id="liveSearchInput">
+        </div>
+    </div>
+
+    <!-- C. SORT DROPDOWN -->
+    <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end gap-2">
+
+        <!-- SORT DROPDOWN -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                {% if current_sort == 'course-asc' %} Course (A-Z)
+                {% elif current_sort == 'section-asc' %} Section (A-Z)
+                {% else %} Default
+                {% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' %}active{% endif %}"
+                        href="{{ url_for('manage_preassignments', sort='default') }}">
+                        Default
+                    </a>
+                </li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'course-asc' %}active{% endif %}"
+                        href="{{ url_for('manage_preassignments', sort='course-asc') }}">
+                        Course (A-Z)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'section-asc' %}active{% endif %}"
+                        href="{{ url_for('manage_preassignments', sort='section-asc') }}">
+                        Section (A-Z)
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+</div>
+
+<!-- 3. TABLE FORM -->
+<form id="bulkArchiveForm" action="{{ url_for('bulk_archive_preassignments') }}" method="POST"> <!-- Needs route -->
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="bg-white rounded border shadow-sm overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="select-cell"><input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                        </th>
+                        <th class="ps-2" style="width: 40%;">Class Details</th>
+                        <th style="width: 30%;">Schedule</th>
+                        <th style="width: 20%;">Instructor</th>
+                        <th class="text-center" style="width: 10%;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="preAssignmentTableBody">
+                    {% for pa in pre_assignments %}
+                    <tr class="pa-row course-row" data-id="{{ pa.id }}">
+                        <td class="select-cell">
+                            <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
+                                value="{{ pa.id }}">
+                        </td>
+
+                        <td class="ps-2 search-target">
+                            <div class="d-flex flex-column">
+                                <span class="fw-bold text-dark">{{ pa.course.course_code }}</span>
+                                <span class="text-muted small">{{ pa.course.course_name }}</span>
+                                <span
+                                    class="badge bg-light text-dark border mt-1 w-auto border-secondary text-secondary">{{
+                                    pa.section.section_name }}</span>
+                            </div>
+                        </td>
+
+                        <td class="search-target">
+                            <div class="d-flex flex-column">
+                                <span class="fw-bold text-primary">{{ pa.day }}</span>
+                                <span class="text-dark small">{{ pa.start_time }} - {{ pa.end_time }}</span>
+                                <span class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ pa.room.room_name
+                                    }}</span>
+                            </div>
+                        </td>
+
+                        <td class="search-target">
+                            <div class="d-flex align-items-center">
+                                <div class="stat-icon-bg bg-light text-secondary me-2 rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width:32px; height:32px;">
+                                    <i class="bi bi-person-fill" style="font-size: 1rem;"></i>
+                                </div>
+                                <span class="fw-medium text-dark">{{ pa.faculty.full_name }}</span>
+                            </div>
+                        </td>
+
+                        <td class="text-center" onclick="event.stopPropagation()">
+                            <button type="button" class="btn-icon delete" title="Move to Recycle Bin"
+                                data-bs-toggle="modal" data-bs-target="#archiveModal{{ pa.id }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">No active locked schedules found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</form>
+
+<!-- ================= MODALS ================= -->
+
+<!-- 1. BULK DELETE MODAL -->
+<div class="modal fade" id="bulkArchiveModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Move to Recycle Bin?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Move the <span id="modalArchiveCount" class="fw-bold text-danger">0</span> selected schedules to the
+                recycle bin?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-archive-confirm"
+                    onclick="document.getElementById('bulkArchiveForm').submit()">Yes, Move to Recycle Bin</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Pre-assignment Modal (Retained Logic) -->
+<div class="modal fade modal-lg" id="addPreAssignmentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Locked Schedule (Multi-Section)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <!-- Inside Add Pre-assignment Modal -->
+            <form action="{{ url_for('add_preassignment') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body p-4"> <!-- Added padding 4 for breathing room -->
+
+                    <!-- 1. TOP ROW: Course, Faculty, Room -->
+                    <div class="row g-3">
+
+                        <!-- COURSE -->
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-2">COURSE</label>
+                            <div class="searchable-list-container border rounded bg-white overflow-hidden">
+                                <div class="p-2 border-bottom bg-light">
+                                    <input type="text" class="form-control form-control-sm border-0 bg-light"
+                                        placeholder="Search course...">
+                                </div>
+                                <div class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;">
+                                    {% for item in all_courses %}
+                                    <label
+                                        class="list-group-item list-group-item-action border-0 px-3 py-2 small d-flex align-items-center cursor-pointer">
+                                        <input class="form-check-input me-3" type="radio" name="course_id"
+                                            value="{{ item.id }}" required style="transform: scale(1.2);">
+                                        <span class="fw-bold text-dark">{{ item.course_code }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FACULTY -->
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-2">FACULTY</label>
+                            <div class="searchable-list-container border rounded bg-white overflow-hidden">
+                                <div class="p-2 border-bottom bg-light">
+                                    <input type="text" class="form-control form-control-sm border-0 bg-light"
+                                        placeholder="Search faculty...">
+                                </div>
+                                <div class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;">
+                                    {% for item in all_faculty %}
+                                    <label
+                                        class="list-group-item list-group-item-action border-0 px-3 py-2 small d-flex align-items-center cursor-pointer">
+                                        <input class="form-check-input me-3" type="radio" name="faculty_id"
+                                            value="{{ item.id }}" required style="transform: scale(1.2);">
+                                        {{ item.full_name }}
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ROOM -->
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted mb-2">ROOM <span
+                                    class="fw-normal">(Field/TBA)</span></label>
+                            <div class="searchable-list-container border rounded bg-white overflow-hidden">
+                                <div class="p-2 border-bottom bg-light">
+                                    <input type="text" class="form-control form-control-sm border-0 bg-light"
+                                        placeholder="Search room...">
+                                </div>
+                                <div class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;">
+                                    {% for item in all_rooms %}
+                                    <label
+                                        class="list-group-item list-group-item-action border-0 px-3 py-2 small d-flex align-items-center cursor-pointer">
+                                        <input class="form-check-input me-3" type="radio" name="room_id"
+                                            value="{{ item.id }}" required style="transform: scale(1.2);">
+                                        {{ item.room_name }}
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. SECTIONS (Improved Spacing & Plain Buttons) -->
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between align-items-end mb-2">
+                            <label class="form-label small fw-bold text-muted mb-0">SECTIONS</label>
+
+                            <!-- PLAIN ACTION BUTTONS -->
+                            <div class="small">
+                                <button type="button"
+                                    class="btn btn-link text-secondary text-decoration-none fw-bold p-0 me-2"
+                                    style="font-size: 0.85rem;" onclick="checkVisibleSections(true)">
+                                    Select Visible
+                                </button>
+                                <span class="text-muted">|</span>
+                                <button type="button" class="btn btn-link text-secondary text-decoration-none p-0 ms-2"
+                                    style="font-size: 0.85rem;" onclick="checkVisibleSections(false)">
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Year Level Filters -->
+                        <div class="btn-group w-100 mb-3" role="group">
+                            <button type="button" class="btn btn-outline-secondary btn-sm"
+                                onclick="filterSections('all')">All Years</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm"
+                                onclick="filterSections('1')">1st Year</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm"
+                                onclick="filterSections('2')">2nd Year</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm"
+                                onclick="filterSections('3')">3rd Year</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm"
+                                onclick="filterSections('4')">4th Year</button>
+                        </div>
+
+                        <!-- Checkbox List -->
+                        <div class="border rounded bg-light p-3" style="max-height: 180px; overflow-y: auto;">
+                            <div class="row g-3">
+                                {% for item in all_sections %}
+                                <div class="col-md-3 section-option year-{{ item.year_level }}">
+                                    <div class="form-check">
+                                        <input class="form-check-input sec-cb" type="checkbox" name="section_ids"
+                                            value="{{ item.id }}" id="sec{{ item.id }}" style="cursor: pointer;">
+                                        <label class="form-check-label small text-dark" for="sec{{ item.id }}"
+                                            style="cursor: pointer;">
+                                            {{ item.section_name }}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- 3. TIME SETTINGS -->
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">DAY</label>
+                            <select name="day" class="form-select">{% for d in days %}<option>{{ d }}</option>{% endfor
+                                %}</select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">START TIME</label>
+                            <select name="start_time" class="form-select">{% for t in time_slots %}<option>{{ t }}
+                                </option>{% endfor %}</select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">END TIME</label>
+                            <select name="end_time" class="form-select">{% for t in time_slots %}<option>{{ t }}
+                                </option>{% endfor %}</select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer bg-white border-top-0 pt-0 pb-4 pe-4">
+                    <button type="button" class="btn btn-light border me-2" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success px-4">Lock Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Single Delete Modal -->
+{% for pa in pre_assignments %}
+<div class="modal fade" id="archiveModal{{ pa.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Move to Recycle Bin?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p>Are you sure you want to move the schedule for <strong>{{ pa.course.course_code }}</strong> to the
+                    recycle bin?</p>
+                <div class="alert alert-light border d-inline-block text-start">
+                    <small class="d-block text-muted">Time: {{ pa.day }} @ {{ pa.start_time }}</small>
+                    <small class="d-block text-muted">Section: {{ pa.section.section_name }}</small>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('archive_preassignment', pa_id=pa.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-archive-confirm">Yes, Move to Recycle Bin</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Dulo ng iyong HTML content sa manage_preassignments.html -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // --- PART 1: Filter Logic ---
+    function filterSections(year) {
+        const options = document.querySelectorAll('.section-option');
+        options.forEach(opt => {
+            if (year === 'all') {
+                opt.style.display = 'block';
+            } else {
+                if (opt.classList.contains('year-' + year)) {
+                    opt.style.display = 'block';
+                } else {
+                    opt.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    function checkVisibleSections(check) {
+        const options = document.querySelectorAll('.section-option');
+        options.forEach(opt => {
+            if (opt.style.display !== 'none') {
+                const cb = opt.querySelector('input[type="checkbox"]');
+                if (cb) cb.checked = check;
+            }
+        });
+    }
+
+    // --- PART 2: Bulk Actions & Search Logic ---
+    function submitSingleAction(url) {
+        const form = document.getElementById('singleActionForm');
+        form.action = url;
+        form.submit();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('liveSearchInput');
+        const allRows = document.querySelectorAll('.pa-row');
+
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function () {
+                const filterText = this.value.toLowerCase();
+                allRows.forEach(row => {
+                    let rowText = "";
+                    row.querySelectorAll('.search-target').forEach(el => { rowText += el.textContent + " "; });
+                    row.style.display = rowText.toLowerCase().includes(filterText) ? "" : "none";
+                });
+            });
+        }
+
+        // Modal Inner Search
+        document.querySelectorAll('.searchable-list-container input[type="text"]').forEach(input => {
+            input.addEventListener('keyup', function () {
+                const filter = this.value.toLowerCase();
+                this.nextElementSibling.querySelectorAll('.list-group-item').forEach(item => {
+                    item.style.display = item.textContent.toLowerCase().includes(filter) ? "" : "none";
+                });
+            });
+        });
+
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        const bulkActionBar = document.getElementById('bulkActionBar');
+        const selectedCountSpan = document.getElementById('selectedCount');
+        const modalArchiveCount = document.getElementById('modalArchiveCount');
+        const bulkForm = document.getElementById('bulkForm');
+
+        function updateSelectionState() {
+            let count = 0;
+            rowCheckboxes.forEach(cb => {
+                const row = cb.closest('tr');
+                if (cb.checked) {
+                    count++;
+                    row.classList.add('selected');
+                } else {
+                    row.classList.remove('selected');
+                }
+            });
+
+            if (selectedCountSpan) selectedCountSpan.textContent = count;
+            if (modalArchiveCount) modalArchiveCount.textContent = count;
+
+            if (count > 0) bulkActionBar.classList.add('active');
+            else bulkActionBar.classList.remove('active');
+
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = (count === rowCheckboxes.length && count > 0);
+                selectAllCheckbox.indeterminate = (count > 0 && count < rowCheckboxes.length);
+            }
+        }
+
+        allRows.forEach(row => {
+            row.addEventListener('click', function (e) {
+                const checkbox = this.querySelector('.row-checkbox');
+                checkbox.checked = !checkbox.checked;
+                updateSelectionState();
+            });
+        });
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function () {
+                const isChecked = this.checked;
+                rowCheckboxes.forEach(cb => {
+                    if (cb.closest('tr').style.display !== 'none') cb.checked = isChecked;
+                });
+                updateSelectionState();
+            });
+        }
+
+        window.deselectAll = function () {
+            rowCheckboxes.forEach(cb => cb.checked = false);
+            updateSelectionState();
+        };
+
+        window.submitBulkForm = function (actionType) {
+            if (actionType === 'restore') {
+                bulkForm.action = "{{ url_for('bulk_restore_preassignments') }}";
+                bulkForm.submit();
+            } else if (actionType === 'delete') {
+                bulkForm.action = "{{ url_for('bulk_delete_preassignments') }}";
+                bulkForm.submit();
+            }
+        };
+    });
+</script>
+{% endblock %}

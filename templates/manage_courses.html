@@ -1,0 +1,885 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Courses{% endblock %}
+
+{% block content %}
+
+<!-- 1. HEADER (Static) -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1">Courses</h1>
+        <p class="text-muted small mb-0">Manage your subject offerings, units, and hours.</p>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+        <button class="btn-google-action" data-bs-toggle="modal"
+            data-bs-target="#importPdfModal">
+            <i class="bi bi-file-earmark-pdf-fill"></i>
+            <span>Import Curriculum (PDF)</span>
+        </button>
+
+        <button class="btn-google-action" data-bs-toggle="modal"
+            data-bs-target="#importWordModal">
+            <i class="bi bi-file-earmark-word-fill"></i>
+            <span>Import Curriculum (Word)</span>
+        </button>
+
+        <a href="{{ url_for('course_code_assignment') }}" class="btn-google-action"
+            style="text-decoration:none;">
+            <i class="bi bi-diagram-3-fill"></i>
+            <span>Dept. Assignment</span>
+        </a>
+
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addCourseModal">
+            <i class="bi bi-plus-lg"></i>
+            <span>New Course</span>
+        </button>
+    </div>
+</div>
+
+<!-- 2. SEARCH & FILTER WRAPPER (With Bulk Action Overlay) -->
+<div class="row mb-4 position-relative align-items-center" style="height: 50px;">
+
+    <!-- A. BULK ACTION BAR (Overlay - Green Background) -->
+    <div class="bulk-action-bar" id="bulkActionBar">
+        <div class="d-flex align-items-center">
+            <button class="btn-icon" onclick="deselectAll()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <span class="bulk-count ms-2"><span id="selectedCount">0</span> selected</span>
+        </div>
+
+        <!-- Trash Icon -->
+        <button type="button" class="bulk-btn delete-icon" data-bs-toggle="modal" data-bs-target="#bulkArchiveModal"
+            title="Move to Recycle Bin">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+
+    <!-- B. SEARCH INPUT (Server-Side Trigger) -->
+    <div class="col h-100">
+        <!-- Added Form Wrapper -->
+        <form action="{{ url_for('manage_courses') }}" method="GET" class="h-100 w-100">
+            <!-- Keep Sort parameter hidden so it doesn't reset when searching -->
+            <input type="hidden" name="sort" value="{{ current_sort }}">
+
+            <div class="google-search-bar d-flex align-items-center h-100 w-100">
+                <i class="bi bi-search text-secondary me-3"></i>
+                <!-- Added name="search" and value="{{ search_query }}" -->
+                <input type="text" name="search" class="google-search-input"
+                    placeholder="Search courses (e.g. '1st', 'DCS', 'Math')..." id="liveSearchInput"
+                    value="{{ search_query }}" autocomplete="off" onchange="this.form.submit()">
+                <!-- Auto submit on enter/change -->
+            </div>
+        </form>
+    </div>
+
+    <!-- C. SORT & FILTER GROUP -->
+    <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end gap-2">
+
+        <!-- 1. FILTER DROPDOWN (Nested) -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="filterDropdown"
+                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                <i class="bi bi-funnel me-2"></i>
+                {% if current_filter_by == 'dept' %}
+                Dept: {{ current_filter_val }}
+                {% elif current_filter_by == 'code' %}
+                Code: {{ current_filter_val }}
+                {% else %}
+                Filter
+                {% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="filterDropdown">
+                <!-- Clear Filter Option -->
+                <li>
+                    <a class="dropdown-item text-danger"
+                        href="{{ url_for('manage_courses', sort=current_sort, search=search_query) }}">
+                        <i class="bi bi-x-circle me-2"></i>Clear Filter
+                    </a>
+                </li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+
+                <!-- NESTED 1: Department -->
+                <li class="dropdown-submenu">
+                    <a class="dropdown-item submenu-trigger" href="javascript:void(0);">Department</a>
+                    <ul class="dropdown-menu">
+                        {% for dept in unique_depts %}
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == dept %}active{% endif %}"
+                                href="{{ url_for('manage_courses', sort=current_sort, search=search_query, filter_by='dept', filter_val=dept) }}">
+                                {{ dept }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+
+                <!-- NESTED 2: Subject Code -->
+                <li class="dropdown-submenu">
+                    <a class="dropdown-item submenu-trigger" href="javascript:void(0);">Subject Code</a>
+                    <ul class="dropdown-menu" style="max-height: 300px; overflow-y: auto;">
+                        {% for prefix in unique_prefixes %}
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == prefix %}active{% endif %}"
+                                href="{{ url_for('manage_courses', sort=current_sort, search=search_query, filter_by='code', filter_val=prefix) }}">
+                                {{ prefix }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 2. SORT DROPDOWN (Ito yung nawala sa code mo, ibinalik ko) -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                {% if current_sort == 'a-z' %} Code (A-Z)
+                {% elif current_sort == 'z-a' %} Code (Z-A)
+                {% elif current_sort == 'dept-asc' %} Dept (A-Z)
+                {% elif current_sort == 'dept-desc' %} Dept (Z-A)
+                {% else %} Newest
+                {% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' %}active{% endif %}"
+                        href="{{ url_for('manage_courses', sort='default', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Sort by: Newest
+                    </a>
+                </li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'a-z' %}active{% endif %}"
+                        href="{{ url_for('manage_courses', sort='a-z', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Sort by: Code (A-Z)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'z-a' %}active{% endif %}"
+                        href="{{ url_for('manage_courses', sort='z-a', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Sort by: Code (Z-A)
+                    </a>
+                </li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'dept-asc' %}active{% endif %}"
+                        href="{{ url_for('manage_courses', sort='dept-asc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Sort by: Dept (A-Z)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'dept-desc' %}active{% endif %}"
+                        href="{{ url_for('manage_courses', sort='dept-desc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Sort by: Dept (Z-A)
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- 3. TABLE FORM -->
+<form id="bulkArchiveForm" action="{{ url_for('bulk_archive_courses') }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="bg-white rounded border shadow-sm overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="coursesTable">
+                <thead class="table-light">
+                    <tr>
+                        <th class="select-cell">
+                            <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                        </th>
+
+                        <!-- 1. CODE -->
+                        <th class="ps-2" style="width: 100px;">Code</th>
+
+                        <!-- 2. NAME -->
+                        <th style="width: 25%;">Course Name</th>
+
+                        <!-- 3. PROGRAM (BSCS/BSIT) -->
+                        <th style="width: 10%;">Program</th>
+
+                        <!-- 4. DEPARTMENT -->
+                        <th style="width: 15%;">Department</th>
+
+                        <!-- 5. UNITS -->
+                        <th class="text-center" style="width: 8%;">Units</th>
+
+                        <!-- 6. HOURS -->
+                        <th class="text-center" style="width: 8%;">Sync</th>
+                        <th class="text-center" style="width: 8%;">Async</th>
+
+                        <!-- 7. SEMESTER -->
+                        <th class="text-center" style="width: 10%;">Semester</th>
+
+                        <!-- 8. ACTIONS -->
+                        <th class="text-center" style="width: 100px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for course in courses %}
+                    <tr class="course-row" data-id="{{ course.id }}">
+                        <td class="select-cell">
+                            <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
+                                value="{{ course.id }}">
+                        </td>
+
+                        <!-- 1. CODE -->
+                        <td class="fw-bold text-dark ps-2">{{ course.course_code }}</td>
+
+                        <!-- 2. NAME (Isa lang dapat ito!) -->
+                        <td>{{ course.course_name }}</td>
+
+                        <!-- 3. PROGRAM (Badges) -->
+                        <td>
+                            {% if course.program == 'Both' %}
+                            <span class="badge bg-secondary">Common</span>
+                            {% elif course.program == 'BSCoS' %}
+                            <span class="badge bg-primary">BSCS</span>
+                            {% elif course.program == 'BSInfoTech' %}
+                            <span class="badge bg-info text-dark">BSIT</span>
+                            {% else %}
+                            <!-- Fallback if empty -->
+                            <span class="badge bg-light text-dark border">Gen</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 4. DEPARTMENT -->
+                        <td>
+                            <span class="badge-clean">{{ course.department }}</span>
+                        </td>
+
+                        <!-- 5. UNITS -->
+                        <td class="text-center text-muted fw-medium">{{ course.lec_units }} / {{ course.lab_units }}
+                        </td>
+
+                        <!-- 6. HOURS -->
+                        <td class="text-center text-muted small">{{ course.synchronous_lec_hours }} / {{
+                            course.synchronous_lab_hours }}</td>
+                        <td class="text-center text-muted small">{{ course.asynchronous_lec_hours }} / {{
+                            course.asynchronous_lab_hours }}</td>
+
+                        <!-- 7. SEMESTER -->
+                        <td class="text-center">
+                            {% if course.semester_offered == '1st Semester' %}
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success">1st
+                                Sem</span>
+                            {% elif course.semester_offered == '2nd Semester' %}
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">2nd
+                                Sem</span>
+                            {% else %}
+                            <span class="badge bg-warning bg-opacity-10 text-dark border border-warning">Midyear</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 8. ACTIONS -->
+                        <td class="text-center">
+                            <!-- 3rd button: Schedule -->
+                            <button type="button" class="btn-icon view"
+                                onclick="viewSchedule('course', {{ course.id }})" title="View Schedule">
+                                <i class="bi bi-calendar-week"></i>
+                            </button>
+                            <button type="button" class="btn-icon edit" data-bs-toggle="modal"
+                                data-bs-target="#editCourseModal{{ course.id }}"><i class="bi bi-pencil"></i></button>
+                            <button type="button" class="btn-icon delete" title="Move to Recycle Bin"
+                                data-bs-toggle="modal" data-bs-target="#archiveModal{{ course.id }}"><i
+                                    class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</form>
+
+<!-- 4. PAGINATION (With Search Persistence) -->
+<div class="mt-3 pb-5">
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center mb-2">
+
+            <!-- Previous -->
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link"
+                    href="{{ url_for('manage_courses', page=pagination.prev_num, sort=current_sort, search=search_query) }}"><i
+                        class="bi bi-chevron-left"></i></a>
+            </li>
+
+            <!-- Numbers -->
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+            {% if page_num %}
+            <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                <a class="page-link"
+                    href="{{ url_for('manage_courses', page=page_num, sort=current_sort, search=search_query) }}">{{
+                    page_num }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>
+            {% endif %}
+            {% endfor %}
+
+            <!-- Next -->
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link"
+                    href="{{ url_for('manage_courses', page=pagination.next_num, sort=current_sort, search=search_query) }}"><i
+                        class="bi bi-chevron-right"></i></a>
+            </li>
+        </ul>
+    </nav>
+    {% if pagination.pages > 1 %}
+    <div class="d-flex align-items-center justify-content-center gap-2 text-muted" style="font-size:0.85rem;">
+        <span>Jump to:</span>
+        <input type="number" id="pageJumpInput" class="form-control form-control-sm text-center" style="width:70px;"
+            min="1" max="{{ pagination.pages }}" placeholder="1–{{ pagination.pages }}">
+        <button class="btn btn-sm btn-outline-secondary px-3" onclick="jumpToPage()">Go</button>
+        <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i class="bi bi-arrow-right-short"></i>
+            arrow keys</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ================= MODALS ================= -->
+
+<!-- 1. BULK DELETE MODAL -->
+<div class="modal fade" id="bulkArchiveModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Move to Recycle Bin?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to move the <span id="modalSelectedCount" class="fw-bold text-danger">0</span>
+                selected courses to the recycle bin?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-archive-confirm"
+                    onclick="document.getElementById('bulkArchiveForm').submit()">Yes, Move to Recycle Bin</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. ADD COURSE MODAL -->
+<div class="modal fade" id="addCourseModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Course</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('add_course') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">COURSE CODE</label>
+                        <input type="text" class="form-control" name="course_code" placeholder="e.g. COSC 101" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">COURSE NAME</label>
+                        <input type="text" class="form-control" name="course_name"
+                            placeholder="e.g. Introduction to Computing" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">PROGRAM</label>
+                        <select class="form-select" name="program">
+                            <option value="BSCoS">BS Computer Science (BSCoS)</option>
+                            <option value="BSInfoTech">BS Information Technology (BSIT)</option>
+                            <option value="Both">Both (Common)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
+                        <select class="form-select" name="department">
+                            <option value="DCS">Department of Computer Studies</option>
+                            <option value="Engineering">Department of Engineering</option>
+
+                            <!-- BAGUHIN MO ITO: Tanggalin ang 'value="Teachers Education"' para gamitin niya yung full text -->
+                            <option>Department of Teachers Education</option>
+
+                            <option value="Arts & Sciences">Department of Arts and Sciences</option>
+                            <option value="NSTP">NSTP Department</option>
+                        </select>
+                    </div>
+
+                    <!-- Units & Hours Grid -->
+                    <div class="row g-2">
+                        <div class="col-4 border-end">
+                            <label class="form-label small fw-bold text-center w-100 mb-1">UNITS</label>
+                            <div class="d-flex gap-1">
+                                <input type="number" id="addLecUnits" class="form-control form-control-sm text-center" name="lec_units"
+                                    placeholder="Lec" value="0" min="0">
+                                <input type="number" id="addLabUnits" class="form-control form-control-sm text-center" name="lab_units"
+                                    placeholder="Lab" value="0" min="0">
+                            </div>
+                        </div>
+                        <div class="col-4 border-end ps-2">
+                            <label class="form-label small fw-bold text-center w-100 mb-1">SYNC HRS</label>
+                            <div class="d-flex gap-1">
+                                <input type="number" id="addSyncLec" class="form-control form-control-sm text-center"
+                                    name="synchronous_lec_hours" placeholder="Lec" value="0" min="0">
+                                <input type="number" id="addSyncLab" class="form-control form-control-sm text-center"
+                                    name="synchronous_lab_hours" placeholder="Lab" value="0" min="0">
+                            </div>
+                        </div>
+                        <div class="col-4 ps-2">
+                            <label class="form-label small fw-bold text-center w-100 mb-1">ASYNC HRS
+                                <span class="text-muted fw-normal" style="font-size:0.65rem;">(pandemic)</span>
+                            </label>
+                            <div class="d-flex gap-1">
+                                <input type="number" class="form-control form-control-sm text-center"
+                                    name="asynchronous_lec_hours" placeholder="Lec" value="0" min="0">
+                                <input type="number" class="form-control form-control-sm text-center"
+                                    name="asynchronous_lab_hours" placeholder="Lab" value="0" min="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label small text-muted fw-bold">SEMESTER</label>
+                        <select class="form-select" name="semester_offered">
+                            <option>1st Semester</option>
+                            <option>2nd Semester</option>
+                            <option>Midyear</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="submit" class="btn btn-primary px-4">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- SINGLE ITEM MODALS -->
+{% for course in all_courses %}
+
+<!-- 3. EDIT MODAL (Logic Updated for Department Selection) -->
+<div class="modal fade" id="editCourseModal{{ course.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Course</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('update_course', course_id=course.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">COURSE CODE</label>
+                        <input type="text" class="form-control" name="course_code" value="{{ course.course_code }}"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">COURSE NAME</label>
+                        <input type="text" class="form-control" name="course_name" value="{{ course.course_name }}"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">PROGRAM</label>
+                        <select class="form-select" name="program">
+                            <option value="BSCoS" {% if course.program=='BSCoS' %}selected{% endif %}>BS Computer
+                                Science</option>
+                            <option value="BSInfoTech" {% if course.program=='BSInfoTech' %}selected{% endif %}>BS
+                                Information Technology</option>
+                            <option value="Both" {% if course.program=='Both' %}selected{% endif %}>Both (Common)
+                            </option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
+                        <select class="form-select" name="department">
+                            <option value="DCS" {% if course.department=='DCS' or
+                                course.department=='Department of Computer Studies' %}selected{% endif %}>Department of
+                                Computer Studies</option>
+                            <option value="Engineering" {% if course.department=='Engineering' or
+                                course.department=='Department of Engineering' %}selected{% endif %}>Department of
+                                Engineering</option>
+
+                            <!-- BAGUHIN MO ITO (Simplified logic para sa full name match): -->
+                            <option {% if course.department=='Department of Teachers Education' or
+                                course.department=='Education' %}selected{% endif %}>
+                                Department of Teachers Education
+                            </option>
+
+                            <option value="Arts & Sciences" {% if course.department=='Arts & Sciences' or
+                                course.department=='Department of Arts and Sciences' %}selected{% endif %}>Department of
+                                Arts and Sciences</option>
+                            <option value="NSTP" {% if course.department=='NSTP' or course.department=='NSTP Department'
+                                %}selected{% endif %}>NSTP Department</option>
+                        </select>
+                    </div>
+
+                    <!-- Units/Hours -->
+                    <div class="row g-2">
+                        <div class="col-4 border-end">
+                            <label class="form-label small fw-bold text-center w-100 mb-1">UNITS</label>
+                            <div class="d-flex gap-1">
+                                <input type="number" class="form-control form-control-sm text-center" name="lec_units"
+                                    value="{{ course.lec_units }}">
+                                <input type="number" class="form-control form-control-sm text-center" name="lab_units"
+                                    value="{{ course.lab_units }}">
+                            </div>
+                        </div>
+                        <div class="col-4 border-end ps-2">
+                            <label class="form-label small fw-bold text-center w-100 mb-1">SYNC HRS</label>
+                            <div class="d-flex gap-1">
+                                <input type="number" class="form-control form-control-sm text-center"
+                                    name="synchronous_lec_hours" value="{{ course.synchronous_lec_hours }}">
+                                <input type="number" class="form-control form-control-sm text-center"
+                                    name="synchronous_lab_hours" value="{{ course.synchronous_lab_hours }}">
+                            </div>
+                        </div>
+                        <div class="col-4 ps-2">
+                            <label class="form-label small fw-bold text-center w-100 mb-1">ASYNC HRS</label>
+                            <div class="d-flex gap-1">
+                                <input type="number" class="form-control form-control-sm text-center"
+                                    name="asynchronous_lec_hours" value="{{ course.asynchronous_lec_hours }}">
+                                <input type="number" class="form-control form-control-sm text-center"
+                                    name="asynchronous_lab_hours" value="{{ course.asynchronous_lab_hours }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label small text-muted fw-bold">SEMESTER</label>
+                        <select class="form-select" name="semester_offered">
+                            <option {% if course.semester_offered=='1st Semester' %}selected{% endif %}>1st Semester
+                            </option>
+                            <option {% if course.semester_offered=='2nd Semester' %}selected{% endif %}>2nd Semester
+                            </option>
+                            <option {% if course.semester_offered=='Midyear' %}selected{% endif %}>Midyear</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="submit" class="btn btn-primary px-4">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- SINGLE DELETE MODAL -->
+<div class="modal fade" id="archiveModal{{ course.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Move to Recycle Bin?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to move <strong>{{ course.course_code }}</strong> to the recycle bin?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('archive_course', course_id=course.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-archive-confirm">Yes, Move to Recycle Bin</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- PDF IMPORT MODAL -->
+<div class="modal fade" id="importPdfModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import Curriculum PDF</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('import_courses_pdf') }}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">THIS CHECKLIST BELONGS TO:</label>
+                        <select class="form-select" name="target_program">
+                            <option value="BSCoS">BS Computer Science (BSCoS)</option>
+                            <option value="BSInfoTech">BS Information Technology (BSIT)</option>
+                        </select>
+                    </div>
+
+                    <!-- Eto yung "Matalinong Prompt" -->
+                    <div class="p-3 border rounded bg-light mb-3">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" name="auto_assign" id="autoAssignSwitch"
+                                checked>
+                            <label class="form-check-label fw-bold small" for="autoAssignSwitch">Auto-assign to
+                                Sections?</label>
+                        </div>
+                        <label class="form-label small text-muted">Identify the semester to populate in
+                            sections:</label>
+                        <select class="form-select form-select-sm" name="assign_semester">
+                            <option value="1st Semester">1st Semester</option>
+                            <option value="2nd Semester">2nd Semester</option>
+                            <option value="Midyear">Midyear</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">SELECT PDF FILE</label>
+                        <input type="file" name="file" class="form-control" accept=".pdf" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-danger">Import & Auto-Assign</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- WORD IMPORT MODAL -->
+<div class="modal fade" id="importWordModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import Curriculum (Word)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('import_courses_docx') }}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <a href="{{ url_for('download_curriculum_template') }}"
+                            class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                            <i class="bi bi-download me-1"></i> Download Template
+                        </a>
+                        <span class="text-muted small ms-2">Get the pre-formatted Word (.docx) template</span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">THIS CHECKLIST BELONGS TO:</label>
+                        <select class="form-select" name="target_program">
+                            <option value="BSCoS">BS Computer Science (BSCoS)</option>
+                            <option value="BSInfoTech">BS Information Technology (BSIT)</option>
+                        </select>
+                    </div>
+
+                    <div class="p-3 border rounded bg-light mb-3">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" name="auto_assign" id="autoAssignSwitchWord"
+                                checked>
+                            <label class="form-check-label fw-bold small" for="autoAssignSwitchWord">Auto-assign to
+                                Sections?</label>
+                        </div>
+                        <label class="form-label small text-muted">Identify the semester to populate in
+                            sections:</label>
+                        <select class="form-select form-select-sm" name="assign_semester">
+                            <option value="1st Semester">1st Semester</option>
+                            <option value="2nd Semester">2nd Semester</option>
+                            <option value="Midyear">Midyear</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">SELECT WORD FILE (.docx)</label>
+                        <input type="file" name="file" class="form-control" accept=".docx" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Import & Auto-Assign</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // ==================================================
+        // 1. SHARED VARIABLES
+        // ==================================================
+        const searchInput = document.getElementById('liveSearchInput');
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const bulkActionBar = document.getElementById('bulkActionBar');
+        const selectedCountSpan = document.getElementById('selectedCount');
+        const modalSelectedCount = document.getElementById('modalSelectedCount');
+        let rowCheckboxes = document.querySelectorAll('.row-checkbox'); // Will update dynamically
+        let allRows = document.querySelectorAll('.course-row');         // Will update dynamically
+
+        // ==================================================
+        // 2. SELECTION LOGIC (Extracted to Function)
+        // ==================================================
+        // Ginawa itong function para matawag ulit pagkatapos mag-search
+        function initializeSelectionLogic() {
+            rowCheckboxes = document.querySelectorAll('.row-checkbox');
+            allRows = document.querySelectorAll('.course-row');
+
+            // Row Click Event
+            allRows.forEach(row => {
+                // Remove old listeners to prevent duplicates (clean slate)
+                row.replaceWith(row.cloneNode(true));
+            });
+
+            // Re-select rows after cloning
+            allRows = document.querySelectorAll('.course-row');
+            rowCheckboxes = document.querySelectorAll('.row-checkbox');
+
+            allRows.forEach(row => {
+                row.addEventListener('click', function (e) {
+                    // Prevent row selection if clicking inside an action button or link
+                    if (e.target.closest('button') || e.target.closest('a')) {
+                        return;
+                    }
+                    const checkbox = this.querySelector('.row-checkbox');
+                    checkbox.checked = !checkbox.checked;
+                    updateSelectionState();
+                });
+            });
+        }
+
+        function updateSelectionState() {
+            let count = 0;
+            rowCheckboxes.forEach(cb => {
+                const row = cb.closest('tr');
+                if (cb.checked) {
+                    count++;
+                    row.classList.add('selected');
+                } else {
+                    row.classList.remove('selected');
+                }
+            });
+
+            if (selectedCountSpan) selectedCountSpan.textContent = count;
+            if (modalSelectedCount) modalSelectedCount.textContent = count;
+
+            if (count > 0) {
+                bulkActionBar.classList.add('active');
+            } else {
+                bulkActionBar.classList.remove('active');
+            }
+
+            if (selectAllCheckbox) {
+                // Only check visible rows
+                const visibleCheckboxes = Array.from(rowCheckboxes).filter(cb => cb.closest('tr').style.display !== 'none');
+                const checkedVisible = visibleCheckboxes.filter(cb => cb.checked);
+
+                if (visibleCheckboxes.length > 0) {
+                    selectAllCheckbox.checked = (checkedVisible.length === visibleCheckboxes.length);
+                    selectAllCheckbox.indeterminate = (checkedVisible.length > 0 && checkedVisible.length < visibleCheckboxes.length);
+                } else {
+                    selectAllCheckbox.checked = false;
+                    selectAllCheckbox.indeterminate = false;
+                }
+            }
+        }
+
+        // Select All Click
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function () {
+                const isChecked = this.checked;
+                rowCheckboxes.forEach(cb => {
+                    cb.checked = isChecked;
+                });
+                updateSelectionState();
+            });
+        }
+
+        window.deselectAll = function () {
+            rowCheckboxes.forEach(cb => cb.checked = false);
+            updateSelectionState();
+        };
+
+        window.submitBulkForm = function (formId) {
+            if (confirm('Are you sure you want to perform this action on selected items?')) {
+                document.getElementById(formId).submit();
+            }
+        };
+
+        // Initialize on first load
+        initializeSelectionLogic();
+
+
+        // ==================================================
+        // 3. AJAX LIVE SEARCH (The Magic Part)
+        // ==================================================
+        let debounceTimer;
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const query = this.value;
+                const currentSort = "{{ current_sort }}"; // Get from server template
+
+                // Clear previous timer (debounce)
+                clearTimeout(debounceTimer);
+
+                // Wait 300ms after typing stops before sending request
+                debounceTimer = setTimeout(() => {
+
+                    // 1. Update URL in Browser (Para pag ni-refresh, andun pa rin ang search)
+                    const newUrl = `${window.location.pathname}?search=${encodeURIComponent(query)}&sort=${currentSort}`;
+                    window.history.pushState({ path: newUrl }, '', newUrl);
+
+                    // 2. Fetch Data from Server (Background)
+                    fetch(newUrl)
+                        .then(response => response.text())
+                        .then(html => {
+                            // 3. Parse the HTML response
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+
+                            // 4. Get new Table Body and Pagination
+                            const newTableBody = doc.getElementById('coursesTable').querySelector('tbody').innerHTML;
+                            const newPagination = doc.querySelector('.pagination').innerHTML;
+
+                            // 5. Replace content in current page
+                            document.querySelector('#coursesTable tbody').innerHTML = newTableBody;
+                            document.querySelector('.pagination').innerHTML = newPagination;
+
+                            // 6. Re-attach click events to the new rows
+                            initializeSelectionLogic();
+
+                            // 7. Reset selection state (kasi nawala ang checked rows pagpalit)
+                            bulkActionBar.classList.remove('active');
+                            if (selectAllCheckbox) selectAllCheckbox.checked = false;
+
+                        })
+                        .catch(err => console.error('Search failed:', err));
+
+                }, 300); // 300ms delay
+            });
+        }
+
+        // ==================================================
+        // Auto-fill Sync Hours in Add Course modal
+        // Lec units → default sync lec = 2 hrs
+        // Lab units → default sync lab = 3 hrs
+        // Async hours stay at 0 (pandemic/special use only — fill manually if needed)
+        // ==================================================
+        const addLecUnits = document.getElementById('addLecUnits');
+        const addLabUnits = document.getElementById('addLabUnits');
+        const addSyncLec  = document.getElementById('addSyncLec');
+        const addSyncLab  = document.getElementById('addSyncLab');
+
+        if (addLecUnits && addSyncLec) {
+            addLecUnits.addEventListener('input', function () {
+                addSyncLec.value = parseInt(this.value) > 0 ? 2 : 0;
+            });
+        }
+        if (addLabUnits && addSyncLab) {
+            addLabUnits.addEventListener('input', function () {
+                addSyncLab.value = parseInt(this.value) > 0 ? 3 : 0;
+            });
+        }
+    });
+</script>
+{% endblock %}

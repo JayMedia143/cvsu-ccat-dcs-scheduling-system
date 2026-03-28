@@ -1,0 +1,24 @@
+<!-- templates/_blank_timetable.html -->
+<div class="table-responsive">
+    <table class="table table-bordered timetable-grid">
+        <thead>
+            <tr class="text-center">
+                <th class="time-header">Time</th>
+                {% for day in current_days %}
+                <th>{{ day }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% set time_slots = ["7:00-8:00", "8:00-9:00", "9:00-10:00", "10:00-11:00", "11:00-12:00", "12:00-1:00", "1:00-2:00", "2:00-3:00", "3:00-4:00", "4:00-5:00", "5:00-6:00", "6:00-7:00", "7:00-8:00"] %}
+            {% for time in time_slots %}
+            <tr>
+                <td class="time-slot">{{ time }}</td>
+                {% for day in current_days %}
+                <td></td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

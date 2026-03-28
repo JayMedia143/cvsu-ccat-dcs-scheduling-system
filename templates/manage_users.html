@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Users{% endblock %}
+
+{% block content %}
+
+<!-- 1. HEADER -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1">Users</h1>
+        <p class="text-muted small mb-0">Manage system administrators and regular users (Superadmin Access Only).</p>
+    </div>
+
+    <div class="d-flex align-items-center gap-3">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addUserModal">
+            <i class="bi bi-person-plus"></i>
+            <span>New User</span>
+        </button>
+    </div>
+</div>
+
+<!-- 2. MAIN TABLE CONTENT -->
+<div id="mainContentArea">
+    <div class="bg-white rounded border shadow-sm overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;" class="ps-4">USERNAME</th>
+                        <th style="width: 20%;">ROLE</th>
+                        <th style="width: 20%;" class="text-center">ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody class="user-table-body">
+                    {% for user in users %}
+                    <tr class="user-row" data-id="{{ user.id }}">
+                        <td class="fw-bold text-black ps-4">{{ user.username }}</td>
+                        <td>
+                            <span class="badge-clean">
+                                {% if user.role == 'superadmin' %}
+                                <i class="bi bi-shield-lock-fill text-danger me-1"></i> Superadmin
+                                {% elif user.role == 'admin' %}
+                                <i class="bi bi-tools text-primary me-1"></i> Admin
+                                {% else %}
+                                <i class="bi bi-person-fill text-success me-1"></i> User
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            {% if current_user_id != user.id %}
+                            <button type="button" class="btn-icon delete" data-bs-toggle="modal"
+                                data-bs-target="#deleteUserModal{{ user.id }}" title="Delete User">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            {% else %}
+                            <span class="text-muted small fst-italic">Logged in (You)</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="text-center py-5 text-muted">No users found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODALS ================= -->
+
+<!-- ADD USER MODAL -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('add_user') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">USERNAME</label>
+                        <input type="text" class="form-control" name="username" placeholder="e.g., admin_juan" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">PASSWORD</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">ROLE</label>
+                        <select class="form-select" name="role" required>
+                            <option value="user">User (View Only)</option>
+                            <option value="admin">Admin (Manage Data)</option>
+                            <option value="superadmin">Superadmin (Manage Everything)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Create User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ================= DELETE MODALS ================= -->
+{% for user in users %}
+{% if current_user_id != user.id %}
+<div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Delete User?</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-4">
+                Are you sure you want to permanently delete user <strong>{{ user.username }}</strong>?
+                <br>
+                <small class="text-danger mt-2 d-block">This action cannot be undone.</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('delete_user', user_id=user.id) }}" method="POST" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% endblock %}

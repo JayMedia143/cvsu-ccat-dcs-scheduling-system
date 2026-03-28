@@ -1,0 +1,1150 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Sections{% endblock %}
+
+{% block content %}
+
+<!-- 1. HEADER -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1">Sections</h1>
+        <p class="text-muted small mb-0">Manage student blocks and curriculum assignments.</p>
+    </div>
+
+    <!-- Updated Buttons: Clean Style -->
+    <div class="d-flex align-items-center gap-3">
+        <!-- New Section (Clean Style like Manage Courses) -->
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addSectionModal">
+            <i class="bi bi-plus-lg"></i>
+            <span>New Section</span>
+        </button>
+    </div>
+</div>
+
+<!-- 2. SEARCH & FILTER TOOLBAR -->
+<div class="row mb-4 position-relative align-items-center" style="height: 50px;">
+
+    <!-- A. BULK ACTION BAR (Overlay) -->
+    <!-- bulkActionBar div -->
+    <div class="bulk-action-bar" id="bulkActionBar">
+        <div class="d-flex align-items-center">
+            <button class="btn-icon" onclick="deselectAll()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <span class="bulk-count ms-2"><span id="selectedCount">0</span> selected</span>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <!-- PASTE BUTTON (Lalabas lang kapag may laman ang clipboard) -->
+            <button type="button" id="mainPasteBtn" class="btn btn-sm btn-outline-dark rounded-pill px-3 fw-bold"
+                style="display: none;" onclick="bulkPasteToSections()">
+                <i class="bi bi-clipboard-check text-success me-1"></i> Paste subjects
+            </button>
+
+            <button type="button" class="btn-simple-assign" onclick="openBulkAssignModal()">
+                <i class="bi bi-journal-plus me-2 fs-5"></i> Assign Curriculum
+            </button>
+
+            <div class="vr mx-2"></div>
+
+            <button type="button" class="bulk-btn delete-icon" data-bs-toggle="modal"
+                data-bs-target="#bulkArchiveModal">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- B. SEARCH INPUT -->
+    <div class="col h-100">
+        <form action="{{ url_for('manage_sections') }}" method="GET" class="h-100 w-100">
+            <input type="hidden" name="sort" value="{{ current_sort }}">
+            <input type="hidden" name="filter_by" value="{{ current_filter_by }}">
+            <input type="hidden" name="filter_val" value="{{ current_filter_val }}">
+
+            <div class="google-search-bar d-flex align-items-center h-100 w-100">
+                <i class="bi bi-search text-secondary me-3"></i>
+                <input type="text" name="search" class="google-search-input"
+                    placeholder="Search sections (e.g. '101', '4th')..." id="liveSearchInput" value="{{ search_query }}"
+                    autocomplete="off" onchange="this.form.submit()">
+            </div>
+        </form>
+    </div>
+
+    <!-- C. SORT & FILTER GROUP -->
+    <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end gap-2">
+
+        <!-- 1. FILTER DROPDOWN (New) -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="filterDropdown"
+                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                <i class="bi bi-funnel me-2"></i>
+                {% if current_filter_by == 'year' %}
+                Year: {{ current_filter_val }}
+                {% else %}
+                Filter
+                {% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="filterDropdown">
+                <!-- Clear Filter -->
+                <li>
+                    <a class="dropdown-item text-danger"
+                        href="{{ url_for('manage_sections', sort=current_sort, search=search_query) }}">
+                        <i class="bi bi-x-circle me-2"></i>Clear Filter
+                    </a>
+                </li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+
+                <!-- Year Level Filter -->
+                <li class="dropdown-submenu">
+                    <a class="dropdown-item" href="javascript:void(0);">Year Level</a>
+                    <ul class="dropdown-menu">
+                        {% for year in unique_years %}
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == year|string %}active{% endif %}"
+                                href="{{ url_for('manage_sections', sort=current_sort, search=search_query, filter_by='year', filter_val=year) }}">
+                                {% if year == 1 %}1st Year
+                                {% elif year == 2 %}2nd Year
+                                {% elif year == 3 %}3rd Year
+                                {% elif year == 4 %}4th Year
+                                {% else %}{{ year }}{% endif %}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 2. SORT DROPDOWN -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                {% if current_sort == 'name-asc' %} Name (A-Z)
+                {% elif current_sort == 'name-desc' %} Name (Z-A)
+                {% elif current_sort == 'year-asc' %} Year (1-4)
+                {% elif current_sort == 'year-desc' %} Year (4-1)
+                {% else %} Sort By {% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'name-asc' %}active{% endif %}"
+                        href="{{ url_for('manage_sections', sort='name-asc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Name (A-Z)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'name-desc' %}active{% endif %}"
+                        href="{{ url_for('manage_sections', sort='name-desc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Name (Z-A)
+                    </a>
+                </li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'year-asc' %}active{% endif %}"
+                        href="{{ url_for('manage_sections', sort='year-asc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Year Level (Low-High)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'year-desc' %}active{% endif %}"
+                        href="{{ url_for('manage_sections', sort='year-desc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Year Level (High-Low)
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+</div>
+
+<!-- 3. MAIN TABLE CONTENT -->
+<form id="bulkActionForm" method="POST"> <!-- Generic Form ID -->
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div id="mainContentArea">
+        <div class="bg-white rounded border shadow-sm overflow-hidden">
+            <!-- manage_sections.html TABLE PART -->
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="select-cell text-center" style="width: 40px;">
+                                <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                            </th>
+                            <!-- Adjusted Widths for Compact Look -->
+                            <th style="width: 20%;">SECTION NAME</th>
+                            <th style="width: 12%;" class="text-center">YEAR LEVEL</th>
+                            <th style="width: 12%;" class="text-center">POPULATION</th>
+                            <th style="width: 40%;">ASSIGNED COURSES</th>
+                            <th style="width: 16%;" class="text-center">ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody class="section-table-body">
+                        {% for section in sections %}
+                        <tr class="section-row" data-id="{{ section.id }}">
+                            <td class="select-cell text-center">
+                                <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
+                                    value="{{ section.id }}">
+                            </td>
+
+                            <!-- Pure Black Section Name -->
+                            <td class="fw-bold text-black">{{ section.section_name }}</td>
+
+                            <!-- Simple Badge -->
+                            <td class="text-center">
+                                <span class="badge-clean">
+                                    {% if section.year_level == 1 %}1st Year
+                                    {% elif section.year_level == 2 %}2nd Year
+                                    {% elif section.year_level == 3 %}3rd Year
+                                    {% elif section.year_level == 4 %}4th Year
+                                    {% else %}{{ section.year_level }}{% endif %}
+                                </span>
+                            </td>
+
+                            <td class="text-center text-dark">{{ section.number_of_students }}</td>
+
+                            <!-- Compact Course List -->
+                            <td>
+                                {% if section.courses %}
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% for course in section.courses[:3] %}
+                                    <span class="badge-clean" style="font-size: 0.7rem;">{{ course.course_code }}</span>
+                                    {% endfor %}
+                                    {% if section.courses|length > 3 %}
+                                    <!-- Hover effect using title attribute -->
+                                    <span class="text-muted small ms-1 align-self-center cursor-help"
+                                        title="{% for c in section.courses[3:] %}{{ c.course_code }} - {{ c.course_name }}{{ '\n' }}{% endfor %}">
+                                        +{{ section.courses|length - 3 }} more
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <span class="text-muted small fst-italic">--</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Sa loob ng Actions column -->
+                            <td class="text-center" onclick="event.stopPropagation()">
+                                <button type="button" class="btn-icon"
+                                    onclick="copyCurriculum({{ section.id }}, '{{ section.section_name }}')"
+                                    title="Copy subjects">
+                                    <i class="bi bi-clipboard text-dark opacity-75"></i>
+                                </button>
+
+                                <!-- 3rd: Schedule Viewer -->
+                                <button type="button" class="btn-icon view"
+                                    onclick="viewSchedule('section', {{ section.id }})" title="View Schedule">
+                                    <i class="bi bi-calendar-week"></i>
+                                </button>
+
+                                <!-- 3. Edit -->
+                                <button type="button" class="btn-icon edit" data-bs-toggle="modal"
+                                    data-bs-target="#editSectionModal{{ section.id }}" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+
+                                <!-- 4. Delete (hidden for T.B.A. system section) -->
+                                {% if section.section_name != 'T.B.A.' %}
+                                <button type="button" class="btn-icon delete" title="Move to Recycle Bin"
+                                    data-bs-toggle="modal" data-bs-target="#archiveModal{{ section.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">No sections found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PAGINATION -->
+        <div class="mt-3 pb-5">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mb-2">
+                    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                        <a class="page-link"
+                            href="{{ url_for('manage_sections', page=pagination.prev_num, sort=current_sort, search=search_query) }}"><i
+                                class="bi bi-chevron-left"></i></a>
+                    </li>
+                    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2)
+                    %}
+                    {% if page_num %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link"
+                            href="{{ url_for('manage_sections', page=page_num, sort=current_sort, search=search_query) }}">{{
+                            page_num }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>
+                    {% endif %}
+                    {% endfor %}
+                    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                        <a class="page-link"
+                            href="{{ url_for('manage_sections', page=pagination.next_num, sort=current_sort, search=search_query) }}"><i
+                                class="bi bi-chevron-right"></i></a>
+                    </li>
+                </ul>
+            </nav>
+            {% if pagination.pages > 1 %}
+            <div class="d-flex align-items-center justify-content-center gap-2 text-muted" style="font-size:0.85rem;">
+                <span>Jump to:</span>
+                <input type="number" id="pageJumpInput" class="form-control form-control-sm text-center"
+                    style="width:70px;" min="1" max="{{ pagination.pages }}" placeholder="1–{{ pagination.pages }}">
+                <button class="btn btn-sm btn-outline-secondary px-3" onclick="jumpToPage()">Go</button>
+                <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i
+                        class="bi bi-arrow-right-short"></i> arrow keys</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</form>
+
+<!-- ================= MODALS ================= -->
+
+<!-- 1. FINAL BULK ASSIGN MODAL (v5.3 - EXCEL LIGHT & READABLE) -->
+<div class="modal fade" id="bulkAssignModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-below-nav modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 4px;">
+            <form action="{{ url_for('bulk_assign_curriculum') }}" method="POST" id="assignForm"
+                class="d-flex flex-column"
+                style="max-height: 92vh; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- HEADER (Consistent Light Excel) -->
+                <div class="modal-header border-bottom py-3 px-4 bg-white sticky-top">
+                    <div class="d-flex align-items-center">
+                        <div class="p-2 rounded-1 me-3" style="background-color: #e6f4ea;">
+                            <i class="bi bi-file-earmark-spreadsheet-fill fs-4" style="color: #217346;"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0" style="font-size: 1.1rem;">Curriculum
+                                Assignment Wizard</h5>
+                            <span class="text-muted" style="font-size: 0.85rem;">Assigning to <span
+                                    id="assignCountDisplay" class="fw-bold text-dark">0</span> section(s)</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" style="font-size: 0.8rem;"></button>
+                </div>
+
+                <div class="modal-body bg-white p-0">
+                    <div id="hiddenSectionInputs"></div>
+
+                    <!-- CONTROL PANEL -->
+                    <div class="border-bottom p-4" style="background-color: #f9fbf9;">
+                        <div class="row g-4">
+                            <!-- Selected Summary Area -->
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold text-dark small text-uppercase"
+                                        style="letter-spacing: 0.5px;">Selected Items:</span>
+                                    <button type="button"
+                                        class="btn btn-link btn-sm text-danger text-decoration-none p-0 fw-bold"
+                                        onclick="resetAllAssignments()">
+                                        <i class="bi bi-trash3 me-1"></i> Reset All
+                                    </button>
+                                </div>
+                                <div id="selectedSubjectsContainer"
+                                    class="d-flex flex-wrap gap-2 p-3 bg-white border rounded shadow-sm"
+                                    style="min-height: 70px; max-height: 150px; overflow-y: auto; border: 1px solid #ced4da !important;">
+                                    <span class="text-muted fst-italic align-self-center" style="font-size: 0.9rem;">No
+                                        subjects selected. Click subjects below or use presets...</span>
+                                </div>
+                            </div>
+
+                            <!-- Paste Area (Lalabas lang pag may na-copy) -->
+                            <div id="modalPasteArea" class="col-12" style="display: none !important;">
+                                <div class="alert alert-success d-flex justify-content-between align-items-center py-2 px-3 mb-0 border-0 shadow-sm"
+                                    style="border-left: 5px solid #217346 !important; background-color: #e6f4ea;">
+                                    <div class="fw-bold text-dark" style="font-size: 0.9rem;">
+                                        <i class="bi bi-clipboard-check-fill me-2 text-success"></i>
+                                        Clipboard: <span id="copiedSectionLabel" class="text-success">---</span>
+                                    </div>
+                                    <button type="button" class="btn btn-dark btn-sm px-4 fw-bold shadow-sm"
+                                        onclick="pasteInModal()">
+                                        Apply Copied Subjects
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Smart Presets -->
+                            <div class="col-lg-8">
+                                <span class="fw-bold text-dark small text-uppercase d-block mb-2">Smart Presets:</span>
+                                <div class="row g-2">
+                                    <!-- BSCoS -->
+                                    <div class="col-md-6 border-end">
+                                        <div class="text-secondary fw-bold mb-2 pb-1 border-bottom"
+                                            style="font-size: 0.85rem; color: #444 !important;">BS COMPUTER SCIENCE
+                                        </div>
+                                        <div class="row g-1">
+                                            {% for yr in [1, 2, 3, 4] %}
+                                            <div class="col-6 mb-1">
+                                                <div class="btn-group w-100 shadow-xs">
+                                                    <button type="button"
+                                                        class="btn btn-outline-secondary btn-sm fw-bold w-50 py-1"
+                                                        style="font-size: 0.75rem;"
+                                                        onclick="smartSelect({{yr}}, '1st Semester', 'BSCoS')">{{yr}}Y-S1</button>
+                                                    <button type="button"
+                                                        class="btn btn-outline-secondary btn-sm fw-bold w-50 py-1"
+                                                        style="font-size: 0.75rem;"
+                                                        onclick="smartSelect({{yr}}, '2nd Semester', 'BSCoS')">S2</button>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    <!-- BSIT -->
+                                    <div class="col-md-6 ps-md-4">
+                                        <div class="text-secondary fw-bold mb-2 pb-1 border-bottom"
+                                            style="font-size: 0.85rem; color: #444 !important;">BS INFO TECH</div>
+                                        <div class="row g-1">
+                                            {% for yr in [1, 2, 3, 4] %}
+                                            <div class="col-6 mb-1">
+                                                <div class="btn-group w-100 shadow-xs">
+                                                    <button type="button"
+                                                        class="btn btn-outline-secondary btn-sm fw-bold w-50 py-1"
+                                                        style="font-size: 0.75rem;"
+                                                        onclick="smartSelect({{yr}}, '1st Semester', 'BSInfoTech')">{{yr}}Y-S1</button>
+                                                    <button type="button"
+                                                        class="btn btn-outline-secondary btn-sm fw-bold w-50 py-1"
+                                                        style="font-size: 0.75rem;"
+                                                        onclick="smartSelect({{yr}}, '2nd Semester', 'BSInfoTech')">S2</button>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Manual Filter -->
+                            <div class="col-lg-4">
+                                <span class="fw-bold text-dark small text-uppercase d-block mb-2">Subject Filter:</span>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0"><i
+                                            class="bi bi-search"></i></span>
+                                    <input type="text" id="subjectSearchInput" class="form-control border-start-0 ps-1"
+                                        placeholder="Type code or name...">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SUBJECT GRID (3 COLUMNS) -->
+                    <div class="p-4 bg-white">
+                        <div class="row gx-4">
+                            {% for sem in ['1st Semester', '2nd Semester', 'Midyear'] %}
+                            {% if courses_by_sem[sem] %}
+                            <div class="col-md-4 mb-4">
+                                <div class="d-flex align-items-center mb-3 border-bottom border-2 pb-2"
+                                    style="border-color: #217346 !important;">
+                                    <i class="bi bi-collection-fill text-success me-2 fs-5"></i>
+                                    <span class="fw-bold text-dark text-uppercase"
+                                        style="font-size: 0.9rem; letter-spacing: 0.5px;">{{ sem }}</span>
+                                </div>
+                                <div class="course-list-container pe-1" style="max-height: 450px; overflow-y: auto;">
+                                    {% for course in courses_by_sem[sem] %}
+                                    <div class="course-readable-card mb-2">
+                                        <input class="form-check-input d-none" type="checkbox" name="course_ids"
+                                            value="{{ course.id }}" id="bulk_course_{{ course.id }}"
+                                            data-code="{{ course.course_code }}" data-semester="{{ sem }}"
+                                            data-program="{{ course.program }}" data-year="{{ course.year_level }}"
+                                            onchange="updateSelectedSummary()">
+                                        <label
+                                            class="d-flex align-items-center p-3 border bg-white transition-all cursor-pointer w-100"
+                                            for="bulk_course_{{ course.id }}">
+                                            <div class="flex-shrink-0 me-3">
+                                                <i class="bi bi-square text-muted fs-5 check-indicator"></i>
+                                            </div>
+                                            <div class="flex-grow-1 overflow-hidden">
+                                                <div class="fw-bold text-dark mb-1" style="font-size: 1rem;">{{
+                                                    course.course_code }}</div>
+                                                <div class="text-secondary text-truncate" style="font-size: 0.85rem;">{{
+                                                    course.course_name }}</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FOOTER -->
+                <div class="modal-footer bg-white border-top py-3 px-4 d-flex justify-content-between shadow-lg"
+                    style="z-index: 20;">
+                    <div class="text-muted" style="font-size: 0.9rem;">
+                        <i class="bi bi-info-circle me-1"></i> Review selections before saving.
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary px-4 fw-bold"
+                            data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn text-white px-5 fw-bold shadow-sm"
+                            style="background-color: #217346; font-size: 1rem;">
+                            <i class="bi bi-save2-fill me-2"></i> Save Assignments
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Excel Theme Styles */
+    .course-readable-card label {
+        border-color: #e2e8f0 !important;
+        border-radius: 4px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    }
+
+    .course-readable-card label:hover {
+        background-color: #f8fafc !important;
+        border-color: #217346 !important;
+    }
+
+    .course-readable-card input:checked+label {
+        background-color: #f0fdf4 !important;
+        border-color: #217346 !important;
+        border-left: 5px solid #217346 !important;
+    }
+
+    .course-readable-card input:checked+label .check-indicator {
+        color: #217346 !important;
+    }
+
+    .course-readable-card input:checked+label .check-indicator::before {
+        content: "\f272";
+        font-family: "bootstrap-icons";
+    }
+
+    .course-list-container::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .course-list-container::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 10px;
+    }
+
+    .badge-selection {
+        font-size: 0.85rem;
+        font-weight: bold;
+        background: white;
+        border: 1px solid #217346;
+        color: #217346;
+        padding: 5px 12px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .shadow-xs {
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+</style>
+
+<!-- 2. ADD SECTION MODAL -->
+<div class="modal fade" id="addSectionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Section</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('add_section') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">SECTION NAME</label>
+                        <input type="text" class="form-control" name="section_name" placeholder="e.g., BSCoS 101-A"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">NUMBER OF STUDENTS</label>
+                        <input type="number" class="form-control" name="number_of_students" value="40" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">YEAR LEVEL</label>
+                        <select class="form-select" name="year_level">
+                            <option value="1">First Year</option>
+                            <option value="2">Second Year</option>
+                            <option value="3">Third Year</option>
+                            <option value="4">Fourth Year</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="submit" class="btn btn-primary px-4">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 3. EDIT & DELETE MODALS -->
+{% for section in sections %}
+<div class="modal fade" id="editSectionModal{{ section.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Section</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('update_section', section_id=section.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">SECTION NAME</label>
+                        <input type="text" class="form-control" name="section_name" value="{{ section.section_name }}"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">NUMBER OF STUDENTS</label>
+                        <input type="number" class="form-control" name="number_of_students"
+                            value="{{ section.number_of_students }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">YEAR LEVEL</label>
+                        <select class="form-select" name="year_level">
+                            <option value="1" {% if section.year_level==1 %}selected{% endif %}>First Year</option>
+                            <option value="2" {% if section.year_level==2 %}selected{% endif %}>Second Year</option>
+                            <option value="3" {% if section.year_level==3 %}selected{% endif %}>Third Year</option>
+                            <option value="4" {% if section.year_level==4 %}selected{% endif %}>Fourth Year</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="submit" class="btn btn-primary px-4">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="archiveModal{{ section.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Move to Recycle Bin?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to move <strong>{{ section.section_name }}</strong> to the recycle bin?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('archive_section', section_id=section.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-archive-confirm">Yes, Move to Recycle Bin</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- ======================================================= -->
+<!-- BULK DELETE MODAL (ILABAS MO DITO PARA ISA LANG SIYA) -->
+<!-- ======================================================= -->
+<div class="modal fade" id="bulkArchiveModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Move to Recycle Bin?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to move the <span id="modalSelectedCount" class="fw-bold text-danger">0</span> selected
+                sections to the recycle bin?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
+                <!-- Trigger form submission via JS -->
+                <button type="button" class="btn btn-archive-confirm" onclick="confirmBulkDelete()">Yes, Move to Recycle Bin</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PROGRAM MISMATCH WARNING MODAL                               -->
+<!-- ============================================================ -->
+<div class="modal fade" id="mismatchWarningModal" tabindex="-1" aria-labelledby="mismatchWarningLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered" style="max-width: 520px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+
+            <!-- Red gradient header -->
+            <div class="modal-header border-0 py-4 px-4"
+                style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                <div class="d-flex align-items-center gap-3 w-100">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                        style="width:48px; height:48px; background: rgba(255,255,255,0.2);">
+                        <i class="bi bi-exclamation-triangle-fill text-white fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title text-white fw-bold mb-0" id="mismatchWarningLabel">Program Mismatch
+                            Detected</h5>
+                        <small class="text-white opacity-75">Curriculum cannot be assigned as-is</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body px-4 py-4">
+                <p class="text-dark mb-3" style="font-size: 0.95rem; line-height: 1.6;">
+                    You selected subjects from
+                    <span class="fw-bold text-danger" id="mismatchSubjectProgram">—</span>,
+                    but the following section(s) belong to
+                    <span class="fw-bold text-primary" id="mismatchSectionProgram">—</span>:
+                </p>
+
+                <!-- Mismatched section list -->
+                <div class="rounded-3 border border-danger bg-danger bg-opacity-10 px-3 py-2 mb-4">
+                    <ul class="list-unstyled mb-0" id="mismatchSectionList">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+
+                <div class="alert alert-warning border-0 d-flex align-items-start gap-2 py-2 px-3 rounded-2 mb-0"
+                    style="background:#fff8e1; font-size:0.88rem;">
+                    <i class="bi bi-lightbulb-fill text-warning mt-1 flex-shrink-0"></i>
+                    <span>
+                        <strong>How to fix:</strong> Go back to the wizard, click <em>Reset All</em>,
+                        then choose the correct program preset for the selected sections.
+                    </span>
+                </div>
+            </div>
+
+            <!-- Footer — back button only (no "proceed anyway") -->
+            <div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end">
+                <button type="button" class="btn btn-danger px-5 fw-bold rounded-pill shadow-sm"
+                    data-bs-dismiss="modal">
+                    <i class="bi bi-arrow-left me-2"></i> Go Back & Fix
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    // ==========================================
+    // 1. GLOBAL CLIPBOARD VARIABLES
+    // ==========================================
+    let curriculumClipboard = null;
+    let clipboardSourceName = "";
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // DOM Elements
+        const searchInput = document.getElementById('liveSearchInput');
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const bulkActionBar = document.getElementById('bulkActionBar');
+        const selectedCountSpan = document.getElementById('selectedCount');
+
+        // Modal Elements
+        const subjectSearchInput = document.getElementById('subjectSearchInput');
+
+        // ==========================================
+        // 2. MAIN TABLE SELECTION & AJAX SEARCH
+        // ==========================================
+
+        function initializeSelectionLogic() {
+            const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+            const allRows = document.querySelectorAll('.section-row');
+            const paginationLinks = document.querySelectorAll('.page-link');
+
+            allRows.forEach(row => {
+                // Prevent duplicate listeners by cloning
+                const newRow = row.cloneNode(true);
+                row.parentNode.replaceChild(newRow, row);
+
+                newRow.addEventListener('click', function (e) {
+                    // Don't trigger if a button or link was clicked
+                    if (e.target.closest('button') || e.target.closest('a')) return;
+                    const checkbox = this.querySelector('.row-checkbox');
+                    checkbox.checked = !checkbox.checked;
+                    updateSelectionState();
+                });
+            });
+
+            document.querySelectorAll('.row-checkbox').forEach(cb => {
+                cb.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    updateSelectionState();
+                });
+            });
+
+            // AJAX Pagination support
+            paginationLinks.forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const url = this.getAttribute('href');
+                    if (url && url !== '#') fetchContent(url);
+                });
+            });
+        }
+
+        function updateSelectionState() {
+            const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+            let count = 0;
+            rowCheckboxes.forEach(cb => {
+                const row = cb.closest('tr');
+                if (cb.checked) {
+                    count++;
+                    row.classList.add('selected');
+                } else {
+                    row.classList.remove('selected');
+                }
+            });
+
+            if (selectedCountSpan) selectedCountSpan.textContent = count;
+            const modalSelectedCount = document.getElementById('modalSelectedCount');
+            if (modalSelectedCount) modalSelectedCount.textContent = count;
+
+            if (count > 0) bulkActionBar.classList.add('active');
+            else bulkActionBar.classList.remove('active');
+
+            if (selectAllCheckbox) {
+                const visible = Array.from(rowCheckboxes).filter(cb => cb.closest('tr').style.display !== 'none');
+                if (visible.length > 0) {
+                    const checked = visible.filter(cb => cb.checked).length;
+                    selectAllCheckbox.checked = (checked === visible.length);
+                    selectAllCheckbox.indeterminate = (checked > 0 && checked < visible.length);
+                }
+            }
+        }
+
+        // Select All Event
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function () {
+                const isChecked = this.checked;
+                document.querySelectorAll('.row-checkbox').forEach(cb => {
+                    if (cb.closest('tr').style.display !== 'none') cb.checked = isChecked;
+                });
+                updateSelectionState();
+            });
+        }
+
+        window.deselectAll = function () {
+            document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+            if (selectAllCheckbox) { selectAllCheckbox.checked = false; selectAllCheckbox.indeterminate = false; }
+            updateSelectionState();
+        };
+
+        // AJAX Fetch Function
+        function fetchContent(url) {
+            fetch(url).then(response => response.text()).then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                document.getElementById('mainContentArea').innerHTML = doc.getElementById('mainContentArea').innerHTML;
+                initializeSelectionLogic();
+                bulkActionBar.classList.remove('active');
+                if (selectAllCheckbox) { selectAllCheckbox.checked = false; selectAllCheckbox.indeterminate = false; }
+            }).catch(err => console.error('Fetch failed:', err));
+        }
+
+        // Live Search with Debounce
+        let debounceTimer;
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const query = this.value;
+                const currentSort = "{{ current_sort }}";
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    const newUrl = `${window.location.pathname}?search=${encodeURIComponent(query)}&sort=${currentSort}&page=1`;
+                    window.history.replaceState({ path: newUrl }, '', newUrl);
+                    fetchContent(newUrl);
+                }, 300);
+            });
+        }
+
+        // ==========================================
+        // 3. MODAL INTERNAL FEATURES
+        // ==========================================
+
+        // Internal Modal Search
+        if (subjectSearchInput) {
+            subjectSearchInput.addEventListener('keyup', function (e) {
+                const term = e.target.value.toLowerCase();
+                const items = document.querySelectorAll('.course-readable-card');
+                items.forEach(item => {
+                    const text = item.innerText.toLowerCase();
+                    item.style.display = text.includes(term) ? 'block' : 'none';
+                });
+            });
+        }
+
+        // Initialize logic
+        initializeSelectionLogic();
+    });
+
+    // ==========================================
+    // 4. ASSIGNMENT MODAL & SMART LOGIC
+    // ==========================================
+
+    // FIXED: Open Modal with Existing Badges
+    window.openBulkAssignModal = function () {
+        const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+        const ids = Array.from(checkedBoxes).map(cb => cb.value);
+
+        if (ids.length === 0) {
+            alert("Select at least one section first.");
+            return;
+        }
+
+        document.getElementById('assignCountDisplay').textContent = ids.length;
+        document.querySelectorAll('#assignForm input[name="course_ids"]').forEach(cb => cb.checked = false);
+
+        // Hidden inputs for IDs — also store section name for program validation
+        const container = document.getElementById('hiddenSectionInputs');
+        container.innerHTML = '';
+        ids.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'section_ids';
+            input.value = id;
+            // Grab the section name from the visible table row for mismatch detection
+            const row = document.querySelector(`.section-row[data-id="${id}"]`);
+            if (row) {
+                const nameCell = row.querySelector('td.fw-bold');
+                if (nameCell) input.setAttribute('data-section-name', nameCell.textContent.trim());
+            }
+            container.appendChild(input);
+        });
+
+        const modalEl = document.getElementById('bulkAssignModal');
+        const assignModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+        // KUNG ISA LANG ANG PINILI: Load existing subjects to badges
+        if (ids.length === 1) {
+            fetch(`/get_section_courses/${ids[0]}`)
+                .then(res => res.json())
+                .then(courseIds => {
+                    courseIds.forEach(id => {
+                        const cb = document.getElementById(`bulk_course_${id}`);
+                        if (cb) cb.checked = true;
+                    });
+                    updateSelectedSummary(); // Eto yung kailangan para lumabas yung badges!
+                    assignModal.show();
+                });
+        } else {
+            updateSelectedSummary();
+            assignModal.show();
+        }
+    };
+
+    // Simplified Badge Updater
+    window.updateSelectedSummary = function () {
+        const checkedBoxes = document.querySelectorAll('#assignForm input[name="course_ids"]:checked');
+        const container = document.getElementById('selectedSubjectsContainer');
+        container.innerHTML = '';
+
+        if (checkedBoxes.length === 0) {
+            container.innerHTML = '<span class="text-muted fst-italic align-self-center ps-2">No subjects selected...</span>';
+            return;
+        }
+
+        checkedBoxes.forEach(cb => {
+            const code = cb.getAttribute('data-code');
+            const badge = document.createElement('div');
+            badge.className = 'badge-selection shadow-xs cursor-pointer';
+            badge.innerHTML = `<span>${code}</span> <i class="bi bi-x-lg"></i>`;
+            badge.onclick = () => { cb.checked = false; updateSelectedSummary(); };
+            container.appendChild(badge);
+        });
+    };
+
+    window.resetAllAssignments = function () {
+        document.querySelectorAll('#assignForm input[name="course_ids"]').forEach(cb => cb.checked = false);
+        updateSelectedSummary();
+    };
+
+    window.smartSelect = function (yearLevel, semesterName, programName) {
+        const checkboxes = document.querySelectorAll('#assignForm input[name="course_ids"]');
+        let count = 0;
+
+        checkboxes.forEach(cb => {
+            const sem = cb.getAttribute('data-semester');
+            const prog = cb.getAttribute('data-program');
+            const yr = parseInt(cb.getAttribute('data-year'));
+
+            if (sem === semesterName && yr === yearLevel && (prog === programName || prog === 'Both')) {
+                cb.checked = true;
+                count++;
+            }
+        });
+
+        updateSelectedSummary();
+
+        // ── Immediate mismatch check right after applying preset ──
+        validateProgramMatch();
+    };
+
+    // ==========================================
+    // 5. COPY & PASTE SYSTEM
+    // ==========================================
+
+    window.copyCurriculum = function (sectionId, sectionName) {
+        const btn = event.currentTarget;
+        const icon = btn.querySelector('i');
+        const originalClass = icon.className;
+
+        icon.className = "spinner-border spinner-border-sm text-secondary";
+
+        fetch(`/get_section_courses/${sectionId}`)
+            .then(r => r.json())
+            .then(ids => {
+                if (ids.length === 0) {
+                    alert("Section has no subjects to copy.");
+                    icon.className = originalClass;
+                    return;
+                }
+                curriculumClipboard = ids;
+                clipboardSourceName = sectionName;
+
+                // Show UI elements
+                document.getElementById('copiedSectionLabel').textContent = sectionName;
+                document.getElementById('modalPasteArea').style.setProperty('display', 'flex', 'important');
+                if (document.getElementById('mainPasteBtn')) document.getElementById('mainPasteBtn').style.display = "inline-block";
+
+                icon.className = "bi bi-check2 text-success fw-bold";
+                setTimeout(() => { icon.className = "bi bi-clipboard-check-fill text-dark"; }, 1500);
+            })
+            .catch(() => { icon.className = originalClass; });
+    };
+
+    window.pasteInModal = function () {
+        if (!curriculumClipboard) return;
+        document.querySelectorAll('#assignForm input[name="course_ids"]').forEach(cb => cb.checked = false);
+        curriculumClipboard.forEach(id => {
+            const checkbox = document.getElementById(`bulk_course_${id}`);
+            if (checkbox) checkbox.checked = true;
+        });
+        updateSelectedSummary();
+    };
+
+    window.bulkPasteToSections = function () {
+        const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+        const targetIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+        if (!curriculumClipboard || targetIds.length === 0) return;
+
+        if (confirm(`Paste subjects of "${clipboardSourceName}" to ${targetIds.length} sections?`)) {
+            const formData = new FormData();
+            targetIds.forEach(id => formData.append('section_ids', id));
+            curriculumClipboard.forEach(id => formData.append('course_ids', id));
+
+            fetch("{{ url_for('bulk_assign_curriculum') }}", { method: 'POST', body: formData })
+                .then(res => { if (res.ok) location.reload(); });
+        }
+    };
+
+    window.confirmBulkDelete = function () {
+        document.getElementById('bulkActionForm').action = "{{ url_for('bulk_archive_sections') }}";
+        document.getElementById('bulkActionForm').submit();
+    };
+
+    // ==========================================
+    // 6. PROGRAM MISMATCH VALIDATION
+    // ==========================================
+
+    /**
+     * Infer program from section name.
+     * Returns 'BSCoS', 'BSInfoTech', or null (unrecognised → skip check).
+     */
+    function inferProgramFromSectionName(name) {
+        const u = name.toUpperCase();
+        if (/BSCOS|BSCS|COMSCI|COMPSCI|CS[-\s]?\d/.test(u)) return 'BSCoS';
+        if (/BSIT|INFOTECH|INFO\s*TECH|IT[-\s]?\d/.test(u)) return 'BSInfoTech';
+        return null;
+    }
+
+    /**
+     * Detect the dominant program from currently-checked subjects
+     * (ignoring 'Both' subjects since they are shared).
+     */
+    function detectSubjectProgram() {
+        const programs = new Set();
+        document.querySelectorAll('#assignForm input[name="course_ids"]:checked').forEach(cb => {
+            const p = cb.getAttribute('data-program');
+            if (p && p !== 'Both') programs.add(p);
+        });
+        if (programs.size === 0) return null;   // nothing exclusive selected
+        if (programs.size === 1) return [...programs][0];
+        return 'Mixed'; // both BSCoS and BSInfoTech exclusive subjects checked
+    }
+
+    /**
+     * Main validator. Returns true = OK to submit, false = mismatch found.
+     * Also shows the warning modal when a mismatch is detected.
+     */
+    window.validateProgramMatch = function () {
+        const subjectProgram = detectSubjectProgram();
+
+        // If nothing exclusive is selected, or subjects are mixed, skip check
+        if (!subjectProgram || subjectProgram === 'Mixed') return true;
+
+        const sectionInputs = document.querySelectorAll('#hiddenSectionInputs input[name="section_ids"]');
+        const mismatchedSections = [];
+
+        sectionInputs.forEach(inp => {
+            const sName = inp.getAttribute('data-section-name') || '';
+            const sProgram = inferProgramFromSectionName(sName);
+            // Only flag if we CAN identify the section's program AND it DOESN'T match
+            if (sProgram && sProgram !== subjectProgram) {
+                mismatchedSections.push(sName);
+            }
+        });
+
+        if (mismatchedSections.length === 0) return true; // all good
+
+        // ── Build and show warning modal ──
+        const labelMap = { 'BSCoS': 'BS Computer Science', 'BSInfoTech': 'BS Information Technology' };
+        const subjectLabel = labelMap[subjectProgram] || subjectProgram;
+
+        // Determine what the sections are
+        const sectionPrograms = new Set(
+            mismatchedSections.map(n => inferProgramFromSectionName(n)).filter(Boolean)
+        );
+        const sectionLabel = sectionPrograms.size === 1 ? (labelMap[[...sectionPrograms][0]] || [...sectionPrograms][0]) : 'a different program';
+
+        document.getElementById('mismatchSubjectProgram').textContent = subjectLabel;
+        document.getElementById('mismatchSectionProgram').textContent = sectionLabel;
+        document.getElementById('mismatchSectionList').innerHTML =
+            mismatchedSections.map(n => `<li class="py-1"><i class="bi bi-building me-2 text-danger opacity-75"></i><strong>${n}</strong></li>`).join('');
+
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('mismatchWarningModal'));
+        modal.show();
+        return false;
+    };
+
+    // Block form submit when mismatch is detected
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('assignForm');
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                if (!validateProgramMatch()) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

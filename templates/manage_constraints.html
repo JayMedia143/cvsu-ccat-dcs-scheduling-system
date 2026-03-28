@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Constraints{% endblock %}
+
+{% block content %}
+
+<!-- 1. HEADER -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1">Constraints</h1>
+        <p class="text-muted small mb-0">Define the hard and soft rules for the scheduling engine.</p>
+    </div>
+    <div>
+        <form method="POST" action="{{ url_for('sync_constraints') }}"
+              onsubmit="return confirm('Sync the master constraint list?\n\nThis will add any missing constraints and update names/descriptions.\nYour current type and weight settings will NOT be changed.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2">
+                <i class="bi bi-arrow-repeat"></i>
+                <span>Sync Constraints</span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- 2. LEGEND (Balanced Grid Layout) -->
+<div class="card border shadow-sm mb-4">
+    <div class="card-body py-3 px-0"> 
+        <div class="row g-0 align-items-center">
+            
+            <!-- Label -->
+            <div class="col-auto px-4 border-end d-flex align-items-center" style="min-width: 150px;">
+                <span class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem; letter-spacing: 1px;">
+                    Priority Levels:
+                </span>
+            </div>
+
+            <!-- Hard -->
+            <div class="col border-end d-flex justify-content-center align-items-center py-1">
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-danger rounded-pill me-3" style="width: 45px; height: 24px; display: flex; align-items: center; justify-content: center;">HC</span>
+                    <div class="d-flex flex-column lh-1 text-start">
+                        <span class="fw-bold text-dark" style="font-size: 0.85rem;">Hard</span>
+                        <span class="text-danger small fw-bold" style="font-size: 0.65rem;">Invalid</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Soft I -->
+            <div class="col border-end d-flex justify-content-center align-items-center py-1">
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-warning text-dark rounded-pill me-3" style="width: 45px; height: 24px; display: flex; align-items: center; justify-content: center;">SC-I</span>
+                    <div class="d-flex flex-column lh-1 text-start">
+                        <span class="fw-bold text-dark" style="font-size: 0.85rem;">Soft I</span>
+                        <span class="text-muted" style="font-size: 0.65rem;">High penalty</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Soft II -->
+            <div class="col border-end d-flex justify-content-center align-items-center py-1">
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-info text-dark rounded-pill me-3" style="width: 45px; height: 24px; display: flex; align-items: center; justify-content: center;">SC-II</span>
+                    <div class="d-flex flex-column lh-1 text-start">
+                        <span class="fw-bold text-dark" style="font-size: 0.85rem;">Soft II</span>
+                        <span class="text-muted" style="font-size: 0.65rem;">Low penalty</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Not Constraint -->
+            <div class="col d-flex justify-content-center align-items-center py-1">
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-secondary rounded-pill me-3" style="width: 45px; height: 24px; display: flex; align-items: center; justify-content: center;">NC</span>
+                    <div class="d-flex flex-column lh-1 text-start">
+                        <span class="fw-bold text-dark" style="font-size: 0.85rem;">None</span>
+                        <span class="text-muted" style="font-size: 0.65rem;">Disabled</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- 3. SEARCH & FILTER TOOLBAR -->
+<div class="row mb-4 position-relative align-items-center" style="height: 50px;"> 
+    
+    <!-- Search Input (Fluid) -->
+    <div class="col h-100">
+        <div class="google-search-bar d-flex align-items-center h-100 w-100">
+            <i class="bi bi-search text-secondary me-3"></i>
+            <input type="text" class="google-search-input" placeholder="Search rules (e.g. 'Room', 'Faculty')..." id="liveSearchInput" value="{{ search_query }}">
+        </div>
+    </div>
+
+    <!-- Filter & Sort Dropdowns -->
+    <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end gap-2">
+        
+        <!-- Filter Dropdown -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                Filter: 
+                {% if current_filter == 'all' %}All
+                {% elif current_filter == 'HC' %}Hard
+                {% elif current_filter == 'SC1' %}Soft I
+                {% elif current_filter == 'SC2' %}Soft II
+                {% elif current_filter == 'NC' %}Disabled
+                {% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="filterDropdown">
+                <li><a class="dropdown-item google-sort-item {% if current_filter == 'all' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='all', sort=current_sort) }}">All Types</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_filter == 'HC' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='HC', sort=current_sort) }}">Hard Constraints</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_filter == 'SC1' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='SC1', sort=current_sort) }}">Soft Constraints I</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_filter == 'SC2' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='SC2', sort=current_sort) }}">Soft Constraints II</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_filter == 'NC' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='NC', sort=current_sort) }}">Not Constraints</a></li>
+            </ul>
+        </div>
+
+        <!-- Sort Dropdown -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                {% if current_sort == 'name-asc' %}Name (A-Z)
+                {% elif current_sort == 'name-desc' %}Name (Z-A)
+                {% elif current_sort == 'category' %}Category
+                {% else %}Sort by
+                {% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
+                <li><a class="dropdown-item google-sort-item {% if current_sort == 'name-asc' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='name-asc', filter=current_filter) }}">Name (A-Z)</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_sort == 'name-desc' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='name-desc', filter=current_filter) }}">Name (Z-A)</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_sort == 'category' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='category', filter=current_filter) }}">Category</a></li>
+            </ul>
+        </div>
+
+    </div>
+</div>
+
+<!-- 4. CONSTRAINTS FORM -->
+<form method="POST" action="{{ url_for('manage_constraints') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div id="mainContentArea" class="bg-white rounded border shadow-sm overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4" style="width: 110px;">Category</th>
+                        <th style="width: 28%;">Rule Name</th>
+                        <th>Description</th>
+                        <th class="text-center pe-4" style="min-width: 230px; width: 230px;">Priority Setting</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in constraints %}
+                    <tr class="constraint-row"
+                        style="cursor: pointer;"
+                        onclick="showConstraintDetail(this)"
+                        data-name="{{ item.name }}"
+                        data-category="{{ item.category }}"
+                        data-desc="{{ item.description }}"
+                        data-type="{{ item.constraint_type }}"
+                        data-weight="{{ item.weight }}">
+
+                        <!-- Category -->
+                        <td class="ps-4">
+                            <span class="badge bg-light text-secondary border">{{ item.category }}</span>
+                        </td>
+
+                        <!-- Name -->
+                        <td>
+                            <span class="fw-bold text-dark">{{ item.name }}</span>
+                        </td>
+
+                        <!-- Description (truncated, full text on hover) -->
+                        <td style="max-width: 0;">
+                            <span class="text-muted small d-block text-truncate" title="{{ item.description }}">{{ item.description }}</span>
+                        </td>
+
+                        <!-- Setting Dropdown — stop row-click propagation -->
+                        <td class="text-center pe-4" onclick="event.stopPropagation()">
+                            <div class="d-flex flex-column gap-2 align-items-stretch">
+                                <select name="type_{{ item.id }}" class="form-select form-select-sm fw-bold border-0 bg-light
+                                    {% if item.constraint_type == 'HC' %}text-danger
+                                    {% elif item.constraint_type == 'SC1' %}text-warning
+                                    {% elif item.constraint_type == 'SC2' %}text-info
+                                    {% else %}text-secondary{% endif %}"
+                                    style="cursor: pointer;"
+                                    onchange="this.className = 'form-select form-select-sm fw-bold border-0 bg-light ' +
+                                    (this.value == 'HC' ? 'text-danger' :
+                                     this.value == 'SC1' ? 'text-warning' :
+                                     this.value == 'SC2' ? 'text-info' : 'text-secondary')">
+                                    <option value="HC"  class="text-danger"    {% if item.constraint_type == 'HC'  %}selected{% endif %}>Hard Constraint (HC)</option>
+                                    <option value="SC1" class="text-warning"   {% if item.constraint_type == 'SC1' %}selected{% endif %}>Soft Constraint I (SC-I)</option>
+                                    <option value="SC2" class="text-info"      {% if item.constraint_type == 'SC2' %}selected{% endif %}>Soft Constraint II (SC-II)</option>
+                                    <option value="NC"  class="text-secondary" {% if item.constraint_type == 'NC'  %}selected{% endif %}>Not Constraint (NC)</option>
+                                </select>
+                                <div class="input-group input-group-sm" title="Penalty Weight (Higher = More Important)">
+                                    <span class="input-group-text bg-light border-0"><i class="bi bi-speedometer2"></i></span>
+                                    <input type="number" class="form-control border-0 bg-light fw-bold"
+                                           name="weight_{{ item.id }}" value="{{ item.weight }}" min="1" max="100">
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-5 text-muted">No constraints found matching your filter.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- FLOATING SAVE BUTTON -->
+    <div class="position-fixed bottom-0 end-0 p-4" style="z-index: 1050">
+        <button type="submit" class="btn btn-success btn-lg shadow-lg rounded-pill px-4 py-3 d-flex align-items-center">
+            <i class="bi bi-save-fill me-2"></i> Save Changes
+        </button>
+    </div>
+</form>
+
+<!-- 5. PAGINATION -->
+<div class="mt-3 pb-5">
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center mb-2">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('manage_constraints', page=pagination.prev_num, sort=current_sort, filter=current_filter, search=search_query) }}"><i class="bi bi-chevron-left"></i></a>
+            </li>
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if page_num %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('manage_constraints', page=page_num, sort=current_sort, filter=current_filter, search=search_query) }}">{{ page_num }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('manage_constraints', page=pagination.next_num, sort=current_sort, filter=current_filter, search=search_query) }}"><i class="bi bi-chevron-right"></i></a>
+            </li>
+        </ul>
+    </nav>
+    {% if pagination.pages > 1 %}
+    <div class="d-flex align-items-center justify-content-center gap-2 text-muted" style="font-size:0.85rem;">
+        <span>Jump to:</span>
+        <input type="number" id="pageJumpInput" class="form-control form-control-sm text-center"
+               style="width:70px;" min="1" max="{{ pagination.pages }}" placeholder="1–{{ pagination.pages }}">
+        <button class="btn btn-sm btn-outline-secondary px-3" onclick="jumpToPage()">Go</button>
+        <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i class="bi bi-arrow-right-short"></i> arrow keys</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- CONSTRAINT DETAIL OFFCANVAS -->
+<style>
+    #constraintDetailOffcanvas { z-index: 1075; }
+    .offcanvas-backdrop { z-index: 1065; }
+</style>
+<div class="offcanvas offcanvas-end" tabindex="-1" id="constraintDetailOffcanvas"
+     style="width: 360px; top: 0; height: 100%; box-shadow: -4px 0 20px rgba(0,0,0,0.18);">
+    <div class="offcanvas-header border-bottom py-2 px-3">
+        <div>
+            <span id="detailCategory" class="badge bg-light text-secondary border mb-1" style="font-size:0.7rem;"></span>
+            <h6 id="detailName" class="offcanvas-title fw-bold mb-0" style="font-size:0.95rem;"></h6>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <!-- Description -->
+        <div class="mb-4">
+            <p class="text-muted small fw-bold text-uppercase mb-1" style="letter-spacing:.05em;">Description</p>
+            <p id="detailDesc" class="text-dark" style="line-height:1.6;"></p>
+        </div>
+
+        <!-- Priority Badge -->
+        <div class="mb-3">
+            <p class="text-muted small fw-bold text-uppercase mb-2" style="letter-spacing:.05em;">Priority Level</p>
+            <span id="detailTypeBadge" class="badge rounded-pill fs-6 px-3 py-2"></span>
+        </div>
+
+        <!-- Weight -->
+        <div>
+            <p class="text-muted small fw-bold text-uppercase mb-1" style="letter-spacing:.05em;">Penalty Weight</p>
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-speedometer2 text-secondary"></i>
+                <span id="detailWeight" class="fw-bold fs-5 text-dark"></span>
+                <span class="text-muted small">/ 100</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showConstraintDetail(row) {
+    const name     = row.dataset.name;
+    const category = row.dataset.category;
+    const desc     = row.dataset.desc;
+    const type     = row.dataset.type;
+    const weight   = row.dataset.weight;
+
+    document.getElementById('detailName').textContent     = name;
+    document.getElementById('detailCategory').textContent = category;
+    document.getElementById('detailDesc').textContent     = desc;
+    document.getElementById('detailWeight').textContent   = weight;
+
+    const badge = document.getElementById('detailTypeBadge');
+    const typeMap = {
+        'HC':  { label: 'Hard Constraint (HC)',      cls: 'bg-danger'                },
+        'SC1': { label: 'Soft Constraint I (SC-I)',  cls: 'bg-warning text-dark'     },
+        'SC2': { label: 'Soft Constraint II (SC-II)',cls: 'bg-info text-dark'         },
+        'NC':  { label: 'Not Constraint (Disabled)', cls: 'bg-secondary'             },
+    };
+    const t = typeMap[type] || typeMap['NC'];
+    badge.textContent = t.label;
+    badge.className   = 'badge rounded-pill fs-6 px-3 py-2 ' + t.cls;
+
+    bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('constraintDetailOffcanvas')).show();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // AJAX LIVE SEARCH
+    const searchInput = document.getElementById('liveSearchInput');
+    let debounceTimer;
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value;
+            const currentSort = "{{ current_sort }}";
+            const currentFilter = "{{ current_filter }}";
+            
+            clearTimeout(debounceTimer);
+
+            debounceTimer = setTimeout(() => {
+                const newUrl = `${window.location.pathname}?search=${encodeURIComponent(query)}&sort=${currentSort}&filter=${currentFilter}`;
+                window.history.pushState({path: newUrl}, '', newUrl);
+
+                fetch(newUrl)
+                    .then(response => response.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+
+                        // Replace Table Content
+                        const newContent = doc.getElementById('mainContentArea').innerHTML;
+                        document.getElementById('mainContentArea').innerHTML = newContent;
+                        
+                        // Replace Pagination
+                        const newPagination = doc.querySelector('.pagination').innerHTML;
+                        document.querySelector('.pagination').innerHTML = newPagination;
+                    })
+                    .catch(err => console.error('Search failed:', err));
+            }, 300);
+        });
+    }
+});
+</script>
+{% endblock %}

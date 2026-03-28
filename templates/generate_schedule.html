@@ -1,0 +1,732 @@
+﻿{% extends "base.html" %}
+{% block title %}Optimization Active{% endblock %}
+
+{% block content %}
+<link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap"
+    rel="stylesheet">
+
+<style>
+    :root {
+        --theme-green: #137333;
+        --theme-border: #dadce0;
+        --theme-bg: #f8f9fa;
+        --conflict-bg: #fce8e6;
+        --conflict-text: #c5221f;
+        --safe-bg: #e6f4ea;
+        --safe-text: #137333;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #eee;
+        font-family: 'Roboto', sans-serif;
+    }
+
+    /* REMOVE DEFAULT UI */
+    .sheets-header,
+    .sheets-menubar {
+        display: none !important;
+    }
+
+    .main-content {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .sheet-container {
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        background: none !important;
+    }
+
+    /* DASHBOARD BACKGROUND */
+    .dashboard-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        border: none;
+        z-index: 0;
+    }
+
+    /* MAIN APP OVERLAY */
+    .app-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: white;
+        z-index: 10;
+        display: grid;
+        grid-template-rows: 60px 40px 1fr 30px;
+        transition: all 0.3s ease-in-out;
+        overflow: hidden;
+    }
+
+    /* MINIMIZED STATE */
+    .app-overlay.minimized {
+        width: 320px !important;
+        height: 160px !important;
+        top: auto !important;
+        left: auto !important;
+        bottom: 20px !important;
+        right: 20px !important;
+        border-radius: 12px;
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+        border: 2px solid var(--theme-green);
+        display: block !important;
+        background: white;
+    }
+
+    .app-overlay.minimized> :not(.widget-view) {
+        display: none !important;
+    }
+
+    /* WIDGET CONTENT */
+    .widget-view {
+        display: none;
+        padding: 15px;
+        text-align: center;
+        height: 100%;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .app-overlay.minimized .widget-view {
+        display: flex !important;
+    }
+
+    .widget-stat {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1;
+        margin: 5px 0;
+        color: #333;
+    }
+
+    .widget-controls {
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+    }
+
+    .btn-widget {
+        border: 1px solid #ccc;
+        background: white;
+        padding: 4px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+
+    /* HEADER */
+    .sheet-header {
+        background: white;
+        border-bottom: 1px solid var(--theme-border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 20px;
+    }
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .btn-icon {
+        border: none;
+        background: transparent;
+        font-size: 1.2rem;
+        cursor: pointer;
+        color: #5f6368;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: 0.2s;
+    }
+
+    .btn-icon:hover {
+        background: #f1f3f4;
+    }
+
+    .file-title {
+        font-size: 1.1rem;
+        color: #444;
+        font-weight: 500;
+    }
+
+    .file-status {
+        font-size: 0.8rem;
+        color: #666;
+    }
+
+    .btn-stop {
+        background: white;
+        border: 1px solid #d93025;
+        color: #d93025;
+        padding: 6px 16px;
+        border-radius: 4px;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    .btn-stop:hover {
+        background: #fce8e6;
+    }
+
+    /* FORMULA BAR */
+    .formula-bar {
+        background: white;
+        border-bottom: 1px solid var(--theme-border);
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        color: #333;
+    }
+
+    .fx-icon {
+        font-style: italic;
+        font-weight: bold;
+        color: #999;
+        margin-right: 10px;
+        border-right: 1px solid #ccc;
+        padding-right: 10px;
+    }
+
+    /* GRID */
+    .grid-stage {
+        position: relative;
+        background: #fff;
+        overflow: hidden;
+        height: 100%;
+    }
+
+    canvas#mainCanvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* DRAGGABLE PANEL (FIXED) */
+    .draggable-panel {
+        position: absolute;
+        bottom: 50px;
+        right: 30px;
+        width: 320px;
+        height: 280px;
+        /* Fixed Height */
+        background: white;
+        border: 1px solid var(--theme-border);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        z-index: 50;
+        overflow: hidden;
+    }
+
+    .panel-header {
+        padding: 10px 15px;
+        background: #f8f9fa;
+        border-bottom: 1px solid var(--theme-border);
+        cursor: move;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #5f6368;
+        text-transform: uppercase;
+        user-select: none;
+        height: 40px;
+        /* Fixed header height */
+    }
+
+    .panel-body {
+        padding: 15px;
+        height: 240px;
+        /* Remaining height */
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .metric-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        align-items: flex-end;
+    }
+
+    .metric-lbl {
+        font-size: 0.7rem;
+        color: #5f6368;
+        font-weight: bold;
+    }
+
+    .metric-val {
+        font-size: 1.5rem;
+        font-weight: 400;
+        color: #202124;
+        line-height: 1;
+    }
+
+    .text-red {
+        color: var(--theme-red);
+    }
+
+    .text-green {
+        color: var(--theme-green);
+    }
+
+    /* LOG WINDOW */
+    .log-window {
+        background: #f1f3f4;
+        border: 1px solid #dadce0;
+        border-radius: 4px;
+        padding: 8px 10px;
+        flex-grow: 1;
+        overflow-y: auto;
+        margin-top: 8px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.65rem;
+        color: #3c4043;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .log-window::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .log-window::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 2px;
+    }
+
+    .log-item {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0;
+    }
+
+    /* FOOTER */
+    .sheet-tabs {
+        background: #f1f3f4;
+        border-top: 1px solid var(--theme-border);
+        display: flex;
+        align-items: center;
+        padding-left: 20px;
+    }
+
+    .tab {
+        background: white;
+        padding: 0 20px;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        color: var(--theme-green);
+        font-weight: 500;
+        font-size: 13px;
+        border-top: 3px solid var(--theme-green);
+    }
+
+    /* MODALS */
+    .modal-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        z-index: 100;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal-box {
+        background: white;
+        padding: 40px;
+        width: 400px;
+        text-align: center;
+        border: 1px solid var(--theme-border);
+        border-radius: 8px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-primary {
+        background: var(--theme-green);
+        color: white;
+        border: none;
+        padding: 12px;
+        width: 100%;
+        border-radius: 4px;
+        font-size: 1rem;
+        cursor: pointer;
+        margin-top: 15px;
+        font-weight: 500;
+    }
+
+    /* VICTORY OVERLAY */
+    .victory-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        z-index: 90;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        backdrop-filter: blur(2px);
+    }
+</style>
+
+<!-- BACKGROUND DASHBOARD -->
+<iframe src="{{ url_for('dashboard') }}" class="dashboard-bg"></iframe>
+
+<!-- MAIN APP OVERLAY -->
+<div class="app-overlay" id="appOverlay">
+
+    <!-- HEADER -->
+    <div class="sheet-header">
+        <div class="header-left">
+            <button class="btn-icon" onclick="toggleView()" title="Minimize to Dashboard">
+                <i class="bi bi-arrow-down-left-square"></i>
+            </button>
+            <i class="bi bi-file-earmark-spreadsheet-fill"
+                style="color:var(--theme-green); font-size:1.5rem; margin-right:10px;"></i>
+            <div>
+                <div class="file-title">Master Schedule Gen</div>
+                <div class="file-status" id="sysStatus">Ready</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <span style="font-family:'JetBrains Mono'; margin-right:15px;">TIME: <span id="timer">00:00</span></span>
+            <button class="btn-stop" onclick="confirmAbort()">Stop</button>
+        </div>
+    </div>
+
+    <!-- WIDGET CONTENT -->
+    <div class="widget-view">
+        <div style="font-weight: bold; color: var(--theme-green); margin-bottom: 5px;">Processing...</div>
+        <div class="widget-stat" id="widGen">Gen 0</div>
+        <div style="color:#c5221f; font-weight:bold;">Conflicts: <span id="widConf">--</span></div>
+        <div class="widget-controls">
+            <button class="btn-widget" onclick="confirmAbort()" style="color:#d93025;">Stop</button>
+            <button class="btn-widget" onclick="toggleView()"
+                style="color:var(--theme-green); border-color:var(--theme-green);">Full View</button>
+        </div>
+    </div>
+
+    <!-- FORMULA BAR -->
+    <div class="formula-bar">
+        <span class="fx-icon">fx</span>
+        <div id="formulaText">=INITIALIZE()</div>
+    </div>
+
+    <!-- CANVAS GRID -->
+    <div class="grid-stage">
+        <canvas id="mainCanvas" data-start-hour="{{ start_hour }}" data-end-hour="{{ end_hour }}"></canvas>
+
+        <!-- DRAGGABLE PANEL -->
+        <div class="draggable-panel" id="dragPanel">
+            <div class="panel-header" id="dragHeader">
+                <span><i class="bi bi-grip-vertical"></i> Calculation Thread</span>
+                <i class="bi bi-arrows-move" style="cursor:move; opacity:0.5;"></i>
+            </div>
+            <div class="panel-body">
+                <div class="metric-row">
+                    <div>
+                        <div style="font-size:0.7rem; color:#666; font-weight:bold;">ACTIVE CONFLICTS</div>
+                        <div class="metric-val text-red" id="hudHard">--</div>
+                        <div style="font-size:0.65rem; color:#999; margin-top:2px;" id="hudConflictBreakdown">HC:--
+                            SC-I:-- SC-II:--</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:0.7rem; color:#666; font-weight:bold;">GENERATION</div>
+                        <div class="metric-val" id="hudGen">0</div>
+                    </div>
+                </div>
+                <div style="font-size:0.7rem; color:#666; font-weight:bold;">REAL-TIME OPERATIONS</div>
+                <!-- Log Window Fixed Style -->
+                <div class="log-window" id="logStream">
+                    <div class="log-item">System ready. Waiting for input...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="sheet-tabs">
+        <div class="tab">Generation_Data</div>
+    </div>
+
+</div>
+
+<!-- START MODAL -->
+<div class="modal-overlay" id="startScreen">
+    <div class="modal-box" style="max-width: 480px; width: 90%;">
+        <div class="mb-3"><i class="bi bi-grid-3x3-gap-fill text-success" style="font-size:3rem;"></i></div>
+        <h3>Initialize Generator</h3>
+        <p style="color:#666;">Select semester and departments to schedule.</p>
+
+        <select id="semesterSelect"
+            style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; margin-top:10px;">
+            <option value="1st Semester">1st Semester</option>
+            <option value="2nd Semester">2nd Semester</option>
+            <option value="Midyear">Midyear</option>
+        </select>
+
+        <!-- DEPARTMENT CHECKLIST -->
+        <div style="margin-top: 16px; text-align: left; border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden;">
+            <div style="padding: 8px 12px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.8rem; font-weight: 600; color: #444; text-transform: uppercase; letter-spacing: 0.04em;">Departments to Schedule</span>
+                <span style="font-size: 0.75rem; color: #888;">Unchecked = minor subjects</span>
+            </div>
+            <div style="padding: 8px 4px;">
+                {% for dept in known_departments %}
+                <label style="display: flex; align-items: center; padding: 6px 10px; cursor: pointer; border-radius: 4px; transition: background 0.15s;" onmouseover="this.style.background='#f1f8f4'" onmouseout="this.style.background='transparent'">
+                    <input type="checkbox" class="dept-checkbox" value="{{ dept }}"
+                        {% if dept in saved_depts %}checked{% endif %}
+                        style="width: 15px; height: 15px; cursor: pointer; accent-color: #188038; margin-right: 10px; flex-shrink: 0;">
+                    <span style="font-size: 0.88rem; color: #3c4043;">{{ dept }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- FRESH START -->
+        <div style="margin-top: 12px; text-align: left; padding: 10px; background: #fff8e1; border-radius: 4px; border-left: 4px solid #ffc107;">
+            <label style="display: flex; align-items: center; cursor: pointer; font-size: 0.9rem; color: #555; gap: 10px;">
+                <input type="checkbox" id="freshStartCheck" style="width: 18px; height: 18px; cursor: pointer;">
+                <span><strong>Fresh Start</strong> (Burahin ang dating schedule ng semester na ito bago mag-start)</span>
+            </label>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-outline" onclick="history.back()">Cancel</button>
+            <button class="btn-primary" id="igniteBtn" style="margin-top: 0;">Start</button>
+        </div>
+    </div>
+</div>
+
+<!-- VICTORY MODAL -->
+<div class="victory-overlay" id="victoryScreen">
+    <div class="modal-box" style="border-top: 5px solid var(--theme-green);">
+        <div class="mb-3 text-success"><i class="bi bi-check-circle-fill display-2"></i></div>
+        <h2>Resolved!</h2>
+        <p style="color:#666;">Optimization complete. <span id="finalConflictCount">--</span> Active Conflict(s)
+            remaining.</p>
+        <p style="color:#999; font-size:0.8rem;" id="finalConflictBreakdown"></p>
+        <p style="color:#bbb; font-size:0.78rem; margin-top:2px;">
+            <span id="finalGenerations">--</span> generations &nbsp;·&nbsp; <span id="finalTime">--</span>
+        </p>
+        <a href="{{ url_for('view_timetable') }}" class="btn-primary" style="text-decoration:none; display:block;">View
+            Schedule</a>
+        <button onclick="location.reload()" class="btn-stop w-100 mt-2"
+            style="border:1px solid #ccc; color:#333;">Generate New</button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function makeDraggable(el) {
+        var p1 = 0, p2 = 0, p3 = 0, p4 = 0, hdr = document.getElementById('dragHeader');
+        if (hdr) hdr.onmousedown = function (e) { e = e || window.event; e.preventDefault(); p3 = e.clientX; p4 = e.clientY; document.onmouseup = function () { document.onmouseup = null; document.onmousemove = null; }; document.onmousemove = function (e) { e = e || window.event; e.preventDefault(); p1 = p3 - e.clientX; p2 = p4 - e.clientY; p3 = e.clientX; p4 = e.clientY; var nL = el.offsetLeft - p1, nT = el.offsetTop - p2, pr = document.querySelector('.grid-stage').getBoundingClientRect(), er = el.getBoundingClientRect(); nL = Math.max(0, Math.min(nL, pr.width - er.width)); nT = Math.max(0, Math.min(nT, pr.height - er.height)); el.style.left = nL + 'px'; el.style.top = nT + 'px'; }; };
+    }
+    makeDraggable(document.getElementById('dragPanel'));
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var cvs = document.getElementById('mainCanvas'), ctx = cvs.getContext('2d');
+        var ov = document.getElementById('appOverlay'), ss = document.getElementById('startScreen');
+        var hG = document.getElementById('hudGen'), hH = document.getElementById('hudHard');
+        var wG = document.getElementById('widGen'), wC = document.getElementById('widConf');
+        var log = document.getElementById('logStream'), tmr = document.getElementById('timer');
+        var fx = document.getElementById('formulaText'), vs = document.getElementById('victoryScreen');
+        var stat = document.getElementById('sysStatus');
+        var running = false, mat = null, t0, tInt, pInt, vP = 0, wC2 = 0;
+        var SH = parseInt(cvs.dataset.startHour) || 7;
+        var LOGS = ["Evaluating population fitness...", "Checking constraints HC-01 to HC-29...", "Resolving Room Overlaps...", "Optimizing Faculty Load...", "Mutating Gene Sequence...", "Calculating Penalty Score...", "Verifying Section Time Blocks...", "Swapping Time Slots...", "Cross-over phase initiated..."];
+
+        window.toggleView = function () { ov.classList.toggle('minimized'); setTimeout(rsz, 400); };
+        window.confirmAbort = function () { if (confirm('Stop generation?')) fetch('/stop-generation', { method: 'POST', headers: { 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content } }).then(function () { location.reload(); }); };
+
+        function rsz() {
+            var par = cvs.offsetParent || cvs.parentElement; if (!par) return;
+            var d = window.devicePixelRatio || 1, r = par.getBoundingClientRect();
+            cvs.width = r.width * d; cvs.height = r.height * d; cvs.style.width = r.width + 'px'; cvs.style.height = r.height + 'px';
+            ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.scale(d, d);
+        }
+        new ResizeObserver(rsz).observe(cvs.offsetParent || cvs.parentElement); rsz();
+
+        function draw() {
+            var d = window.devicePixelRatio || 1, W = cvs.width / d, H = cvs.height / d;
+            var rHW = 80, hH2 = 30;
+            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+            if (!mat) {
+                ctx.fillStyle = '#f8f9fa'; ctx.fillRect(0, 0, W, H);
+                ctx.fillStyle = '#ccc'; ctx.font = '13px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('Initializing population...', W / 2, H / 2 - 10);
+                ctx.fillStyle = '#ddd'; ctx.font = '11px monospace';
+                ctx.fillText('Building chromosomes and evaluating fitness', W / 2, H / 2 + 12);
+                requestAnimationFrame(draw); return;
+            }
+            var rows = mat.rooms, cols = mat.cols, rNames = mat.room_names || [];
+            var cW = (W - rHW) / cols, cH = (H - hH2) / rows;
+            ctx.lineWidth = 1; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+            // ── Hour header ──
+            ctx.fillStyle = '#f8f9fa'; ctx.fillRect(0, 0, W, hH2);
+            ctx.fillStyle = '#5f6368'; ctx.font = '10px Roboto';
+            for (var c = 0; c < cols; c++) {
+                var x = rHW + c * cW;
+                ctx.strokeStyle = '#e0e0e0'; ctx.strokeRect(x, 0, cW, hH2);
+                if (c % 2 === 0) {
+                    var h24 = SH + c * 0.5, h12 = h24 === 12 ? 12 : h24 % 12 || 12, ap = h24 < 12 ? 'AM' : 'PM';
+                    ctx.fillText(Math.floor(h12) + ap, x + cW / 2, hH2 / 2);
+                }
+            }
+
+            // ── Room label column ──
+            ctx.fillStyle = '#f8f9fa'; ctx.fillRect(0, hH2, rHW, H);
+            for (var r = 0; r < rows; r++) {
+                var y = hH2 + r * cH;
+                ctx.strokeStyle = '#e0e0e0'; ctx.strokeRect(0, y, rHW, cH);
+                ctx.fillStyle = '#5f6368'; ctx.font = '9px Roboto';
+                var rLabel = rNames[r] || ('RM ' + (r + 1));
+                // Truncate long names
+                if (rLabel.length > 12) rLabel = rLabel.substring(0, 11) + '…';
+                ctx.fillText(rLabel, rHW / 2, y + cH / 2);
+            }
+
+            // ── Empty grid lines ──
+            ctx.strokeStyle = '#e0e0e0';
+            for (var r = 0; r < rows; r++) {
+                for (var c = 0; c < cols; c++) {
+                    ctx.strokeRect(rHW + c * cW, hH2 + r * cH, cW, cH);
+                }
+            }
+
+            // ── Draw blocks (real GA data) ──
+            for (var r = 0; r < rows; r++) {
+                var roomBlocks = mat.blocks[r] || [];
+                var y = hH2 + r * cH;
+                for (var bi = 0; bi < roomBlocks.length; bi++) {
+                    var blk = roomBlocks[bi];
+                    var st  = blk.start, en = blk.end;
+                    // victory sweep animation
+                    if (vP === 1 && st > wC2) continue;
+                    var bx = rHW + st * cW, bw = (en - st) * cW;
+                    var v = blk.status;
+                    var bg, fg, bc;
+                    if (v === 2)      { bg = '#fce8e6'; fg = '#c5221f'; bc = '#c5221f'; }
+                    else if (v === 3) { bg = '#e8f0fe'; fg = '#1a73e8'; bc = '#1a73e8'; }
+                    else              { bg = '#e6f4ea'; fg = '#137333'; bc = '#137333'; }
+                    ctx.fillStyle = bg; ctx.fillRect(bx + 1, y + 1, bw - 2, cH - 2);
+                    // Conflict corner marker
+                    if (v === 2) {
+                        ctx.fillStyle = fg;
+                        ctx.beginPath(); ctx.moveTo(bx + bw - 8, y + 4); ctx.lineTo(bx + bw - 2, y + 4); ctx.lineTo(bx + bw - 2, y + 10); ctx.fill();
+                    }
+                    ctx.strokeStyle = bc; ctx.strokeRect(bx, y, bw, cH);
+                    // Labels — only if cell is tall enough and wide enough
+                    if (cH > 20 && bw > 30) {
+                        ctx.fillStyle = fg;
+                        ctx.font = 'bold 9px Roboto';
+                        ctx.fillText(blk.course,  bx + bw / 2, y + cH / 2 - 6);
+                        ctx.font = 'normal 8px Roboto';
+                        ctx.fillText(blk.faculty, bx + bw / 2, y + cH / 2 + 6);
+                    }
+                }
+            }
+            if (vP === 1) { wC2 += 0.5; if (wC2 > cols) vP = 2; }
+            requestAnimationFrame(draw);
+        }
+
+        document.getElementById('igniteBtn').addEventListener('click', function () {
+            var sem = document.getElementById('semesterSelect').value;
+            var isFresh = document.getElementById('freshStartCheck').checked;
+            var selectedDepts = Array.from(document.querySelectorAll('.dept-checkbox:checked')).map(function(cb){ return cb.value; });
+            ss.style.display = 'none'; running = true; stat.innerText = 'Running...'; rsz(); requestAnimationFrame(draw);
+            while (log.firstChild) log.removeChild(log.firstChild);
+            t0 = Date.now(); tInt = setInterval(function () { var d = Date.now() - t0, dt = new Date(d); tmr.innerText = dt.toISOString().substr(11, 8); }, 1000);
+            fetch('/start-generation', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content }, body: JSON.stringify({ semester: sem, fresh_start: isFresh, scheduled_depts: selectedDepts }) })
+                .then(function (r) { return r.json(); })
+                .then(function () {
+                    var lastG = 0;
+                    pInt = setInterval(function () {
+                        fetch('/get-generation-status').then(function (r) { return r.json(); }).then(function (d) {
+                            if (d.visual_matrix) mat = d.visual_matrix;
+                            var hc = d.hard_conflicts || 0, sc1 = d.sc1_violations || 0, sc2 = d.sc2_violations || 0;
+                            hG.innerText = d.generation;
+                            hH.innerText = hc;
+                            hH.className = hc > 0 ? 'metric-val text-red' : 'metric-val text-green';
+                            wG.innerText = 'Gen ' + d.generation;
+                            wC.innerText = hc > 0 ? hc + ' HC' : (sc1 + sc2 > 0 ? (sc1 + sc2) + ' SC' : '✓ 0');
+                            var bd = document.getElementById('hudConflictBreakdown');
+                            if (bd) bd.innerText = 'HC:' + hc + '  SC-I:' + sc1 + '  SC-II:' + sc2;
+                            // Show init message when generation hasn't started yet
+                            if (d.generation === 0 && !d.done) {
+                                fx.innerText = '=INITIALIZE(population=' + (d.pop_size || '...') + ')';
+                                if (!document.getElementById('initLogEntry')) {
+                                    var iv = document.createElement('div'); iv.className = 'log-item'; iv.id = 'initLogEntry';
+                                    iv.innerText = '⚙ Building initial population — evaluating chromosomes in parallel...';
+                                    log.appendChild(iv);
+                                }
+                            }
+                            if (d.generation > 0 && document.getElementById('initLogEntry')) {
+                                document.getElementById('initLogEntry').remove();
+                            }
+                            if (d.generation > lastG) {
+                                var div = document.createElement('div'); div.className = 'log-item';
+                                div.innerText = 'Gen ' + d.generation + ': ' + LOGS[Math.floor(Math.random() * LOGS.length)];
+                                log.appendChild(div); while (log.children.length > 60) log.removeChild(log.firstChild);
+                                log.scrollTop = log.scrollHeight;
+                                fx.innerText = hc === 0 ? '=SOFT_OPTIMIZE(gen=' + d.generation + ',sc=' + (sc1 + sc2) + ')' : '=RESOLVE_HC(gen=' + d.generation + ',hc=' + hc + ')';
+                                lastG = d.generation;
+                            }
+                            if (d.done) {
+                                clearInterval(pInt); clearInterval(tInt); running = false; stat.innerText = 'Saved'; fx.innerText = '=COMPLETE()';
+                                document.getElementById('finalConflictCount').innerText = hc;
+                                var fb = document.getElementById('finalConflictBreakdown');
+                                if (fb) fb.innerText = 'HC: ' + hc + '  |  SC-I: ' + sc1 + '  |  SC-II: ' + sc2;
+                                document.querySelector('#victoryScreen h2').innerText = (hc === 0 && sc1 === 0 && sc2 === 0) ? 'Perfect Schedule!' : 'Optimization Complete';
+                                var ic = document.querySelector('#victoryScreen .bi-check-circle-fill,#victoryScreen .bi-exclamation-circle-fill');
+                                if (ic) ic.className = (hc === 0 && sc1 === 0 && sc2 === 0) ? 'bi bi-check-circle-fill display-2' : 'bi bi-exclamation-circle-fill display-2 text-warning';
+                                var fgen = document.getElementById('finalGenerations');
+                                if (fgen) fgen.innerText = ((d.total_generations || d.generation || 0)).toLocaleString() + ' gens';
+                                var ftm = document.getElementById('finalTime');
+                                if (ftm) { var secs = d.total_time ? Math.round(d.total_time) : Math.round((Date.now() - t0) / 1000); ftm.innerText = Math.floor(secs/60) + 'm ' + (secs%60) + 's'; }
+                                vP = 1; setTimeout(function () { vs.style.display = 'flex'; }, 3000);
+                            }
+                        });
+                    }, 100);
+                });
+        });
+    });
+</script>
+{% endblock %}

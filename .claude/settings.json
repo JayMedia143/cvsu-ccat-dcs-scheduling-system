@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/Jaedon/**)",
+      "Bash(/c/Users/Jaedon/AppData/Local/Programs/Python/Python311/python.exe -c \":*)",
+      "Bash(python -c \":*)",
+      "Bash(python -c \"import genetic_algorithm; print\\(''OK''\\)\")",
+      "Bash(grep -E '\\\\.\\(py|js|html|json\\)$')",
+      "Bash(python -m py_compile genetic_algorithm.py)",
+      "Bash(/tmp/analysis.txt:*)",
+      "Read(//tmp/**)",
+      "Bash(python -m py_compile app.py)",
+      "Bash(venv/Scripts/python -c \"import py_compile; py_compile.compile\\(''app.py'', doraise=True\\); print\\(''OK - no syntax errors''\\)\")",
+      "Bash(venv/Scripts/python -c \"import py_compile; py_compile.compile\\(''app.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "Bash(venv/Scripts/python -c \":*)",
+      "Bash(\"C:\\\\Users\\\\HP 250 G7\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python311\\\\python.exe\" -m venv venv)",
+      "Bash(./venv/Scripts/pip install:*)",
+      "Bash(./venv/Scripts/python app.py)",
+      "Read(//c/Users/HP 250 G7/Desktop/CvSU_Scheduling_System/CvSU_Scheduling_System-Version-2 - antigravity_2_claude - Copy/**)",
+      "Bash(python -m venv venv)",
+      "Bash(pip install:*)",
+      "Bash(python app.py)",
+      "Bash(grep -rn \"ALTER TABLE\\\\|db.engine.execute\\\\|op.add_column\" '/c/Users/HP 250 G7/Desktop/CvSU_Scheduling_System/CvSU_Scheduling_System-Version-2 - antigravity_2_claude - Copy/' --include=*.py)",
+      "Read(//c/Users/HP/ 250/ G7/Desktop/CvSU_Scheduling_System/CvSU_Scheduling_System-Version-2/ -/ antigravity_2_claude/ -/ Copy/**)",
+      "Read(//c/Users/HP 250 G7/Desktop/CvSU_Scheduling_System/CvSU_Scheduling_System-Version-2 - aigravity_2_claude - Copy/**)",
+      "Bash(sqlite3 site.db \"SELECT sc.start_time, sc.day, r.room_name, c.course_code, c.synchronous_lec_hours, sec.section_name, sc.session_type, c.semester_offered, \\(\\(CAST\\(substr\\(sc.start_time, 1, 2\\) AS INTEGER\\) - 7\\) * 2 + CASE WHEN CAST\\(substr\\(sc.start_time, 4, 2\\) AS INTEGER\\) >= 30 THEN 1 ELSE 0 END\\) as slot FROM scheduled_class sc JOIN room r ON r.id = sc.room_id JOIN course c ON c.id = sc.course_id JOIN section sec ON sec.id = sc.section_id WHERE r.capabilities NOT LIKE ''%Computer Lab%'' AND r.room_name NOT IN \\(''T.B.A.'', ''University Field''\\) AND c.synchronous_lec_hours > 0 AND c.synchronous_lec_hours <= 2 ORDER BY slot % 4, slot LIMIT 50;\")",
+      "Bash(python -:*)",
+      "Bash(python check_fac.py)",
+      "Bash(del check_fac.py)",
+      "Bash(ls -la \"c:/Users/HP 250 G7/Desktop/CvSU_Scheduling_System/CvSU_Scheduling_System-Version-2 - antigravity_2_claude - Copy/static/assets/\"*section*)",
+      "Bash(find 'c:/Users/HP 250 G7/Desktop/CvSU_Scheduling_System/CvSU_Scheduling_System-Version-2 - antigravity_2_claude - Copy' -type f \\\\\\(-name *.py -o -name *.html -o -name *.js -o -name *.css \\\\\\))",
+      "Bash(python3 -c \":*)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\Jaedon\\.claude\\projects\\c--WFH-jeremy-CvSU-Scheduling-System-Version-2---antigravity-2-claude",
+      "C:\\Users\\HP 250 G7\\Desktop\\CvSU_Scheduling_System\\CvSU_Scheduling_System-Version-2 - antigravity_2_claude - Copy\\venv",
+      "C:\\Users\\HP 250 G7\\.claude\\projects\\c--Users-HP-250-G7-Desktop-CvSU-Scheduling-System-CvSU-Scheduling-System-Version-2---antigravity-2-claude---Copy-CvSU-Scheduling-System-Version-2---antigravity-2-claude---Copy\\memory"
+    ]
+  }
+}

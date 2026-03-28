@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Archived Code Rules{% endblock %}
+
+{% block content %}
+
+<!-- HEADER -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1"><i class="bi bi-trash me-2 text-danger"></i>Recycle Bin — Code Rules
+        </h1>
+        <p class="text-muted small mb-0">Restore or permanently delete code rules.</p>
+    </div>
+    <a href="{{ url_for('course_code_assignment') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+        <i class="bi bi-arrow-left me-1"></i> Back to Assignment
+    </a>
+</div>
+
+<!-- Flash messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<!-- TABLE -->
+<div class="card border shadow-sm">
+    <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-trash me-2"></i>Recycle Bin</h6>
+        <span class="badge bg-secondary rounded-pill">{{ archived_rules|length }}</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4" style="width:20%;">Code</th>
+                    <th style="width:20%;">Type</th>
+                    <th style="width:40%;">Department</th>
+                    <th class="text-center pe-4" style="width:20%;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in archived_rules %}
+                <tr>
+                    <td class="ps-4">
+                        <span
+                            class="badge {% if rule.is_prefix %}bg-primary{% else %}bg-warning text-dark{% endif %} rounded-pill px-3 fs-6 opacity-75">{{
+                            rule.code }}</span>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border">
+                            {% if rule.is_prefix %}Prefix Rule{% else %}Exception{% endif %}
+                        </span>
+                    </td>
+                    <td class="text-muted">{{ rule.department }}</td>
+                    <td class="text-center pe-4">
+                        <div class="d-flex justify-content-center gap-2">
+                            <!-- Restore -->
+                            <button type="button" class="btn btn-outline-success btn-sm px-3"
+                                data-bs-toggle="modal" data-bs-target="#restoreModal{{ rule.id }}">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Restore
+                            </button>
+                            <!-- Delete Forever -->
+                            <button type="button" class="btn btn-outline-danger btn-sm px-3"
+                                data-bs-toggle="modal" data-bs-target="#deleteModal{{ rule.id }}">
+                                <i class="bi bi-trash3-fill me-1"></i> Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center py-5">
+                        <div class="text-success opacity-75">
+                            <i class="bi bi-check-circle-fill display-4 d-block mb-2"></i>
+                            <h5>Recycle bin is empty</h5>
+                            <p class="text-muted small">No deleted code rules.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- RESTORE MODALS -->
+{% for rule in archived_rules %}
+<div class="modal fade" id="restoreModal{{ rule.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Restore Code Rule?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p>Restore rule <strong>{{ rule.code }}</strong> to the active list?</p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('restore_code_rule', rule_id=rule.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-success px-4">Yes, Restore</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- DELETE FOREVER MODALS -->
+{% for rule in archived_rules %}
+<div class="modal fade" id="deleteModal{{ rule.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Delete Forever?</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p>Permanently delete <strong>{{ rule.code }}</strong>?</p>
+                <p class="small text-danger fw-bold">This cannot be undone.</p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('delete_code_rule_forever', rule_id=rule.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger px-4">Yes, Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}

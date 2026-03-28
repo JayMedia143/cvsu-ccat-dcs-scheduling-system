@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CvSU-CCAT Scheduling System - Sign Up</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="auth-page">
+
+    <!-- Loader overlay -->
+    <div id="auth-loader">
+        <img src="{{ url_for('static', filename='assets/loader.gif') }}" alt="Loading...">
+    </div>
+    <script>
+        var _showLoader = !sessionStorage.getItem('signupSubmitted');
+        sessionStorage.removeItem('signupSubmitted');
+        if (_showLoader) {
+            var _loaderStart = Date.now();
+            document.getElementById('auth-loader').style.display = 'flex';
+        }
+    </script>
+
+    <!-- ===== Form Panel ===== -->
+    <div class="auth-right">
+        <div class="auth-form-box">
+
+            <div class="auth-system-badge">
+                <span class="auth-badge-dot"></span> CvSU-CCAT DCS
+            </div>
+
+            <!-- Accent line -->
+            <div class="auth-accent-line"></div>
+
+            <div class="auth-form-heading">Create account</div>
+            <div class="auth-form-subtext">Fill in the details below to register.</div>
+
+            <hr class="auth-form-divider">
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="mb-3">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show border-0 py-2 small" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <form action="{{ url_for('signup') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="auth-input-group">
+                    <label class="auth-input-label">Username</label>
+                    <i class="bi bi-person input-icon"></i>
+                    <input type="text" name="username" placeholder="Choose a username" required autocomplete="username">
+                </div>
+
+                <div class="auth-input-group">
+                    <label class="auth-input-label">Password</label>
+                    <i class="bi bi-lock input-icon"></i>
+                    <input type="password" name="password" placeholder="Create a password" required minlength="4" autocomplete="new-password">
+                </div>
+
+                <div class="auth-input-group">
+                    <label class="auth-input-label">Confirm Password</label>
+                    <i class="bi bi-lock-fill input-icon"></i>
+                    <input type="password" name="confirm_password" placeholder="Repeat your password" required minlength="4" autocomplete="new-password">
+                </div>
+
+                <button type="submit" class="btn-auth mt-1">Sign Up</button>
+            </form>
+
+            <div class="text-center mt-4" style="font-size:0.9rem;color:#777;">
+                Already have an account?
+                <a href="{{ url_for('login') }}" class="auth-link ms-1">Sign in</a>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Hide page-load loader after 2s (only if it was shown)
+        if (_showLoader) {
+            window.addEventListener('load', function() {
+                var elapsed = Date.now() - _loaderStart;
+                var remaining = Math.max(2000 - elapsed, 0);
+                setTimeout(function() {
+                    document.getElementById('auth-loader').style.display = 'none';
+                }, remaining);
+            });
+        }
+        // Reset button on page show (back button / page reload)
+        window.addEventListener('pageshow', function() {
+            var btn = document.querySelector('.btn-auth');
+            btn.innerHTML = 'Sign Up';
+            btn.disabled = false;
+        });
+        // On submit: show button spinner + mark as submitted
+        document.querySelector('form').addEventListener('submit', function() {
+            var btn = document.querySelector('.btn-auth');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Signing up...';
+            btn.disabled = true;
+            sessionStorage.setItem('signupSubmitted', '1');
+        });
+    </script>
+</body>
+
+</html>

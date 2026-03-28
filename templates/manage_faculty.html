@@ -1,0 +1,1450 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Faculty{% endblock %}
+
+{% block content %}
+
+<!-- 1. HEADER -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1">Faculty</h1>
+        <p class="text-muted small mb-0">Manage instructors, workloads, and department assignments.</p>
+    </div>
+
+    <!-- Updated Buttons: Clean Style -->
+    <div class="d-flex align-items-center gap-3">
+        <!-- IMPORT BUTTON -->
+        <button class="btn-google-action" data-bs-toggle="modal"
+            data-bs-target="#importLoadingModal">
+            <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+            <span>Import Faculty Loading</span>
+        </button>
+
+        <!-- New Faculty (Existing) -->
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addFacultyModal">
+            <i class="bi bi-plus-lg"></i>
+            <span>New Faculty</span>
+        </button>
+
+        <!-- Quick Add T.B.A. Faculty -->
+        <form method="POST" action="{{ url_for('quick_add_tba_faculty') }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-secondary"
+                    title="Add next T.B.A. faculty slot (TBA-01, TBA-02, ...)">
+                <i class="bi bi-person-fill-slash"></i> + T.B.A.
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- 2. SEARCH & FILTER TOOLBAR -->
+<div class="row mb-4 position-relative align-items-center" style="height: 50px;">
+
+    <!-- A. BULK ACTION BAR -->
+    <div class="bulk-action-bar" id="bulkActionBar">
+        <div class="d-flex align-items-center">
+            <button class="btn-icon" onclick="deselectAll()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <span class="bulk-count ms-2"><span id="selectedCount">0</span> selected</span>
+        </div>
+
+        <!-- Trash Icon -->
+        <button type="button" class="bulk-btn delete-icon" data-bs-toggle="modal" data-bs-target="#bulkArchiveModal"
+            title="Move to Recycle Bin">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+
+    <!-- B. SEARCH INPUT -->
+    <div class="col h-100">
+        <form action="{{ url_for('manage_faculty') }}" method="GET" class="h-100 w-100">
+            <input type="hidden" name="sort" value="{{ current_sort }}">
+            <input type="hidden" name="filter_by" value="{{ current_filter_by }}">
+            <input type="hidden" name="filter_val" value="{{ current_filter_val }}">
+
+            <div class="google-search-bar d-flex align-items-center h-100 w-100">
+                <i class="bi bi-search text-secondary me-3"></i>
+                <input type="text" name="search" class="google-search-input"
+                    placeholder="Search faculty (ID, Name, Dept)..." id="liveSearchInput" value="{{ search_query }}"
+                    autocomplete="off" onchange="this.form.submit()">
+            </div>
+        </form>
+    </div>
+
+    <!-- C. SORT & FILTER GROUP -->
+    <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end gap-2">
+
+        <!-- 1. FILTER DROPDOWN -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="filterDropdown"
+                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                <i class="bi bi-funnel me-2"></i>
+                {% if current_filter_by == 'dept' %}
+                Dept: {{ current_filter_val }}
+                {% elif current_filter_by == 'status' %}
+                Status: {{ current_filter_val }}
+                {% else %}
+                Filter
+                {% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="filterDropdown">
+                <!-- Clear Filter -->
+                <li>
+                    <a class="dropdown-item text-danger"
+                        href="{{ url_for('manage_faculty', sort=current_sort, search=search_query) }}">
+                        <i class="bi bi-x-circle me-2"></i>Clear Filter
+                    </a>
+                </li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+
+                <!-- Department Filter (Nested) -->
+                <li class="dropdown-submenu">
+                    <a class="dropdown-item" href="javascript:void(0);">Department</a>
+                    <ul class="dropdown-menu">
+                        {% for dept in unique_depts %}
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == dept %}active{% endif %}"
+                                href="{{ url_for('manage_faculty', sort=current_sort, search=search_query, filter_by='dept', filter_val=dept) }}">
+                                {{ dept }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+
+                <!-- Status Filter (Nested) -->
+                <li class="dropdown-submenu">
+                    <a class="dropdown-item" href="javascript:void(0);">Status</a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == 'Full-time' %}active{% endif %}"
+                                href="{{ url_for('manage_faculty', sort=current_sort, search=search_query, filter_by='status', filter_val='Full-time') }}">
+                                Full-time
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == 'Part-time' %}active{% endif %}"
+                                href="{{ url_for('manage_faculty', sort=current_sort, search=search_query, filter_by='status', filter_val='Part-time') }}">
+                                Part-time
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 2. SORT DROPDOWN -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                {% if current_sort == 'name-asc' %} Name (A-Z)
+                {% elif current_sort == 'name-desc' %} Name (Z-A)
+                {% else %} Sort By {% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'name-asc' %}active{% endif %}"
+                        href="{{ url_for('manage_faculty', sort='name-asc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Name (A-Z)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'name-desc' %}active{% endif %}"
+                        href="{{ url_for('manage_faculty', sort='name-desc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Name (Z-A)
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+</div>
+
+<!-- 3. TABLE CONTENT (Flat List) -->
+<form id="bulkArchiveForm" action="{{ url_for('bulk_archive_faculty') }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div id="mainContentArea">
+        <div class="bg-white rounded border shadow-sm overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="facultyTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="select-cell"><input class="form-check-input" type="checkbox"
+                                    id="selectAllCheckbox"></th>
+                            <th class="ps-2" style="width: 15%;">Employee ID</th>
+                            <th style="width: 20%;">Full Name</th>
+                            <th style="width: 20%;">Department</th> <!-- NEW COLUMN -->
+                            <th class="text-center" style="width: 10%;">Status</th>
+                            <th class="text-center" style="width: 8%;">Availability</th>
+                            <th class="text-center" style="width: 10%;">Max Hrs</th>
+                            <th class="text-center" style="width: 10%;">Workload</th>
+                            <th class="text-center" style="width: 15%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="faculty-table-body">
+                        {% for faculty in faculty_list %}
+                        <tr class="course-row faculty-row" data-id="{{ faculty.id }}">
+                            <td class="select-cell">
+                                <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
+                                    value="{{ faculty.id }}">
+                            </td>
+
+                            <td class="text-dark font-monospace ps-2">{{ faculty.employee_id }}</td>
+                            <td class="fw-bold text-dark">{{ faculty.full_name }}</td>
+
+                            <!-- Department Column (Updated to Clean Style) -->
+                            <td>
+                                <span class="badge-clean">
+                                    {{ 'All Departments' if faculty.department == 'Unassigned' else faculty.department }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                {% if faculty.employment_status == 'Full-time' %}
+                                <span
+                                    class="badge bg-success bg-opacity-10 text-success border border-success fw-normal">Full-time</span>
+                                {% else %}
+                                <span
+                                    class="badge bg-info bg-opacity-10 text-info border border-info fw-normal">Part-time</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-center">
+                                {% set avail_list = (faculty.available_days or '').split(',') | select | list %}
+                                {% set avail_count = avail_list | length %}
+                                <span class="badge bg-secondary rounded-pill cursor-help" style="padding: 5px 10px;"
+                                    title="{{ avail_list | join(', ') if avail_list else 'No days set' }}">
+                                    {{ avail_count }}
+                                </span>
+                            </td>
+
+                            <td class="text-center text-muted fw-medium">{{ faculty.max_weekly_hours }}</td>
+
+                            <td class="text-center">
+                                <!-- Total scheduled hours from GA-generated schedule -->
+                                {% set wload = workload_map.get(faculty.id, 0) %}
+                                <span class="badge bg-secondary rounded-pill cursor-help" style="padding: 5px 10px;"
+                                    title="{{ wload }} hrs scheduled">
+                                    {{ wload }}
+                                </span>
+                            </td>
+
+                            <!-- Hanapin ang Actions column sa table loop -->
+                            <td class="text-center text-nowrap" onclick="event.stopPropagation()">
+                                <!-- View Profile -->
+                                <button type="button" class="btn-icon"
+                                    onclick="openFacultyProfile({{ loop.index0 }})" title="View Profile">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+
+                                <!-- Workload -->
+                                <button type="button" class="btn-icon" style="color: #188038;" data-bs-toggle="modal"
+                                    data-bs-target="#assignCoursesModal{{ faculty.id }}" title="Assign Workload">
+                                    <i class="bi bi-clipboard-check"></i>
+                                </button>
+
+                                <!-- Schedule Viewer -->
+                                <button type="button" class="btn-icon view"
+                                    onclick="viewSchedule('faculty', {{ faculty.id }})" title="View Schedule">
+                                    <i class="bi bi-calendar-week"></i>
+                                </button>
+
+                                <!-- Edit -->
+                                <button type="button" class="btn-icon edit" data-bs-toggle="modal"
+                                    data-bs-target="#editFacultyModal{{ faculty.id }}" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+
+                                <!-- Delete -->
+                                <button type="button" class="btn-icon delete" title="Move to Recycle Bin"
+                                    data-bs-toggle="modal" data-bs-target="#archiveModal{{ faculty.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">No faculty found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4. PAGINATION -->
+        <div class="mt-3 pb-5">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mb-2">
+                    <!-- Previous -->
+                    <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                        <a class="page-link"
+                            href="{{ url_for('manage_faculty', page=pagination.prev_num, sort=current_sort, search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}"><i
+                                class="bi bi-chevron-left"></i></a>
+                    </li>
+
+                    <!-- Numbers -->
+                    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2)
+                    %}
+                    {% if page_num %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link"
+                            href="{{ url_for('manage_faculty', page=page_num, sort=current_sort, search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">{{
+                            page_num }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>
+                    {% endif %}
+                    {% endfor %}
+
+                    <!-- Next -->
+                    <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                        <a class="page-link"
+                            href="{{ url_for('manage_faculty', page=pagination.next_num, sort=current_sort, search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}"><i
+                                class="bi bi-chevron-right"></i></a>
+                    </li>
+                </ul>
+            </nav>
+            {% if pagination.pages > 1 %}
+            <div class="d-flex align-items-center justify-content-center gap-2 text-muted" style="font-size:0.85rem;">
+                <span>Jump to:</span>
+                <input type="number" id="pageJumpInput" class="form-control form-control-sm text-center"
+                    style="width:70px;" min="1" max="{{ pagination.pages }}" placeholder="1–{{ pagination.pages }}">
+                <button class="btn btn-sm btn-outline-secondary px-3" onclick="jumpToPage()">Go</button>
+                <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i
+                        class="bi bi-arrow-right-short"></i> arrow keys</span>
+            </div>
+            {% endif %}
+        </div>
+
+    </div> <!-- End MainContentArea -->
+</form>
+
+<!-- ================= MODALS ================= -->
+{% endblock %}
+
+{% block modals %}
+<!-- 1. BULK DELETE MODAL -->
+<div class="modal fade" id="bulkArchiveModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Move to Recycle Bin?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to move the <span id="modalSelectedCount" class="fw-bold text-danger">0</span> selected
+                faculty to the recycle bin?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-archive-confirm" onclick="submitBulkForm('archive')">Yes, Move to Recycle Bin</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Faculty Modal -->
+<div class="modal fade" id="addFacultyModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Faculty</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('add_faculty') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">EMPLOYEE ID</label>
+                        <input type="text" class="form-control" name="employee_id" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">FULL NAME</label>
+                        <input type="text" class="form-control" name="full_name" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small text-muted fw-bold">STATUS</label>
+                            <select class="form-select" name="employment_status">
+                                <option>Full-time</option>
+                                <option>Part-time</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small text-muted fw-bold">MAX HOURS/WEEK</label>
+                            <input type="number" class="form-control" name="max_weekly_hours" value="35">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
+                        <select class="form-select" name="department">
+                            <option>Department of Computer Studies</option>
+                            <option>Department of Arts and Sciences</option>
+                            <option>Department of Teachers Education</option>
+                            <option>Department of Engineering</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">HIGHEST EDUCATIONAL ATTAINMENT</label>
+                        <input type="text" class="form-control" name="highest_educational_attainment"
+                            placeholder="e.g. MASTER IN INFORMATION TECHNOLOGY">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">ACADEMIC RANK</label>
+                        <input type="text" class="form-control" name="academic_rank"
+                            placeholder="e.g. Instructor I, Assistant Professor II">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">SEX</label>
+                        <div class="d-flex gap-3 mt-1">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="sex" value="M" id="addSexMale">
+                                <label class="form-check-label small" for="addSexMale">Male</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="sex" value="F" id="addSexFemale">
+                                <label class="form-check-label small" for="addSexFemale">Female</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">AVAILABLE DAYS</label>
+                        <div class="d-flex flex-wrap gap-2 mt-1">
+                            {% for day in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="available_days"
+                                    value="{{ day }}" id="add_day_{{ day }}" checked>
+                                <label class="form-check-label small" for="add_day_{{ day }}">{{ day[:3] }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="submit" class="btn btn-primary px-4">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% for faculty in all_faculty_for_modals %}
+
+<!-- Edit Faculty Modal -->
+<div class="modal fade" id="editFacultyModal{{ faculty.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Faculty</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('update_faculty', faculty_id=faculty.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">EMPLOYEE ID</label>
+                        <input type="text" class="form-control" name="employee_id" value="{{ faculty.employee_id }}"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">FULL NAME</label>
+                        <input type="text" class="form-control" name="full_name" value="{{ faculty.full_name }}"
+                            required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small text-muted fw-bold">STATUS</label>
+                            <select class="form-select" name="employment_status">
+                                <option {% if faculty.employment_status=='Full-time' %}selected{% endif %}>Full-time
+                                </option>
+                                <option {% if faculty.employment_status=='Part-time' %}selected{% endif %}>Part-time
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small text-muted fw-bold">MAX HOURS/WEEK</label>
+                            <input type="number" class="form-control" name="max_weekly_hours"
+                                value="{{ faculty.max_weekly_hours }}">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
+                        <select class="form-select" name="department">
+                            <option {% if faculty.department=='Department of Computer Studies' %}selected{% endif %}>
+                                Department of Computer Studies</option>
+                            <option {% if faculty.department=='Department of Arts and Sciences' %}selected{% endif %}>
+                                Department of Arts and Sciences</option>
+                            <option {% if faculty.department=='Department of Education' or
+                                faculty.department=='Department of Teachers Education' %}selected{% endif %}>
+                                Department of Teachers Education
+                            </option>
+                            <option {% if faculty.department=='Department of Engineering' %}selected{% endif %}>
+                                Department of Engineering</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">HIGHEST EDUCATIONAL ATTAINMENT</label>
+                        <input type="text" class="form-control" name="highest_educational_attainment"
+                            value="{{ faculty.highest_educational_attainment or '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">ACADEMIC RANK</label>
+                        <input type="text" class="form-control" name="academic_rank"
+                            value="{{ faculty.academic_rank or '' }}"
+                            placeholder="e.g. Instructor I, Assistant Professor II">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">SEX</label>
+                        <div class="d-flex gap-3 mt-1">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="sex" value="M"
+                                    id="editSexMale{{ faculty.id }}"
+                                    {% if faculty.sex == 'M' %}checked{% endif %}>
+                                <label class="form-check-label small" for="editSexMale{{ faculty.id }}">Male</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="sex" value="F"
+                                    id="editSexFemale{{ faculty.id }}"
+                                    {% if faculty.sex == 'F' %}checked{% endif %}>
+                                <label class="form-check-label small" for="editSexFemale{{ faculty.id }}">Female</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">AVAILABLE DAYS</label>
+                        <div class="d-flex flex-wrap gap-2 mt-1">
+                            {% set avail = (faculty.available_days or '').split(',') %}
+                            {% for day in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="available_days"
+                                    value="{{ day }}" id="edit_day_{{ faculty.id }}_{{ day }}"
+                                    {% if day in avail %}checked{% endif %}>
+                                <label class="form-check-label small" for="edit_day_{{ faculty.id }}_{{ day }}">{{ day[:3] }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-primary px-4" onclick="this.form.submit()">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Single Delete Modal -->
+<div class="modal fade" id="archiveModal{{ faculty.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Move to Recycle Bin?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to move <strong>{{ faculty.full_name }}</strong> to the recycle bin?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('archive_faculty', faculty_id=faculty.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-archive-confirm">Yes, Move to Recycle Bin</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 1. FACULTY ASSIGNMENT WIZARD (v5.2 STYLED) -->
+<div class="modal fade modal-xl" id="assignCoursesModal{{ faculty.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+
+            <!-- STEP 1: TEACHABLE COURSES -->
+            <div class="wizard-step-1">
+                <div class="modal-header border-bottom py-3 px-4 bg-white">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-success bg-opacity-10 p-2 rounded-2 me-3">
+                            <i class="bi bi-person-check-fill fs-4" style="color: #188038;"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0">Teachable Subjects: {{ faculty.full_name }}
+                            </h5>
+                            <small class="text-muted">Select all subjects this instructor is qualified to handle</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body bg-white p-0">
+                    <!-- SUMMARY AREA -->
+                    <div class="border-bottom p-4" style="background-color: #f9fbf9;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-success small text-uppercase"
+                                style="letter-spacing: 0.5px;">Teachable Selection</span>
+                            <button type="button"
+                                class="btn btn-link btn-sm text-danger text-decoration-none p-0 fw-bold"
+                                onclick="resetTeachableSelection('{{ faculty.id }}')">
+                                <i class="bi bi-trash3 me-1"></i> Clear All
+                            </button>
+                        </div>
+                        <div id="teachableSummary{{ faculty.id }}"
+                            class="d-flex flex-wrap gap-2 p-3 bg-white border rounded shadow-sm"
+                            style="min-height: 60px; max-height: 120px; overflow-y: auto; border-style: dashed !important; border-width: 2px !important;">
+                            <span class="text-muted fst-italic">No subjects selected. Use the grid below...</span>
+                        </div>
+                    </div>
+
+                    <!-- SUBJECT GRID (3 COLUMNS) -->
+                    <div class="p-4 pt-3 bg-white">
+                        <div class="row gx-4">
+                            <!-- DITO ANG FIX: Ginawang faculty.courses -->
+                            {% set teachable_ids = faculty.courses | map(attribute='id') | list %}
+
+                            {% for sem in ['1st Semester', '2nd Semester', 'Midyear'] %}
+                            {% if courses_by_sem[sem] %} <!-- ⚠️ ITO YUNG NAWALANG LINYA, IBALIK MO ITO -->
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center mb-3 border-bottom border-2 pb-1"
+                                    style="border-color: #188038 !important;">
+                                    <i class="bi bi-collection-fill text-success me-2"></i>
+                                    <span class="fw-bold text-dark text-uppercase"
+                                        style="font-size: 0.85rem; letter-spacing: 0.5px;">{{ sem }}</span>
+                                </div>
+                                <div class="course-list-container pe-1" style="max-height: 400px; overflow-y: auto;">
+                                    {% set _fdn = faculty.department | lower | replace('department of ', '') | replace(' and ', ' & ') | trim %}
+                                    {% for course in courses_by_sem[sem] %}
+                                    {% set _cdn = (course.department or '') | lower | replace('department of ', '') | replace(' and ', ' & ') | trim %}
+                                    {% if not _cdn or _cdn == _fdn or faculty.full_name == 'T.B.A.' %}
+                                    <div class="course-readable-card mb-2">
+                                        <input
+                                            class="form-check-input d-none teachable-cb-{{ faculty.id }} teachable-checkbox"
+                                            type="checkbox" name="course_ids" value="{{ course.id }}"
+                                            id="teach_{{ faculty.id }}_{{ course.id }}"
+                                            data-code="{{ course.course_code }}"
+                                            data-course-name="{{ course.course_name }}"
+                                            data-lec-hours="{{ course.synchronous_lec_hours or course.lec_units or 0 }}"
+                                            data-lab-hours="{{ course.synchronous_lab_hours or course.lab_units or 0 }}"
+                                            data-async-hours="{{ (course.asynchronous_lec_hours or 0) + (course.asynchronous_lab_hours or 0) }}"
+                                            data-course-hours="{{ (course.synchronous_lec_hours or course.lec_units or 0) + (course.synchronous_lab_hours or course.lab_units or 0) + (course.asynchronous_lec_hours or 0) + (course.asynchronous_lab_hours or 0) }}"
+                                            onchange="updateTeachableSummary('{{ faculty.id }}')" {% if course.id in teachable_ids %}checked{% endif %}>
+                                        <label
+                                            class="d-flex align-items-center p-2 border bg-white transition-all cursor-pointer w-100 shadow-xs"
+                                            for="teach_{{ faculty.id }}_{{ course.id }}">
+                                            <div class="flex-shrink-0 me-3 ms-1">
+                                                <i class="bi bi-app text-muted fs-5 check-indicator d-none"></i>
+                                            </div>
+                                            <div class="flex-grow-1 overflow-hidden" style="line-height: 1.3;">
+                                                <div class="fw-bold text-dark" style="font-size: 0.95rem;">{{
+                                                    course.course_code }}</div>
+                                                <div class="text-secondary text-truncate" style="font-size: 0.8rem;">{{
+                                                    course.course_name }}</div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light border-top py-3 px-4 d-flex justify-content-end">
+                    <button type="button" class="btn text-white px-5 fw-bold shadow-sm btn-next-step"
+                        style="background-color: #188038;">
+                        Next: Assign Final Load <i class="bi bi-arrow-right ms-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 2: FINAL LOAD -->
+            <div class="wizard-step-2" style="display: none;">
+                <div class="modal-header border-bottom py-3 px-4 bg-white">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-success bg-opacity-10 p-2 rounded-2 me-3">
+                            <i class="bi bi-calendar2-week-fill fs-4" style="color: #188038;"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0">Assign Final Workload</h5>
+                            <small class="text-muted">Tick sections then optionally split hours across days</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0 bg-white">
+                    <!-- HOUR COUNTER BAR -->
+                    <div class="px-4 pt-3 pb-2 border-bottom" style="background:#f9fbf9;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small text-muted fw-semibold text-uppercase" style="letter-spacing:.5px;">Weekly Load</span>
+                            <span class="fw-bold" style="font-size:.95rem;">
+                                <span id="totalHours{{ faculty.id }}" class="fw-bold text-success">0</span>
+                                <span class="text-muted"> / {{ faculty.max_weekly_hours }}h</span>
+                            </span>
+                        </div>
+                        <div class="progress" style="height:6px; border-radius:4px;">
+                            <div id="hoursBar{{ faculty.id }}" class="progress-bar bg-success" role="progressbar" style="width:0%"></div>
+                        </div>
+                    </div>
+                    <div id="sectionList{{ faculty.id }}" class="p-3" style="max-height:480px; overflow-y:auto;"></div>
+                </div>
+                <div class="modal-footer bg-light border-top py-3 px-4 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary px-4 fw-bold btn-back-step">
+                        <i class="bi bi-arrow-left me-1"></i> Back
+                    </button>
+                    <button type="submit" form="assignmentForm{{ faculty.id }}"
+                        class="btn text-white px-5 fw-bold shadow-sm" style="background-color: #188038;">
+                        <i class="bi bi-save2-fill me-2"></i> Finalize Load
+                    </button>
+                </div>
+            </div>
+
+            <form action="{{ url_for('save_faculty_assignments', faculty_id=faculty.id) }}" method="POST"
+                id="assignmentForm{{ faculty.id }}" style="display: none;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endfor %}
+
+<!-- IMPORT MODAL moved safely to bottom -->
+<div class="modal fade" id="importLoadingModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import Faculty Loading</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('import_faculty_loading') }}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <p class="text-muted small">
+                        Upload the <strong>Faculty Loading Template.xlsx</strong> file.
+                        The system will automatically assign courses and sections to faculty members based on this file.
+                    </p>
+                    <div class="mb-3">
+                        <a href="{{ url_for('download_faculty_loading_template') }}"
+                            class="btn btn-outline-success btn-sm rounded-pill px-3">
+                            <i class="bi bi-download me-1"></i> Download Template
+                        </a>
+                        <span class="text-muted small ms-2">Get the pre-formatted Excel template</span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">SELECT EXCEL FILE</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx" required>
+                    </div>
+                    <div class="alert alert-info small">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        Make sure the file follows the exact format:
+                        <ul>
+                            <li>Column A: Name of Faculty</li>
+                            <li>Column B: Course Code</li>
+                            <li>Column H: Sections</li>
+                            <li>Column K: Total Contact Hours</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Import Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== PROFILE CUSTOM BACKDROP (below navbar only) ===== -->
+<div id="profileBackdrop"
+     style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+            background:rgba(0,0,0,0.45);z-index:1059;"
+     onclick="closeFacultyProfile()"></div>
+
+<!-- ===== VIEW PROFILE OFFCANVAS ===== -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="facultyProfileOffcanvas"
+     data-bs-backdrop="false" data-bs-scroll="true"
+     style="width:380px;top:0;height:100vh;z-index:1060;" aria-labelledby="facultyProfileLabel">
+    <div class="offcanvas-header border-bottom py-3 px-4" style="background:#f9fbf9;">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-eye text-muted fs-5"></i>
+            <h5 class="offcanvas-title fw-bold mb-0" id="facultyProfileLabel">Faculty Profile</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+
+    <!-- Navigation arrows -->
+    <div class="d-flex justify-content-between align-items-center px-4 py-2 border-bottom bg-white">
+        <button class="btn btn-sm btn-light border" id="profilePrevBtn" onclick="openFacultyProfile(window._profileIdx - 1)">
+            <i class="bi bi-chevron-left"></i> Prev
+        </button>
+        <span id="profileNavLabel" class="small text-muted"></span>
+        <button class="btn btn-sm btn-light border" id="profileNextBtn" onclick="openFacultyProfile(window._profileIdx + 1)">
+            Next <i class="bi bi-chevron-right"></i>
+        </button>
+    </div>
+
+    <div class="offcanvas-body p-0" id="profileOffcanvasBody">
+        <!-- Filled by JS -->
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const allSections      = {{ all_sections_json | tojson | safe }};
+    const allSplitData     = {{ split_data_by_faculty | tojson | safe }};
+    const allFacultyProfiles = {{ faculty_profiles | tojson | safe }};
+    const allTakenByOthers = {{ others_taken_by_faculty | tojson | safe }};
+    const faSplitHoursMap  = {{ fa_split_hours_map | tojson | safe }};
+
+    document.addEventListener('DOMContentLoaded', function () {
+
+        // 1. INITIALIZE TABLE LOGIC
+        initializeSelectionLogic();
+
+        // =========================================================
+        // 2. MODAL OBSERVER: AUTO-LOAD BADGES (ISANG BESES LANG DAPAT ITO)
+        // =========================================================
+        document.addEventListener('shown.bs.modal', function (event) {
+            const modal = event.target;
+            if (modal.id.startsWith('assignCoursesModal')) {
+                const facultyId = modal.id.replace('assignCoursesModal', '');
+                updateTeachableSummary(facultyId);
+            }
+        });
+
+        // =========================================================
+        // 3. MAIN TABLE CONTROLS (Search, Checkboxes, Pagination)
+        // =========================================================
+        const searchInput = document.getElementById('liveSearchInput');
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const bulkActionBar = document.getElementById('bulkActionBar');
+        const selectedCountSpan = document.getElementById('selectedCount');
+
+        function getDynamicElements() {
+            return {
+                rowCheckboxes: document.querySelectorAll('.row-checkbox'),
+                allRows: document.querySelectorAll('.faculty-row'),
+                paginationLinks: document.querySelectorAll('.page-link')
+            };
+        }
+
+        function initializeSelectionLogic() {
+            const { rowCheckboxes, allRows, paginationLinks } = getDynamicElements();
+
+            allRows.forEach(row => {
+                const newRow = row.cloneNode(true);
+                row.parentNode.replaceChild(newRow, row);
+            });
+
+            document.querySelectorAll('.faculty-row').forEach(row => {
+                row.addEventListener('click', function (e) {
+                    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+                    const checkbox = this.querySelector('.row-checkbox');
+                    if (checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        updateSelectionState();
+                    }
+                });
+
+                const cb = row.querySelector('.row-checkbox');
+                if (cb) {
+                    cb.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        updateSelectionState();
+                    });
+                }
+            });
+
+            paginationLinks.forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const url = this.getAttribute('href');
+                    if (url && url !== '#') fetchContent(url);
+                });
+            });
+        }
+
+        function updateSelectionState() {
+            const { rowCheckboxes } = getDynamicElements();
+            let count = 0;
+            rowCheckboxes.forEach(cb => {
+                const row = cb.closest('tr');
+                if (cb.checked) { count++; row.classList.add('selected'); }
+                else { row.classList.remove('selected'); }
+            });
+
+            if (selectedCountSpan) selectedCountSpan.textContent = count;
+            const modalCount = document.getElementById('modalSelectedCount');
+            if (modalCount) modalCount.textContent = count;
+            if (count > 0) bulkActionBar.classList.add('active');
+            else bulkActionBar.classList.remove('active');
+
+            if (selectAllCheckbox) {
+                const visibleCheckboxes = Array.from(rowCheckboxes).filter(cb => cb.closest('tr').style.display !== 'none');
+                const checkedVisible = visibleCheckboxes.filter(cb => cb.checked);
+                if (visibleCheckboxes.length > 0) {
+                    selectAllCheckbox.checked = (checkedVisible.length === visibleCheckboxes.length);
+                    selectAllCheckbox.indeterminate = (checkedVisible.length > 0 && checkedVisible.length < visibleCheckboxes.length);
+                } else {
+                    selectAllCheckbox.checked = false;
+                    selectAllCheckbox.indeterminate = false;
+                }
+            }
+        }
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function () {
+                const isChecked = this.checked;
+                document.querySelectorAll('.row-checkbox').forEach(cb => {
+                    if (cb.closest('tr').style.display !== 'none') cb.checked = isChecked;
+                });
+                updateSelectionState();
+            });
+        }
+
+        window.deselectAll = function () {
+            document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+            if (selectAllCheckbox) { selectAllCheckbox.checked = false; selectAllCheckbox.indeterminate = false; }
+            updateSelectionState();
+        };
+
+        function fetchContent(url) {
+            window.history.pushState({ path: url }, '', url);
+            fetch(url).then(response => response.text()).then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                document.getElementById('mainContentArea').innerHTML = doc.getElementById('mainContentArea').innerHTML;
+                initializeSelectionLogic();
+                bulkActionBar.classList.remove('active');
+                if (selectAllCheckbox) { selectAllCheckbox.checked = false; selectAllCheckbox.indeterminate = false; }
+            }).catch(err => console.error('Fetch failed:', err));
+        }
+
+        let debounceTimer;
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const query = this.value;
+                const currentSort = "{{ current_sort }}";
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    const newUrl = `${window.location.pathname}?search=${encodeURIComponent(query)}&sort=${currentSort}&page=1`;
+                    fetchContent(newUrl);
+                }, 300);
+            });
+        }
+
+        // =========================================================
+        // 4. WIZARD LOGIC LOOP (Per Faculty Member)
+        // =========================================================
+        {% for faculty in all_faculty_for_modals %}
+        (function () {
+            const facultyId = "{{ faculty.id }}";
+            const modal = document.getElementById(`assignCoursesModal${facultyId}`);
+            if (!modal) return;
+
+            const step1 = modal.querySelector('.wizard-step-1');
+            const step2 = modal.querySelector('.wizard-step-2');
+            const nextBtn = modal.querySelector('.btn-next-step');
+            const backBtn = modal.querySelector('.btn-back-step');
+            const sectionListDiv = modal.querySelector(`#sectionList${facultyId}`);
+            const totalHoursSpan = modal.querySelector(`#totalHours${facultyId}`);
+            const maxHours = parseInt("{{ faculty.max_weekly_hours }}", 10);
+
+            // RETENTION: Kunin ang assignments mula sa database + ScheduledClass (post-GA)
+            const currentAssignmentPairs = [...new Set([
+                {% for assign in faculty.assignments %}
+                "{{ assign.course_id }}-{{ assign.section_id }}",
+                {% endfor %}
+                {% for pair in sc_pairs_by_faculty.get(faculty.id|string, []) %}
+                "{{ pair }}",
+                {% endfor %}
+            ])];
+
+            // Faculty available days for split dropdowns
+            const availDaysRaw = "{{ faculty.available_days or '' }}";
+            const availDays = availDaysRaw ? availDaysRaw.split(',').map(d => d.trim()).filter(d => d)
+                : ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+            // Existing split data for this faculty (pre-populate)
+            const facSplitData = allSplitData[String(facultyId)] || {};
+
+    // --- NEXT STEP LOGIC ---
+    nextBtn.addEventListener('click', function () {
+        const checkedBoxes = Array.from(step1.querySelectorAll(`.teachable-cb-${facultyId}:checked`));
+        const selectedCourses = checkedBoxes.map(cb => ({
+            id:         cb.value,
+            code:       cb.getAttribute('data-code'),
+            name:       cb.getAttribute('data-course-name'),
+            lecHours:   parseFloat(cb.getAttribute('data-lec-hours')   || 0),
+            labHours:   parseFloat(cb.getAttribute('data-lab-hours')   || 0),
+            asyncHours: parseFloat(cb.getAttribute('data-async-hours') || 0),
+            totalHours: parseFloat(cb.getAttribute('data-course-hours')|| 0),
+        }));
+
+        sectionListDiv.innerHTML = '';
+        if (selectedCourses.length === 0) {
+            sectionListDiv.innerHTML = '<div class="alert alert-warning border-0 shadow-sm m-2">No subjects selected. Go back to Step 1.</div>';
+        } else {
+            const allDayOpts = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+            function buildSplitPanel(pair, sfx, hours, savedDay1, savedHours1, savedDay2, savedHours2) {
+                const dayOpts1 = allDayOpts.map(d => `<option value="${d}" ${d===savedDay1?'selected':''}>${d}</option>`).join('');
+                const dayOpts2 = '<option value="">-- none --</option>' +
+                    allDayOpts.map(d => `<option value="${d}" ${d===savedDay2?'selected':''}>${d}</option>`).join('');
+                return `
+                  <div class="split-panel ps-3 pb-2 pt-1" id="splitpanel_${facultyId}_${pair.replace('-','_')}_${sfx}">
+                    <div class="small text-muted mb-1" style="font-size:.77rem;">
+                      <i class="bi bi-scissors me-1"></i>Split ${hours}h across days <em>(optional)</em>
+                    </div>
+                    <div class="d-flex align-items-center gap-1 mb-1 flex-wrap">
+                      <span class="small text-muted" style="width:38px;font-size:.78rem;">Day 1:</span>
+                      <select class="form-select form-select-sm split-day-1 py-0" style="max-width:120px;font-size:.8rem;"
+                              name="split_${pair}_${sfx}day_1">${dayOpts1}</select>
+                      <input type="number" class="form-control form-control-sm split-hrs-1 py-0"
+                             style="max-width:64px;font-size:.8rem;" min="0.5" max="${hours}" step="0.5"
+                             value="${savedHours1||''}" placeholder="hrs"
+                             name="split_${pair}_${sfx}hours_1"
+                             onchange="validateSplit(this.closest('.split-panel'),'${hours}')">
+                      <span class="small text-muted">h</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1 mb-1 flex-wrap">
+                      <span class="small text-muted" style="width:38px;font-size:.78rem;">Day 2:</span>
+                      <select class="form-select form-select-sm split-day-2 py-0" style="max-width:120px;font-size:.8rem;"
+                              name="split_${pair}_${sfx}day_2">${dayOpts2}</select>
+                      <input type="number" class="form-control form-control-sm split-hrs-2 py-0"
+                             style="max-width:64px;font-size:.8rem;" min="0" max="${hours}" step="0.5"
+                             value="${savedHours2||''}" placeholder="hrs"
+                             name="split_${pair}_${sfx}hours_2"
+                             onchange="validateSplit(this.closest('.split-panel'),'${hours}')">
+                      <span class="small text-muted">h</span>
+                    </div>
+                    <div class="split-total-msg" style="font-size:.77rem;"></div>
+                  </div>`;
+            }
+
+            let content = '<div class="row g-2">';
+            const othersTaken = allTakenByOthers[String(facultyId)] || [];
+            selectedCourses.forEach(course => {
+                let matches = allSections.filter(s => {
+                    const pair = `${course.id}-${s.id}`;
+                    const alreadyMine = currentAssignmentPairs.includes(pair);
+                    const takenByOther = othersTaken.includes(pair);
+                    return (s.course_ids.includes(parseInt(course.id)) || alreadyMine) && !takenByOther;
+                });
+                if (matches.length === 0) return;
+
+                // Effective hours: use split hours when configured for this faculty+course pair
+                const _facSplit = faSplitHoursMap[String(facultyId)] || {};
+                const _firstEntry = Object.entries(_facSplit).find(([k]) => k.startsWith(course.id + '-'));
+                const _hdrSplit = _firstEntry ? _firstEntry[1] : {};
+                const effLecHoursHdr = _hdrSplit.lec !== undefined ? _hdrSplit.lec : course.lecHours;
+                const effLabHoursHdr = _hdrSplit.lab !== undefined ? _hdrSplit.lab : course.labHours;
+
+                // Build header badges
+                let badges = '';
+                if (effLecHoursHdr > 0)    badges += `<span class="badge bg-primary bg-opacity-75 ms-1" style="font-size:.75rem;">Lec ${effLecHoursHdr}h</span>`;
+                if (effLabHoursHdr > 0)    badges += `<span class="badge bg-warning text-dark ms-1" style="font-size:.75rem;">Lab ${effLabHoursHdr}h</span>`;
+                if (course.asyncHours > 0) badges += `<span class="badge bg-secondary ms-1" style="font-size:.75rem;">Async ${course.asyncHours}h</span>`;
+
+                content += `
+                <div class="col-md-6">
+                  <div class="card border-0 shadow-sm h-100" style="border-radius:8px;overflow:hidden;">
+                    <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between"
+                         style="background:rgba(24,128,56,.08);border-bottom:2px solid rgba(24,128,56,.18);">
+                      <span class="fw-bold text-success" style="font-size:.82rem;">${course.code} <span class="text-muted fw-normal" style="font-size:.78rem;">— ${course.name}</span></span>
+                      <span>${badges}</span>
+                    </div>
+                    <div class="p-1">`;
+
+                matches.forEach(sec => {
+                    const pair = `${course.id}-${sec.id}`;
+                    const isChecked = currentAssignmentPairs.includes(pair);
+                    const sd = facSplitData[pair] || {};
+
+                    // Per-section effective hours (split hours override full course hours)
+                    const _secSplit = (_facSplit[pair]) || {};
+                    const effLecHours = _secSplit.lec !== undefined ? _secSplit.lec : course.lecHours;
+                    const effLabHours = _secSplit.lab !== undefined ? _secSplit.lab : course.labHours;
+
+                    // Main row checkbox (tracks total hours for counter)
+                    content += `
+                      <div class="px-2 pt-2 pb-1 border-bottom border-light assignment-row">
+                          <input class="assignment-checkbox"
+                                 type="checkbox" name="assignments"
+                                 value="${pair}" id="assign_${facultyId}_${pair}"
+                                 data-hours="${course.totalHours}"
+                                 data-lec-hours="${course.lecHours}"
+                                 data-lab-hours="${course.labHours}"
+                                 data-async-hours="${course.asyncHours}"
+                                 ${isChecked ? 'checked' : ''}
+                                 onchange="toggleSessionPanels(this,'${facultyId}','${pair}')"
+                                 style="display:none">
+                          <label class="d-block small fw-semibold text-dark cursor-pointer px-1 py-1 rounded"
+                                 for="assign_${facultyId}_${pair}">
+                            ${sec.name}
+                          </label>`;
+
+                    // Lec sub-row (if course has lec hours)
+                    if (course.lecHours > 0) {
+                        const lecVisible = isChecked ? '' : 'display:none;';
+                        content += `
+                        <div class="session-panels-${facultyId}-${pair.replace('-','_')}" style="${lecVisible}">
+                          <div class="d-flex align-items-center px-2 py-1 rounded mb-1"
+                               style="background:rgba(13,110,253,.06);border-left:3px solid rgba(13,110,253,.4);">
+                            <span class="badge bg-primary bg-opacity-75 me-2" style="font-size:.72rem;min-width:46px;">Lec</span>
+                            <span class="small text-muted" style="font-size:.8rem;">${effLecHours}h — split across days (optional)</span>
+                          </div>
+                          ${buildSplitPanel(pair,'lec_',effLecHours,sd.lec_day_1,sd.lec_hours_1,sd.lec_day_2,sd.lec_hours_2)}
+                        </div>`;
+                    }
+
+                    // Lab sub-row (if course has lab hours)
+                    if (course.labHours > 0) {
+                        const labVisible = isChecked ? '' : 'display:none;';
+                        content += `
+                        <div class="session-panels-${facultyId}-${pair.replace('-','_')}" style="${labVisible}">
+                          <div class="d-flex align-items-center px-2 py-1 rounded mb-1"
+                               style="background:rgba(255,193,7,.08);border-left:3px solid rgba(255,193,7,.6);">
+                            <span class="badge bg-warning text-dark me-2" style="font-size:.72rem;min-width:46px;">Lab</span>
+                            <span class="small text-muted" style="font-size:.8rem;">${effLabHours}h — split across days (optional)</span>
+                          </div>
+                          ${buildSplitPanel(pair,'',effLabHours,sd.day_1,sd.hours_1,sd.day_2,sd.hours_2)}
+                        </div>`;
+                    }
+
+                    // Async row (no split panel)
+                    if (course.asyncHours > 0) {
+                        const asyncVisible = isChecked ? '' : 'display:none;';
+                        content += `
+                        <div class="session-panels-${facultyId}-${pair.replace('-','_')}" style="${asyncVisible}">
+                          <div class="d-flex align-items-center px-2 py-1 rounded mb-1"
+                               style="background:rgba(108,117,125,.07);border-left:3px solid rgba(108,117,125,.4);">
+                            <span class="badge bg-secondary me-2" style="font-size:.72rem;min-width:46px;">Async</span>
+                            <span class="small text-muted" style="font-size:.8rem;">${course.asyncHours}h — GA places freely</span>
+                          </div>
+                        </div>`;
+                    }
+
+                    content += `</div>`;  // close assignment-row
+                });
+
+                content += `</div></div></div>`;
+            });
+            sectionListDiv.innerHTML = content + '</div>';
+        }
+        step1.style.display = 'none';
+        step2.style.display = 'block';
+        updateTotal(facultyId);
+    });
+
+    // --- BACK STEP LOGIC ---
+    backBtn.addEventListener('click', function () {
+        step2.style.display = 'none';
+        step1.style.display = 'block';
+    });
+
+    // --- FINALIZE LOAD ---
+    modal.querySelector(`#assignmentForm${facultyId}`).addEventListener('submit', function (e) {
+        e.preventDefault();
+        const form2 = this;
+        form2.innerHTML = '';
+
+        // Collect assignment checkboxes + their split data (Lec + Lab)
+        step2.querySelectorAll('.assignment-checkbox:checked').forEach(cb => {
+            const pair = cb.value;
+            const addH = (n, v) => { const i = document.createElement('input'); i.type='hidden'; i.name=n; i.value=v; form2.appendChild(i); };
+            addH('assignments', pair);
+            // Collect all split panels for this pair (lab panel + lec panel)
+            const pairKey = pair.replace('-','_');
+            ['', 'lec_'].forEach(sfx => {
+                const panelId = `splitpanel_${facultyId}_${pairKey}_${sfx}`;
+                const panel = step2.querySelector(`#${panelId}`);
+                if (!panel) return;
+                const d1 = panel.querySelector(`[name="split_${pair}_${sfx}day_1"]`);
+                const h1 = panel.querySelector(`[name="split_${pair}_${sfx}hours_1"]`);
+                const d2 = panel.querySelector(`[name="split_${pair}_${sfx}day_2"]`);
+                const h2 = panel.querySelector(`[name="split_${pair}_${sfx}hours_2"]`);
+                if (d1 && h1 && h1.value) { addH(d1.name, d1.value); addH(h1.name, h1.value); }
+                if (d2 && h2 && d2.value && h2.value) { addH(d2.name, d2.value); addH(h2.name, h2.value); }
+            });
+        });
+
+        form2.submit();
+    });
+
+    // LIVE HOUR COUNTER
+    sectionListDiv.addEventListener('change', (e) => {
+        if (e.target.classList.contains('assignment-checkbox')) updateTotal(facultyId);
+    });
+    sectionListDiv.addEventListener('input', (e) => {
+        if (e.target.classList.contains('split-hrs-1') || e.target.classList.contains('split-hrs-2')) {
+            updateTotal(facultyId);
+        }
+    });
+
+    function updateTotal(id) {
+        let current = 0;
+        const activeModal = document.getElementById(`assignCoursesModal${id}`);
+        activeModal.querySelectorAll('.assignment-checkbox:checked').forEach(cb => {
+            const pair    = cb.value;
+            const pairKey = pair.replace('-', '_');
+            const lecHoursAttr   = parseFloat(cb.dataset.lecHours   || 0);
+            const labHoursAttr   = parseFloat(cb.dataset.labHours   || 0);
+            const asyncHoursAttr = parseFloat(cb.dataset.asyncHours || 0);
+
+            // Read actual split inputs for lec and lab panels
+            const lecPanel = activeModal.querySelector(`#splitpanel_${id}_${pairKey}_lec_`);
+            const labPanel = activeModal.querySelector(`#splitpanel_${id}_${pairKey}_`);
+            const lecH1 = lecPanel ? parseFloat(lecPanel.querySelector('.split-hrs-1')?.value || 0) : 0;
+            const lecH2 = lecPanel ? parseFloat(lecPanel.querySelector('.split-hrs-2')?.value || 0) : 0;
+            const labH1 = labPanel ? parseFloat(labPanel.querySelector('.split-hrs-1')?.value || 0) : 0;
+            const labH2 = labPanel ? parseFloat(labPanel.querySelector('.split-hrs-2')?.value || 0) : 0;
+
+            // Use split total when user has entered hours, else fall back to course attr
+            const effLec = (lecH1 > 0) ? (lecH1 + lecH2) : lecHoursAttr;
+            const effLab = (labH1 > 0) ? (labH1 + labH2) : labHoursAttr;
+            current += effLec + effLab + asyncHoursAttr;
+        });
+        const span  = activeModal.querySelector(`#totalHours${id}`);
+        const bar   = activeModal.querySelector(`#hoursBar${id}`);
+        const max   = maxHours || 1;
+        if (span) {
+            span.textContent = current;
+            span.classList.toggle('text-danger', current > max);
+            span.classList.toggle('text-success', current <= max);
+        }
+        if (bar) {
+            const pct = Math.min(100, Math.round(current / max * 100));
+            bar.style.width = pct + '%';
+            bar.classList.toggle('bg-danger', current > max);
+            bar.classList.toggle('bg-success', current <= max);
+        }
+    }
+        }) ();
+    {% endfor %}
+    });
+
+    // ==========================================
+    // 5. GLOBAL SUMMARY UPDATER (BADGE GENERATOR - FIXED)
+    // ==========================================
+    window.updateTeachableSummary = function (facultyId) {
+        const container = document.getElementById(`teachableSummary${facultyId}`);
+        if (!container) return;
+
+        // Kukunin na lang natin kung ano yung ACTUALLY naka-check sa screen, 
+        // para pwede mo na siyang i-uncheck o i-clear nang malaya.
+        const checkedBoxes = document.querySelectorAll(`.teachable-cb-${facultyId}:checked`);
+
+        container.innerHTML = '';
+
+        if (checkedBoxes.length === 0) {
+            container.innerHTML = '<span class="text-muted fst-italic small">No subjects selected...</span>';
+            return;
+        }
+
+        checkedBoxes.forEach(cb => {
+            const badge = document.createElement('div');
+            badge.className = 'badge-selection';
+            badge.innerHTML = `<span>${cb.getAttribute('data-code')}</span> <i class="bi bi-x-lg" style="font-size: 0.7rem;"></i>`;
+
+            // Pag-click sa "X" ng badge, maa-uncheck din ang box
+            badge.onclick = () => {
+                cb.checked = false;
+                updateTeachableSummary(facultyId);
+            };
+            container.appendChild(badge);
+        });
+    };
+
+    window.resetTeachableSelection = function (facultyId) {
+        document.querySelectorAll(`.teachable-cb-${facultyId}`).forEach(cb => cb.checked = false);
+        updateTeachableSummary(facultyId);
+    };
+
+    // ==========================================
+    // VIEW PROFILE OFFCANVAS
+    // ==========================================
+    window._profileIdx = 0;
+    window.openFacultyProfile = function(idx) {
+        const profiles = allFacultyProfiles;
+        if (!profiles || profiles.length === 0) return;
+        idx = Math.max(0, Math.min(idx, profiles.length - 1));
+        window._profileIdx = idx;
+        const f = profiles[idx];
+
+        // Navigation state
+        document.getElementById('profileNavLabel').textContent = `${idx + 1} / ${profiles.length}`;
+        document.getElementById('profilePrevBtn').disabled = (idx === 0);
+        document.getElementById('profileNextBtn').disabled = (idx === profiles.length - 1);
+
+        // Format available days as badges
+        const dayList = (f.available_days || '').split(',').map(d => d.trim()).filter(d => d);
+        const dayBadges = dayList.map(d =>
+            `<span class="badge bg-success bg-opacity-10 text-success border border-success fw-normal me-1 mb-1" style="font-size:.75rem;">${d.substring(0,3)}</span>`
+        ).join('') || '<span class="text-muted small">Not set</span>';
+
+        // Status badge
+        const statusBadge = f.employment_status === 'Full-time'
+            ? `<span class="badge bg-success bg-opacity-10 text-success border border-success fw-normal">${f.employment_status}</span>`
+            : `<span class="badge bg-info bg-opacity-10 text-info border border-info fw-normal">${f.employment_status}</span>`;
+
+        // Workload bar
+        const maxH = f.max_weekly_hours || 1;
+        const curH = f.workload_hours || 0;
+        const pct = Math.min(100, Math.round(curH / maxH * 100));
+        const barCls = curH > maxH ? 'bg-danger' : 'bg-success';
+
+        // Build assignments section
+        const assignments = f.assignments || [];
+        let assignmentsHtml = '';
+        if (assignments.length === 0) {
+            assignmentsHtml = '<div class="text-muted small fst-italic">No assignments yet</div>';
+        } else {
+            assignmentsHtml = assignments.map(a => {
+                const badges = [];
+                const _dur = a.duration_hours || 0;
+                if (a.session_type === 'Lab')
+                    badges.push(`<span class="badge fw-normal" style="background:#fef9c3;color:#854d0e;border:1px solid #fbbf24;font-size:.7rem;">Lab ${_dur}h</span>`);
+                else if (a.session_type === 'Async')
+                    badges.push(`<span class="badge fw-normal" style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;font-size:.7rem;">Async ${_dur}h</span>`);
+                else
+                    badges.push(`<span class="badge fw-normal" style="background:#e8f0fe;color:#1a56db;border:1px solid #93b4f8;font-size:.7rem;">Lec ${_dur}h</span>`);
+                return `
+                  <div class="d-flex align-items-start gap-2 py-2 border-bottom">
+                    <div style="flex:1;min-width:0;">
+                      <div class="small fw-semibold text-dark text-truncate">${a.course_code} — ${a.course_name}</div>
+                      <div class="d-flex align-items-center gap-1 mt-1 flex-wrap">
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary border fw-normal" style="font-size:.7rem;">${a.section_name}</span>
+                        ${badges.join('')}
+                      </div>
+                    </div>
+                  </div>`;
+            }).join('');
+        }
+
+        document.getElementById('profileOffcanvasBody').innerHTML = `
+          <div class="p-4">
+            <!-- Name + ID -->
+            <div class="text-center mb-4">
+              <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3"
+                   style="width:64px;height:64px;">
+                <i class="bi bi-person-fill text-primary fs-3"></i>
+              </div>
+              <h5 class="fw-bold mb-0">${f.full_name}</h5>
+              <div class="text-muted small font-monospace">${f.employee_id}</div>
+              <div class="mt-1">${statusBadge}</div>
+            </div>
+
+            <!-- Details grid -->
+            <div class="mb-3">
+              <div class="d-flex justify-content-between border-bottom py-2">
+                <span class="small text-muted fw-semibold">Department</span>
+                <span class="small text-dark">${f.department || '—'}</span>
+              </div>
+              <div class="d-flex justify-content-between border-bottom py-2">
+                <span class="small text-muted fw-semibold">Academic Rank</span>
+                <span class="small text-dark">${f.academic_rank || '—'}</span>
+              </div>
+              <div class="border-bottom py-2">
+                <div class="small text-muted fw-semibold mb-1">Educational Attainment</div>
+                <div class="small text-dark">${f.highest_educational_attainment || '—'}</div>
+              </div>
+              <div class="border-bottom py-2">
+                <div class="small text-muted fw-semibold mb-1">Available Days</div>
+                <div>${dayBadges}</div>
+              </div>
+              <div class="py-2">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="small text-muted fw-semibold">Weekly Load</span>
+                  <span class="small fw-bold ${curH > maxH ? 'text-danger' : 'text-success'}">${curH}h / ${maxH}h</span>
+                </div>
+                <div class="progress" style="height:6px;border-radius:4px;">
+                  <div class="progress-bar ${barCls}" style="width:${pct}%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Assigned Courses -->
+            <div class="mt-1">
+              <div class="small fw-bold text-muted text-uppercase mb-2" style="letter-spacing:.05em;font-size:.7rem;">
+                <i class="bi bi-journal-bookmark me-1"></i>Assigned Courses
+              </div>
+              ${assignmentsHtml}
+            </div>
+          </div>`;
+
+        // Open offcanvas + custom backdrop
+        const oc = document.getElementById('facultyProfileOffcanvas');
+        const bsOc = bootstrap.Offcanvas.getOrCreateInstance(oc, { backdrop: false, scroll: true });
+        document.getElementById('profileBackdrop').style.display = '';
+        bsOc.show();
+    };
+
+    window.closeFacultyProfile = function() {
+        const oc = document.getElementById('facultyProfileOffcanvas');
+        bootstrap.Offcanvas.getOrCreateInstance(oc).hide();
+    };
+
+    // Hide custom backdrop when offcanvas fully closes
+    document.getElementById('facultyProfileOffcanvas').addEventListener('hidden.bs.offcanvas', function() {
+        document.getElementById('profileBackdrop').style.display = 'none';
+    });
+
+    // SESSION PANELS TOGGLE (show/hide Lec + Lab sub-rows when checkbox ticked)
+    window.toggleSessionPanels = function (checkbox, facultyId, pair) {
+        const pairKey = pair.replace('-','_');
+        const panels = document.querySelectorAll(`.session-panels-${facultyId}-${pairKey}`);
+        panels.forEach(p => {
+            if (checkbox.checked) {
+                p.style.display = '';
+            } else {
+                p.style.display = 'none';
+                // clear all split inputs inside
+                p.querySelectorAll('input[type="number"]').forEach(i => i.value = '');
+                p.querySelectorAll('select').forEach(s => { if (s.options[0]?.value === '') s.selectedIndex = 0; });
+                p.querySelectorAll('.split-total-msg').forEach(m => m.innerHTML = '');
+            }
+        });
+    };
+
+    // Keep old name as alias for backward compat
+    window.toggleSplitPanel = function (checkbox, panelId) {
+        const panel = document.getElementById(panelId);
+        if (!panel) return;
+        panel.style.display = checkbox.checked ? '' : 'none';
+        if (!checkbox.checked) {
+            panel.querySelectorAll('input[type="number"]').forEach(i => i.value = '');
+            panel.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+            const msg = panel.querySelector('.split-total-msg');
+            if (msg) msg.innerHTML = '';
+        }
+    };
+
+    window.validateSplit = function (panel, totalHours) {
+        if (!panel) return;
+        const h1 = parseFloat(panel.querySelector('.split-hrs-1')?.value) || 0;
+        const h2 = parseFloat(panel.querySelector('.split-hrs-2')?.value) || 0;
+        const total = parseFloat(totalHours) || 0;
+        const msg = panel.querySelector('.split-total-msg');
+        if (!msg) return;
+        const used = h1 + h2;
+        if (used === 0) { msg.innerHTML = ''; return; }
+        if (Math.abs(used - total) < 0.01) {
+            msg.innerHTML = `<span class="text-success fw-semibold">${used} / ${total}h ✓</span>`;
+        } else {
+            msg.innerHTML = `<span class="text-danger fw-semibold">${used} / ${total}h — must sum to ${total}h</span>`;
+        }
+    };
+
+    window.submitBulkForm = function(action) {
+        document.getElementById('bulkArchiveForm').submit();
+    };
+</script>
+{% endblock %}

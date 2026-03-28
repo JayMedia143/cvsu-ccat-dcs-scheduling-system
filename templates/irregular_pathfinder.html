@@ -1,0 +1,490 @@
+{% extends "base.html" %}
+{% block title %}Irregular Schedule Finder — {{ student.full_name }}{% endblock %}
+{% block content %}
+<style>
+/* Ghost cancel button */
+.modal-cancel-btn {
+    background: none;
+    border: none;
+    color: #5f6368;
+    padding: 6px 16px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+.modal-cancel-btn:hover { background: #e6f4ea; color: #188038; }
+
+/* Option cards */
+.option-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+.option-card-header {
+    background: #f8f9fa;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid #e8eaed;
+}
+.option-card-body { padding: 12px 14px; }
+.section-group { margin-bottom: 10px; }
+.section-group:last-child { margin-bottom: 0; }
+.section-group-header {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #3c4043;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: 4px 0 6px 0;
+    border-bottom: 2px solid #e8eaed;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.course-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid #f1f3f4;
+    font-size: 0.83rem;
+}
+.course-row:last-child { border-bottom: none; }
+.course-code { font-weight: 700; min-width: 80px; }
+.course-slots { color: #3c4043; flex: 1; }
+.course-meta { color: #9aa0a6; font-size: 0.78rem; text-align: right; white-space: nowrap; }
+
+/* Full-cover clickable cards */
+.fullcover-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background 0.15s, border-color 0.15s;
+}
+.fullcover-card:hover { background: #f0faf0; border-color: #34a853; }
+</style>
+
+<!-- HEADER -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex align-items-center gap-3">
+        <a href="{{ url_for('manage_irregular') }}" class="btn-icon" title="Back" style="font-size:1.2rem;">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+            <h1 class="h4 fw-light mb-0">
+                Irregular Schedule Finder
+                <span class="badge ms-2" style="background:#7c3aed;font-size:0.7rem;vertical-align:middle;">IRREG</span>
+            </h1>
+            <p class="text-muted small mb-0">
+                {{ student.full_name }} &nbsp;·&nbsp; <span class="font-monospace">{{ student.student_id }}</span>
+                {% if student.section %}&nbsp;·&nbsp; {{ student.section.section_name }}{% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- ═══════════════ LEFT: COURSE PICKER ═══════════════ -->
+    <div class="col-lg-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-list-check me-2 text-primary"></i>Select Subjects</h6>
+            </div>
+            <div class="card-body d-flex flex-column p-3" style="gap:12px;">
+                <!-- Semester -->
+                <div>
+                    <label class="form-label small fw-bold text-muted mb-1">Semester</label>
+                    <select class="form-select form-select-sm" id="semesterSelect">
+                        {% for s in semesters %}
+                        <option value="{{ s }}" {% if s == saved_semester %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Search -->
+                <input type="text" class="form-control form-control-sm" id="courseSearch"
+                    placeholder="Search by code or name..." oninput="filterCourses()">
+                <!-- Course list -->
+                <div id="courseList" style="flex:1;overflow-y:auto;max-height:460px;border:1px solid #dee2e6;border-radius:8px;padding:8px;">
+                    {% for year_level, clist in courses_by_year.items() %}
+                    <div class="year-group mb-2">
+                        <div class="text-muted fw-bold px-1 mb-1"
+                            style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em;">
+                            {% if year_level == 0 %}No Year Level
+                            {% elif year_level == 1 %}1st Year
+                            {% elif year_level == 2 %}2nd Year
+                            {% elif year_level == 3 %}3rd Year
+                            {% elif year_level == 4 %}4th Year
+                            {% else %}Year {{ year_level }}{% endif %}
+                        </div>
+                        {% for c in clist %}
+                        <label class="course-item d-flex align-items-start gap-2 p-1 rounded"
+                            style="cursor:pointer;font-size:0.85rem;"
+                            data-code="{{ c.course_code | lower }}"
+                            data-name="{{ c.course_name | lower }}">
+                            <input type="checkbox" class="form-check-input course-chk mt-1 flex-shrink-0"
+                                value="{{ c.id }}"
+                                {% if c.id in saved_course_ids %}checked{% endif %}
+                                onchange="updateSelectedCount()">
+                            <span>
+                                <span class="fw-bold">{{ c.course_code }}</span>
+                                <span class="text-muted"> — {{ c.course_name }}</span>
+                                <span class="text-muted small">
+                                    {% if c.lec_units %}Lec:{{ c.lec_units }}{% endif %}
+                                    {% if c.lab_units %} Lab:{{ c.lab_units }}{% endif %}
+                                </span>
+                            </span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+                <!-- Footer -->
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="small text-muted">Selected: <strong id="selectedCount">0</strong> subjects</span>
+                    <button class="btn btn-sm btn-primary px-3" id="findBtn" onclick="runFinder()" disabled>
+                        <i class="bi bi-search me-1"></i>Find Best Assignment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ RIGHT: RESULTS ═══════════════ -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-diagram-3 me-2 text-success"></i>Results</h6>
+                <span id="resultsBadge" class="badge bg-secondary" style="display:none;"></span>
+            </div>
+            <div class="card-body p-3" id="resultsPanel" style="overflow-y:auto;max-height:580px;">
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-puzzle fs-2 opacity-25 d-block mb-2"></i>
+                    Select subjects on the left, then click <strong>Find Best Assignment</strong>.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CONFIRM ASSIGNMENT MODAL -->
+<div class="modal fade" id="confirmAssignModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-check-circle text-success me-2"></i>Confirm Schedule Assignment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4" id="confirmModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="modal-cancel-btn" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success px-4" onclick="doConfirmFromModal()">
+                    <i class="bi bi-check-lg me-1"></i>Confirm & Save
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CONFIRM SUCCESS TOAST -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999;">
+    <div id="confirmToast" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive">
+        <div class="d-flex">
+            <div class="toast-body"><i class="bi bi-check-circle me-2"></i>Schedule confirmed and saved!</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<script>
+const CSRF_TOKEN  = "{{ csrf_token() }}";
+const STUDENT_ID  = {{ student.id }};
+let lastResult    = null;
+let pendingConfirmData = null;  // {assignments, semester}
+
+document.addEventListener('DOMContentLoaded', () => updateSelectedCount());
+
+function filterCourses() {
+    const q = document.getElementById('courseSearch').value.toLowerCase();
+    document.querySelectorAll('.course-item').forEach(el => {
+        el.style.display = (!q || el.dataset.code.includes(q) || el.dataset.name.includes(q)) ? '' : 'none';
+    });
+    document.querySelectorAll('.year-group').forEach(grp => {
+        const visible = [...grp.querySelectorAll('.course-item')].some(el => el.style.display !== 'none');
+        grp.style.display = visible ? '' : 'none';
+    });
+}
+
+function updateSelectedCount() {
+    const n = document.querySelectorAll('.course-chk:checked').length;
+    document.getElementById('selectedCount').textContent = n;
+    document.getElementById('findBtn').disabled = (n === 0);
+}
+
+async function runFinder() {
+    const courseIds = [...document.querySelectorAll('.course-chk:checked')].map(c => parseInt(c.value));
+    const semester  = document.getElementById('semesterSelect').value;
+    const panel     = document.getElementById('resultsPanel');
+    const badge     = document.getElementById('resultsBadge');
+
+    panel.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted small">Scanning master schedule...</p></div>';
+    badge.style.display = 'none';
+
+    const res  = await fetch(`/api/irregular-pathfinder/${STUDENT_ID}`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF_TOKEN},
+        body: JSON.stringify({course_ids: courseIds, semester})
+    });
+    const data = await res.json();
+    if (!res.ok) { panel.innerHTML = `<div class="alert alert-danger">${data.error}</div>`; return; }
+
+    lastResult = data;
+    renderResults(data, semester, courseIds);
+}
+
+// ─── Render Results ────────────────────────────────────────────────────────────
+function renderResults(data, semester, courseIds) {
+    const panel = document.getElementById('resultsPanel');
+    const badge = document.getElementById('resultsBadge');
+    let html = '';
+
+    // ── Full Cover ──────────────────────────────────────────────────────────────
+    if (data.full_cover && data.full_cover_sections && data.full_cover_sections.length) {
+        badge.textContent = '✅ Full Match';
+        badge.className = 'badge bg-success';
+        badge.style.display = '';
+        html += `<div class="alert alert-success d-flex align-items-start gap-2 mb-3">
+            <i class="bi bi-check-circle-fill fs-5 flex-shrink-0"></i>
+            <div><strong>Full Match Found!</strong><br>
+            The following sections teach ALL selected subjects. Click a section to assign.</div>
+        </div>`;
+        data.full_cover_sections.forEach(sec => {
+            html += `<div class="fullcover-card"
+                onclick="showFullCoverConfirmModal(${sec.section_id}, ${JSON.stringify(courseIds)}, '${semester}', '${esc(sec.section_name)}')">
+                <div>
+                    <span class="fw-bold">${sec.section_name}</span>
+                    <span class="text-muted small ms-2">covers all ${courseIds.length} subjects</span>
+                </div>
+                <span class="text-success small"><i class="bi bi-arrow-right-circle me-1"></i>Select</span>
+            </div>`;
+        });
+        if (data.combinations && data.combinations.length) {
+            html += '<hr class="my-3"><p class="text-muted small mb-3">Or choose a mix-and-match option below:</p>';
+        }
+    }
+
+    // ── Deadlock / Conflict warnings ────────────────────────────────────────────
+    if (data.deadlock_courses && data.deadlock_courses.length) {
+        if (!data.full_cover) {
+            badge.textContent = '⚠ Partial';
+            badge.className = 'badge bg-warning text-dark';
+            badge.style.display = '';
+        }
+        html += `<div class="alert alert-warning mb-2">
+            <strong><i class="bi bi-exclamation-triangle me-1"></i>Not scheduled this semester:</strong><br>
+            ${data.deadlock_courses.map(d => `<span class="badge bg-warning text-dark me-1">${d.course_code}</span>`).join('')}
+        </div>`;
+    }
+    if (data.conflict_courses && data.conflict_courses.length) {
+        html += `<div class="alert alert-danger mb-2">
+            <strong><i class="bi bi-x-circle me-1"></i>Causing schedule conflicts:</strong><br>
+            ${data.conflict_courses.map(d => `<span class="badge bg-danger me-1">${d.course_code}</span>`).join('')}
+            <div class="mt-1 small">Removing one of these subjects may unblock a valid combination.</div>
+        </div>`;
+    }
+
+    // ── Combinations ────────────────────────────────────────────────────────────
+    if (data.combinations && data.combinations.length) {
+        if (!data.full_cover) {
+            badge.textContent = `${data.combinations.length} option(s) found`;
+            badge.className = 'badge bg-success';
+            badge.style.display = '';
+        }
+        html += `<p class="text-muted small fw-bold text-uppercase mb-2 mt-1">
+            ${data.combinations.length} Valid Option(s) — sorted by fewest gaps</p>`;
+
+        data.combinations.forEach((combo, idx) => {
+            const isFirst  = idx === 0;
+            const gapBadge = gapBadgeHtml(combo.gap_minutes);
+            const bestBadge = isFirst ? '<span class="badge bg-warning text-dark me-1">★ Best</span>' : '';
+
+            // Build section groups: anchor courses first, then extras grouped by section
+            const groups = buildSectionGroups(data, combo);
+            let groupsHtml = '';
+            groups.forEach(g => {
+                groupsHtml += `<div class="section-group">
+                    <div class="section-group-header">
+                        <i class="bi bi-people-fill text-primary" style="font-size:0.8rem;"></i>
+                        ${g.sectionName}
+                    </div>`;
+                g.courses.forEach(c => {
+                    const slotStr = c.slots.map(s => `${s.day.slice(0,3)} ${s.start_time}–${s.end_time}`).join(', ');
+                    const metaStr = c.slots.length ? `${c.slots[0].faculty || ''}${c.slots[0].room ? ' / ' + c.slots[0].room : ''}` : '';
+                    groupsHtml += `<div class="course-row">
+                        <span class="course-code">${c.course_code}</span>
+                        <span class="course-slots">${slotStr}</span>
+                        <span class="course-meta">${metaStr}</span>
+                    </div>`;
+                });
+                groupsHtml += '</div>';
+            });
+
+            html += `<div class="option-card">
+                <div class="option-card-header">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="fw-bold">Option ${idx+1}</span>
+                        ${bestBadge}
+                        ${gapBadge}
+                    </div>
+                    <button class="btn btn-sm btn-outline-success px-3"
+                        onclick="showComboConfirmModal(${idx}, '${semester}')">
+                        <i class="bi bi-check-lg me-1"></i>Confirm This Option
+                    </button>
+                </div>
+                <div class="option-card-body">${groupsHtml}</div>
+            </div>`;
+        });
+    } else if (!data.full_cover &&
+               !(data.deadlock_courses && data.deadlock_courses.length) &&
+               !(data.conflict_courses && data.conflict_courses.length)) {
+        badge.textContent = 'No options';
+        badge.className = 'badge bg-secondary';
+        badge.style.display = '';
+        html += '<div class="alert alert-secondary">No valid combinations found for the selected subjects.</div>';
+    }
+
+    panel.innerHTML = html || '<p class="text-muted">No results.</p>';
+}
+
+// ─── Section groups helper ─────────────────────────────────────────────────────
+function buildSectionGroups(data, combo) {
+    const groups = [];
+    // Anchor section courses
+    if (data.anchor && data.anchor_courses && data.anchor_courses.length) {
+        groups.push({
+            sectionName: data.anchor.section_name,
+            courses: data.anchor_courses.map(c => ({
+                course_code: c.course_code,
+                slots: c.slots || []
+            }))
+        });
+    }
+    // Extra sections — group by section_id
+    if (combo.extras && combo.extras.length) {
+        const bySection = {};
+        combo.extras.forEach(ex => {
+            const key = ex.section_id;
+            if (!bySection[key]) bySection[key] = {sectionName: ex.section_name, courses: []};
+            bySection[key].courses.push({course_code: ex.course_code, slots: ex.slots || []});
+        });
+        Object.values(bySection).forEach(g => groups.push(g));
+    }
+    return groups;
+}
+
+// ─── Gap badge ─────────────────────────────────────────────────────────────────
+function gapBadgeHtml(minutes) {
+    if (minutes === 0)  return '<span class="badge bg-success ms-1">0 min gap</span>';
+    if (minutes <= 30)  return `<span class="badge bg-warning text-dark ms-1">${minutes} min gap</span>`;
+    if (minutes <= 90)  return `<span class="badge ms-1" style="background:#fd7e14;color:#fff;">${minutes} min gap</span>`;
+    return `<span class="badge bg-danger ms-1">${Math.round(minutes/60*10)/10} hr gap</span>`;
+}
+
+function esc(s) { return s.replace(/'/g, "\\'"); }
+
+// ─── Confirm modals ────────────────────────────────────────────────────────────
+function showFullCoverConfirmModal(sectionId, courseIds, semester, sectionName) {
+    const assignments = courseIds.map(cid => ({course_id: cid, section_id: sectionId}));
+    pendingConfirmData = {assignments, semester};
+
+    // Build preview: list selected course labels
+    const labels = courseIds.map(id => {
+        const chk = document.querySelector(`.course-chk[value="${id}"]`);
+        const label = chk ? chk.closest('label') : null;
+        return label ? label.querySelector('.fw-bold').textContent : `Course #${id}`;
+    });
+    const preview = `
+        <div class="alert alert-success mb-3 py-2">
+            <i class="bi bi-check-circle me-1"></i>
+            All subjects will be assigned from <strong>${sectionName}</strong>.
+        </div>
+        <div class="small text-muted mb-1">Subjects (${labels.length}):</div>
+        <div class="d-flex flex-wrap gap-1">
+            ${labels.map(l => `<span class="badge bg-light text-dark border">${l}</span>`).join('')}
+        </div>`;
+    document.getElementById('confirmModalBody').innerHTML = preview;
+    new bootstrap.Modal(document.getElementById('confirmAssignModal')).show();
+}
+
+function showComboConfirmModal(idx, semester) {
+    if (!lastResult) return;
+    const combo    = lastResult.combinations[idx];
+    const anchor   = lastResult.anchor;
+    const assignments = [];
+    if (anchor) {
+        (lastResult.anchor_courses || []).forEach(c => {
+            assignments.push({course_id: c.course_id, section_id: anchor.section_id});
+        });
+    }
+    (combo.extras || []).forEach(ex => {
+        assignments.push({course_id: ex.course_id, section_id: ex.section_id});
+    });
+    pendingConfirmData = {assignments, semester};
+
+    // Build preview using the same section groups
+    const groups = buildSectionGroups(lastResult, combo);
+    let groupsHtml = '';
+    groups.forEach(g => {
+        groupsHtml += `<div class="mb-3">
+            <div class="fw-bold small text-uppercase text-muted mb-1" style="letter-spacing:.04em;">
+                <i class="bi bi-people-fill me-1 text-primary"></i>${g.sectionName}
+            </div>`;
+        g.courses.forEach(c => {
+            const slotStr = c.slots.map(s => `${s.day.slice(0,3)} ${s.start_time}–${s.end_time}`).join(', ');
+            groupsHtml += `<div class="d-flex gap-2 py-1 border-bottom" style="font-size:0.85rem;">
+                <span class="fw-bold" style="min-width:80px;">${c.course_code}</span>
+                <span class="text-muted">${slotStr || '—'}</span>
+            </div>`;
+        });
+        groupsHtml += '</div>';
+    });
+    document.getElementById('confirmModalBody').innerHTML =
+        `<p class="text-muted small mb-3">The following schedule will be saved for this student:</p>${groupsHtml}`;
+    new bootstrap.Modal(document.getElementById('confirmAssignModal')).show();
+}
+
+async function doConfirmFromModal() {
+    bootstrap.Modal.getInstance(document.getElementById('confirmAssignModal')).hide();
+    if (pendingConfirmData) {
+        await doConfirm(pendingConfirmData.assignments, pendingConfirmData.semester);
+    }
+}
+
+async function doConfirm(assignments, semester) {
+    const res = await fetch(`/api/irregular-confirm/${STUDENT_ID}`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','X-CSRFToken': CSRF_TOKEN},
+        body: JSON.stringify({semester, assignments})
+    });
+    const data = await res.json();
+    if (data.ok) {
+        const toast = new bootstrap.Toast(document.getElementById('confirmToast'));
+        toast.show();
+        setTimeout(() => {
+            window.location.href = '{{ url_for("manage_irregular") }}';
+        }, 1500);
+    }
+}
+</script>
+{% endblock %}
