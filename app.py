@@ -11230,7 +11230,7 @@ def manage_irregular():
                 all_objs = [o for o in all_objs if getattr(o, 'year_level', None) == val]
             except: pass
         elif filter_by == 'section' and filter_val:
-             try:
+            try:
                 val = int(filter_val)
                 all_objs = [o for o in all_objs if getattr(o, 'section_id', None) == val]
             except: pass
@@ -11243,9 +11243,9 @@ def manage_irregular():
         elif sort_by == 'id-desc':
             all_objs.sort(key=lambda x: (getattr(x, 'student_id', '') or '').lower(), reverse=True)
         elif sort_by == 'section':
-             all_secs = get_archive_entities(archive_id, 'Section')
-             sec_map = {s.id: getattr(s, 'section_name', '') for s in all_secs}
-             all_objs.sort(key=lambda x: (sec_map.get(getattr(x, 'section_id', 0), 'Z-NoSection'), (getattr(x, 'full_name', '') or '').lower()))
+            all_secs = get_archive_entities(archive_id, 'Section')
+            sec_map = {s.id: getattr(s, 'section_name', '') for s in all_secs}
+            all_objs.sort(key=lambda x: (sec_map.get(getattr(x, 'section_id', 0), 'Z-NoSection'), (getattr(x, 'full_name', '') or '').lower()))
         else: # Default: name-asc
             all_objs.sort(key=lambda x: (getattr(x, 'full_name', '') or '').lower())
 
