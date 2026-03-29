@@ -62,8 +62,8 @@ def hist_lockdown(f):
     def decorated_function(*args, **kwargs):
         if session.get('historical_mode_active', False):
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify(ok=False, error='System is in read-only Historical Mode. Exit the Time Machine to make changes.'), 403
-            flash('⏳ Action blocked: System is in Historical Mode (read-only). Exit the Time Machine to make changes.', 'warning')
+                return jsonify(ok=False, error='System is in read-only Archive Mode. Exit Archive to make changes.'), 403
+            flash('⏳ Action blocked: System is in Archive Mode (read-only). Exit Archive to make changes.', 'warning')
             return redirect(request.referrer or url_for('dashboard'))
         return f(*args, **kwargs)
     return decorated_function
@@ -193,9 +193,9 @@ def block_mutations_in_hist_mode():
     # Block the mutation
     if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         from flask import abort
-        return jsonify(ok=False, error='System is in read-only Historical Mode. Exit the Time Machine to make changes.'), 403
+        return jsonify(ok=False, error='System is in read-only Archive Mode. Exit Archive to make changes.'), 403
 
-    flash('⏳ Action blocked: System is in Historical Mode (read-only). Exit the Time Machine to make changes.', 'warning')
+    flash('⏳ Action blocked: System is in Archive Mode (read-only). Exit Archive to make changes.', 'warning')
     return redirect(request.referrer or url_for('dashboard'))
 
 # Rate limiting: track failed login attempts per IP
@@ -5751,7 +5751,7 @@ def api_archive_enter(archive_id):
     session['historical_mode_active'] = True
     session['active_archive_id'] = archive_id
     session['active_archive_display'] = f"{archive.semester} AY {archive.academic_year}"
-    flash(f"Entering Time Machine: {session['active_archive_display']}", "info")
+    flash(f"Entering Archive: {session['active_archive_display']}", "info")
     return redirect(request.referrer or url_for('dashboard'))
 
 @app.route('/api/archive/exit-snapshot')

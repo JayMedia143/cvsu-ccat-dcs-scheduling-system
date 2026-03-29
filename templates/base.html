@@ -22,6 +22,68 @@
         <img src="{{ url_for('static', filename='assets/loader.gif') }}" style="width:150px; height:150px;" alt="Loading...">
     </div>
 
+    {% if is_hist %}
+    <div class="historical-mode-banner d-flex align-items-center justify-content-between px-3 py-2 shadow-sm">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-clock-history fs-5 me-2"></i>
+            <div>
+                <span class="fw-bold text-uppercase" style="letter-spacing: 0.5px;">VIEW MODE</span>
+                <span class="ms-2 opacity-75">| Viewing Archive: {{ active_archive_display }}</span>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <a href="{{ url_for('api_archive_exit') }}" class="btn btn-sm btn-light text-dark fw-bold px-3 border shadow-sm exit-btn-hist">
+                <i class="bi bi-box-arrow-left me-1"></i> EXIT ARCHIVE
+            </a>
+        </div>
+    </div>
+    
+    <style>
+    .historical-mode-banner {
+        background: linear-gradient(90deg, #f59e0b, #d97706);
+        color: white;
+        font-size: 0.85rem;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 44px;
+        z-index: 1065;
+        border-bottom: 2px solid #b45309;
+    }
+    .sheets-menubar {
+        top: 44px !important;
+    }
+    body {
+        padding-top: 92px !important;
+    }
+    .exit-btn-hist {
+        transition: all 0.2s ease;
+        font-size: 0.75rem;
+    }
+    .exit-btn-hist:hover {
+        background: #fff !important;
+        transform: scale(1.05);
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    /* Historical Dropdown Styling */
+    .historical-item:hover {
+        background-color: rgba(25, 135, 84, 0.08) !important;
+        color: #198754 !important;
+    }
+    .historical-item:hover .fw-bold {
+        color: #198754 !important;
+    }
+    .historical-item:hover i {
+        color: #198754 !important;
+        transform: translateX(2px);
+    }
+    .historical-item i {
+        transition: all 0.2s ease;
+    }
+    </style>
+    {% endif %}
+
     <!-- MENU BAR (Unified) -->
     <nav class="sheets-menubar">
         <div class="menu-links d-flex gap-1 align-items-center">
@@ -29,6 +91,8 @@
             <!-- A. SUPERADMIN & ADMIN ONLY -->
             {% if session.get('role') in ['admin', 'superadmin'] %}
 
+            {% if not is_hist %}
+            <!-- FULL ADMIN NAVBAR (ACTIVE TERM) -->
             <a class="menu-item {% if 'dashboard' in request.endpoint %}active{% endif %}"
                 href="{{ url_for('dashboard') }}">
                 Dashboard
@@ -143,6 +207,46 @@
                     </li>
                 </ul>
             </div>
+
+            {% else %}
+            <!-- ARCHIVE ACCESS NAVBAR (VIEW MODE ACTIVE) -->
+            <a class="menu-item {% if 'dashboard' in request.endpoint %}active{% endif %}"
+                href="{{ url_for('dashboard') }}">
+                Dashboard
+            </a>
+
+            <div class="dropdown">
+                <a class="menu-item dropdown-toggle {% if 'manage' in request.endpoint %}active{% endif %}"
+                    href="#" role="button" data-bs-toggle="dropdown">
+                    Data
+                </a>
+                <ul class="dropdown-menu shadow-sm">
+                    <li><a class="dropdown-item" href="{{ url_for('manage_courses') }}"><i class="bi bi-book me-2"></i> Courses</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_sections') }}"><i class="bi bi-people-fill me-2"></i> Sections</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_students') }}"><i class="bi bi-person-lines-fill me-2"></i> Students</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_irregular') }}"><i class="bi bi-person-exclamation me-2"></i> Irregular Students</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_faculty') }}"><i class="bi bi-person-badge me-2"></i> Faculty</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_rooms') }}"><i class="bi bi-door-open me-2"></i> Rooms</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_preassignments') }}"><i class="bi bi-pin-angle-fill me-2"></i> Pre-assignments</a></li>
+                </ul>
+            </div>
+
+            <a class="menu-item {% if 'view_timetable' in request.endpoint %}active{% endif %}"
+                href="{{ url_for('view_timetable') }}">
+                View
+            </a>
+
+            <a class="menu-item {% if 'reports' in request.endpoint %}active{% endif %}"
+                href="{{ url_for('reports_page') }}">
+                Reports
+            </a>
+
+            <a class="menu-item {% if 'student_portal' in request.endpoint %}active{% endif %}"
+                href="{{ url_for('student_portal') }}">
+                Portal
+            </a>
+            {% endif %}
 
             {% else %}
 
@@ -291,62 +395,6 @@
             </div>
         </div>
     </nav>
-
-    {% if is_hist %}
-    <div class="historical-mode-banner d-flex align-items-center justify-content-between px-3 py-2 shadow-sm">
-        <div class="d-flex align-items-center">
-            <i class="bi bi-clock-history fs-5 me-2"></i>
-            <div>
-                <span class="fw-bold text-uppercase" style="letter-spacing: 0.5px;">Historical View Mode</span>
-                <span class="ms-2 opacity-75">| Viewing Snapshot: {{ active_archive_display }}</span>
-            </div>
-        </div>
-        <div class="d-flex align-items-center gap-3">
-            <div class="d-none d-md-flex align-items-center me-2">
-                <span class="badge bg-white text-dark fw-bold px-2 py-1" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.1);">READ-ONLY</span>
-            </div>
-            <a href="{{ url_for('api_archive_exit') }}" class="btn btn-sm btn-light text-dark fw-bold px-3 border shadow-sm exit-btn-hist">
-                <i class="bi bi-box-arrow-left me-1"></i> EXIT SNAPSHOT
-            </a>
-        </div>
-    </div>
-    
-    <style>
-    .historical-mode-banner {
-        background: linear-gradient(90deg, #f59e0b, #d97706);
-        color: white;
-        font-size: 0.85rem;
-        position: sticky;
-        top: 0;
-        z-index: 1050;
-        border-bottom: 2px solid #b45309;
-    }
-    .exit-btn-hist {
-        transition: all 0.2s ease;
-        font-size: 0.75rem;
-    }
-    .exit-btn-hist:hover {
-        background: #fff !important;
-        transform: scale(1.05);
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-    }
-    /* Historical Dropdown Styling */
-    .historical-item:hover {
-        background-color: rgba(25, 135, 84, 0.08) !important;
-        color: #198754 !important;
-    }
-    .historical-item:hover .fw-bold {
-        color: #198754 !important;
-    }
-    .historical-item:hover i {
-        color: #198754 !important;
-        transform: translateX(2px);
-    }
-    .historical-item i {
-        transition: all 0.2s ease;
-    }
-    </style>
-    {% endif %}
 
     <!-- MAIN DASHBOARD CONTENT -->
     <div class="main-content">
