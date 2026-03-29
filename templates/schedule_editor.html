@@ -753,6 +753,7 @@
     <!-- TOP BAR -->
     <div class="editor-topbar">
         <span class="page-title"><i class="bi bi-pencil-square me-2 text-success"></i>Schedule Editor</span>
+        {% if not is_hist %}
         {% if session.get('role') in ['admin','superadmin'] %}
         <button id="lockToggleBtn" class="btn-lock-toggle {% if lock_status %}lock-on{% else %}lock-off{% endif %}"
             onclick="toggleLock()">
@@ -761,6 +762,7 @@
         </button>
         {% else %}
         {% if lock_status %}<span class="lock-badge-nav"><i class="bi bi-lock-fill me-1"></i>GA Locked</span>{% endif %}
+        {% endif %}
         {% endif %}
         <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
             <select id="semesterSel" class="form-select form-select-sm" style="width:auto" onchange="loadGrid()">
@@ -790,9 +792,11 @@
                 <span id="modeBadgeLabel">Direct Edit Mode</span>
                 <i class="bi bi-chevron-down" style="font-size:.65rem;opacity:.6"></i>
             </button>
+            {% if not is_hist %}
             {% if session.get('role') in ['admin','superadmin'] %}
             <button class="btn btn-sm btn-success" id="publishDraftBtn" style="display:none" onclick="publishDraft()"><i
                     class="bi bi-cloud-upload me-1"></i>Publish</button>
+            {% endif %}
             {% endif %}
             <button class="btn btn-sm btn-outline-secondary" onclick="loadGrid()" title="Refresh"><i
                     class="bi bi-arrow-clockwise"></i></button>
@@ -814,6 +818,7 @@
     <!-- BODY -->
     <div class="editor-body">
 
+        {% if not is_hist %}
         <!-- LEFT PANEL -->
         <div class="editor-left-panel">
             <div>
@@ -907,6 +912,7 @@
                 </a>
             </div>
         </div>
+        {% endif %}
 
         <!-- MAIN GRID -->
         <div class="editor-main">
@@ -1509,6 +1515,7 @@
     let redoStack = [];
     let editorMode = null; // 'direct' | 'draft' — null until picker is used
     const IS_ADMIN = {{ 'true' if session.get('role') in ['admin', 'superadmin'] else 'false' }};
+    const IS_HIST = {{ 'true' if is_hist else 'false' }};
     let DRAFTS_DATA = [{% for dv in drafts %}{ id:{{ dv.id }}, name:{{ dv.name|tojson }}, semester:{{ dv.semester|tojson }}, department:{{ (dv.department or '')|tojson }}, notes:{{ (dv.notes or '')|tojson }}, is_published:{{ 'true' if dv.is_published else 'false' }} }{% if not loop.last %},{% endif %}{% endfor %}];
     let _editDraftId = null;
     let _newDraftCtx = 'picker'; // 'picker' | 'manage'
@@ -1694,20 +1701,24 @@
             col.style.height = colH + 'px';
 
             col.addEventListener('dragover', e => {
+                if (IS_HIST) return;
                 e.preventDefault();
                 col.classList.add('drag-over');
                 if (draggingEntry) showGhost(col, e);
             });
             col.addEventListener('dragleave', e => {
+                if (IS_HIST) return;
                 if (!col.contains(e.relatedTarget)) { col.classList.remove('drag-over'); removeGhost(); }
             });
             col.addEventListener('drop', e => {
+                if (IS_HIST) return;
                 e.preventDefault();
                 col.classList.remove('drag-over');
                 removeGhost();
                 handleDrop(col, e);
             });
             col.addEventListener('click', e => {
+                if (IS_HIST) return;
                 if (e.target === col) {
                     const rect = col.getBoundingClientRect();
                     const rawMin = START_HOUR * 60 + (e.clientY - rect.top);
@@ -1775,14 +1786,16 @@
         <div class="blk-title">${entry.course_code}${lockIco}</div>
         <div class="blk-sub">${entry.section_name || entry.faculty_name || ''}</div>
         ${height >= 45 ? `<div class="blk-time">${fmt12(entry.start_time)} – ${fmt12(entry.end_time)}</div>` : ''}
+        ${!IS_HIST ? `
         <div class="block-actions">
             <button class="block-act-btn edt" onclick="${editOnclick}" title="Edit"><i class="bi bi-pencil"></i></button>
             ${canDelete || isMasterInDraftMode ? `<button class="block-act-btn del" onclick="${deleteOnclick}" title="Delete"><i class="bi bi-x"></i></button>` : ''}
-        </div>`;
+        </div>` : ''}`;
 
         // In Draft Mode, master entries are not draggable
-        block.draggable = !isMasterInDraftMode;
+        block.draggable = !isMasterInDraftMode && !IS_HIST;
         block.addEventListener('dragstart', e => {
+            if (IS_HIST) { e.preventDefault(); return; }
             draggingEntry = entry; wasDragging = true;
             e.dataTransfer.setData('text/plain', String(entry.id));
             e.dataTransfer.effectAllowed = 'move';
@@ -1794,6 +1807,7 @@
                 .catch(() => { });
         });
         block.addEventListener('dragend', () => {
+            if (IS_HIST) return;
             block.style.opacity = '';
             draggingEntry = null;
             heatmapData = null;
@@ -1801,11 +1815,13 @@
             setTimeout(() => { wasDragging = false; }, 60);
         });
         // Fix B: prevent dragstart from triggering when clicking action buttons
-        block.querySelector('.block-actions').addEventListener('mousedown', e => {
-            e.stopPropagation();
-            block.draggable = false;
-            document.addEventListener('mouseup', () => { block.draggable = true; }, { once: true });
-        });
+        if (!IS_HIST) {
+            block.querySelector('.block-actions').addEventListener('mousedown', e => {
+                e.stopPropagation();
+                block.draggable = false;
+                document.addEventListener('mouseup', () => { block.draggable = true; }, { once: true });
+            });
+        }
         block.addEventListener('mouseenter', e => showTooltip(entry, e));
         block.addEventListener('mousemove', e => moveTooltip(e));
         block.addEventListener('mouseleave', hideTooltip);

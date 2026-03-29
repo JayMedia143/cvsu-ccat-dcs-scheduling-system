@@ -177,9 +177,11 @@
         <h5 class="mb-0 fw-semibold">Layout Settings</h5>
         <small class="text-muted">Manage Excel templates and schedule document variables.</small>
     </div>
+    {% if not is_hist %}
     <button type="submit" form="settingsForm" class="btn btn-success px-4 save-btn">
         <i class="bi bi-floppy me-1"></i>Save Settings
     </button>
+    {% endif %}
 </div>
 
 <div class="layout-page">
@@ -221,6 +223,7 @@
                 <!-- filled by JS -->
             </div>
 
+            {% if not is_hist %}
             <!-- Upload form -->
             <form id="uploadForm" method="POST" action="{{ url_for('upload_template') }}" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -230,6 +233,11 @@
                     <i class="bi bi-upload me-1"></i>Upload .xlsx
                 </button>
             </form>
+            {% else %}
+            <div class="alert alert-info py-2 small mb-0">
+                <i class="bi bi-info-circle me-1"></i>Uploads disabled in historical mode.
+            </div>
+            {% endif %}
 
             <!-- Actions (Preview + Delete) — shown only when template exists -->
             <div id="templateActions">
@@ -238,6 +246,7 @@
                     <button type="button" class="btn btn-sm btn-outline-primary btn-preview-action">
                         <i class="bi bi-eye me-1"></i>Preview
                     </button>
+                    {% if not is_hist %}
                     <form id="deleteForm" method="POST" action="" class="d-grid">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-sm btn-outline-danger"
@@ -245,6 +254,7 @@
                             <i class="bi bi-trash me-1"></i>Delete Template
                         </button>
                     </form>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -253,6 +263,7 @@
     <!-- ══════════════ RIGHT COLUMN ══════════════ -->
     <div class="layout-right">
         <form method="POST" action="{{ url_for('manage_layouts') }}" id="settingsForm">
+        <fieldset {% if is_hist %}disabled{% endif %} style="border:none; padding:0; margin:0;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="active_tab" id="activeTabInput" value="section">
         <div class="tab-content">

@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Archived Schedule: {{ archive.semester }} AY {{ archive.academic_year }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 text-gray-800 fw-light">
+                <i class="bi bi-clock-history me-2 text-primary"></i>Archive: {{ archive.academic_year }}
+            </h1>
+            <p class="text-muted small mb-0">{{ archive.semester }} snapshot • Captured on {{ archive.created_at.strftime('%b %d, %Y') }}</p>
+        </div>
+        <div>
+            <a href="{{ url_for('archive_explorer') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                <i class="bi bi-arrow-left me-1"></i> Back to Explorer
+            </a>
+        </div>
+    </div>
+
+    <!-- Alert Banner -->
+    <div class="alert alert-warning border-0 shadow-sm rounded-3 d-flex align-items-center mb-4 py-3" role="alert" style="background: #fff8e1; border-left: 5px solid #ffca28 !important;">
+        <i class="bi bi-shield-lock-fill fs-3 me-3 text-warning"></i>
+        <div>
+            <h6 class="alert-heading fw-bold mb-0 text-dark">READ-ONLY IMMUTABLE RECORD</h6>
+            <p class="mb-0 small text-dark opacity-75">You are viewing a historical snapshot. This data is protected and cannot be modified.</p>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm overflow-hidden mb-5">
+        <div class="card-header bg-white border-bottom py-3">
+            <div class="row align-items-center g-3">
+                <div class="col-md-6 col-lg-4">
+                    <div class="input-group input-group-sm rounded-pill border overflow-hidden">
+                        <span class="input-group-text bg-transparent border-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" id="archiveSearch" class="form-control border-0" placeholder="Search historical records...">
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-8 text-md-end">
+                    <span class="badge bg-light text-dark border py-2 px-3 fw-normal rounded-pill me-2">
+                        <i class="bi bi-layers me-1 text-muted"></i> {{ schedules|length }} Total Records
+                    </span>
+                    <button class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="window.print()">
+                        <i class="bi bi-printer me-1"></i> Print Report
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="archiveTable">
+                <thead class="table-light text-muted small text-uppercase fw-bold">
+                    <tr>
+                        <th class="ps-4">Code</th>
+                        <th>Subject Title</th>
+                        <th>Section</th>
+                        <th>Faculty</th>
+                        <th>Room</th>
+                        <th>Day/Time</th>
+                        <th class="text-center">Type</th>
+                    </tr>
+                </thead>
+                <tbody class="text-dark small">
+                    {% for sc in schedules %}
+                    <tr class="archive-row">
+                        <td class="ps-4 fw-bold text-primary">{{ sc.course_code }}</td>
+                        <td>{{ sc.course_name }}</td>
+                        <td><span class="text-dark fw-medium">{{ sc.section_name }}</span></td>
+                        <td>
+                            <span class="badge bg-light text-dark fw-normal border px-2 py-1">
+                                <i class="bi bi-person me-1 text-muted"></i>{{ sc.faculty_name }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark fw-normal border px-2 py-1">
+                                <i class="bi bi-door-open me-1 text-muted"></i>{{ sc.room_name }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-2" style="font-size: 0.7rem;">{{ sc.day[:3]|upper }}</span>
+                                <span class="ms-2 text-muted" style="font-size: 0.75rem;">{{ sc.start_time }} – {{ sc.end_time }}</span>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill {% if 'Lec' in sc.schedule_type %}bg-info{% else %}bg-success{% endif %} bg-opacity-10 
+                                  {% if 'Lec' in sc.schedule_type %}text-info{% else %}text-success{% endif %} border 
+                                  {% if 'Lec' in sc.schedule_type %}border-info{% else %}border-success{% endif %} px-3" style="font-size: 0.65rem;">
+                                {{ sc.schedule_type }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">No schedule records found in this snapshot.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Instant Live Search
+        const searchInput = document.getElementById('archiveSearch');
+        const rows = document.querySelectorAll('.archive-row');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const query = this.value.toLowerCase().trim();
+                rows.forEach(row => {
+                    const text = row.innerText.toLowerCase();
+                    row.style.display = text.includes(query) ? "" : "none";
+                });
+            });
+        }
+    });
+</script>
+
+<style>
+    .table-hover tbody tr:hover {
+        background-color: rgba(0,0,0,0.02);
+    }
+    @media print {
+        .navbar, .btn, .input-group, .alert, .breadcrumb, footer { display: none !important; }
+        .container-fluid { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+        .card { box-shadow: none !important; border: 0 !important; }
+        .table { width: 100% !important; margin: 0 !important; font-size: 0.7rem !important; }
+        .badge { color: black !important; background: none !important; border: 1px solid #ccc !important; }
+        
+        /* Official Header for Physical Archives */
+        body::before {
+            content: "CAVITE STATE UNIVERSITY - CCAT CAMPUS \A Scheduling System Historical Record";
+            white-space: pre-wrap;
+            display: block;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        
+        /* Official Footer for Physical Archives */
+        body::after {
+            content: "Term: {{ archive.semester }} | Academic Year: {{ archive.academic_year }} \A Snapshot Captured on: {{ archive.created_at.strftime('%Y-%m-%d %H:%M') }}";
+            white-space: pre-wrap;
+            display: block;
+            text-align: center;
+            font-size: 0.7rem;
+            margin-top: 30px;
+            color: #666;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+    }
+</style>
+
+{% endblock %}

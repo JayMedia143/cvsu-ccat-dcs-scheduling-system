@@ -53,6 +53,95 @@ def role_required(*roles):
         return decorated_function
     return decorator
 
+# ── Time Machine: Backend Route Protection ─────────────────────────────────────
+def hist_lockdown(f):
+    """Blocks all POST/DELETE mutation routes when Ghost Mode (historical view) is active.
+    Returns 403 JSON for API calls and redirects with a flash for normal form submissions.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('historical_mode_active', False):
+            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify(ok=False, error='System is in read-only Historical Mode. Exit the Time Machine to make changes.'), 403
+            flash('⏳ Action blocked: System is in Historical Mode (read-only). Exit the Time Machine to make changes.', 'warning')
+            return redirect(request.referrer or url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# ── Time Machine: Archive Entity Reconstructor ─────────────────────────────────
+from types import SimpleNamespace
+
+def get_archive_entities(archive_id, entity_type):
+    """Parses ArchivedEntity JSON rows for a given archive and type into a list of
+    SimpleNamespace objects. This lets Jinja2 templates access fields via dot-notation
+    (e.g. course.course_code) exactly as they would with real SQLAlchemy model objects.
+    """
+    rows = ArchivedEntity.query.filter_by(
+        term_archive_id=archive_id,
+        entity_type=entity_type
+    ).all()
+    results = []
+    for row in rows:
+        try:
+            data = json.loads(row.data_json)
+            obj = SimpleNamespace(**data)
+            results.append(obj)
+        except Exception:
+            pass
+    return results
+
+
+def _mock_archived_schedule(as_obj):
+    """
+    Wraps an ArchivedSchedule (flattened strings) in a SimpleNamespace that 
+    mimics the ScheduledClass structure (model relationships) for template compatibility.
+    """
+    from types import SimpleNamespace
+    return SimpleNamespace(
+        id=as_obj.id,
+        day=as_obj.day,
+        start_time=as_obj.start_time,
+        end_time=as_obj.end_time,
+        session_type=as_obj.schedule_type,
+        is_preassigned=getattr(as_obj, 'is_preassigned', False),
+        is_irregular=getattr(as_obj, 'is_irregular', False),
+        course_id=None, 
+        section_id=None,
+        faculty_id=None,
+        room_id=None,
+        course=SimpleNamespace(course_code=as_obj.course_code, course_name=as_obj.course_name),
+        section=SimpleNamespace(section_name=as_obj.section_name),
+        faculty=SimpleNamespace(full_name=as_obj.faculty_name, sex=None),
+        room=SimpleNamespace(room_name=as_obj.room_name)
+    )
+
+class MockPagination:
+    """Mock pagination class to provide the same interface as SQLAlchemy's paginate()
+    for list-based historical data reconstructed from archives.
+    """
+    def __init__(self, items, page, per_page, total_items):
+        self.items = items
+        self.page = page
+        self.per_page = per_page
+        self.total = total_items
+        self.pages = (total_items + per_page - 1) // per_page if per_page > 0 else 0
+        self.has_prev = page > 1
+        self.has_next = page < self.pages
+        self.prev_num = page - 1
+        self.next_num = page + 1
+
+    def iter_pages(self, left_edge=2, left_current=2, right_current=5, right_edge=2):
+        last = 0
+        for num in range(1, self.pages + 1):
+            if num <= left_edge or \
+               (num > self.page - left_current - 1 and \
+                num < self.page + right_current) or \
+               num > self.pages - right_edge:
+                if last + 1 != num:
+                    yield None
+                yield num
+                last = num
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or 'cvsu-ccat-dev-secret-key-change-in-prod'
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
@@ -67,6 +156,47 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 db = SQLAlchemy(app)
 csrf = CSRFProtect(app)
+
+@app.context_processor
+def inject_archive_vars():
+    """Makes archive mode variables available to all templates automatically."""
+    return {
+        'is_hist': session.get('historical_mode_active', False),
+        'active_archive_display': session.get('active_archive_display', ''),
+        'all_archives': TermArchive.query.order_by(TermArchive.created_at.desc()).all()
+    }
+
+function_list = ['manage_courses', 'manage_sections', 'manage_students', 'manage_irregular', 'manage_faculty', 'manage_rooms', 'manage_preassignments']
+
+# ── Time Machine: Global POST/MUTATION Firewall ────────────────────────────────
+# Whitelisted endpoints that are always allowed (auth + time machine controls)
+_HIST_SAFE_ENDPOINTS = {
+    'login', 'logout', 'api_archive_exit', 'api_archive_enter',
+    'static', 'upload_profile_pic', 'change_password', 'change_username',
+}
+
+@app.before_request
+def block_mutations_in_hist_mode():
+    """Global firewall: blocks all data-mutating HTTP methods when Ghost Mode is active.
+    This is the backend security complement to the UI-level is_hist lockdown.
+    """
+    if request.method not in ('POST', 'PUT', 'DELETE', 'PATCH'):
+        return  # GET requests are always fine
+
+    if not session.get('historical_mode_active', False):
+        return  # Not in historical mode — allow everything
+
+    endpoint = request.endpoint or ''
+    if endpoint in _HIST_SAFE_ENDPOINTS:
+        return  # Whitelisted — always allowed
+
+    # Block the mutation
+    if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        from flask import abort
+        return jsonify(ok=False, error='System is in read-only Historical Mode. Exit the Time Machine to make changes.'), 403
+
+    flash('⏳ Action blocked: System is in Historical Mode (read-only). Exit the Time Machine to make changes.', 'warning')
+    return redirect(request.referrer or url_for('dashboard'))
 
 # Rate limiting: track failed login attempts per IP
 # Structure: { ip: {'count': int, 'first_attempt': datetime} }
@@ -405,6 +535,63 @@ class HistoricalSchedule(db.Model):
     archived_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     archived_by = db.Column(db.String(50), nullable=True)
 
+# --- Module 4: SNAPSHOT ARCHIVE ---
+class TermArchive(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    academic_year = db.Column(db.String(50), nullable=False)
+    semester = db.Column(db.String(50), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    
+    # Metadata summaries for the snapshot listing
+    total_sections = db.Column(db.Integer, default=0)
+    total_courses = db.Column(db.Integer, default=0)
+    total_faculty = db.Column(db.Integer, default=0)
+    total_schedules = db.Column(db.Integer, default=0)
+    
+    # Relationship to user
+    creator = db.relationship('User', foreign_keys=[created_by_id])
+
+class ArchivedSchedule(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    term_archive_id = db.Column(db.Integer, db.ForeignKey('term_archive.id'), nullable=False, index=True)
+    
+    # Flattened metadata (Immutable string copies with search indexing)
+    course_code = db.Column(db.String(255), index=True)
+    course_name = db.Column(db.String(255))
+    section_name = db.Column(db.String(255))
+    faculty_name = db.Column(db.String(255), index=True)
+    room_name = db.Column(db.String(255))
+    
+    # Schedule details
+    day = db.Column(db.String(20))
+    start_time = db.Column(db.String(20))
+    end_time = db.Column(db.String(20))
+    schedule_type = db.Column(db.String(50)) # Lec/Lab/Sync/Async
+    
+    # Integrated Archive Mode Fields
+    is_preassigned = db.Column(db.Boolean, default=False)
+    is_irregular = db.Column(db.Boolean, default=False)
+    irregular_student_name = db.Column(db.String(255), nullable=True)
+    
+    term_archive = db.relationship('TermArchive', backref=db.backref('schedules', lazy=True, cascade="all, delete-orphan"))
+
+class ArchivedEntity(db.Model):
+    """
+    Stores a snapshot of an entity (Section, Course, Faculty) exactly as it was during the archive.
+    This allows 1:1 reconstruction of Data Management pages without relying on the live tables.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    term_archive_id = db.Column(db.Integer, db.ForeignKey('term_archive.id'), nullable=False, index=True)
+    entity_type = db.Column(db.String(50)) # 'Course', 'Section', 'Faculty', 'Room', 'Student', 'IrregularStudent'
+    
+    # Common fields stored as JSON to handle different entity schemas
+    data_json = db.Column(db.Text, nullable=False)
+    
+    term_archive = db.relationship('TermArchive', backref=db.backref('entities', lazy=True, cascade="all, delete-orphan"))
+
+
+
 class Student(db.Model):
     id          = db.Column(db.Integer, primary_key=True)
     student_id  = db.Column(db.String(20), unique=True, nullable=False)
@@ -682,6 +869,29 @@ def upload_profile_pic():
 @login_required
 @role_required('admin', 'superadmin')
 def dashboard():
+    # ── Time Machine: Historical Mode Dashboard ─────────────────────────────
+    if session.get('historical_mode_active', False):
+        archive_id = session.get('active_archive_id')
+        archive = TermArchive.query.get(archive_id) if archive_id else None
+        if archive:
+            stats = {
+                'courses':         archive.total_courses,
+                'faculty':         archive.total_faculty,
+                'rooms':           ArchivedEntity.query.filter_by(term_archive_id=archive_id, entity_type='Room').count(),
+                'sections':        archive.total_sections,
+                'needed':          archive.total_schedules,
+                'scheduled':       archive.total_schedules,
+                'completion_rate': 100,
+                'selected_depts':  [],
+                'hist_archive':    archive,
+            }
+        else:
+            stats = {'courses': 0, 'faculty': 0, 'rooms': 0, 'sections': 0,
+                     'needed': 0, 'scheduled': 0, 'completion_rate': 0,
+                     'selected_depts': [], 'hist_archive': None}
+        return render_template('dashboard.html', stats=stats)
+
+    # ── Live Mode Dashboard ─────────────────────────────────────────────────
     # 1. Bilangin ang mga basic data
     total_courses = Course.query.count()
     total_faculty = Faculty.query.count()
@@ -750,6 +960,72 @@ def manage_courses():
 
     selected_semester = session.get('selected_semester', 'All')
 
+    # ── Time Machine: Historical Mode ───────────────────────────────────────
+    if session.get('historical_mode_active', False):
+        archive_id = session.get('active_archive_id')
+        all_objs = get_archive_entities(archive_id, 'Course')
+        
+        # 1. Apply Filtering
+        if selected_semester != 'All':
+            all_objs = [o for o in all_objs if getattr(o, 'semester_offered', None) == selected_semester]
+        
+        if search_query:
+            s = search_query.lower()
+            all_objs = [o for o in all_objs if 
+                        s in (getattr(o, 'course_code', '') or '').lower() or 
+                        s in (getattr(o, 'course_name', '') or '').lower() or 
+                        s in (getattr(o, 'department', '') or '').lower()]
+        
+        if filter_by == 'dept' and filter_val:
+            all_objs = [o for o in all_objs if getattr(o, 'department', None) == filter_val]
+        elif filter_by == 'code' and filter_val:
+            all_objs = [o for o in all_objs if (getattr(o, 'course_code', '') or '').lower().startswith(filter_val.lower())]
+
+        # 2. Apply Sorting
+        if sort_by == 'a-z':
+            all_objs.sort(key=lambda x: (getattr(x, 'course_code', '') or '').lower())
+        elif sort_by == 'z-a':
+            all_objs.sort(key=lambda x: (getattr(x, 'course_code', '') or '').lower(), reverse=True)
+        elif sort_by == 'dept-asc':
+            all_objs.sort(key=lambda x: ((getattr(x, 'department', '') or '').lower(), (getattr(x, 'course_code', '') or '').lower()))
+        elif sort_by == 'dept-desc':
+            all_objs.sort(key=lambda x: ((getattr(x, 'department', '') or '').lower(), (getattr(x, 'course_code', '') or '').lower()), reverse=True)
+        else:
+            all_objs.sort(key=lambda x: getattr(x, 'id', 0), reverse=True)
+
+        # 3. Paginate
+        per_page = 10
+        total = len(all_objs)
+        start = (page - 1) * per_page
+        end = start + per_page
+        items = all_objs[start:end]
+        pagination = MockPagination(items, page, per_page, total)
+        
+        # Re-derive dropdown data from ARCHIVED set
+        unique_depts = sorted(list(set(getattr(o, 'department', '') for o in all_objs if getattr(o, 'department', None))))
+        unique_prefixes = set()
+        for o in all_objs:
+            code = getattr(o, 'course_code', '')
+            if code:
+                parts = code.split(' ')
+                if parts: unique_prefixes.add(parts[0])
+        sorted_prefixes = sorted(list(unique_prefixes))
+
+        return render_template(
+            'manage_courses.html',
+            courses=items,
+            pagination=pagination,
+            current_sort=sort_by,
+            search_query=search_query,
+            all_courses=all_objs,
+            selected_semester=selected_semester,
+            unique_depts=unique_depts,
+            unique_prefixes=sorted_prefixes,
+            current_filter_by=filter_by,
+            current_filter_val=filter_val
+        )
+
+    # ── Live Mode ───────────────────────────────────────────────────────────
     # Base Query
     query = Course.query.filter_by(is_archived=False)
 
@@ -1223,6 +1499,55 @@ def manage_rooms():
     filter_by = request.args.get('filter_by', '', type=str) # 'building' or 'status'
     filter_val = request.args.get('filter_val', '', type=str)
 
+    # ── Time Machine: Historical Mode ───────────────────────────────────────
+    if session.get('historical_mode_active', False):
+        archive_id = session.get('active_archive_id')
+        all_objs = get_archive_entities(archive_id, 'Room')
+        
+        # 1. Apply Filtering
+        if search_query:
+            s = search_query.lower()
+            all_objs = [o for o in all_objs if 
+                        s in (getattr(o, 'room_name', '') or '').lower() or 
+                        s in (getattr(o, 'building', '') or '').lower() or 
+                        s in (getattr(o, 'capabilities', '') or '').lower()]
+        
+        if filter_by == 'building' and filter_val:
+            all_objs = [o for o in all_objs if getattr(o, 'building', None) == filter_val]
+        elif filter_by == 'status' and filter_val:
+            all_objs = [o for o in all_objs if getattr(o, 'status', None) == filter_val]
+
+        # 2. Apply Sorting
+        if sort_by == 'name-desc':
+            all_objs.sort(key=lambda x: (getattr(x, 'room_name', '') or '').lower(), reverse=True)
+        elif sort_by == 'capacity-desc':
+            all_objs.sort(key=lambda x: getattr(x, 'capacity', 0) or 0, reverse=True)
+        elif sort_by == 'capacity-asc':
+            all_objs.sort(key=lambda x: getattr(x, 'capacity', 0) or 0)
+        else: # Default: name-asc
+            all_objs.sort(key=lambda x: (getattr(x, 'room_name', '') or '').lower())
+
+        # 3. Paginate
+        per_page = 10
+        total = len(all_objs)
+        start = (page - 1) * per_page
+        items = all_objs[start:start+per_page]
+        pagination = MockPagination(items, page, per_page, total)
+        
+        # Unique Buildings for Filter
+        unique_buildings = sorted(list(set(getattr(o, 'building', '') for o in all_objs if getattr(o, 'building', None))))
+
+        return render_template('manage_rooms.html',
+            rooms=items,
+            pagination=pagination,
+            unique_buildings=unique_buildings,
+            current_sort=sort_by,
+            search_query=search_query,
+            current_filter_by=filter_by,
+            current_filter_val=filter_val
+        )
+
+    # ── Live Mode ───────────────────────────────────────────────────────────
     # 2. Base Query
     query = Room.query.filter_by(is_archived=False)
     
@@ -1491,6 +1816,66 @@ def manage_sections():
 
     selected_semester = session.get('selected_semester', 'All')
     
+    # ── Time Machine: Historical Mode ───────────────────────────────────────
+    if session.get('historical_mode_active', False):
+        archive_id = session.get('active_archive_id')
+        # Exclude T.B.A. system section if present in archive
+        all_objs = [o for o in get_archive_entities(archive_id, 'Section') if getattr(o, 'section_name', '') != 'T.B.A.']
+        
+        # 1. Apply Filtering
+        if search_query:
+            s = search_query.lower()
+            all_objs = [o for o in all_objs if 
+                        s in (getattr(o, 'section_name', '') or '').lower() or 
+                        s in str(getattr(o, 'year_level', ''))]
+        
+        if filter_by == 'year' and filter_val:
+            try:
+                val = int(filter_val)
+                all_objs = [o for o in all_objs if getattr(o, 'year_level', None) == val]
+            except: pass
+
+        # 2. Apply Sorting
+        if sort_by == 'name-desc':
+            all_objs.sort(key=lambda x: (getattr(x, 'section_name', '') or '').lower(), reverse=True)
+        elif sort_by == 'year-asc':
+            all_objs.sort(key=lambda x: (getattr(x, 'year_level', 0), (getattr(x, 'section_name', '') or '').lower()))
+        elif sort_by == 'year-desc':
+            all_objs.sort(key=lambda x: (getattr(x, 'year_level', 0) or 0, (getattr(x, 'section_name', '') or '').lower()), reverse=True)
+        else: # Default: name-asc
+            all_objs.sort(key=lambda x: (getattr(x, 'section_name', '') or '').lower())
+
+        # 3. Paginate
+        per_page = 10
+        total = len(all_objs)
+        start = (page - 1) * per_page
+        items = all_objs[start:start+per_page]
+        pagination = MockPagination(items, page, per_page, total)
+        
+        # Prepare courses data from archive
+        all_courses = get_archive_entities(archive_id, 'Course')
+        courses_by_sem = {'1st Semester': [], '2nd Semester': [], 'Midyear': []}
+        for c in all_courses:
+            if getattr(c, 'semester_offered', None) in courses_by_sem:
+                courses_by_sem[c.semester_offered].append(c)
+
+        # Unique Years for filter
+        unique_years = sorted(list(set(getattr(o, 'year_level', 0) for o in all_objs if getattr(o, 'year_level', None) is not None)))
+
+        return render_template(
+            'manage_sections.html', 
+            sections=items, 
+            pagination=pagination, 
+            courses_by_sem=courses_by_sem, 
+            current_sort=sort_by, 
+            search_query=search_query,
+            selected_semester=selected_semester,
+            unique_years=unique_years,
+            current_filter_by=filter_by,
+            current_filter_val=filter_val
+        )
+
+    # ── Live Mode ───────────────────────────────────────────────────────────
     # 2. Base Query (exclude T.B.A. system section)
     query = Section.query.filter_by(is_archived=False).filter(Section.section_name != 'T.B.A.')
     
@@ -1775,6 +2160,67 @@ def manage_faculty():
 
     selected_semester = session.get('selected_semester', 'All')
 
+    # ── Time Machine: Historical Mode ───────────────────────────────────────
+    if session.get('historical_mode_active', False):
+        archive_id = session.get('active_archive_id')
+        all_objs = get_archive_entities(archive_id, 'Faculty')
+        
+        # 1. Apply Filtering
+        if search_query:
+            s = search_query.lower()
+            all_objs = [o for o in all_objs if 
+                        s in (getattr(o, 'full_name', '') or '').lower() or 
+                        s in (getattr(o, 'employee_id', '') or '').lower() or 
+                        s in (getattr(o, 'department', '') or '').lower()]
+        
+        if filter_by == 'dept' and filter_val:
+            all_objs = [o for o in all_objs if getattr(o, 'department', None) == filter_val]
+        elif filter_by == 'status' and filter_val:
+            all_objs = [o for o in all_objs if getattr(o, 'employment_status', None) == filter_val]
+
+        # 2. Apply Sorting
+        if sort_by == 'name-desc':
+            all_objs.sort(key=lambda x: (getattr(x, 'full_name', '') or '').lower(), reverse=True)
+        else:
+            all_objs.sort(key=lambda x: (getattr(x, 'full_name', '') or '').lower())
+
+        # 3. Paginate
+        per_page = 10
+        total = len(all_objs)
+        start = (page - 1) * per_page
+        items = all_objs[start:start+per_page]
+        pagination = MockPagination(items, page, per_page, total)
+        
+        # Reconstruct dropdown data from archive
+        all_courses = get_archive_entities(archive_id, 'Course')
+        if selected_semester != 'All':
+            all_courses = [c for c in all_courses if getattr(c, 'semester_offered', None) == selected_semester]
+            
+        courses_by_sem = {'1st Semester': [], '2nd Semester': [], 'Midyear': []}
+        for c in all_courses:
+            if getattr(c, 'semester_offered', None) in courses_by_sem:
+                courses_by_sem[c.semester_offered].append(c)
+
+        all_archives_sections = get_archive_entities(archive_id, 'Section')
+        all_sections_json = [{'id': s.id, 'name': getattr(s, 'section_name', ''), 'course_ids': getattr(s, 'course_ids', [])} for s in all_archives_sections]
+        unique_depts = sorted(list(set(getattr(o, 'department', '') for o in all_objs if getattr(o, 'department', None))))
+
+        return render_template(
+            'manage_faculty.html',
+            faculty=items,
+            pagination=pagination,
+            courses_by_sem=courses_by_sem,
+            all_sections_json=all_sections_json,
+            unique_depts=unique_depts,
+            current_sort=sort_by,
+            search_query=search_query,
+            selected_semester=selected_semester,
+            current_filter_by=filter_by,
+            current_filter_val=filter_val,
+            split_data_by_faculty={} # Assignment logic hidden in Ghost Mode
+        )
+
+    # ── Live Mode ───────────────────────────────────────────────────────────
     # 2. Base Query
     query = Faculty.query.filter_by(is_archived=False)
 
@@ -2315,51 +2761,104 @@ def view_timetable():
     filter_type = request.args.get('type', 'section')
     filter_id   = request.args.get('id', type=int)
 
-    # Semester history: collect distinct semesters that have saved schedules
-    _sem_rows = db.session.query(ScheduledClass.semester).distinct().all()
-    available_semesters = sorted(
-        {r[0] for r in _sem_rows if r[0]},
-        key=lambda s: ({'1st Semester': 0, 'Midyear': 1, '2nd Semester': 2}.get(s, 99))
-    )
-    # Default to the semester with the most recent data; fall back to 1st Semester
-    default_sem = available_semesters[0] if available_semesters else '1st Semester'
-    current_semester = request.args.get('semester', default_sem)
+    # ── Time Machine: Historical Mode ───────────────────────────────────────
+    if session.get('historical_mode_active', False):
+        archive_id = session.get('active_archive_id')
+        
+        # 1. Fetch historical dropdown data
+        all_sections = get_archive_entities(archive_id, 'Section')
+        all_faculty  = get_archive_entities(archive_id, 'Faculty')
+        all_rooms    = get_archive_entities(archive_id, 'Room')
+        
+        # 2. Get target name for filtering
+        selected_name = "Historical Schedule"
+        target_field = None
+        target_name = None
+        current_semester = "Archived Term" # Or fetch from TermArchive if desired
+        available_semesters = [] # Only one semester per archive
 
-    all_sections = Section.query.order_by(Section.year_level, Section.section_name).all()
-    all_faculty = Faculty.query.order_by(Faculty.full_name).all()
-    all_rooms = Room.query.order_by(Room.room_name).all()
+        if filter_id:
+            if filter_type == 'section':
+                match = next((s for s in all_sections if s.id == filter_id), None)
+                if match: 
+                    target_field = 'section_name'
+                    target_name = match.section_name
+                    selected_name = f"Schedule for {match.section_name}"
+            elif filter_type == 'faculty':
+                match = next((f for f in all_faculty if f.id == filter_id), None)
+                if match:
+                    target_field = 'faculty_name'
+                    target_name = match.full_name
+                    selected_name = f"Schedule for {match.full_name}"
+            elif filter_type == 'room':
+                match = next((r for r in all_rooms if r.id == filter_id), None)
+                if match:
+                    target_field = 'room_name'
+                    target_name = match.room_name
+                    selected_name = f"Schedule for {match.room_name}"
+        else:
+            if all_sections:
+                match = all_sections[0]
+                filter_id = match.id
+                target_field = 'section_name'
+                target_name = match.section_name
+                selected_name = f"Schedule for {match.section_name}"
 
-    query = ScheduledClass.query.filter_by(semester=current_semester)
-    selected_name = "Master Schedule"
+        # 3. Query ArchivedSchedule
+        base_query = ArchivedSchedule.query.filter_by(term_archive_id=archive_id)
+        if target_field and target_name:
+            schedules_raw = base_query.filter(getattr(ArchivedSchedule, target_field) == target_name).all()
+        else:
+            schedules_raw = base_query.all()
+        
+        schedules = [_mock_archived_schedule(s) for s in schedules_raw]
+        settings = get_settings()
 
-    if filter_id:
-        if filter_type == 'section':
-            query = query.filter_by(section_id=filter_id)
-            item = Section.query.get(filter_id)
-            if item: selected_name = f"Schedule for {item.section_name}"
-        elif filter_type == 'faculty':
-            query = query.filter_by(faculty_id=filter_id)
-            item = Faculty.query.get(filter_id)
-            if item: selected_name = f"Schedule for {item.full_name}"
-        elif filter_type == 'room':
-            query = query.filter_by(room_id=filter_id)
-            item = Room.query.get(filter_id)
-            if item: selected_name = f"Schedule for {item.room_name}"
-        elif filter_type == 'course':
-            query = query.filter_by(course_id=filter_id)
-            item = Course.query.get(filter_id)
-            if item: selected_name = f"Schedule for {item.course_code}"
     else:
-        if all_sections:
-            first = all_sections[0]
-            query = query.filter_by(section_id=first.id)
-            filter_id = first.id
-            selected_name = f"Schedule for {first.section_name}"
+        # ── Live Mode ───────────────────────────────────────────────────────────
+        # Semester history: collect distinct semesters that have saved schedules
+        _sem_rows = db.session.query(ScheduledClass.semester).distinct().all()
+        available_semesters = sorted(
+            {r[0] for r in _sem_rows if r[0]},
+            key=lambda s: ({'1st Semester': 0, 'Midyear': 1, '2nd Semester': 2}.get(s, 99))
+        )
+        # Default to the semester with the most recent data; fall back to 1st Semester
+        default_sem = available_semesters[0] if available_semesters else '1st Semester'
+        current_semester = request.args.get('semester', default_sem)
 
-    schedules = query.all()
+        all_sections = Section.query.order_by(Section.year_level, Section.section_name).all()
+        all_faculty = Faculty.query.order_by(Faculty.full_name).all()
+        all_rooms = Room.query.order_by(Room.room_name).all()
 
-    # --- GET SETTINGS FROM DB (ITO ANG BAGO) ---
-    settings = get_settings()
+        query = ScheduledClass.query.filter_by(semester=current_semester)
+        selected_name = "Master Schedule"
+
+        if filter_id:
+            if filter_type == 'section':
+                query = query.filter_by(section_id=filter_id)
+                item = Section.query.get(filter_id)
+                if item: selected_name = f"Schedule for {item.section_name}"
+            elif filter_type == 'faculty':
+                query = query.filter_by(faculty_id=filter_id)
+                item = Faculty.query.get(filter_id)
+                if item: selected_name = f"Schedule for {item.full_name}"
+            elif filter_type == 'room':
+                query = query.filter_by(room_id=filter_id)
+                item = Room.query.get(filter_id)
+                if item: selected_name = f"Schedule for {item.room_name}"
+            elif filter_type == 'course':
+                query = query.filter_by(course_id=filter_id)
+                item = Course.query.get(filter_id)
+                if item: selected_name = f"Schedule for {item.course_code}"
+        else:
+            if all_sections:
+                first = all_sections[0]
+                query = query.filter_by(section_id=first.id)
+                filter_id = first.id
+                selected_name = f"Schedule for {first.section_name}"
+
+        schedules = query.all()
+        settings = get_settings()
 
     # --- UPDATED GRID LOGIC (Perfect Alignment) ---
     def to_12hr(h, m):
@@ -2965,6 +3464,37 @@ def export_excel_bulk():
 @role_required('admin', 'superadmin')
 def manage_preassignments():
     sort_by = request.args.get('sort', 'default', type=str)
+    # ── Time Machine: Historical Mode ───────────────────────────────────────
+    if session.get('historical_mode_active', False):
+        archive_id = session.get('active_archive_id')
+        all_objs = get_archive_entities(archive_id, 'PreAssignment')
+        
+        # Joins for sorting (mocked)
+        all_courses = get_archive_entities(archive_id, 'Course')
+        all_sections = get_archive_entities(archive_id, 'Section')
+        course_map = {c.id: getattr(c, 'course_code', '') for c in all_courses}
+        sec_map = {s.id: getattr(s, 'section_name', '') for s in all_sections}
+
+        if sort_by == 'course-asc':
+            all_objs.sort(key=lambda x: course_map.get(getattr(x, 'course_id', 0), ''))
+        elif sort_by == 'section-asc':
+            all_objs.sort(key=lambda x: sec_map.get(getattr(x, 'section_id', 0), ''))
+        else:
+            all_objs.sort(key=lambda x: getattr(x, 'id', 0), reverse=True)
+
+        return render_template(
+            'manage_preassignments.html',
+            pre_assignments=all_objs,
+            all_courses=all_courses,
+            all_sections=all_sections,
+            all_faculty=get_archive_entities(archive_id, 'Faculty'),
+            all_rooms=get_archive_entities(archive_id, 'Room'),
+            days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+            time_slots=[f"{h:02d}:{m:02d}" for h in range(7, 20) for m in (0, 30)],
+            current_sort=sort_by
+        )
+
+    # ── Live Mode ───────────────────────────────────────────────────────────
     query = PreAssignment.query.filter_by(is_archived=False)
     if sort_by == 'course-asc': query = query.join(Course).order_by(Course.course_code.asc())
     elif sort_by == 'section-asc': query = query.join(Section).order_by(Section.section_name.asc())
@@ -3631,6 +4161,7 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
 @app.route('/start-generation', methods=['POST'])
 @login_required
 @role_required('admin', 'superadmin')
+@hist_lockdown
 def start_generation():
     global generation_status
     
@@ -4538,6 +5069,64 @@ def api_schedule_entries():
     faculty_id = request.args.get('faculty_id', type=int)
     room_id    = request.args.get('room_id', type=int)
 
+    # ── Time Machine: Historical Mode ───────────────────────────────────────
+    if session.get('historical_mode_active', False):
+        archive_id = session.get('active_archive_id')
+        
+        target_field = None
+        target_name = None
+        
+        if section_id:
+            all_sections = get_archive_entities(archive_id, 'Section')
+            match = next((s for s in all_sections if s.id == section_id), None)
+            if match:
+                target_field = 'section_name'
+                target_name = match.section_name
+        elif faculty_id:
+            all_faculty = get_archive_entities(archive_id, 'Faculty')
+            match = next((f for f in all_faculty if f.id == faculty_id), None)
+            if match:
+                target_field = 'faculty_name'
+                target_name = match.full_name
+        elif room_id:
+            all_rooms = get_archive_entities(archive_id, 'Room')
+            match = next((r for r in all_rooms if r.id == room_id), None)
+            if match:
+                target_field = 'room_name'
+                target_name = match.room_name
+
+        if not target_field or not target_name:
+            return jsonify([])
+
+        schedules_raw = ArchivedSchedule.query.filter_by(term_archive_id=archive_id).filter(
+            getattr(ArchivedSchedule, target_field) == target_name
+        ).all()
+        
+        entries = []
+        for as_obj in schedules_raw:
+            entries.append({
+                'id':           as_obj.id,
+                'course_id':    None,
+                'course_code':  as_obj.course_code,
+                'course_name':  as_obj.course_name,
+                'section_id':   section_id if target_field == 'section_name' else None,
+                'section_name': as_obj.section_name,
+                'faculty_id':   faculty_id if target_field == 'faculty_name' else None,
+                'faculty_name': as_obj.faculty_name,
+                'room_id':      room_id    if target_field == 'room_name'    else None,
+                'room_name':    as_obj.room_name,
+                'day':          as_obj.day,
+                'start_time':   as_obj.start_time,
+                'end_time':     as_obj.end_time,
+                'semester':     "Archived",
+                'session_type': as_obj.schedule_type,
+                'source':       'archive',
+                'is_draft':     False,
+                'has_conflict': False
+            })
+        return jsonify(entries)
+
+    # ── Live Mode ───────────────────────────────────────────────────────────
     q = ScheduledClass.query.options(
         joinedload(ScheduledClass.course),
         joinedload(ScheduledClass.section),
@@ -4959,6 +5548,319 @@ def api_draft_edit(draft_id):
     db.session.commit()
     return jsonify(ok=True, draft=dict(id=dv.id, name=dv.name, semester=dv.semester,
                                        department=dv.department, notes=dv.notes))
+
+
+@app.route('/api/archive/stats')
+@login_required
+@role_required('admin', 'superadmin')
+def api_archive_stats():
+    """Returns counts of active entities for the archive summary modal."""
+    return jsonify({
+        'ok': True,
+        'counts': {
+            'courses': Course.query.filter_by(is_archived=False).count(),
+            'sections': Section.query.filter_by(is_archived=False).count(),
+            'faculty': Faculty.query.filter_by(is_archived=False).count(),
+            'rooms': Room.query.filter_by(is_archived=False).count(),
+            'scheduled': ScheduledClass.query.filter_by(is_draft=False).count()
+        }
+    })
+
+
+@app.route('/api/archive/capture', methods=['POST'])
+@login_required
+@role_required('admin', 'superadmin')
+def api_archive_capture():
+    """Performs the full-state cloning of current schedules into an archive snapshot."""
+    data = request.get_json()
+    ay = data.get('ay')
+    sem = data.get('semester')
+
+    if not ay or not sem:
+        return jsonify(ok=False, message="Missing Academic Year or Semester metadata.")
+
+    try:
+        # 1. Fetch live master schedules (non-drafts)
+        master_schedules = ScheduledClass.query.filter_by(is_draft=False).all()
+        
+        # 2. Calculate summary totals
+        active_sections = Section.query.filter_by(is_archived=False).count()
+        active_courses = Course.query.filter_by(is_archived=False).count()
+        active_faculty = Faculty.query.filter_by(is_archived=False).count()
+
+        # 3. Create the parent Archive record
+        new_archive = TermArchive(
+            academic_year=ay,
+            semester=sem,
+            created_by_id=session.get('user_id'),
+            total_sections=active_sections,
+            total_courses=active_courses,
+            total_faculty=active_faculty,
+            total_schedules=len(master_schedules)
+        )
+        db.session.add(new_archive)
+        db.session.flush() # Get ID for the schedules
+
+        # 4. Clone entries (flattening names to strings for decoupling)
+        for sc in master_schedules:
+            # Extract names cautiously
+            course_code = sc.course.course_code if sc.course else "Unknown"
+            course_name = sc.course.course_name if sc.course else "Unknown"
+            sec_name = sc.section.section_name if sc.section else "TBA"
+            fac_name = sc.faculty.full_name if sc.faculty else "TBA"
+            rm_name = sc.room.room_name if sc.room else "TBA"
+
+            # Determine if this class was pre-assigned
+            # Pre-assignments match records in the PreAssignment table for the current term
+            # Since we don't have a direct FK, we check for a match on all space-time-entity fields
+            is_pre = db.session.query(PreAssignment).filter_by(
+                course_id=sc.course_id,
+                section_id=sc.section_id,
+                faculty_id=sc.faculty_id,
+                room_id=sc.room_id,
+                day=sc.day,
+                start_time=sc.start_time,
+                end_time=sc.end_time
+            ).first() is not None
+
+            archived_sc = ArchivedSchedule(
+                term_archive_id=new_archive.id,
+                course_code=course_code,
+                course_name=course_name,
+                section_name=sec_name,
+                faculty_name=fac_name,
+                room_name=rm_name,
+                day=sc.day,
+                start_time=sc.start_time,
+                end_time=sc.end_time,
+                schedule_type=sc.session_type, # FIXED: was schedule_type
+                is_preassigned=is_pre
+            )
+            db.session.add(archived_sc)
+
+        # 5. Snapshot Entities for 1:1 Reconstruction (Time Machine)
+        # Capture Courses
+        for c in Course.query.filter_by(is_archived=False).all():
+            data = {col.name: getattr(c, col.name) for col in c.__table__.columns if col.name != 'deleted_at'}
+            db.session.add(ArchivedEntity(term_archive_id=new_archive.id, entity_type='Course', data_json=json.dumps(data, default=str)))
+
+        # Capture Sections
+        for s in Section.query.filter_by(is_archived=False).all():
+            data = {col.name: getattr(s, col.name) for col in s.__table__.columns if col.name != 'deleted_at'}
+            db.session.add(ArchivedEntity(term_archive_id=new_archive.id, entity_type='Section', data_json=json.dumps(data, default=str)))
+
+        # Capture Faculty
+        for f in Faculty.query.filter_by(is_archived=False).all():
+            data = {col.name: getattr(f, col.name) for col in f.__table__.columns if col.name != 'deleted_at'}
+            db.session.add(ArchivedEntity(term_archive_id=new_archive.id, entity_type='Faculty', data_json=json.dumps(data, default=str)))
+
+        # Capture Rooms
+        for r in Room.query.filter_by(is_archived=False).all():
+            data = {col.name: getattr(r, col.name) for col in r.__table__.columns if col.name != 'deleted_at'}
+            db.session.add(ArchivedEntity(term_archive_id=new_archive.id, entity_type='Room', data_json=json.dumps(data, default=str)))
+
+        # Capture Students (Regular)
+        for st in Student.query.filter_by(is_archived=False, is_irregular=False).all():
+            data = {col.name: getattr(st, col.name) for col in st.__table__.columns if col.name != 'deleted_at'}
+            db.session.add(ArchivedEntity(term_archive_id=new_archive.id, entity_type='Student', data_json=json.dumps(data, default=str)))
+
+        # Capture Irregular Students (Student + Assignment)
+        for ist in Student.query.filter_by(is_archived=False, is_irregular=True).all():
+            st_data = {col.name: getattr(ist, col.name) for col in ist.__table__.columns if col.name != 'deleted_at'}
+            # Get assignment for current semester
+            asgn = IrregularAssignment.query.filter_by(student_id_fk=ist.id, semester=sem).first()
+            asgn_data = json.loads(asgn.assignments_json) if asgn else []
+            data = {**st_data, 'assignments': asgn_data}
+            db.session.add(ArchivedEntity(term_archive_id=new_archive.id, entity_type='IrregularStudent', data_json=json.dumps(data, default=str)))
+
+        # Capture Pre-Assignments
+        for pa in PreAssignment.query.filter_by(is_archived=False).all():
+            data = {col.name: getattr(pa, col.name) for col in pa.__table__.columns if col.name != 'deleted_at'}
+            # Cautiously add names for reconstruction
+            data['course_code'] = pa.course.course_code if pa.course else "Unknown"
+            data['course_name'] = pa.course.course_name if pa.course else "Unknown"
+            data['section_name'] = pa.section.section_name if pa.section else "TBA"
+            data['faculty_name'] = pa.faculty.full_name if pa.faculty else "TBA"
+            data['room_name'] = pa.room.room_name if pa.room else "TBA"
+            db.session.add(ArchivedEntity(term_archive_id=new_archive.id, entity_type='PreAssignment', data_json=json.dumps(data, default=str)))
+
+        db.session.commit()
+        return jsonify(ok=True, message=f"Archived {len(master_schedules)} records for {sem} AY {ay} successfully.")
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(ok=False, message=str(e))
+
+
+# --- Module 4: SNAPSHOT EXPLORATION ---
+
+@app.route('/archives/explorer')
+@login_required
+@role_required('admin', 'superadmin')
+def archive_explorer():
+    """Lists all available archived snapshots with pagination."""
+    page = request.args.get('page', 1, type=int)
+    per_page = 12 # 3x4 grid fits well on most screens
+    
+    pagination = TermArchive.query.order_by(TermArchive.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False)
+    
+    return render_template('archive_explorer.html', 
+                          archives=pagination.items, 
+                          pagination=pagination)
+
+
+
+@app.route('/archives/view/<int:archive_id>')
+@login_required
+@role_required('admin', 'superadmin')
+def archive_view(archive_id):
+    """Displays the immutable schedule for a specific archived term."""
+    archive = TermArchive.query.get_or_404(archive_id)
+    # Fetch all schedules for this archive
+    schedules = ArchivedSchedule.query.filter_by(term_archive_id=archive_id).all()
+    return render_template('archive_viewer.html', archive=archive, schedules=schedules)
+
+
+@app.route('/archives/delete/<int:archive_id>', methods=['POST'])
+@login_required
+@role_required('admin', 'superadmin')
+def archive_delete(archive_id):
+    """Permanently removes an entire snapshot snapshot."""
+    archive = TermArchive.query.get_or_404(archive_id)
+    db.session.delete(archive)
+    db.session.commit()
+    flash(f"Archive for {archive.semester} AY {archive.academic_year} deleted permanently.", "danger")
+    return redirect(url_for('archive_explorer'))
+
+
+@app.route('/api/archive/reset-system', methods=['POST'])
+@login_required
+@role_required('superadmin')
+def api_archive_reset():
+    """Wipes the active operational data and prepares the system for a new term."""
+    data = request.get_json()
+    new_ay = data.get('new_ay')
+    new_sem = data.get('new_semester')
+
+    try:
+        # 1. Wipe Active Tables (Wipes both Master and Drafts)
+        ScheduledClass.query.delete()
+        DraftVersion.query.delete()
+        IrregularAssignment.query.delete()
+
+        # 2. Update System Metadata
+        settings = SystemSettings.query.first()
+        if settings:
+            if new_ay and new_sem:
+                settings.sem_ay_value = f"{new_sem} / {new_ay}"
+            # Reset Global AI-Lock for the new term
+            settings.schedule_lock = False
+
+        db.session.commit()
+        return jsonify(ok=True, message=f"System cleared! Metadata updated to {new_sem} AY {new_ay}.")
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(ok=False, message=str(e))
+
+# --- Integrated Archive Mode Controller ---
+
+@app.route('/api/archive/enter-snapshot/<int:archive_id>')
+@login_required
+@role_required('admin', 'superadmin')
+def api_archive_enter(archive_id):
+    """Activates the system-wide read-only historical view for a specific snapshot."""
+    archive = TermArchive.query.get_or_404(archive_id)
+    session['historical_mode_active'] = True
+    session['active_archive_id'] = archive_id
+    session['active_archive_display'] = f"{archive.semester} AY {archive.academic_year}"
+    flash(f"Entering Time Machine: {session['active_archive_display']}", "info")
+    return redirect(request.referrer or url_for('dashboard'))
+
+@app.route('/api/archive/exit-snapshot')
+@login_required
+@role_required('admin', 'superadmin')
+def api_archive_exit():
+    """Exits historical view and returns the system to the active live state."""
+    session.pop('historical_mode_active', None)
+    session.pop('active_archive_id', None)
+    session.pop('active_archive_display', None)
+    flash("Returned to Active Scheduling System.", "success")
+    return redirect(request.referrer or url_for('dashboard'))
+
+
+@app.route('/api/archive/export/<int:archive_id>')
+@login_required
+@role_required('admin', 'superadmin')
+def archive_export_excel(archive_id):
+    """Exports a specific archive to a professional Excel report."""
+    archive = TermArchive.query.get_or_404(archive_id)
+    schedules = ArchivedSchedule.query.filter_by(term_archive_id=archive_id).all()
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Archived Schedule"
+    
+    # Professional Styling
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="0D6EFD", end_color="0D6EFD", fill_type="solid") # Bootstrap Primary
+    center_align = Alignment(horizontal="center", vertical="center")
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), 
+                        top=Side(style='thin'), bottom=Side(style='thin'))
+
+    # Build Headers
+    headers = ['Course Code', 'Course Name', 'Section', 'Faculty Member', 'Room', 'Day', 'Start Time', 'End Time', 'Type']
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.value = header
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_align
+        cell.border = thin_border
+
+    # Populate Data
+    for row_num, s in enumerate(schedules, 2):
+        cells = [
+            ws.cell(row=row_num, column=1, value=s.course_code),
+            ws.cell(row=row_num, column=2, value=s.course_name),
+            ws.cell(row=row_num, column=3, value=s.section_name),
+            ws.cell(row=row_num, column=4, value=s.faculty_name),
+            ws.cell(row=row_num, column=5, value=s.room_name),
+            ws.cell(row=row_num, column=6, value=s.day),
+            ws.cell(row=row_num, column=7, value=s.start_time),
+            ws.cell(row=row_num, column=8, value=s.end_time),
+            ws.cell(row=row_num, column=9, value=s.schedule_type)
+        ]
+        for c in cells:
+            c.border = thin_border
+            if c.column == 6: # Day column
+                c.alignment = center_align
+
+    # Auto-adjust column widths
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except: pass
+        ws.column_dimensions[column].width = max_length + 3
+
+    # Save to buffer
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    safe_name = f"CVSu_Archive_{archive.semester}_{archive.academic_year}".replace(" ", "_")
+    return send_file(output, 
+                     download_name=f"{safe_name}.xlsx", 
+                     as_attachment=True,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+
 
 
 # --- C: SCHEDULE EDITOR PAGE ---
@@ -8006,13 +8908,29 @@ def section_timetable_html(section_id):
       ?semester=1st Semester   (default: most recent in DB)
       ?sem_ay=Second / 2023-2024
     """
-    section = Section.query.get_or_404(section_id)
+    # ── Time Machine: Historical Mode ───────────────────────────────────────
+    if session.get('historical_mode_active', False):
+        archive_id = session.get('active_archive_id')
+        sections = get_archive_entities(archive_id, 'Section')
+        section = next((s for s in sections if s.id == section_id), None)
+        if not section: abort(404)
+        
+        schedules_raw = ArchivedSchedule.query.filter_by(
+            term_archive_id=archive_id, 
+            section_name=section.section_name
+        ).all()
+        schedules = [_mock_archived_schedule(s) for s in schedules_raw]
+        semester = "Archived"
+        sem_ay = request.args.get('sem_ay', '')
+    else:
+        # ── Live Mode ───────────────────────────────────────────────────────────
+        section = Section.query.get_or_404(section_id)
 
-    # Resolve semester
-    _req_sem  = request.args.get('semester', '')
-    _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
-    semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
-    sem_ay    = request.args.get('sem_ay', '')
+        # Resolve semester
+        _req_sem  = request.args.get('semester', '')
+        _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
+        semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
+        sem_ay    = request.args.get('sem_ay', '')
 
     path = os.path.join(basedir, 'static', 'assets', 'section_template.xlsx')
     if not os.path.exists(path):
@@ -8881,27 +9799,40 @@ def build_subject_table_overlays(ws, schedules):
 @app.route('/faculty-timetable-html/<int:faculty_id>')
 @login_required
 def faculty_timetable_html(faculty_id):
-    faculty  = Faculty.query.get_or_404(faculty_id)
-    _req_sem = request.args.get('semester', '')
-    _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
-    semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
+    # ── Time Machine: Historical Mode ───────────────────────────────────────
+    if session.get('historical_mode_active', False):
+        archive_id = session.get('active_archive_id')
+        faculty_objs = get_archive_entities(archive_id, 'Faculty')
+        faculty = next((f for f in faculty_objs if f.id == faculty_id), None)
+        if not faculty: abort(404)
 
-    path = os.path.join(basedir, 'static', 'assets', 'faculty_template.xlsx')
-    if not os.path.exists(path):
-        return ("<div style='padding:40px;color:#dc3545;font-family:Arial,sans-serif;'>"
-                "<strong>No faculty template uploaded.</strong><br>"
-                "Go to <a href='/manage/layouts'>Layout Settings</a> to upload one.</div>"), 404
+        schedules_raw = ArchivedSchedule.query.filter_by(
+            term_archive_id=archive_id,
+            faculty_name=faculty.full_name
+        ).all()
+        schedules = [_mock_archived_schedule(s) for s in schedules_raw]
+        semester = "Archived"
 
-    schedules = ScheduledClass.query.options(
-        joinedload(ScheduledClass.course),
-        joinedload(ScheduledClass.section),
-        joinedload(ScheduledClass.faculty),
-        joinedload(ScheduledClass.room),
-    ).filter_by(faculty_id=faculty_id, semester=semester, is_draft=False).all()
+        # Count preps from schedules list since ArcherSchedule doesn't have course_id
+        prep_count = len(set(sc.course.course_code for sc in schedules if sc.course))
+    else:
+        # ── Live Mode ───────────────────────────────────────────────────────────
+        faculty  = Faculty.query.get_or_404(faculty_id)
 
-    # Compute prep count and total contact hours (exclude drafts)
-    prep_count  = db.session.query(ScheduledClass.course_id).filter_by(
-                      faculty_id=faculty_id, semester=semester, is_draft=False).distinct().count()
+        # Resolve semester
+        _req_sem  = request.args.get('semester', '')
+        _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
+        semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
+
+        schedules = ScheduledClass.query.options(
+            joinedload(ScheduledClass.course),
+            joinedload(ScheduledClass.section),
+            joinedload(ScheduledClass.faculty),
+            joinedload(ScheduledClass.room),
+        ).filter_by(faculty_id=faculty_id, semester=semester, is_draft=False).all()
+
+        prep_count  = db.session.query(ScheduledClass.course_id).filter_by(
+                          faculty_id=faculty_id, semester=semester, is_draft=False).distinct().count()
     total_hours = 0.0
     for sc in schedules:
         try:
@@ -9010,24 +9941,34 @@ def faculty_timetable_pdf(faculty_id):
 @app.route('/room-timetable-html/<int:room_id>')
 @login_required
 def room_timetable_html(room_id):
-    room     = Room.query.get_or_404(room_id)
-    _req_sem = request.args.get('semester', '')
-    _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
-    semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
+    # ── Time Machine: Historical Mode ───────────────────────────────────────
+    if session.get('historical_mode_active', False):
+        archive_id = session.get('active_archive_id')
+        room_objs = get_archive_entities(archive_id, 'Room')
+        room = next((r for r in room_objs if r.id == room_id), None)
+        if not room: abort(404)
 
-    path = os.path.join(basedir, 'static', 'assets', 'room_template.xlsx')
-    if not os.path.exists(path):
-        return ("<div style='padding:40px;color:#dc3545;font-family:Arial,sans-serif;'>"
-                "<strong>No room template uploaded.</strong><br>"
-                "Go to <a href='/manage/layouts'>Layout Settings</a> to upload one.</div>"), 404
+        schedules_raw = ArchivedSchedule.query.filter_by(
+            term_archive_id=archive_id,
+            room_name=room.room_name
+        ).all()
+        schedules = [_mock_archived_schedule(s) for s in schedules_raw]
+        semester = "Archived"
+        sem_ay = request.args.get('sem_ay', '')
+    else:
+        # ── Live Mode ───────────────────────────────────────────────────────────
+        room     = Room.query.get_or_404(room_id)
+        _req_sem = request.args.get('semester', '')
+        _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
+        semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
+        sem_ay    = request.args.get('sem_ay', '')
 
-    sem_ay    = request.args.get('sem_ay', '')
-    schedules = ScheduledClass.query.options(
-        joinedload(ScheduledClass.course),
-        joinedload(ScheduledClass.section),
-        joinedload(ScheduledClass.faculty),
-        joinedload(ScheduledClass.room),
-    ).filter_by(room_id=room_id, semester=semester, is_draft=False).all()
+        schedules = ScheduledClass.query.options(
+            joinedload(ScheduledClass.course),
+            joinedload(ScheduledClass.section),
+            joinedload(ScheduledClass.faculty),
+            joinedload(ScheduledClass.room),
+        ).filter_by(room_id=room_id, semester=semester, is_draft=False).all()
     ws, grid_info, bounds = _get_cached_template(path)
     if grid_info:
         cell_overrides, extra_merge_map, extra_skip_cells = build_schedule_overlays(
@@ -9107,24 +10048,34 @@ def room_timetable_pdf(room_id):
 @app.route('/course-timetable-html/<int:course_id>')
 @login_required
 def course_timetable_html(course_id):
-    course    = Course.query.get_or_404(course_id)
-    _req_sem  = request.args.get('semester', '')
-    _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
-    semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
-    sem_ay    = request.args.get('sem_ay', '')
+    # ── Time Machine: Historical Mode ───────────────────────────────────────
+    if session.get('historical_mode_active', False):
+        archive_id = session.get('active_archive_id')
+        course_objs = get_archive_entities(archive_id, 'Course')
+        course = next((c for c in course_objs if c.id == course_id), None)
+        if not course: abort(404)
 
-    path = os.path.join(basedir, 'static', 'assets', 'course_template.xlsx')
-    if not os.path.exists(path):
-        return ("<div style='padding:40px;color:#dc3545;font-family:Arial,sans-serif;'>"
-                "<strong>No course template uploaded.</strong><br>"
-                "Go to <a href='/manage/layouts'>Layout Settings</a> to upload one.</div>"), 404
+        schedules_raw = ArchivedSchedule.query.filter_by(
+            term_archive_id=archive_id,
+            course_code=course.course_code
+        ).all()
+        schedules = [_mock_archived_schedule(s) for s in schedules_raw]
+        semester = "Archived"
+        sem_ay = request.args.get('sem_ay', '')
+    else:
+        # ── Live Mode ───────────────────────────────────────────────────────────
+        course    = Course.query.get_or_404(course_id)
+        _req_sem  = request.args.get('semester', '')
+        _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
+        semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
+        sem_ay    = request.args.get('sem_ay', '')
 
-    schedules = ScheduledClass.query.options(
-        joinedload(ScheduledClass.course),
-        joinedload(ScheduledClass.section),
-        joinedload(ScheduledClass.faculty),
-        joinedload(ScheduledClass.room),
-    ).filter_by(course_id=course_id, semester=semester, is_draft=False).all()
+        schedules = ScheduledClass.query.options(
+            joinedload(ScheduledClass.course),
+            joinedload(ScheduledClass.section),
+            joinedload(ScheduledClass.faculty),
+            joinedload(ScheduledClass.room),
+        ).filter_by(course_id=course_id, semester=semester, is_draft=False).all()
     ws, grid_info, bounds = _get_cached_template(path)
     if grid_info:
         cell_overrides, extra_merge_map, extra_skip_cells = build_schedule_overlays(
@@ -9349,6 +10300,65 @@ def manage_students():
     filter_by    = request.args.get('filter_by', '', type=str)
     filter_val   = request.args.get('filter_val', '', type=str)
 
+    # ── Time Machine: Historical Mode ───────────────────────────────────────
+    if session.get('historical_mode_active', False):
+        archive_id = session.get('active_archive_id')
+        all_objs = get_archive_entities(archive_id, 'Student')
+        
+        # 1. Apply Filtering
+        if search_query:
+            s = search_query.lower()
+            all_objs = [o for o in all_objs if 
+                        s in (getattr(o, 'full_name', '') or '').lower() or 
+                        s in (getattr(o, 'student_id', '') or '').lower()]
+        
+        if filter_by == 'year' and filter_val:
+            try:
+                val = int(filter_val)
+                all_objs = [o for o in all_objs if getattr(o, 'year_level', None) == val]
+            except: pass
+        elif filter_by == 'section' and filter_val:
+             try:
+                val = int(filter_val)
+                all_objs = [o for o in all_objs if getattr(o, 'section_id', None) == val]
+            except: pass
+
+        # 2. Apply Sorting
+        if sort_by == 'name-desc':
+            all_objs.sort(key=lambda x: (getattr(x, 'full_name', '') or '').lower(), reverse=True)
+        elif sort_by == 'id-asc':
+            all_objs.sort(key=lambda x: (getattr(x, 'student_id', '') or '').lower())
+        elif sort_by == 'id-desc':
+            all_objs.sort(key=lambda x: (getattr(x, 'student_id', '') or '').lower(), reverse=True)
+        elif sort_by == 'section':
+             all_secs = get_archive_entities(archive_id, 'Section')
+             sec_map = {s.id: getattr(s, 'section_name', '') for s in all_secs}
+             all_objs.sort(key=lambda x: (sec_map.get(getattr(x, 'section_id', 0), 'Z-NoSection'), (getattr(x, 'full_name', '') or '').lower()))
+        else: # Default: name-asc
+            all_objs.sort(key=lambda x: (getattr(x, 'full_name', '') or '').lower())
+
+        # 3. Paginate
+        per_page = 15
+        total = len(all_objs)
+        start = (page - 1) * per_page
+        items = all_objs[start:start+per_page]
+        pagination = MockPagination(items, page, per_page, total)
+        
+        all_sections_data = get_archive_entities(archive_id, 'Section')
+        unique_years_data = sorted(list(set(getattr(o, 'year_level', 0) for o in all_objs if getattr(o, 'year_level', None) is not None)))
+
+        return render_template('manage_students.html',
+            students=items,
+            pagination=pagination,
+            all_sections=all_sections_data,
+            unique_years=unique_years_data,
+            current_sort=sort_by,
+            search_query=search_query,
+            current_filter_by=filter_by,
+            current_filter_val=filter_val
+        )
+
+    # ── Live Mode ───────────────────────────────────────────────────────────
     query = Student.query.filter_by(is_archived=False)
 
     if search_query:
@@ -10202,6 +11212,73 @@ def manage_irregular():
     filter_by    = request.args.get('filter_by', '', type=str)
     filter_val   = request.args.get('filter_val', '', type=str)
 
+    # ── Time Machine: Historical Mode ───────────────────────────────────────
+    if session.get('historical_mode_active', False):
+        archive_id = session.get('active_archive_id')
+        all_objs = [o for o in get_archive_entities(archive_id, 'Student') if getattr(o, 'is_irregular', False)]
+        
+        # 1. Apply Filtering
+        if search_query:
+            s = search_query.lower()
+            all_objs = [o for o in all_objs if 
+                        s in (getattr(o, 'full_name', '') or '').lower() or 
+                        s in (getattr(o, 'student_id', '') or '').lower()]
+        
+        if filter_by == 'year' and filter_val:
+            try:
+                val = int(filter_val)
+                all_objs = [o for o in all_objs if getattr(o, 'year_level', None) == val]
+            except: pass
+        elif filter_by == 'section' and filter_val:
+             try:
+                val = int(filter_val)
+                all_objs = [o for o in all_objs if getattr(o, 'section_id', None) == val]
+            except: pass
+
+        # 2. Apply Sorting
+        if sort_by == 'name-desc':
+            all_objs.sort(key=lambda x: (getattr(x, 'full_name', '') or '').lower(), reverse=True)
+        elif sort_by == 'id-asc':
+            all_objs.sort(key=lambda x: (getattr(x, 'student_id', '') or '').lower())
+        elif sort_by == 'id-desc':
+            all_objs.sort(key=lambda x: (getattr(x, 'student_id', '') or '').lower(), reverse=True)
+        elif sort_by == 'section':
+             all_secs = get_archive_entities(archive_id, 'Section')
+             sec_map = {s.id: getattr(s, 'section_name', '') for s in all_secs}
+             all_objs.sort(key=lambda x: (sec_map.get(getattr(x, 'section_id', 0), 'Z-NoSection'), (getattr(x, 'full_name', '') or '').lower()))
+        else: # Default: name-asc
+            all_objs.sort(key=lambda x: (getattr(x, 'full_name', '') or '').lower())
+
+        # 3. Paginate
+        per_page = 10
+        total = len(all_objs)
+        start = (page - 1) * per_page
+        items = all_objs[start:start+per_page]
+        pagination = MockPagination(items, page, per_page, total)
+        
+        irreg_assignments = {} # For historical, assignments are fixed in the timetable
+
+        all_courses = get_archive_entities(archive_id, 'Course')
+        all_sections_list = get_archive_entities(archive_id, 'Section')
+        unique_years_list = sorted(list(set(getattr(o, 'year_level', 0) for o in all_objs if getattr(o, 'year_level', None) is not None)))
+        regular_students_list = [o for o in get_archive_entities(archive_id, 'Student') if not getattr(o, 'is_irregular', False)]
+
+        return render_template('manage_irregular.html',
+            students=items,
+            pagination=pagination,
+            assignments=irreg_assignments,
+            semesters=['1st Semester', '2nd Semester', 'Summer'],
+            courses=all_courses,
+            all_sections=all_sections_list,
+            unique_years=unique_years_list,
+            regular_students=regular_students_list,
+            current_sort=sort_by,
+            search_query=search_query,
+            current_filter_by=filter_by,
+            current_filter_val=filter_val
+        )
+
+    # ── Live Mode ───────────────────────────────────────────────────────────
     query = Student.query.filter_by(is_irregular=True, is_archived=False)
 
     if search_query:
@@ -10307,6 +11384,7 @@ def irregular_pathfinder(student_id):
 
 @app.route('/api/irregular-pathfinder/<int:student_id>', methods=['POST'])
 @login_required
+@hist_lockdown
 def api_irregular_pathfinder(student_id):
     student = Student.query.get_or_404(student_id)
     data = request.get_json(force=True) or {}

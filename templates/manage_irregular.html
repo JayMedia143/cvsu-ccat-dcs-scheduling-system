@@ -32,17 +32,20 @@
         <h1 class="h3 text-gray-800 fw-light mb-1">Irregular Students</h1>
         <p class="text-muted small mb-0">Manage irregular students and assign conflict-free schedules from the master schedule.</p>
     </div>
+    {% if not is_hist %}
     <div class="d-flex align-items-center gap-3">
         <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addIrregStudentModal">
             <i class="bi bi-plus-lg"></i>
             <span>Add Irregular Student</span>
         </button>
     </div>
+    {% endif %}
 </div>
 
 <!-- ══════════ SEARCH + FILTER + SORT TOOLBAR ══════════ -->
 <div class="row mb-4 position-relative align-items-center" style="height:50px;">
 
+    {% if not is_hist %}
     <!-- BULK ACTION BAR (overlay) -->
     <div class="bulk-action-bar" id="bulkActionBar">
         <div class="d-flex align-items-center">
@@ -62,6 +65,7 @@
             </button>
         </div>
     </div>
+    {% endif %}
 
     <!-- SEARCH -->
     <div class="col h-100">
@@ -221,6 +225,7 @@
                                 onclick="viewSchedule('student', {{ student.id }})" title="View Schedule">
                                 <i class="bi bi-calendar-week"></i>
                             </button>
+                            {% if not is_hist %}
                             <a href="{{ url_for('irregular_pathfinder', student_id=student.id) }}"
                                class="btn-icon" title="Open Schedule Finder">
                                 <i class="bi bi-puzzle"></i>
@@ -229,6 +234,7 @@
                                 onclick="removeIrreg({{ student.id }}, '{{ student.full_name | e }}')">
                                 <i class="bi bi-person-dash"></i>
                             </button>
+                            {% endif %}
                         </td>
                     </tr>
                     {% else %}
@@ -381,9 +387,11 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="modal-cancel-btn" data-bs-dismiss="modal">Cancel</button>
+                {% if not is_hist %}
                 <button type="button" class="btn btn-primary" onclick="submitAddIrreg()">
                     <i class="bi bi-person-exclamation me-1"></i>Mark as Irregular
                 </button>
+                {% endif %}
             </div>
         </div>
     </div>

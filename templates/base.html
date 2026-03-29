@@ -188,6 +188,37 @@
                     class="sem-btn-tool {% if session.get('selected_semester') == '2nd Semester' %}active{% endif %}">2nd</a>
                 <a href="{{ url_for('set_semester_filter', semester_name='Midyear') }}"
                     class="sem-btn-tool {% if session.get('selected_semester') == 'Midyear' %}active{% endif %}">Midyear</a>
+                
+                <div class="dropdown d-inline-block border-start ms-1 ps-1">
+                    <button class="sem-btn-tool dropdown-toggle no-caret" type="button" data-bs-toggle="dropdown" title="Archive History">
+                        <i class="bi bi-clock-history"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-primary shadow border-0 mt-2" style="min-width: 220px; border-radius: 12px;">
+                        <li class="dropdown-header text-uppercase fw-bold text-primary small mb-1">
+                            <i class="bi bi-calendar3 me-1"></i> Historical Terms
+                        </li>
+                        {% if all_archives %}
+                            {% for arc in all_archives %}
+                            <li>
+                                <a class="dropdown-item py-2 px-3 rounded-2" href="{{ url_for('api_archive_enter', archive_id=arc.id) }}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-bold" style="font-size: 0.82rem; color: #1e293b;">{{ arc.semester }}</span>
+                                            <span class="text-muted" style="font-size: 0.72rem;">Academic Year {{ arc.academic_year }}</span>
+                                        </div>
+                                        <i class="bi bi-chevron-right text-muted small"></i>
+                                    </div>
+                                </a>
+                            </li>
+                            {% endfor %}
+                        {% else %}
+                            <li class="p-4 text-center">
+                                <i class="bi bi-archive text-muted fs-3 mb-2 d-block"></i>
+                                <span class="text-muted small">No snapshots available yet.</span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
             </div>
             {% endif %}
 
@@ -229,10 +260,17 @@
                     {% if session.get('role') in ['admin', 'superadmin'] %}
                     <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#settingsModal"><i
                                 class="bi bi-gear me-2"></i> Global Settings</a></li>
+                    
+                    {% if not is_hist %}
+                    <li><a class="dropdown-item" href="#" onclick="openArchiveModal()"><i
+                                class="bi bi-exclamation-triangle-fill text-warning me-2"></i> Finalize & Archive Semester</a></li>
+                    {% endif %}
 
                     <li>
                         <hr class="dropdown-divider">
                     </li>
+                    
+                    {% if not is_hist %}
                     <li>
                         <h6 class="dropdown-header text-danger"><i class="bi bi-trash-fill me-1"></i> Recycle Bin</h6>
                     </li>
@@ -254,12 +292,58 @@
                         <hr class="dropdown-divider">
                     </li>
                     {% endif %}
+                    {% endif %}
                     <li><a class="dropdown-item text-danger fw-bold" href="{{ url_for('logout') }}"><i
                                 class="bi bi-box-arrow-right me-2"></i> Sign out</a></li>
                 </ul>
             </div>
         </div>
     </nav>
+
+    {% if is_hist %}
+    <div class="historical-mode-banner d-flex align-items-center justify-content-between px-3 py-2 shadow-sm">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-clock-history fs-5 me-2"></i>
+            <div>
+                <span class="fw-bold text-uppercase" style="letter-spacing: 0.5px;">Historical View Mode</span>
+                <span class="ms-2 opacity-75">| Viewing Snapshot: {{ active_archive_display }}</span>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-none d-md-flex align-items-center me-2">
+                <span class="badge bg-white text-dark fw-bold px-2 py-1" style="font-size: 0.7rem; border: 1px solid rgba(0,0,0,0.1);">READ-ONLY</span>
+            </div>
+            <a href="{{ url_for('api_archive_exit') }}" class="btn btn-sm btn-light text-dark fw-bold px-3 border shadow-sm exit-btn-hist">
+                <i class="bi bi-box-arrow-left me-1"></i> EXIT SNAPSHOT
+            </a>
+        </div>
+    </div>
+    
+    <style>
+    .historical-mode-banner {
+        background: linear-gradient(90deg, #f59e0b, #d97706);
+        color: white;
+        font-size: 0.85rem;
+        position: sticky;
+        top: 0;
+        z-index: 1050;
+        border-bottom: 2px solid #b45309;
+    }
+    .exit-btn-hist {
+        transition: all 0.2s ease;
+        font-size: 0.75rem;
+    }
+    .exit-btn-hist:hover {
+        background: #fff !important;
+        transform: scale(1.05);
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    /* Adjustment for main content to prevent overlap if needed */
+    .historical-mode-banner + .main-content {
+        margin-top: 0 !important;
+    }
+    </style>
+    {% endif %}
 
     <!-- MAIN DASHBOARD CONTENT -->
     <div class="main-content">
@@ -585,6 +669,159 @@
             });
         }
     })();
+    </script>
+
+    <!-- FINALIZATION & ARCHIVE MODAL (Step 1) -->
+    <div class="modal fade" id="archiveSnapshotModal" tabindex="-1" aria-labelledby="archiveSnapshotModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-warning text-dark py-3">
+                    <h5 class="modal-title fw-bold" id="archiveSnapshotModalLabel">
+                        <i class="bi bi-archive-fill me-2"></i>Finalize Term & Create Archive
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-4">Taking a snapshot will "freeze" all current schedules, sections, and faculty records for this semester. This record will be immutable (Read-Only).</p>
+                    
+                    <form id="archiveForm">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Academic Year</label>
+                            <input type="text" class="form-control" id="archiveAY" placeholder="e.g. 2024-2025" required>
+                            <div class="form-text">Specify the year coverage of this snapshot.</div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Semester</label>
+                            <select class="form-select" id="archiveSemester" required>
+                                <option value="1st Semester">1st Semester</option>
+                                <option value="2nd Semester">2nd Semester</option>
+                                <option value="Summer">Summer / Midyear</option>
+                            </select>
+                        </div>
+
+                        <div class="bg-light rounded-3 p-3 border">
+                            <h6 class="fw-bold text-dark mb-2 small text-uppercase">Snapshot Summary</h6>
+                            <ul class="list-unstyled mb-0 small text-muted" id="archiveSummaryList">
+                                <li class="mb-1"><i class="bi bi-check2-circle text-success me-2"></i>Loading counts...</li>
+                            </ul>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="archiveConfirmBtn" class="btn btn-warning px-4 fw-bold" onclick="startArchivingProcess(this)">
+                        Generate Snapshot <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Module 4 Phase 2: Archive logic Step 1
+    window.openArchiveModal = function() {
+        // 1. Fetch live stats
+        const summaryUl = document.getElementById('archiveSummaryList');
+        if (summaryUl) summaryUl.innerHTML = '<li class="mb-1"><i class="bi bi-hourglass-split me-2"></i>Calculating system state...</li>';
+        
+        // 2. Pre-fill metadata from settings
+        const val = "{{ global_settings.sem_ay_value if global_settings else '' }}";
+        if (val && val.includes('/')) {
+            const parts = val.split('/').map(p => p.trim());
+            if (parts.length >= 2) {
+                const ayInput = document.getElementById('archiveAY');
+                if (ayInput) ayInput.value = parts[1];
+                // Try matching semester select
+                const semSelect = document.getElementById('archiveSemester');
+                if (semSelect) {
+                    for (let i=0; i < semSelect.options.length; i++) {
+                        if (semSelect.options[i].value.includes(parts[0])) {
+                            semSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Show modal
+        const modalEl = document.getElementById('archiveSnapshotModal');
+        if (modalEl) new bootstrap.Modal(modalEl).show();
+
+        // 3. Fetch stats via API
+        fetch('/api/archive/stats')
+            .then(r => r.json())
+            .then(d => {
+                if (d.ok && summaryUl) {
+                    summaryUl.innerHTML = `
+                        <li class="mb-1"><i class="bi bi-layers me-2"></i> <strong>${d.counts.sections}</strong> Block Sections</li>
+                        <li class="mb-1"><i class="bi bi-book me-2"></i> <strong>${d.counts.courses}</strong> Active Courses</li>
+                        <li class="mb-1"><i class="bi bi-person-badge me-2"></i> <strong>${d.counts.faculty}</strong> Faculty Records</li>
+                        <li class="mb-1"><i class="bi bi-calendar3 me-2"></i> <strong>${d.counts.scheduled}</strong> Plotted Classes</li>
+                    `;
+                } else if (summaryUl) {
+                    summaryUl.innerHTML = '<li class="text-danger">Failed to load system stats.</li>';
+                }
+            })
+            .catch(() => {
+                if (summaryUl) summaryUl.innerHTML = '<li class="text-danger">Connection error.</li>';
+            });
+    };
+
+    window.startArchivingProcess = function(btn) {
+        const ay = document.getElementById('archiveAY').value;
+        const sem = document.getElementById('archiveSemester').value;
+        const btnText = btn.innerHTML;
+        
+        if (!ay) {
+            alert('Please enter a valid Academic Year.');
+            return;
+        }
+
+        if (!confirm(`FINAL WARNING: You are about to archive the ${sem} of AY ${ay}. This process will take a full snapshot and make it Read-Only. Proceed?`)) {
+            return;
+        }
+
+        // 1. Loading State
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Cloning Records...';
+
+        // 2. Archive API Call
+        fetch('/api/archive/capture', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('input[name="csrf_token"]') ? 
+                               document.querySelector('input[name="csrf_token"]').value : ''
+            },
+            body: JSON.stringify({ ay: ay, semester: sem })
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.ok) {
+                // Step 4: Multi-step transition
+                const msg = 'Success! ' + d.message + '\n\nSnapshot is secured. Would you like to clear the active system and prepare for the next term now?';
+                if (confirm(msg)) {
+                    // Redirect to Snapshot Explorer where the "Prepare New Term" button is prominent
+                    window.location.href = "{{ url_for('archive_explorer') }}";
+                } else {
+                    const m = bootstrap.Modal.getInstance(document.getElementById('archiveSnapshotModal'));
+                    if (m) m.hide();
+                    window.location.reload(); 
+                }
+            } else {
+                alert('Error: ' + d.message);
+                btn.disabled = false;
+                btn.innerHTML = btnText;
+            }
+        })
+        .catch(err => {
+            console.error('Archive Error:', err);
+            alert('A system error occurred during cloning. Please check your connection.');
+            btn.disabled = false;
+            btn.innerHTML = btnText;
+        });
+    };
 
     // Module 3: Global AI-Lock toggle
     window.toggleScheduleLock = function(cb) {

@@ -12,6 +12,7 @@
     </div>
 
     <!-- Updated Buttons: Clean Style -->
+    {% if not is_hist %}
     <div class="d-flex align-items-center gap-3">
         <!-- IMPORT BUTTON -->
         <button class="btn-google-action" data-bs-toggle="modal"
@@ -35,11 +36,13 @@
             </button>
         </form>
     </div>
+    {% endif %}
 </div>
 
 <!-- 2. SEARCH & FILTER TOOLBAR -->
 <div class="row mb-4 position-relative align-items-center" style="height: 50px;">
 
+    {% if not is_hist %}
     <!-- A. BULK ACTION BAR -->
     <div class="bulk-action-bar" id="bulkActionBar">
         <div class="d-flex align-items-center">
@@ -55,6 +58,7 @@
             <i class="bi bi-trash"></i>
         </button>
     </div>
+    {% endif %}
 
     <!-- B. SEARCH INPUT -->
     <div class="col h-100">
@@ -232,18 +236,20 @@
                             </td>
 
                             <!-- Hanapin ang Actions column sa table loop -->
-                            <td class="text-center text-nowrap" onclick="event.stopPropagation()">
+                             <td class="text-center text-nowrap" onclick="event.stopPropagation()">
                                 <!-- View Profile -->
                                 <button type="button" class="btn-icon"
                                     onclick="openFacultyProfile({{ loop.index0 }})" title="View Profile">
                                     <i class="bi bi-eye"></i>
                                 </button>
 
+                                {% if not is_hist %}
                                 <!-- Workload -->
                                 <button type="button" class="btn-icon" style="color: #188038;" data-bs-toggle="modal"
                                     data-bs-target="#assignCoursesModal{{ faculty.id }}" title="Assign Workload">
                                     <i class="bi bi-clipboard-check"></i>
                                 </button>
+                                {% endif %}
 
                                 <!-- Schedule Viewer -->
                                 <button type="button" class="btn-icon view"
@@ -251,6 +257,7 @@
                                     <i class="bi bi-calendar-week"></i>
                                 </button>
 
+                                {% if not is_hist %}
                                 <!-- Edit -->
                                 <button type="button" class="btn-icon edit" data-bs-toggle="modal"
                                     data-bs-target="#editFacultyModal{{ faculty.id }}" title="Edit">
@@ -262,6 +269,7 @@
                                     data-bs-toggle="modal" data-bs-target="#archiveModal{{ faculty.id }}">
                                     <i class="bi bi-trash"></i>
                                 </button>
+                                {% endif %}
                             </td>
                         </tr>
                         {% else %}

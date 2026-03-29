@@ -2473,3 +2473,11 @@ table.table tbody tr.irreg-row.selected:hover td {
 .legend-ga    { background: #e6f4ea; border-left: 3px solid #188038; }
 .legend-draft { background: #e8f4fd; border: 2px dashed #1a73e8; }
 .legend-manual{ background: #f3e8fd; border-left: 3px solid #7c3aed; }
+
+/* Archive Switcher No-Caret */
+.no-caret::after {
+    display: none !important;
+}
+.dropdown-menu-primary .dropdown-item:hover {
+    background-color: #f1f5f9;
+}

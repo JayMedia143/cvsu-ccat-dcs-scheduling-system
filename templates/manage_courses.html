@@ -10,6 +10,7 @@
         <h1 class="h3 text-gray-800 fw-light mb-1">Courses</h1>
         <p class="text-muted small mb-0">Manage your subject offerings, units, and hours.</p>
     </div>
+    {% if not is_hist %}
     <div class="d-flex align-items-center gap-3">
         <button class="btn-google-action" data-bs-toggle="modal"
             data-bs-target="#importPdfModal">
@@ -34,11 +35,13 @@
             <span>New Course</span>
         </button>
     </div>
+    {% endif %}
 </div>
 
 <!-- 2. SEARCH & FILTER WRAPPER (With Bulk Action Overlay) -->
 <div class="row mb-4 position-relative align-items-center" style="height: 50px;">
 
+    {% if not is_hist %}
     <!-- A. BULK ACTION BAR (Overlay - Green Background) -->
     <div class="bulk-action-bar" id="bulkActionBar">
         <div class="d-flex align-items-center">
@@ -54,6 +57,7 @@
             <i class="bi bi-trash"></i>
         </button>
     </div>
+    {% endif %}
 
     <!-- B. SEARCH INPUT (Server-Side Trigger) -->
     <div class="col h-100">
@@ -289,11 +293,13 @@
                                 onclick="viewSchedule('course', {{ course.id }})" title="View Schedule">
                                 <i class="bi bi-calendar-week"></i>
                             </button>
+                            {% if not is_hist %}
                             <button type="button" class="btn-icon edit" data-bs-toggle="modal"
                                 data-bs-target="#editCourseModal{{ course.id }}"><i class="bi bi-pencil"></i></button>
                             <button type="button" class="btn-icon delete" title="Move to Recycle Bin"
                                 data-bs-toggle="modal" data-bs-target="#archiveModal{{ course.id }}"><i
                                     class="bi bi-trash"></i></button>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

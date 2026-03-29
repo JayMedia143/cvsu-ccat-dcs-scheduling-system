@@ -10,6 +10,7 @@
         <p class="text-muted small mb-0">Map course code prefixes to departments. Click <strong>Save &amp;
                 Apply</strong> to update all courses.</p>
     </div>
+    {% if not is_hist %}
     <div class="d-flex align-items-center gap-2">
         <a href="{{ url_for('manage_courses') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
             <i class="bi bi-arrow-left me-1"></i> Back to Courses
@@ -28,6 +29,13 @@
             </button>
         </form>
     </div>
+    {% else %}
+    <div class="d-flex align-items-center gap-2">
+        <a href="{{ url_for('manage_courses') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-arrow-left me-1"></i> Back to Courses
+        </a>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Flash messages -->
@@ -88,7 +96,8 @@
                         </td>
                         <td>
                             <select name="dept_p_{{ rule.id }}"
-                                class="form-select form-select-sm border-0 bg-light fw-bold" style="max-width:320px;">
+                                class="form-select form-select-sm border-0 bg-light fw-bold" style="max-width:320px;"
+                                {% if is_hist %}disabled{% endif %}>
                                 {% for dept in departments %}
                                 <option value="{{ dept }}" {% if rule.department==dept %}selected{% endif %}>{{ dept }}
                                 </option>
@@ -100,10 +109,12 @@
                                 course(s)</span>
                         </td>
                         <td class="text-center pe-4">
+                            {% if not is_hist %}
                             <button type="button" class="btn btn-link text-danger p-1" title="Move to Recycle Bin"
                                 onclick="archiveRule({{ rule.id }}, '{{ rule.code }}')">
                                 <i class="bi bi-trash"></i>
                             </button>
+                            {% endif %}
                         </td>
                     </tr>
                     {% else %}
@@ -113,6 +124,7 @@
                     </tr>
                     {% endfor %}
 
+                    {% if not is_hist %}
                     <!-- Unassigned prefixes (yellow) -->
                     {% for prefix in unassigned_prefixes %}
                     <tr class="table-warning">
@@ -144,7 +156,9 @@
                         <td></td>
                     </tr>
                     {% endfor %}
+                    {% endif %}
 
+                    {% if not is_hist %}
                     <!-- Add new prefix row -->
                     <tr class="table-light border-top-2" id="newPrefixRow">
                         <td class="ps-4">
@@ -174,6 +188,7 @@
                                 style="display:none;"></span></td>
                         <td></td>
                     </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
@@ -210,7 +225,8 @@
                         </td>
                         <td>
                             <select name="dept_e_{{ rule.id }}"
-                                class="form-select form-select-sm border-0 bg-light fw-bold" style="max-width:320px;">
+                                class="form-select form-select-sm border-0 bg-light fw-bold" style="max-width:320px;"
+                                {% if is_hist %}disabled{% endif %}>
                                 {% for dept in departments %}
                                 <option value="{{ dept }}" {% if rule.department==dept %}selected{% endif %}>{{ dept }}
                                 </option>
@@ -218,10 +234,12 @@
                             </select>
                         </td>
                         <td class="text-center pe-4">
+                            {% if not is_hist %}
                             <button type="button" class="btn btn-link text-danger p-1" title="Move to Recycle Bin"
                                 onclick="archiveRule({{ rule.id }}, '{{ rule.code }}')">
                                 <i class="bi bi-trash"></i>
                             </button>
+                            {% endif %}
                         </td>
                     </tr>
                     {% else %}
@@ -230,6 +248,7 @@
                     </tr>
                     {% endfor %}
 
+                    {% if not is_hist %}
                     <!-- Add new exception row -->
                     <tr class="table-light border-top-2">
                         <td class="ps-4">
@@ -257,17 +276,20 @@
                         </td>
                         <td></td>
                     </tr>
+                    {% endif %}
                 </tbody>
             </table>
         </div>
     </div>
 
+    {% if not is_hist %}
     <!-- FLOATING SAVE BUTTON -->
     <div class="position-fixed bottom-0 end-0 p-4" style="z-index:1050;">
         <button type="submit" class="btn btn-success btn-lg shadow-lg rounded-pill px-4 py-3 d-flex align-items-center">
             <i class="bi bi-save-fill me-2"></i> Save &amp; Apply
         </button>
     </div>
+    {% endif %}
 
 </form>
 
