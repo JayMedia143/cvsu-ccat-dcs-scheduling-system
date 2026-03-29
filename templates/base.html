@@ -71,7 +71,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('manage_constraints') }}"><i
                                 class="bi bi-sliders me-2"></i> Constraints</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('generate_page') }}"><i class="bi bi-cpu me-2"></i>
-                            Optimization Engine</a></li>
+                            Auto-Schedule Generator</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('check_constraints') }}"><i
                                 class="bi bi-shield-check me-2"></i> Check Conflicts</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('pending_sections') }}"><i
@@ -100,19 +100,11 @@
                 View <i class="bi bi-calendar3 ms-1"></i>
             </a>
 
-            <!-- Reports Dropdown -->
-            <div class="dropdown">
-                <a class="menu-item dropdown-toggle {% if 'reports' in request.endpoint or 'clean_archives' in request.endpoint %}active{% endif %}"
-                    href="#" role="button" data-bs-toggle="dropdown">
-                    Reports
-                </a>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ url_for('reports_page') }}"><i
-                                class="bi bi-graph-up me-2"></i> Analytics & Export</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('clean_archives_page') }}"><i
-                                class="bi bi-archive-fill text-muted me-2"></i> Clean Archives</a></li>
-                </ul>
-            </div>
+            <!-- Reports -->
+            <a class="menu-item {% if 'reports' in request.endpoint %}active{% endif %}"
+                href="{{ url_for('reports_page') }}">
+                Reports
+            </a>
 
             <!-- B. SUPERADMIN ONLY (Users Management) -->
             {% if session.get('role') == 'superadmin' %}
@@ -190,20 +182,20 @@
                     class="sem-btn-tool {% if session.get('selected_semester') == 'Midyear' %}active{% endif %}">Midyear</a>
                 
                 <div class="dropdown d-inline-block border-start ms-1 ps-1">
-                    <button class="sem-btn-tool dropdown-toggle no-caret" type="button" data-bs-toggle="dropdown" title="Archive History">
+                    <button class="sem-btn-tool dropdown-toggle no-caret" type="button" data-bs-toggle="dropdown" title="Archive History" style="color: #198754;">
                         <i class="bi bi-clock-history"></i>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-primary shadow border-0 mt-2" style="min-width: 220px; border-radius: 12px;">
-                        <li class="dropdown-header text-uppercase fw-bold text-primary small mb-1">
-                            <i class="bi bi-calendar3 me-1"></i> Historical Terms
+                    <ul class="dropdown-menu shadow border-0 mt-2" style="min-width: 280px; border-radius: 12px; max-height: 360px; overflow-y: auto; overflow-x: hidden;">
+                        <li class="dropdown-header text-uppercase fw-bold small mb-2" style="color: #198754;">
+                            <i class="bi bi-calendar-check me-1"></i> Previous Semesters (Read-Only)
                         </li>
                         {% if all_archives %}
                             {% for arc in all_archives %}
                             <li>
-                                <a class="dropdown-item py-2 px-3 rounded-2" href="{{ url_for('api_archive_enter', archive_id=arc.id) }}">
+                                <a class="dropdown-item py-2 px-3 rounded-2 historical-item" href="{{ url_for('api_archive_enter', archive_id=arc.id) }}">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div class="d-flex flex-column">
-                                            <span class="fw-bold" style="font-size: 0.82rem; color: #1e293b;">{{ arc.semester }}</span>
+                                            <span class="fw-bold" style="font-size: 0.85rem; color: #1e293b;">{{ arc.semester }}</span>
                                             <span class="text-muted" style="font-size: 0.72rem;">Academic Year {{ arc.academic_year }}</span>
                                         </div>
                                         <i class="bi bi-chevron-right text-muted small"></i>
@@ -259,7 +251,7 @@
 
                     {% if session.get('role') in ['admin', 'superadmin'] %}
                     <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#settingsModal"><i
-                                class="bi bi-gear me-2"></i> Global Settings</a></li>
+                                class="bi bi-gear me-2"></i> Settings</a></li>
                     
                     {% if not is_hist %}
                     <li><a class="dropdown-item" href="#" onclick="openArchiveModal()"><i
@@ -338,9 +330,20 @@
         transform: scale(1.05);
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
     }
-    /* Adjustment for main content to prevent overlap if needed */
-    .historical-mode-banner + .main-content {
-        margin-top: 0 !important;
+    /* Historical Dropdown Styling */
+    .historical-item:hover {
+        background-color: rgba(25, 135, 84, 0.08) !important;
+        color: #198754 !important;
+    }
+    .historical-item:hover .fw-bold {
+        color: #198754 !important;
+    }
+    .historical-item:hover i {
+        color: #198754 !important;
+        transform: translateX(2px);
+    }
+    .historical-item i {
+        transition: all 0.2s ease;
     }
     </style>
     {% endif %}
@@ -369,9 +372,9 @@
     <div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-below-nav">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header border-bottom-0">
+                <div class="modal-header d-flex align-items-center py-3 border-bottom-0">
                     <h5 class="modal-title fw-bold" id="settingsModalLabel"><i
-                            class="bi bi-gear-fill me-2"></i> Global Settings</h5>
+                            class="bi bi-gear-fill me-2"></i> Settings</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form action="{{ url_for('save_settings') }}" method="POST">
@@ -399,7 +402,7 @@
                         <div class="mb-4">
                             <label class="form-label text-muted small fw-bold d-block mb-1">SCHEDULE DAYS</label>
                             <p class="text-muted" style="font-size:0.78rem; margin-bottom:8px;">Days the GA uses when plotting schedules.</p>
-                            <div class="d-flex flex-wrap gap-2">
+                            <div class="d-flex justify-content-between w-100">
                                 {% for day in all_days %}
                                 <div class="form-check form-check-inline m-0">
                                     <input class="form-check-input plain-check" type="checkbox" name="days"
@@ -415,7 +418,7 @@
                         {% if session.get('role') in ['admin', 'superadmin'] %}
                         <div class="mb-4 border-top pt-3">
                             <label class="form-label text-muted small fw-bold d-flex align-items-center gap-2 mb-1">
-                                <i class="bi bi-lock-fill text-danger"></i> GLOBAL AI-LOCK
+                                <i class="bi bi-lock-fill text-danger"></i> Generated Schedules Lock
                             </label>
                             <p class="text-muted" style="font-size:0.78rem; margin-bottom:8px;">When ON, GA-generated schedule entries are protected — regular users cannot move or delete them.</p>
                             <div class="form-check form-switch">
@@ -424,7 +427,7 @@
                                     onchange="toggleScheduleLock(this)">
                                 <label class="form-check-label small" for="scheduleLockToggle" id="lockToggleLabel">
                                     {% if global_settings and global_settings.schedule_lock %}
-                                    <span class="text-danger fw-semibold"><i class="bi bi-lock-fill me-1"></i>Lock ON — GA entries are protected</span>
+                                    <span class="text-danger fw-semibold"><i class="bi bi-lock-fill me-1"></i>Lock ON — Protected Mode</span>
                                     {% else %}
                                     <span class="text-success"><i class="bi bi-unlock me-1"></i>Lock OFF — Open Collaborative Mode</span>
                                     {% endif %}
@@ -464,7 +467,7 @@
         aria-hidden="true">
         <div class="modal-dialog modal-dialog-below-nav">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header border-bottom-0">
+                <div class="modal-header d-flex align-items-center py-3 border-bottom-0">
                     <h5 class="modal-title fw-bold" id="changeUsernameModalLabel"><i
                             class="bi bi-person-badge-fill me-2"></i> Change Username</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -497,7 +500,7 @@
         aria-hidden="true">
         <div class="modal-dialog modal-dialog-below-nav">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header border-bottom-0">
+                <div class="modal-header d-flex align-items-center py-3 border-bottom-0">
                     <h5 class="modal-title fw-bold" id="changePasswordModalLabel"><i
                             class="bi bi-shield-lock-fill me-2"></i> Change Password</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -566,7 +569,7 @@
         aria-hidden="true">
         <div class="modal-dialog modal-dialog-below-nav">
             <div class="modal-content border-0 shadow">
-                <div class="modal-header border-bottom-0">
+                <div class="modal-header d-flex align-items-center py-3 border-bottom-0">
                     <h5 class="modal-title fw-bold" id="uploadProfilePicModalLabel"><i
                             class="bi bi-camera-fill me-2"></i> Upload Profile Picture</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -682,13 +685,13 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <p class="text-muted small mb-4">Taking a snapshot will "freeze" all current schedules, sections, and faculty records for this semester. This record will be immutable (Read-Only).</p>
+                    <p class="text-muted small mb-4">This will lock all current schedules and records for the term. It creates a final version for your archives that is 'view-only' to make sure the data stays accurate and safe from accidental changes.</p>
                     
                     <form id="archiveForm">
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Academic Year</label>
                             <input type="text" class="form-control" id="archiveAY" placeholder="e.g. 2024-2025" required>
-                            <div class="form-text">Specify the year coverage of this snapshot.</div>
+                            <div class="form-text">Specify the year coverage of this archive.</div>
                         </div>
                         <div class="mb-4">
                             <label class="form-label fw-semibold">Semester</label>
@@ -700,7 +703,7 @@
                         </div>
 
                         <div class="bg-light rounded-3 p-3 border">
-                            <h6 class="fw-bold text-dark mb-2 small text-uppercase">Snapshot Summary</h6>
+                            <h6 class="fw-bold text-dark mb-2 small text-uppercase">Archive Summary</h6>
                             <ul class="list-unstyled mb-0 small text-muted" id="archiveSummaryList">
                                 <li class="mb-1"><i class="bi bi-check2-circle text-success me-2"></i>Loading counts...</li>
                             </ul>
@@ -710,7 +713,7 @@
                 <div class="modal-footer bg-light border-0">
                     <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" id="archiveConfirmBtn" class="btn btn-warning px-4 fw-bold" onclick="startArchivingProcess(this)">
-                        Generate Snapshot <i class="bi bi-arrow-right ms-1"></i>
+                        Create Archive <i class="bi bi-arrow-right ms-1"></i>
                     </button>
                 </div>
             </div>
@@ -778,7 +781,7 @@
             return;
         }
 
-        if (!confirm(`FINAL WARNING: You are about to archive the ${sem} of AY ${ay}. This process will take a full snapshot and make it Read-Only. Proceed?`)) {
+        if (!confirm(`FINAL WARNING: You are about to archive the ${sem} of AY ${ay}. This process will take a full archive and make it Read-Only. Proceed?`)) {
             return;
         }
 
@@ -800,10 +803,10 @@
         .then(d => {
             if (d.ok) {
                 // Step 4: Multi-step transition
-                const msg = 'Success! ' + d.message + '\n\nSnapshot is secured. Would you like to clear the active system and prepare for the next term now?';
+                const msg = 'Success! ' + d.message + '\n\nArchive is secured. Would you like to clear the active system and prepare for the next term now?';
                 if (confirm(msg)) {
-                    // Redirect to Snapshot Explorer where the "Prepare New Term" button is prominent
-                    window.location.href = "{{ url_for('archive_explorer') }}";
+                    // Refresh the page so the new snapshot appears in the navbar switcher
+                    window.location.reload();
                 } else {
                     const m = bootstrap.Modal.getInstance(document.getElementById('archiveSnapshotModal'));
                     if (m) m.hide();
@@ -837,7 +840,7 @@
             if (!d.ok) { cb.checked = !locked; return; }
             if (label) {
                 label.innerHTML = locked
-                    ? '<span class="text-danger fw-semibold"><i class="bi bi-lock-fill me-1"></i>Lock ON \u2014 GA entries are protected</span>'
+                    ? '<span class="text-danger fw-semibold"><i class="bi bi-lock-fill me-1"></i>Lock ON \u2014 Protected Mode</span>'
                     : '<span class="text-success"><i class="bi bi-unlock me-1"></i>Lock OFF \u2014 Open Collaborative Mode</span>';
             }
             // Update nav badge without full reload
@@ -845,7 +848,7 @@
             if (locked && !badge) {
                 var b = document.createElement('span');
                 b.className = 'lock-badge-nav';
-                b.title = 'Global AI-Lock is ON \u2014 GA entries are protected';
+                b.title = 'Generated Schedules Lock is ON \u2014 Protected Mode';
                 b.innerHTML = '<i class="bi bi-lock-fill me-1"></i>Locked';
                 var rightBar = document.querySelector('.sheets-menubar .d-flex.align-items-center.gap-3');
                 if (rightBar) rightBar.prepend(b);

@@ -5694,32 +5694,8 @@ def api_archive_capture():
 
 # --- Module 4: SNAPSHOT EXPLORATION ---
 
-@app.route('/archives/explorer')
-@login_required
-@role_required('admin', 'superadmin')
-def archive_explorer():
-    """Lists all available archived snapshots with pagination."""
-    page = request.args.get('page', 1, type=int)
-    per_page = 12 # 3x4 grid fits well on most screens
-    
-    pagination = TermArchive.query.order_by(TermArchive.created_at.desc()).paginate(
-        page=page, per_page=per_page, error_out=False)
-    
-    return render_template('archive_explorer.html', 
-                          archives=pagination.items, 
-                          pagination=pagination)
-
-
-
-@app.route('/archives/view/<int:archive_id>')
-@login_required
-@role_required('admin', 'superadmin')
-def archive_view(archive_id):
-    """Displays the immutable schedule for a specific archived term."""
-    archive = TermArchive.query.get_or_404(archive_id)
-    # Fetch all schedules for this archive
-    schedules = ArchivedSchedule.query.filter_by(term_archive_id=archive_id).all()
-    return render_template('archive_viewer.html', archive=archive, schedules=schedules)
+# Snapshot Explorer and Archive Viewers have been removed as per the final streamlined plan.
+# Navigation is now handled exclusively via the Semester Switcher in the top navbar.
 
 
 @app.route('/archives/delete/<int:archive_id>', methods=['POST'])
@@ -5731,7 +5707,7 @@ def archive_delete(archive_id):
     db.session.delete(archive)
     db.session.commit()
     flash(f"Archive for {archive.semester} AY {archive.academic_year} deleted permanently.", "danger")
-    return redirect(url_for('archive_explorer'))
+    return redirect(url_for('dashboard'))
 
 
 @app.route('/api/archive/reset-system', methods=['POST'])
