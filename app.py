@@ -4823,6 +4823,7 @@ def api_draft_create():
     return jsonify({'ok': True, 'draft': {
         'id': dv.id, 'name': dv.name, 'semester': dv.semester,
         'department': dv.department, 'is_published': dv.is_published,
+        'notes': dv.notes
     }})
 
 

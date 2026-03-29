@@ -1138,32 +1138,37 @@
                             </ul>
                         </div>
                     </div>
-                    <!-- Filter dropdown -->
+                    <!-- Filter (Unified with submenus) -->
                     <div class="col-auto">
                         <div class="dropdown">
-                            <button class="btn google-sort-toggle dropdown-toggle" type="button"
+                            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="allDraftsFilterBtn"
                                 data-bs-toggle="dropdown" style="min-width:130px; font-size:.82rem">
-                                <i class="bi bi-funnel me-1"></i>Filter
+                                <i class="bi bi-funnel me-1"></i>Filter: <span id="allDraftsFilterLabel">All</span>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end google-sort-menu"
-                                style="max-height: 400px; overflow-y: auto;">
-                                <li class="dropdown-header small text-muted text-uppercase fw-bold">Semester</li>
-                                <li><a class="dropdown-item google-sort-item" href="#"
-                                        onclick="setAllDraftsSem('','All Semesters');return false">All Semesters</a>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width: 200px;">
+                                <li><a class="dropdown-item text-danger" href="#" onclick="clearAllDraftsFilters(); return false;">
+                                    <i class="bi bi-x-circle me-2"></i>Clear Filter</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="dropdown-submenu">
+                                    <a class="dropdown-item" href="javascript:void(0);">Semester</a>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick='setAllDraftsSem("", "All Semesters"); return false;'>All Semesters</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        {% for s in semesters %}
+                                        <li><a class="dropdown-item" href="#" onclick='setAllDraftsSem({{ s|tojson }}, "{{ s }} Semester"); return false;'>{{ s }} Semester</a></li>
+                                        {% endfor %}
+                                    </ul>
                                 </li>
-                                {% for s in semesters %}<li><a class="dropdown-item google-sort-item" href="#"
-                                        onclick="setAllDraftsSem({{ s|tojson }},{{ s|tojson }});return false">{{ s
-                                        }}</a></li>{% endfor %}
-                                <li>
-                                    <hr class="dropdown-divider">
+                                <li class="dropdown-submenu">
+                                    <a class="dropdown-item" href="javascript:void(0);">Department</a>
+                                    <ul class="dropdown-menu" style="max-height: 300px; overflow-y: auto;">
+                                        <li><a class="dropdown-item" href="#" onclick='setAllDraftsDept("", "All Departments"); return false;'>All Departments</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        {% for d in departments %}
+                                        <li><a class="dropdown-item" href="#" onclick='setAllDraftsDept({{ d|tojson }}, {{ d|tojson }}); return false;'>{{ d }}</a></li>
+                                        {% endfor %}
+                                    </ul>
                                 </li>
-                                <li class="dropdown-header small text-muted text-uppercase fw-bold">Department</li>
-                                <li><a class="dropdown-item google-sort-item" href="#"
-                                        onclick="setAllDraftsDept('','All Departments');return false">All
-                                        Departments</a></li>
-                                {% for d in departments %}<li><a class="dropdown-item google-sort-item" href="#"
-                                        onclick="setAllDraftsDept({{ d|tojson }},{{ d|tojson }});return false">{{ d
-                                        }}</a></li>{% endfor %}
                             </ul>
                         </div>
                     </div>
@@ -1177,13 +1182,14 @@
                                 <tr>
                                     <th class="ps-3" style="width: 1%; white-space: nowrap;">Draft Name</th>
                                     <th style="width: 1%; white-space: nowrap;">Semester</th>
-                                    <th>Department</th>
+                                    <th style="width: 1%; white-space: nowrap;">Department</th>
+                                    <th>Notes</th>
                                     <th class="text-center" style="width: 60px;">Select</th>
                                 </tr>
                             </thead>
                             <tbody id="allDraftsList">
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted py-4">Loading...</td>
+                                    <td colspan="5" class="text-center text-muted py-4">Loading...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1210,9 +1216,6 @@
         </div>
     </div>
 </div>
-</div>
-</div>
-</div>
 
 <!-- MANAGE DRAFTS MODAL -->
 <div class="modal fade" id="manageDraftsModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
@@ -1220,8 +1223,8 @@
         <div class="modal-content">
             <div class="modal-header border-0 pb-1">
                 <div class="d-flex align-items-center gap-2 w-100">
-                    <button id="mdBackBtn" class="btn btn-sm btn-light d-none" type="button">
-                        <i class="bi bi-arrow-left me-1"></i>Back
+                    <button id="mdBackBtn" class="btn btn-sm btn-light d-none" type="button" onclick="closeMdfForm()">
+                        <i class="bi bi-arrow-left"></i>
                     </button>
                     <h5 class="modal-title fw-bold mb-0">
                         <i id="mdHeaderIcon" class="bi bi-layers me-2 text-success"></i>
@@ -1229,7 +1232,7 @@
                     </h5>
 
                     <div class="ms-auto d-flex gap-2 align-items-center">
-                        <button id="mdNewDraftBtn" class="btn-google-action" type="button"><i
+                        <button id="mdNewDraftBtn" class="btn-google-action" type="button" onclick="openMdfCreate()"><i
                                 class="bi bi-plus-lg"></i><span>New Draft</span></button>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
@@ -1262,36 +1265,36 @@
                                         onclick="setMdSort('za','Name Z→A');return false">Name Z→A</a></li>
                             </ul>
                         </div>
+                        <!-- Filter (Unified) -->
                         <div class="dropdown">
-                            <button class="btn google-sort-toggle dropdown-toggle" type="button"
-                                data-bs-toggle="dropdown" style="min-width:120px;font-size:.82rem;padding:6px 12px">
-                                <i class="bi bi-calendar3 me-1"></i><span id="mdSemLabel">Semester</span>
-                            </button>
-                            <ul class="dropdown-menu google-sort-menu">
-                                <li><a class="dropdown-item google-sort-item" href="#"
-                                        onclick="setMdSem('','Semester');return false">All semesters</a></li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
-                                {% for s in semesters %}<li><a class="dropdown-item google-sort-item" href="#"
-                                        onclick="setMdSem({{ s|tojson }},{{ s|tojson }});return false">{{ s }}</a></li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                        <div class="dropdown">
-                            <button class="btn google-sort-toggle dropdown-toggle" type="button"
+                            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="mdFilterBtn"
                                 data-bs-toggle="dropdown" style="min-width:130px;font-size:.82rem;padding:6px 12px">
-                                <i class="bi bi-building me-1"></i><span id="mdDeptLabel">Department</span>
+                                <i class="bi bi-funnel me-1"></i>Filter: <span id="mdFilterLabel">All</span>
                             </button>
-                            <ul class="dropdown-menu google-sort-menu" style="max-height:220px;overflow-y:auto">
-                                <li><a class="dropdown-item google-sort-item" href="#"
-                                        onclick="setMdDept('','Department');return false">All departments</a></li>
-                                <li>
-                                    <hr class="dropdown-divider">
+                            <ul class="dropdown-menu shadow-sm" style="min-width: 200px;">
+                                <li><a class="dropdown-item text-danger" href="#" onclick="resetMdFilters(); return false;">
+                                    <i class="bi bi-x-circle me-2"></i>Clear Filter</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="dropdown-submenu">
+                                    <a class="dropdown-item" href="javascript:void(0);">Semester</a>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick='setMdSem("", "All Semesters"); return false;'>All Semesters</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        {% for s in semesters %}
+                                        <li><a class="dropdown-item" href="#" onclick='setMdSem({{ s|tojson }}, "{{ s }} Semester"); return false;'>{{ s }} Semester</a></li>
+                                        {% endfor %}
+                                    </ul>
                                 </li>
-                                {% for d in departments %}<li><a class="dropdown-item google-sort-item" href="#"
-                                        onclick="setMdDept({{ d|tojson }},{{ d|tojson }});return false">{{ d }}</a></li>
-                                {% endfor %}
+                                <li class="dropdown-submenu">
+                                    <a class="dropdown-item" href="javascript:void(0);">Department</a>
+                                    <ul class="dropdown-menu" style="max-height: 300px; overflow-y: auto;">
+                                        <li><a class="dropdown-item" href="#" onclick='setMdDept("", "All Departments"); return false;'>All Departments</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        {% for d in departments %}
+                                        <li><a class="dropdown-item" href="#" onclick='setMdDept({{ d|tojson }}, {{ d|tojson }}); return false;'>{{ d }}</a></li>
+                                        {% endfor %}
+                                    </ul>
+                                </li>
                             </ul>
                         </div>
                     </div>
@@ -1302,13 +1305,14 @@
                                     <tr>
                                         <th class="ps-3" style="width: 1%; white-space: nowrap;">Draft Name</th>
                                         <th style="width: 1%; white-space: nowrap;">Semester</th>
-                                        <th>Department</th>
+                                        <th style="width: 1%; white-space: nowrap;">Department</th>
+                                        <th>Notes</th>
                                         <th class="text-center" style="width:110px">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="manageDraftsList">
                                     <tr>
-                                        <td colspan="4" class="text-center text-muted py-3">Loading...</td>
+                                        <td colspan="5" class="text-center text-muted py-3">Loading...</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -1333,39 +1337,42 @@
                 </div>
                 <!-- SCREEN B: form view (hidden by default) -->
                 <div id="mdFormView" style="display:none">
-                    <input type="hidden" id="mdfEditId">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Draft Name</label>
-                        <input type="text" class="form-control" id="mdfName" placeholder="e.g. Draft 1, NSTP Draft">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Semester</label>
-                        <select class="form-select" id="mdfSemester">
-                            {% for s in semesters %}<option>{{ s }}</option>{% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Department</label>
-                        <select class="form-select" id="mdfDept">
-                            <option value="">— None (Admin draft) —</option>
-                            {% for d in departments %}
-                            <option value="{{ d }}" {% if user_dept==d %} selected{% endif %}>{{ d }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label fw-semibold">Notes <span
-                                class="text-muted fw-normal">(optional)</span></label>
-                        <textarea class="form-control" id="mdfNotes" rows="2"></textarea>
-                    </div>
-                    <div id="mdfError" class="alert alert-danger py-1 px-2 mb-0 mt-2"
-                        style="display:none;font-size:.82rem"></div>
-                    <div class="d-flex justify-content-end gap-2 mt-3">
-                        <button type="button" class="btn btn-light" id="mdCancelFormBtn">Cancel</button>
-                        <button type="button" class="btn btn-success px-4" id="mdfSubmitBtn" onclick="submitMdfForm()">
-                            <i class="bi bi-check-lg me-1"></i><span id="mdfSubmitLabel">Create Draft</span>
-                        </button>
-                    </div>
+                    <form id="mdfForm" onsubmit="submitMdfForm(event)">
+                        <input type="hidden" id="mdfEditId">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Draft Name</label>
+                            <input type="text" class="form-control" id="mdfName" placeholder="e.g. Draft 1, NSTP Draft" required oninput="validateMdfForm()">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Semester</label>
+                            <select class="form-select" id="mdfSemester" required>
+                                <option value="" disabled selected>— Select Semester —</option>
+                                {% for s in semesters %}<option>{{ s }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Department</label>
+                            <select class="form-select" id="mdfDept">
+                                <option value="">— None (Admin draft) —</option>
+                                {% for d in departments %}
+                                <option value="{{ d }}" {% if user_dept==d %} selected{% endif %}>{{ d }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fw-semibold">Notes <span
+                                    class="text-muted fw-normal">(optional)</span></label>
+                            <textarea class="form-control" id="mdfNotes" rows="2"></textarea>
+                        </div>
+                        <div id="mdfError" class="alert alert-danger py-1 px-2 mb-0 mt-2"
+                            style="display:none;font-size:.82rem"></div>
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <button type="button" class="btn btn-light px-4" id="mdCancelFormBtn" onclick="closeMdfForm()">Cancel</button>
+                            <button type="submit" class="btn btn-success px-4" id="mdfSubmitBtn">
+                                <i class="bi bi-check-lg me-1"></i><span id="mdfSubmitLabel">Create Draft</span>
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -2474,42 +2481,59 @@
     }
     function setAllDraftsSem(val, label) {
         allDraftsSem = val;
+        updateAllDraftsFilterLabel();
         allDraftsPage = 1;
         renderAllDrafts();
     }
     function setAllDraftsDept(val, label) {
         allDraftsDept = val;
+        updateAllDraftsFilterLabel();
+        allDraftsPage = 1;
+        renderAllDrafts();
+    }
+    function updateAllDraftsFilterLabel() {
+        const lbl = document.getElementById('allDraftsFilterLabel');
+        if (allDraftsSem && allDraftsDept) lbl.textContent = "Multiple";
+        else if (allDraftsSem) lbl.textContent = allDraftsSem.split(' ')[0];
+        else if (allDraftsDept) lbl.textContent = allDraftsDept.split(' ')[0];
+        else lbl.textContent = "All";
+    }
+    function clearAllDraftsFilters() {
+        allDraftsSem = '';
+        allDraftsDept = '';
+        const lbl = document.getElementById('allDraftsFilterLabel');
+        if (lbl) lbl.textContent = 'All';
         allDraftsPage = 1;
         renderAllDrafts();
     }
     function jumpToAllDraftsPage() {
         const inp = document.getElementById('allDraftsJumpInput');
+        if (!inp) return;
         const val = parseInt(inp.value);
-        if (val > 0) {
-            allDraftsPage = val;
-            renderAllDrafts();
-        }
+        if (isNaN(val) || val < 1) return;
+        allDraftsPage = val;
+        renderAllDrafts();
     }
     function renderAllDrafts() {
-        const search = document.getElementById('allDraftsSearch').value.toLowerCase();
+        const search = (document.getElementById('allDraftsSearch').value || "").toLowerCase();
+        const semFilter = (allDraftsSem || "").toLowerCase();
+        const deptFilter = (allDraftsDept || "").toLowerCase();
+
         let filtered = DRAFTS_DATA.filter(d => {
+            const dName = (d.name || "").toLowerCase();
             const dSem = (d.semester || "").toLowerCase();
             const dDept = (d.department || "").toLowerCase();
 
-            if (!d.name.toLowerCase().includes(search)) return false;
-
-            if (allDraftsSem) {
-                const filterPrefix = allDraftsSem.toLowerCase().split(' ')[0]; // "1st", "2nd", etc
-                if (!dSem.includes(filterPrefix)) return false;
-            }
-
+            if (search && !dName.includes(search)) return false;
+            if (allDraftsSem && dSem !== allDraftsSem.toLowerCase()) return false;
             if (allDraftsDept && dDept !== allDraftsDept.toLowerCase()) return false;
+
             return true;
         });
 
-        if (allDraftsSort === 'az') filtered.sort((a, b) => a.name.localeCompare(b.name));
-        else if (allDraftsSort === 'za') filtered.sort((a, b) => b.name.localeCompare(a.name));
-        else filtered.sort((a, b) => b.id - a.id);
+        if (allDraftsSort === 'az') filtered.sort((a, b) => (a.name||"").localeCompare(b.name||""));
+        else if (allDraftsSort === 'za') filtered.sort((a, b) => (b.name||"").localeCompare(a.name||""));
+        else filtered.sort((a, b) => (b.id||0) - (a.id||0));
 
         const pageSize = 5;
         const totalPages = Math.ceil(filtered.length / pageSize) || 1;
@@ -2523,7 +2547,7 @@
         container.innerHTML = '';
 
         if (!paged.length) {
-            container.innerHTML = '<tr><td colspan="4" class="text-center py-5 text-muted">No drafts found. Try a different search.</td></tr>';
+            container.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted">No drafts found. Try a different search.</td></tr>';
         } else {
             paged.forEach(d => {
                 const tr = document.createElement('tr');
@@ -2542,6 +2566,7 @@
                 <td class="ps-3 fw-bold text-success text-truncate" style="max-width:250px">${d.name}</td>
                 <td class="text-center">${semBadge}</td>
                 <td class="small text-muted text-truncate" style="max-width:180px">${d.department || '—'}</td>
+                <td class="small text-muted text-truncate" style="max-width:150px">${d.notes || '—'}</td>
                 <td class="text-center">
                     <div class="d-flex justify-content-center">
                         <div class="btn-icon edit" onclick="chooseDraft(${d.id}, '${d.name.replace(/'/g, "\\'")}')" title="Select Draft" style="cursor:pointer">
@@ -2640,102 +2665,193 @@
     }
     function openManageDrafts() {
         _mdPage = 1; _mdSort = ''; _mdSem = ''; _mdDept = '';
-        document.getElementById('mdSearch').value = '';
-        document.getElementById('mdSortLabel').textContent = 'Newest';
-        document.getElementById('mdSemLabel').textContent = 'Semester';
-        document.getElementById('mdDeptLabel').textContent = 'Department';
+        
+        const searchInput = document.getElementById('mdSearch');
+        if (searchInput) searchInput.value = '';
+        
+        const sortLabel = document.getElementById('mdSortLabel');
+        if (sortLabel) sortLabel.textContent = 'Newest';
+        
+        const filterLabel = document.getElementById('mdFilterLabel');
+        if (filterLabel) filterLabel.textContent = 'All';
+        
         renderManageDrafts();
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('manageDraftsModal')).show();
+        const modalEl = document.getElementById('manageDraftsModal');
+        if (modalEl) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
     }
-    // ── MANAGE DRAFT FORM (in-panel, inside manageDraftsModal — no stacked modals) ──
-    function openMdfCreate() {
-        // Reset form
-        const editIdEl = document.getElementById('mdfEditId');
+    function updateMdFilterLabel() {
+        const lbl = document.getElementById('mdFilterLabel');
+        if (!lbl) return;
+        if (_mdSem && _mdDept) lbl.textContent = "Multiple";
+        else if (_mdSem) lbl.textContent = _mdSem.split(' ')[0];
+        else if (_mdDept) lbl.textContent = _mdDept.split(' ')[0];
+        else lbl.textContent = "All";
+    }
+    function resetMdFilters() {
+        _mdSem = ''; _mdDept = '';
+        updateMdFilterLabel();
+        _mdPage = 1;
+        renderManageDrafts();
+    }
+    function setMdSem(val, label) {
+        _mdSem = val;
+        updateMdFilterLabel();
+        _mdPage = 1;
+        renderManageDrafts();
+    }
+    function setMdDept(val, label) {
+        _mdDept = val;
+        updateMdFilterLabel();
+        _mdPage = 1;
+        renderManageDrafts();
+    }
+    // ── MANAGE DRAFT FORM (Nuclear Cleanup & Bomb-Proof Restoration) ──
+    function validateMdfForm() {
         const nameEl = document.getElementById('mdfName');
-        const notesEl = document.getElementById('mdfNotes');
+        const errDiv = document.getElementById('mdfError');
+        if (!nameEl) return false;
+        const name = nameEl.value.trim();
+        if (!name) {
+            if (errDiv) {
+                errDiv.textContent = 'Please fill out this field.';
+                errDiv.style.display = 'block';
+            }
+            nameEl.focus();
+            return false;
+        }
+        // Semester is usually pre-selected, but if it's empty somehow
         const semEl = document.getElementById('mdfSemester');
-        const deptEl = document.getElementById('mdfDept');
-        const errEl = document.getElementById('mdfError');
-        const subLabel = document.getElementById('mdfSubmitLabel');
-
-        if (editIdEl) editIdEl.value = '';
-        if (nameEl) nameEl.value = '';
-        if (notesEl) notesEl.value = '';
-        if (semEl) semEl.selectedIndex = 0;
-        if (deptEl) deptEl.value = '';
-        if (subLabel) subLabel.textContent = 'Create Draft';
-        if (errEl) errEl.style.display = 'none';
-
-        // Switch view
-        document.getElementById('mdListView').style.display = 'none';
-        document.getElementById('mdFormView').style.display = '';
-
-        // Header updates
-        document.getElementById('mdNewDraftBtn').classList.add('d-none');
-        document.getElementById('mdBackBtn').classList.remove('d-none');
-        document.getElementById('mdHeaderIcon').className = 'bi bi-plus-circle me-2 text-success';
-        document.getElementById('mdHeaderTitle').textContent = 'New Draft';
-
-        if (nameEl) nameEl.focus();
+        if (semEl && !semEl.value) {
+            if (errDiv) {
+                errDiv.textContent = 'Please fill out this field.';
+                errDiv.style.display = 'block';
+            }
+            semEl.focus();
+            return false;
+        }
+        if (errDiv) errDiv.style.display = 'none';
+        return true;
     }
+
+    function openMdfCreate() {
+        const els = {
+            editId: document.getElementById('mdfEditId'),
+            name: document.getElementById('mdfName'),
+            notes: document.getElementById('mdfNotes'),
+            sem: document.getElementById('mdfSemester'),
+            dept: document.getElementById('mdfDept'),
+            err: document.getElementById('mdfError'),
+            subLabel: document.getElementById('mdfSubmitLabel'),
+            list: document.getElementById('mdListView'),
+            form: document.getElementById('mdFormView'),
+            newBtn: document.getElementById('mdNewDraftBtn'),
+            backBtn: document.getElementById('mdBackBtn'),
+            hIcon: document.getElementById('mdHeaderIcon'),
+            hTitle: document.getElementById('mdHeaderTitle')
+        };
+        if (els.editId) els.editId.value = '';
+        if (els.name) els.name.value = '';
+        if (els.notes) els.notes.value = '';
+        if (els.sem) els.sem.selectedIndex = 0;
+        if (els.dept) els.dept.value = '';
+        if (els.subLabel) els.subLabel.textContent = 'Create Draft';
+        if (els.err) els.err.style.display = 'none';
+        if (els.list) els.list.style.display = 'none';
+        if (els.form) els.form.style.display = '';
+        if (els.newBtn) els.newBtn.classList.add('d-none');
+        if (els.backBtn) els.backBtn.classList.remove('d-none');
+        if (els.hIcon) els.hIcon.className = 'bi bi-plus-circle me-2 text-primary';
+        if (els.hTitle) els.hTitle.textContent = 'New Draft';
+        if (els.name) els.name.focus();
+    }
+
     function openMdfEdit(id) {
         const d = DRAFTS_DATA.find(x => x.id === id);
-        if (!d) { console.error('[openMdfEdit] Draft not found:', id); return; }
-
-        const editIdEl = document.getElementById('mdfEditId');
-        const nameEl = document.getElementById('mdfName');
-        const semEl = document.getElementById('mdfSemester');
-        const deptEl = document.getElementById('mdfDept');
-        const notesEl = document.getElementById('mdfNotes');
-        const subLabel = document.getElementById('mdfSubmitLabel');
-        const errEl = document.getElementById('mdfError');
-
-        if (editIdEl) editIdEl.value = d.id;
-        if (nameEl) nameEl.value = d.name;
-        if (semEl) semEl.value = d.semester;
-        if (deptEl) deptEl.value = d.department || '';
-        if (notesEl) notesEl.value = d.notes || '';
-        if (subLabel) subLabel.textContent = 'Save Changes';
-        if (errEl) errEl.style.display = 'none';
-
-        // Switch view
-        document.getElementById('mdListView').style.display = 'none';
-        document.getElementById('mdFormView').style.display = '';
-
-        // Header updates
-        document.getElementById('mdNewDraftBtn').classList.add('d-none');
-        document.getElementById('mdBackBtn').classList.remove('d-none');
-        document.getElementById('mdHeaderIcon').className = 'bi bi-pencil-square me-2 text-primary';
-        document.getElementById('mdHeaderTitle').textContent = 'Edit Draft';
-
-        if (nameEl) nameEl.focus();
+        if (!d) return;
+        const els = {
+            editId: document.getElementById('mdfEditId'),
+            name: document.getElementById('mdfName'),
+            sem: document.getElementById('mdfSemester'),
+            dept: document.getElementById('mdfDept'),
+            notes: document.getElementById('mdfNotes'),
+            err: document.getElementById('mdfError'),
+            subLabel: document.getElementById('mdfSubmitLabel'),
+            list: document.getElementById('mdListView'),
+            form: document.getElementById('mdFormView'),
+            newBtn: document.getElementById('mdNewDraftBtn'),
+            backBtn: document.getElementById('mdBackBtn'),
+            hIcon: document.getElementById('mdHeaderIcon'),
+            hTitle: document.getElementById('mdHeaderTitle')
+        };
+        if (els.editId) els.editId.value = d.id;
+        if (els.name) els.name.value = d.name || '';
+        if (els.sem) els.sem.value = d.semester || '';
+        if (els.dept) els.dept.value = d.department || '';
+        if (els.notes) els.notes.value = d.notes || '';
+        if (els.subLabel) els.subLabel.textContent = 'Save Changes';
+        if (els.err) els.err.style.display = 'none';
+        if (els.list) els.list.style.display = 'none';
+        if (els.form) els.form.style.display = '';
+        if (els.newBtn) els.newBtn.classList.add('d-none');
+        if (els.backBtn) els.backBtn.classList.remove('d-none');
+        if (els.hIcon) els.hIcon.className = 'bi bi-pencil-square me-2 text-primary';
+        if (els.hTitle) els.hTitle.textContent = 'Edit Draft';
+        if (els.name) els.name.focus();
     }
+
     function closeMdfForm() {
-        document.getElementById('mdFormView').style.display = 'none';
-        document.getElementById('mdListView').style.display = '';
-        document.getElementById('mdNewDraftBtn').classList.remove('d-none');
-        document.getElementById('mdBackBtn').classList.add('d-none');
-        document.getElementById('mdHeaderIcon').className = 'bi bi-layers me-2 text-success';
-        document.getElementById('mdHeaderTitle').textContent = 'Manage Drafts';
+        const els = {
+            form: document.getElementById('mdFormView'),
+            list: document.getElementById('mdListView'),
+            newBtn: document.getElementById('mdNewDraftBtn'),
+            backBtn: document.getElementById('mdBackBtn'),
+            hIcon: document.getElementById('mdHeaderIcon'),
+            hTitle: document.getElementById('mdHeaderTitle')
+        };
+        if (els.form) els.form.style.display = 'none';
+        if (els.list) els.list.style.display = '';
+        if (els.newBtn) els.newBtn.classList.remove('d-none');
+        if (els.backBtn) els.backBtn.classList.add('d-none');
+        if (els.hIcon) els.hIcon.className = 'bi bi-layers me-2 text-success';
+        if (els.hTitle) els.hTitle.textContent = 'Manage Drafts';
     }
-    async function submitMdfForm() {
-        const name = document.getElementById('mdfName').value.trim();
-        const sem = document.getElementById('mdfSemester').value;
-        const dept = document.getElementById('mdfDept').value;
-        const notes = document.getElementById('mdfNotes').value.trim();
-        const editId = document.getElementById('mdfEditId').value;
-        const errDiv = document.getElementById('mdfError');
-        if (!name) { errDiv.textContent = 'Draft name is required.'; errDiv.style.display = ''; return; }
-        errDiv.style.display = 'none';
-        document.getElementById('mdfSubmitBtn').disabled = true;
+
+    async function submitMdfForm(e) {
+        if (e) e.preventDefault();
+        if (!validateMdfForm()) return;
+        const els = {
+            name: document.getElementById('mdfName'),
+            sem: document.getElementById('mdfSemester'),
+            dept: document.getElementById('mdfDept'),
+            notes: document.getElementById('mdfNotes'),
+            editId: document.getElementById('mdfEditId'),
+            err: document.getElementById('mdfError'),
+            submitBtn: document.getElementById('mdfSubmitBtn')
+        };
+        if (!els.submitBtn) return;
+        const name = els.name ? els.name.value.trim() : '';
+        const sem = els.sem ? els.sem.value : '';
+        const dept = els.dept ? els.dept.value : '';
+        const notes = els.notes ? els.notes.value.trim() : '';
+        const editId = els.editId ? els.editId.value : '';
+
+        if (els.err) els.err.style.display = 'none';
+        els.submitBtn.disabled = true;
+
         try {
             if (editId) {
                 const res = await fetch(`/api/draft/${editId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
                     body: JSON.stringify({ name, semester: sem, department: dept || null, notes: notes || null }),
-                }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
-                if (!res.ok) { errDiv.textContent = res.error || 'Failed to save.'; errDiv.style.display = ''; return; }
+                }).then(r => r.json());
+                
+                if (!res.ok) {
+                    if (els.err) { els.err.textContent = res.error || 'Failed to save.'; els.err.style.display = ''; }
+                    return;
+                }
                 const idx = DRAFTS_DATA.findIndex(x => x.id === parseInt(editId));
                 if (idx !== -1) Object.assign(DRAFTS_DATA[idx], {
                     name: res.draft.name, semester: res.draft.semester,
@@ -2753,55 +2869,74 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
                     body: JSON.stringify({ name, semester: sem, department: dept || null, notes: notes || null }),
-                }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
-                if (!res.ok) { errDiv.textContent = res.error || 'Failed to create draft.'; errDiv.style.display = ''; return; }
+                }).then(r => r.json());
+                
+                if (!res.ok) {
+                    if (els.err) { els.err.textContent = res.error || 'Failed to create draft.'; els.err.style.display = ''; }
+                    return;
+                }
                 DRAFTS_DATA.unshift({
                     id: res.draft.id, name: res.draft.name, semester: res.draft.semester,
                     department: res.draft.department || '', notes: res.draft.notes || '', is_published: false
                 });
                 const draftSel = document.getElementById('draftSel');
-                const opt = new Option(res.draft.name, res.draft.id);
-                opt.dataset.published = '0';
-                draftSel.add(opt);
+                if (draftSel) {
+                    const opt = new Option(res.draft.name, res.draft.id);
+                    opt.dataset.published = '0';
+                    draftSel.add(opt);
+                }
                 refreshLeftPanel();
                 _mdPage = 1;
                 renderManageDrafts();
                 closeMdfForm();
                 showToast('Draft created.', 'success');
             }
-        } catch {
-            errDiv.textContent = 'Network error — please try again.';
-            errDiv.style.display = '';
+        } catch (e) {
+            console.error(e);
+            if (els.err) { els.err.textContent = 'Network error — please try again.'; els.err.style.display = ''; }
         } finally {
-            document.getElementById('mdfSubmitBtn').disabled = false;
+            if (els.submitBtn) els.submitBtn.disabled = false;
         }
     }
 
+    function resetMdFilters() {
+        _mdSem = '';
+        _mdDept = '';
+        document.getElementById('mdFilterLabel').textContent = 'All';
+        _mdPage = 1;
+        renderManageDrafts();
+    }
+    function updateMdFilterLabel() {
+        const lbl = document.getElementById('mdFilterLabel');
+        if (_mdSem && _mdDept) lbl.textContent = "Multiple";
+        else if (_mdSem) lbl.textContent = _mdSem.split(' ')[0];
+        else if (_mdDept) lbl.textContent = _mdDept.split(' ')[0];
+        else lbl.textContent = "All";
+    }
     function setMdSort(v, lbl) { _mdSort = v; _mdPage = 1; document.getElementById('mdSortLabel').textContent = lbl; renderManageDrafts(); }
-    function setMdSem(v, lbl) { _mdSem = v; _mdPage = 1; document.getElementById('mdSemLabel').textContent = lbl; renderManageDrafts(); }
-    function setMdDept(v, lbl) { _mdDept = v; _mdPage = 1; document.getElementById('mdDeptLabel').textContent = lbl; renderManageDrafts(); }
+    function setMdSem(v, lbl) { _mdSem = v; _mdPage = 1; updateMdFilterLabel(); renderManageDrafts(); }
+    function setMdDept(v, lbl) { _mdDept = v; _mdPage = 1; updateMdFilterLabel(); renderManageDrafts(); }
     function jumpToMdPage() {
-        const input = document.getElementById('mdJumpInput');
-        if (!input) return;
-        const q = (document.getElementById('mdSearch').value || '').toLowerCase();
-        let data = [...DRAFTS_DATA];
-        if (q) data = data.filter(d => d.name.toLowerCase().includes(q) || (d.department || '').toLowerCase().includes(q));
-        if (_mdSem) data = data.filter(d => d.semester === _mdSem);
-        if (_mdDept) data = data.filter(d => d.department === _mdDept);
-        const PAGE_SIZE = 5;
-        const totalPages = Math.max(1, Math.ceil(data.length / PAGE_SIZE));
-        let val = parseInt(input.value);
-        if (isNaN(val) || val < 1) val = 1;
-        if (val > totalPages) val = totalPages;
+        const inp = document.getElementById('mdJumpInput');
+        if (!inp) return;
+        const val = parseInt(inp.value);
+        if (isNaN(val) || val < 1) return;
         _mdPage = val;
         renderManageDrafts();
     }
     function renderManageDrafts() {
         const q = (document.getElementById('mdSearch').value || '').toLowerCase();
-        let data = [...DRAFTS_DATA];
-        if (q) data = data.filter(d => d.name.toLowerCase().includes(q) || (d.department || '').toLowerCase().includes(q));
-        if (_mdSem) data = data.filter(d => d.semester === _mdSem);
-        if (_mdDept) data = data.filter(d => d.department === _mdDept);
+        const semF = (_mdSem || '').toLowerCase();
+        const deptF = (_mdDept || '').toLowerCase();
+        let data = DRAFTS_DATA.filter(d => {
+            const dName = (d.name || '').toLowerCase();
+            const dSem = (d.semester || '').toLowerCase();
+            const dDept = (d.department || '').toLowerCase();
+            if (q && !dName.includes(q) && !dDept.includes(q)) return false;
+            if (semF && dSem !== semF) return false;
+            if (deptF && dDept !== deptF) return false;
+            return true;
+        });
         if (_mdSort === 'az') data.sort((a, b) => a.name.localeCompare(b.name));
         if (_mdSort === 'za') data.sort((a, b) => b.name.localeCompare(a.name));
         const PAGE_SIZE = 5;
@@ -2810,8 +2945,9 @@
         const slice = data.slice((_mdPage - 1) * PAGE_SIZE, _mdPage * PAGE_SIZE);
 
         const tbody = document.getElementById('manageDraftsList');
+        if (!tbody) return;
         if (!slice.length) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No drafts found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No drafts found.</td></tr>';
         } else {
             tbody.innerHTML = '';
             slice.forEach(d => {
@@ -2834,6 +2970,7 @@
                 <td class="ps-3 fw-bold text-success text-truncate" style="max-width:250px">${d.name}${d.is_published ? ' <span class="badge bg-success ms-1" style="font-size:.65rem">Published</span>' : ''}</td>
                 <td class="text-center">${semBadge}</td>
                 <td class="small text-muted text-truncate" style="max-width:180px">${d.department || '—'}</td>
+                <td class="small text-muted text-truncate" style="max-width:150px">${d.notes || '—'}</td>
                 <td class="text-center">
                     <div class="d-flex justify-content-center">
                         <div class="btn-icon edit me-2" onclick="openMdfEdit(${d.id})" title="Edit" style="cursor:pointer">
@@ -2988,13 +3125,11 @@
             const pageSize = 5;
             const search = document.getElementById('allDraftsSearch').value.toLowerCase();
             let filtered = DRAFTS_DATA.filter(d => {
+                const dName = (d.name || "").toLowerCase();
                 const dSem = (d.semester || "").toLowerCase();
                 const dDept = (d.department || "").toLowerCase();
-                if (!d.name.toLowerCase().includes(search)) return false;
-                if (allDraftsSem) {
-                    const prefix = allDraftsSem.toLowerCase().split(' ')[0];
-                    if (!dSem.includes(prefix)) return false;
-                }
+                if (search && !dName.includes(search)) return false;
+                if (allDraftsSem && dSem !== allDraftsSem.toLowerCase()) return false;
                 if (allDraftsDept && dDept !== allDraftsDept.toLowerCase()) return false;
                 return true;
             });
@@ -3018,11 +3153,19 @@
         if (manageDraftsModal && manageDraftsModal.classList.contains('show') && mdListView && mdListView.style.display !== 'none') {
             const pageSize = 5;
             const q = (document.getElementById('mdSearch').value || '').toLowerCase();
-            let data = [...DRAFTS_DATA];
-            if (q) data = data.filter(d => d.name.toLowerCase().includes(q) || (d.department || '').toLowerCase().includes(q));
-            if (_mdSem) data = data.filter(d => d.semester === _mdSem);
-            if (_mdDept) data = data.filter(d => d.department === _mdDept);
-            const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
+            const semF = (_mdSem || '').toLowerCase();
+            const deptF = (_mdDept || '').toLowerCase();
+
+            let data = DRAFTS_DATA.filter(d => {
+                const dName = (d.name || '').toLowerCase();
+                const dSem = (d.semester || '').toLowerCase();
+                const dDept = (d.department || '').toLowerCase();
+                if (q && !dName.includes(q) && !dDept.includes(q)) return false;
+                if (_mdSem && dSem !== _mdSem.toLowerCase()) return false;
+                if (_mdDept && dDept !== _mdDept.toLowerCase()) return false;
+                return true;
+            });
+            const totalPages = Math.ceil(data.length / pageSize) || 1;
 
             if (e.key === 'ArrowLeft' && _mdPage > 1) {
                 e.preventDefault();
