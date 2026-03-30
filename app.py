@@ -8278,10 +8278,11 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
     return html_out, table_px
 
 
-def render_a4_page(html_content, table_px, margins=None):
+def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
     """Wrap HTML table in a paper-sized page for iframe preview.
 
     margins: dict with keys top/bottom/left/right (float, inches) + paper (str key).
+    for_canvas: if True, sets background to transparent and removes padding for Infinite Canvas.
     """
     m = margins or {}
     mt = float(m.get('top',    1.0))
@@ -8291,15 +8292,21 @@ def render_a4_page(html_content, table_px, margins=None):
     paper_key  = m.get('paper', 'A4')
     pw, ph, _  = PAPER_SIZES.get(paper_key, PAPER_SIZES['A4'])
 
+    # Canvas-specific overrides
+    bg_style = "background: transparent;" if for_canvas else "background: #c8c8c8;"
+    body_padding = "padding: 0;" if for_canvas else "padding: 24px 0;"
+    body_overflow = "overflow: hidden;" if for_canvas else ""
+
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
   body {{
-    background: #c8c8c8;
+    {bg_style}
     font-family: Calibri, Arial, sans-serif;
-    padding: 24px 0;
+    {body_padding}
+    {body_overflow}
     min-height: 100vh;
     display: flex;
     justify-content: center;
@@ -9086,7 +9093,10 @@ def section_timetable_html(section_id):
         margins=_margins,
         img_settings=_img_settings,
     )
-    return render_a4_page(html_content, table_px, margins=_margins)
+    
+    # Infinite Canvas support
+    for_canvas = request.args.get('canvas', 'false') == 'true'
+    return render_a4_page(html_content, table_px, margins=_margins, for_canvas=for_canvas)
 
 
 @app.route('/public/section-timetable/<int:section_id>')
@@ -9144,7 +9154,10 @@ def public_section_timetable(section_id):
         margins=_margins,
         img_settings=_img_settings,
     )
-    return render_a4_page(html_content, table_px, margins=_margins)
+    
+    # Infinite Canvas support
+    for_canvas = request.args.get('canvas', 'false') == 'true'
+    return render_a4_page(html_content, table_px, margins=_margins, for_canvas=for_canvas)
 
 
 @app.route('/irregular-timetable/<string:student_id>')
@@ -9979,7 +9992,10 @@ def faculty_timetable_html(faculty_id):
         extra_merge_map=extra_merge_map, extra_skip_cells=extra_skip_cells,
         bounds=bounds, layout_type='faculty', margins=_margins,
         img_settings=_img_settings)
-    return render_a4_page(html_content, table_px, margins=_margins)
+    
+    # Infinite Canvas support
+    for_canvas = request.args.get('canvas', 'false') == 'true'
+    return render_a4_page(html_content, table_px, margins=_margins, for_canvas=for_canvas)
 
 
 @app.route('/faculty-timetable-pdf/<int:faculty_id>')
@@ -10107,7 +10123,10 @@ def room_timetable_html(room_id):
         extra_merge_map=extra_merge_map, extra_skip_cells=extra_skip_cells,
         bounds=bounds, layout_type='room', margins=_margins,
         img_settings=_img_settings)
-    return render_a4_page(html_content, table_px, margins=_margins)
+
+    # Infinite Canvas support
+    for_canvas = request.args.get('canvas', 'false') == 'true'
+    return render_a4_page(html_content, table_px, margins=_margins, for_canvas=for_canvas)
 
 
 @app.route('/room-timetable-pdf/<int:room_id>')
@@ -10195,6 +10214,12 @@ def course_timetable_html(course_id):
             joinedload(ScheduledClass.faculty),
             joinedload(ScheduledClass.room),
         ).filter_by(course_id=course_id, semester=semester, is_draft=False).all()
+    # Define path to course template
+    path = os.path.join(basedir, 'static', 'assets', 'course_template.xlsx')
+    if not os.path.exists(path):
+        flash('No course template uploaded.', 'danger')
+        return redirect(url_for('manage_layouts'))
+
     ws, grid_info, bounds = _get_cached_template(path)
     if grid_info:
         cell_overrides, extra_merge_map, extra_skip_cells = build_schedule_overlays(
@@ -10214,7 +10239,10 @@ def course_timetable_html(course_id):
         extra_merge_map=extra_merge_map, extra_skip_cells=extra_skip_cells,
         bounds=bounds, layout_type='course', margins=_margins,
         img_settings=_img_settings)
-    return render_a4_page(html_content, table_px, margins=_margins)
+    
+    # Infinite Canvas support
+    for_canvas = request.args.get('canvas', 'false') == 'true'
+    return render_a4_page(html_content, table_px, margins=_margins, for_canvas=for_canvas)
 
 
 @app.route('/course-timetable-pdf/<int:course_id>')
@@ -11814,8 +11842,10 @@ def public_archived_timetable_html(archive_id, student_id):
         extra_merge_map=extra_merge_map, extra_skip_cells=extra_skip_cells,
         bounds=bounds, layout_type='section', margins=_margins,
         img_settings=_img_settings)
-        
-    return render_a4_page(html_content, table_px, margins=_margins)
+    
+    # Infinite Canvas support
+    for_canvas = request.args.get('canvas', 'false') == 'true'
+    return render_a4_page(html_content, table_px, margins=_margins, for_canvas=for_canvas)
 
 
 with app.app_context():

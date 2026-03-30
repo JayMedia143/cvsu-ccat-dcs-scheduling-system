@@ -88,16 +88,28 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeSemesterFilter();
 
     // ==========================================
-    // DAGDAG DITO: AUTO-DISMISS FLASH MESSAGES 
+    // DAGDAG DITO: AUTO-DISMISS FLASH MESSAGES (Alerts & Toasts)
     // ==========================================
     setTimeout(function () {
+        // Handle standard Alerts
         let alertElements = document.querySelectorAll('.alert');
         alertElements.forEach(function (alertNode) {
             if (typeof bootstrap !== 'undefined') {
                 let bsAlert = new bootstrap.Alert(alertNode);
-                bsAlert.close(); // Fade-out animation
+                bsAlert.close(); 
             } else {
-                alertNode.style.display = 'none'; // Fallback
+                alertNode.style.display = 'none';
+            }
+        });
+
+        // Handle modern Toasts
+        let toastElements = document.querySelectorAll('.toast');
+        toastElements.forEach(function (toastNode) {
+            if (typeof bootstrap !== 'undefined') {
+                let bsToast = bootstrap.Toast.getOrCreateInstance(toastNode);
+                bsToast.hide();
+            } else {
+                toastNode.style.display = 'none';
             }
         });
     }, 5000); // 5 seconds
