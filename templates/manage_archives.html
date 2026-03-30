@@ -1,0 +1,540 @@
+{% extends "base.html" %}
+
+{% block title %}Archive Management{% endblock %}
+
+{% block content %}
+
+<!-- 1. HEADER (Static) -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1">Archive Management</h1>
+        <p class="text-muted small mb-0">Manage and permanently delete previous semester snapshots.</p>
+    </div>
+</div>
+
+<!-- 2. SEARCH & FILTER WRAPPER (With Bulk Action Overlay) -->
+<div class="row mb-4 position-relative align-items-center" style="height: 50px;">
+
+    <!-- A. BULK ACTION BAR (Overlay - Green Background) -->
+    <div class="bulk-action-bar" id="bulkActionBar">
+        <div class="d-flex align-items-center">
+            <button class="btn-icon" onclick="deselectAll()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <span class="bulk-count ms-2"><span id="selectedCount">0</span> selected</span>
+        </div>
+
+        <!-- Trash Icon -->
+        <button type="button" class="bulk-btn delete-icon" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal" 
+            title="Permanently Delete Archives">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+
+    <!-- B. SEARCH INPUT (Server-Side Trigger) -->
+    <div class="col h-100">
+        <form action="{{ url_for('manage_archives') }}" method="GET" class="h-100 w-100">
+             <!-- Keep Sort & Filter parameters hidden so they don't reset when searching -->
+            <input type="hidden" name="sort" value="{{ current_sort }}">
+            <input type="hidden" name="filter_by" value="{{ current_filter_by }}">
+            <input type="hidden" name="filter_val" value="{{ current_filter_val }}">
+
+            <div class="google-search-bar d-flex align-items-center h-100 w-100">
+                <i class="bi bi-search text-secondary me-3"></i>
+                <input type="text" name="search" class="google-search-input"
+                    placeholder="Search archives (e.g. '1st Semester', '2024-2025')..." id="liveSearchInput"
+                    value="{{ search_query }}" autocomplete="off" onchange="this.form.submit()">
+            </div>
+        </form>
+    </div>
+
+    <!-- C. SORT & FILTER GROUP -->
+    <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end gap-2">
+        
+        <!-- 1. FILTER DROPDOWN (Nested) -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="filterDropdown"
+                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                <i class="bi bi-funnel me-2"></i>
+                {% if current_filter_by == 'semester' %}
+                Sem: {{ current_filter_val }}
+                {% elif current_filter_by == 'ay' %}
+                AY: {{ current_filter_val }}
+                {% else %}
+                Filter
+                {% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="filterDropdown">
+                <!-- Clear Filter Option -->
+                <li>
+                    <a class="dropdown-item text-danger"
+                        href="{{ url_for('manage_archives', sort=current_sort, search=search_query) }}">
+                        <i class="bi bi-x-circle me-2"></i>Clear Filter
+                    </a>
+                </li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+
+                <!-- NESTED 1: Semester -->
+                <li class="dropdown-submenu">
+                    <a class="dropdown-item submenu-trigger" href="javascript:void(0);">Semester</a>
+                    <ul class="dropdown-menu">
+                        {% for sem in unique_semesters %}
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == sem %}active{% endif %}"
+                                href="{{ url_for('manage_archives', sort=current_sort, search=search_query, filter_by='semester', filter_val=sem) }}">
+                                {{ sem }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+
+                <!-- NESTED 2: Academic Year -->
+                <li class="dropdown-submenu">
+                    <a class="dropdown-item submenu-trigger" href="javascript:void(0);">Academic Year</a>
+                    <ul class="dropdown-menu" style="max-height: 300px; overflow-y: auto;">
+                        {% for ay in unique_ay %}
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == ay %}active{% endif %}"
+                                href="{{ url_for('manage_archives', sort=current_sort, search=search_query, filter_by='ay', filter_val=ay) }}">
+                                {{ ay }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 2. SORT DROPDOWN -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                {% if current_sort == 'newest' %} Sort by: Newest First
+                {% elif current_sort == 'oldest' %} Sort by: Oldest First
+                {% elif current_sort == 'semester-asc' %} Sort by: Semester (A-Z)
+                {% elif current_sort == 'ay-asc' %} Sort by: Academic Year (A-Z)
+                {% else %} Sort by: Newest First
+                {% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'newest' %}active{% endif %}"
+                        href="{{ url_for('manage_archives', sort='newest', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Sort by: Newest First
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'oldest' %}active{% endif %}"
+                        href="{{ url_for('manage_archives', sort='oldest', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Sort by: Oldest First
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'semester-asc' %}active{% endif %}"
+                        href="{{ url_for('manage_archives', sort='semester-asc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Sort by: Semester (A-Z)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'ay-asc' %}active{% endif %}"
+                        href="{{ url_for('manage_archives', sort='ay-asc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Sort by: Academic Year (A-Z)
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- 3. TABLE FORM -->
+<form id="bulkDeleteForm" action="{{ url_for('bulk_delete_archives') }}" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="bg-white rounded border shadow-sm overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="archivesTable">
+                <thead class="table-light">
+                    <tr>
+                        <th class="select-cell">
+                            <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                        </th>
+                        <th class="ps-2">Semester</th>
+                        <th style="width: 20%;">Academic Year</th>
+                        <th style="width: 20%;">Date Archived</th>
+                        <th class="text-center" style="width: 15%;">Stats</th>
+                        <th class="text-center" style="width: 120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for arc in archives %}
+                    <tr class="archive-row" data-id="{{ arc.id }}">
+                        <td class="select-cell">
+                            <input class="form-check-input row-checkbox" type="checkbox" name="row_ids" value="{{ arc.id }}">
+                        </td>
+                        <td class="fw-bold text-dark ps-2">{{ arc.semester }}</td>
+                        <td class="text-muted">{{ arc.academic_year }}</td>
+                        <td class="text-muted small">
+                            {{ arc.created_at.strftime('%Y-%m-%d %H:%M') }}<br>
+                            <span class="small opacity-75">by {{ arc.creator.username if arc.creator else 'System' }}</span>
+                        </td>
+                        <td class="text-center">
+                            <div class="d-flex flex-column gap-1">
+                                <span class="badge bg-light text-dark border small" title="Sections">
+                                    <i class="bi bi-people-fill me-1"></i> {{ arc.total_sections }}
+                                </span>
+                                <span class="badge bg-light text-dark border small" title="Courses">
+                                    <i class="bi bi-book me-1"></i> {{ arc.total_courses }}
+                                </span>
+                                <span class="badge bg-light text-dark border small" title="Students">
+                                    <i class="bi bi-person-check-fill me-1"></i> {{ arc.total_students }}
+                                </span>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <a href="{{ url_for('api_archive_enter', archive_id=arc.id) }}" class="btn-icon view" title="View Archive">
+                                <i class="bi bi-eye-fill"></i>
+                            </a>
+                            <button type="button" class="btn-icon delete" title="Permanently Delete" 
+                                data-bs-toggle="modal" data-bs-target="#deleteModal{{ arc.id }}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not archives %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-archive fs-2 d-block mb-2"></i>
+                            No archives found.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</form>
+
+<!-- 4. PAGINATION -->
+<div class="mt-3 pb-5">
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center mb-2">
+            <!-- Previous -->
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('manage_archives', page=pagination.prev_num, sort=current_sort, search=search_query) }}">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+
+            <!-- Numbers -->
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+            {% if page_num %}
+            <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('manage_archives', page=page_num, sort=current_sort, search=search_query) }}">{{ page_num }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>
+            {% endif %}
+            {% endfor %}
+
+            <!-- Next -->
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('manage_archives', page=pagination.next_num, sort=current_sort, search=search_query) }}">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    {% if pagination.pages > 1 %}
+    <div class="d-flex align-items-center justify-content-center gap-2 text-muted" style="font-size:0.85rem;">
+        <span>Jump to:</span>
+        <input type="number" id="pageJumpInput" class="form-control form-control-sm text-center" style="width:70px;"
+            min="1" max="{{ pagination.pages }}" placeholder="1–{{ pagination.pages }}">
+        <button class="btn btn-sm btn-outline-secondary px-3" onclick="jumpToPage()">Go</button>
+        <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i class="bi bi-arrow-right-short"></i> arrow keys</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ================= MODALS ================= -->
+
+<!-- 1. BULK DELETE MODAL -->
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Permanently Delete Archives?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-danger fw-bold">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                Are you sure you want to PERMANENTLY delete the <span id="modalSelectedCount">0</span> selected archives? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="document.getElementById('bulkDeleteForm').submit()">Yes, Delete Forever</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. SINGLE DELETE MODALS -->
+{% for arc in archives %}
+<div class="modal fade" id="deleteModal{{ arc.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Permanently Delete Archive?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to permanently delete the archive for <strong>{{ arc.semester }} ({{ arc.academic_year }})</strong>?</p>
+                <p class="text-danger small fw-bold mt-2"><i class="bi bi-exclamation-triangle-fill me-1"></i> Warning: This will remove all historical records associated with this term snapshot.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('delete_archive', archive_id=arc.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Yes, Delete Permanently</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const bulkActionBar = document.getElementById('bulkActionBar');
+        const selectedCountSpan = document.getElementById('selectedCount');
+        const modalSelectedCount = document.getElementById('modalSelectedCount');
+        const searchInput = document.getElementById('liveSearchInput');
+        const archivesTable = document.getElementById('archivesTable');
+        const paginationContainer = document.querySelector('.pagination');
+        
+        // Define these globally so they can be re-queried after AJAX
+        let rowCheckboxes = [];
+        let allRows = [];
+
+        function initializeSelectionLogic() {
+            rowCheckboxes = document.querySelectorAll('.row-checkbox');
+            allRows = document.querySelectorAll('.archive-row');
+
+            allRows.forEach(row => {
+                // Clear existing listeners to prevent duplicates
+                const newRow = row.cloneNode(true);
+                row.parentNode.replaceChild(newRow, row);
+                
+                newRow.addEventListener('click', function (e) {
+                    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.form-check-input')) return;
+                    const checkbox = this.querySelector('.row-checkbox');
+                    checkbox.checked = !checkbox.checked;
+                    updateSelectionState();
+                });
+            });
+
+            // Re-query checkboxes after cloning rows
+            rowCheckboxes = document.querySelectorAll('.row-checkbox');
+            
+            rowCheckboxes.forEach(cb => {
+                cb.addEventListener('change', updateSelectionState);
+            });
+        }
+
+        function updateSelectionState() {
+            let count = 0;
+            rowCheckboxes.forEach(cb => {
+                const row = cb.closest('tr');
+                if (cb.checked) {
+                    count++;
+                    row.classList.add('selected');
+                } else {
+                    row.classList.remove('selected');
+                }
+            });
+
+            if (selectedCountSpan) selectedCountSpan.textContent = count;
+            if (modalSelectedCount) modalSelectedCount.textContent = count;
+
+            if (count > 0) {
+                bulkActionBar.classList.add('active');
+            } else {
+                bulkActionBar.classList.remove('active');
+            }
+
+            if (selectAllCheckbox) {
+                const checkedCount = Array.from(rowCheckboxes).filter(cb => cb.checked).length;
+                selectAllCheckbox.checked = checkedCount === rowCheckboxes.length && rowCheckboxes.length > 0;
+                selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < rowCheckboxes.length;
+            }
+        }
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function () {
+                const isChecked = this.checked;
+                rowCheckboxes.forEach(cb => cb.checked = isChecked);
+                updateSelectionState();
+            });
+        }
+
+        window.deselectAll = function() {
+            if (selectAllCheckbox) selectAllCheckbox.checked = false;
+            rowCheckboxes.forEach(cb => cb.checked = false);
+            updateSelectionState();
+        };
+
+        // --- AJAX LIVE SEARCH ---
+        let debounceTimer;
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                const query = this.value;
+                const currentSort = "{{ current_sort }}";
+                const currentFilterBy = "{{ current_filter_by }}";
+                const currentFilterVal = "{{ current_filter_val }}";
+
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    // Update URL
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('search', query);
+                    params.set('page', '1'); // Reset to page 1 on search
+                    const newUrl = `${window.location.pathname}?${params.toString()}`;
+                    window.history.pushState({ path: newUrl }, '', newUrl);
+
+                    // Fetch background
+                    fetch(newUrl)
+                        .then(response => response.text())
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+
+                            // Update Table Body
+                            const newBody = doc.querySelector('#archivesTable tbody').innerHTML;
+                            archivesTable.querySelector('tbody').innerHTML = newBody;
+
+                            // Update Pagination Container
+                            const newPagination = doc.querySelector('.pagination');
+                            if (newPagination && paginationContainer) {
+                                paginationContainer.innerHTML = newPagination.innerHTML;
+                                paginationContainer.parentElement.style.display = 'block';
+                            } else if (!newPagination && paginationContainer) {
+                                // If no pagination returned (e.g. 1 page), hide it
+                                paginationContainer.innerHTML = '';
+                                paginationContainer.parentElement.style.display = 'none';
+                            }
+
+                            // Re-init selection logic for new rows
+                            initializeSelectionLogic();
+                            updateSelectionState();
+                        })
+                        .catch(err => console.error("Live search error:", err));
+                }, 300);
+            });
+        }
+
+        // Initialize on first load
+        initializeSelectionLogic();
+
+        // Jump to page
+        window.jumpToPage = function() {
+            const input = document.getElementById('pageJumpInput');
+            const page = parseInt(input.value);
+            if (page >= 1 && page <= {{ pagination.pages }}) {
+                window.location.href = "{{ url_for('manage_archives', page=0, sort=current_sort, search=search_query) }}".replace('page=0', 'page=' + page);
+            }
+        };
+
+        // Arrow keys
+        document.addEventListener('keydown', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            {% if pagination.has_prev %}
+            if (e.key === 'ArrowLeft') window.location.href = "{{ url_for('manage_archives', page=pagination.prev_num, sort=current_sort, search=search_query) }}";
+            {% endif %}
+            {% if pagination.has_next %}
+            if (e.key === 'ArrowRight') window.location.href = "{{ url_for('manage_archives', page=pagination.next_num, sort=current_sort, search=search_query) }}";
+            {% endif %}
+        });
+    });
+</script>
+<style>
+    /* 1. SELECTION HIGHLIGHT (Parity with Course Management) */
+    .archive-row {
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+    }
+    
+    table.table tbody tr.archive-row.selected td {
+        background-color: #e6f4ea !important; /* Light Green */
+        transition: background-color 0.2s ease;
+    }
+
+    table.table tbody tr.archive-row.selected:hover td {
+        background-color: #dcece0 !important; /* Slightly darker green on hover */
+    }
+
+    /* 2. BULK ACTION BAR (Overlay Animation Fix) */
+    .google-sort-menu {
+        min-width: 260px; /* Prevent text overflow for longer sort labels */
+    }
+    .bulk-action-bar {
+        display: flex;
+        visibility: hidden;
+        opacity: 0;
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #e6f4ea; /* Match parent row highlight when active */
+        z-index: 1050;
+        padding: 0 20px;
+        align-items: center;
+        justify-content: space-between;
+        border-radius: 4px;
+        transition: all 0.2s ease-in-out;
+        pointer-events: none;
+    }
+
+    .bulk-action-bar.active {
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Bulk count and icons color */
+    .bulk-count {
+        font-size: 1rem;
+        color: #188038;
+        font-weight: 500;
+    }
+
+    .bulk-action-bar .btn-icon {
+        color: #188038;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+        border: none;
+        background: transparent;
+    }
+
+    .bulk-action-bar .btn-icon:hover {
+        background-color: rgba(24, 128, 56, 0.1);
+    }
+
+    /* Hide the checkboxes as in Google Sheets pattern */
+    .row-checkbox {
+        display: none;
+    }
+
+    .btn-icon.delete:hover { color: #d93025 !important; background-color: #fce8e6; }
+    .btn-icon.view:hover { color: #1967d2 !important; background-color: #e8f0fe; }
+</style>
+{% endblock %}

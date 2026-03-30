@@ -143,7 +143,7 @@
             CvSU-CCAT Scheduling System
         </div>
         <a href="{{ url_for('student_portal') }}" class="back-btn">
-            <i class="bi bi-arrow-left"></i> Back to Portal
+            <i class="bi bi-box-arrow-left"></i> Logout
         </a>
     </nav>
 
@@ -163,6 +163,18 @@
         </div>
         {% endif %}
         {% endwith %}
+
+        <!-- Archive View Banner -->
+        {% if is_archive %}
+        <div class="alert alert-success border-0 shadow-sm d-flex align-items-center gap-3 mb-3 py-2" 
+             style="background-color: #d1e7dd; color: #0f5132; border-left: 4px solid #198754 !important;">
+            <i class="bi bi-clock-history fs-5"></i>
+            <div>
+                <span class="fw-bold">Viewing Archived Schedule:</span> 
+                AY {{ active_archive.academic_year }} — {{ active_archive.semester }}
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Student Info Card -->
         <div class="student-info-card">
@@ -195,23 +207,43 @@
         <!-- Timetable Card -->
         <div class="timetable-wrapper">
             <div class="timetable-toolbar">
-                <span class="label">
-                    <i class="bi bi-calendar-week"></i>
-                    {% if student.is_irregular %}
+                    {% if is_archive %}
+                    Archived Schedule — {{ active_archive.semester }}
+                    {% elif student.is_irregular %}
                     Custom Irregular Schedule
                     {% else %}
                     Class Schedule{% if section %} — {{ section.section_name }}{% endif %}
                     {% endif %}
                 </span>
-                {% if schedules %}
-                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 print-btn"
-                    style="font-size:0.78rem;" onclick="window.print()">
-                    <i class="bi bi-printer me-1"></i> Print
-                </button>
-                {% endif %}
+                
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Term Selector Dropdown -->
+                    <select class="form-select form-select-sm rounded-pill px-3" 
+                            style="width: 250px; font-size: 0.78rem; border-color: #e0e0e0; cursor: pointer;"
+                            onchange="window.location.href = '{{ url_for('student_schedule', student_id=student.student_id) }}?term_id=' + this.value">
+                        <option value="live" {% if term_id == 'live' %}selected{% endif %}>Current Session (Live)</option>
+                        {% for archive in archives %}
+                        <option value="{{ archive.id }}" {% if term_id|string == archive.id|string %}selected{% endif %}>
+                            AY {{ archive.academic_year }} — {{ archive.semester }}
+                        </option>
+                        {% endfor %}
+                    </select>
+
+                    {% if schedules %}
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 print-btn"
+                        style="font-size:0.78rem;" onclick="window.print()">
+                        <i class="bi bi-printer me-1"></i> Print
+                    </button>
+                    {% endif %}
+                </div>
             </div>
 
-            {% if student.is_irregular %}
+            {% if is_archive %}
+            <iframe id="scheduleFrame"
+                src="{{ url_for('public_archived_timetable_html', archive_id=active_archive.id, student_id=student.student_id) }}"
+                onload="autoResizeFrame(this)">
+            </iframe>
+            {% elif student.is_irregular %}
                 {% if not assignment or not assignment.assignments_json or assignment.assignments_json == '[]' %}
                 <div class="empty-state">
                     <i class="bi bi-puzzle"></i>
@@ -245,7 +277,7 @@
         </div>
 
         <div class="text-center mt-4 text-muted" style="font-size:0.75rem;">
-            © 2025–2026 CvSU-CCAT Scheduling System
+            © {% if is_archive %}{{ active_archive.academic_year }}{% else %}2025–2026{% endif %} CvSU-CCAT Scheduling System
         </div>
     </div>
 

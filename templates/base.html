@@ -147,7 +147,7 @@
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item"
                                href="{{ url_for('schedule_editor') }}"><i
-                                class="bi bi-pencil-square me-2"></i> Schedule Editor</a></li>
+                                 class="bi bi-pencil-square me-2"></i> Schedule Editor</a></li>
                 </ul>
 
             </div>
@@ -355,11 +355,13 @@
 
                     {% if session.get('role') in ['admin', 'superadmin'] %}
                     <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#settingsModal"><i
-                                class="bi bi-gear me-2"></i> Settings</a></li>
+                                 class="bi bi-gear me-2"></i> Settings</a></li>
                     
                     {% if not is_hist %}
                     <li><a class="dropdown-item" href="#" onclick="openArchiveModal()"><i
-                                class="bi bi-exclamation-triangle-fill text-warning me-2"></i> Finalize & Archive Semester</a></li>
+                                 class="bi bi-exclamation-triangle-fill text-warning me-2"></i> Finalize & Archive Semester</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_archives') }}"><i
+                                class="bi bi-archive-fill text-success me-2"></i> Manage Archives</a></li>
                     {% endif %}
 
                     <li>

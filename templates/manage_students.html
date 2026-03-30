@@ -189,7 +189,9 @@
                                 </span>
                             </td>
                             <td>
-                                {% if student.section %}
+                                {% if student.archived_section_name %}
+                                <span class="badge-clean">{{ student.archived_section_name }}</span>
+                                {% elif student.section %}
                                 <span class="badge-clean">{{ student.section.section_name }}</span>
                                 {% else %}
                                 <span class="text-muted small fst-italic">Unassigned</span>
