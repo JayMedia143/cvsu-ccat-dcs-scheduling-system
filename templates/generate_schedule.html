@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Optimization Active{% endblock %}
 
 {% block content %}
@@ -312,6 +312,26 @@
         gap: 2px;
     }
 
+    /* HW TAGS */
+    .hw-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: white;
+    }
+    .hw-perf { background: #1a73e8; } /* Performance */
+    .hw-bal  { background: #188038; } /* Balanced */
+    .hw-eff  { background: #5f6368; } /* Efficiency */
+
+    .speed-lbl {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem;
+        color: #1a73e8;
+        font-weight: bold;
+    }
+
     .log-window::-webkit-scrollbar {
         width: 4px;
     }
@@ -465,8 +485,24 @@
                             SC-I:-- SC-II:--</div>
                     </div>
                     <div style="text-align:right;">
-                        <div style="font-size:0.7rem; color:#666; font-weight:bold;">GENERATION</div>
+                        <div style="font-size:0.7rem; color:#666; font-weight:bold;">THROUGHPUT</div>
+                        <div class="metric-val" id="hudGPS" style="color:#1a73e8;">0.0</div>
+                        <div class="speed-lbl">gen / sec</div>
+                    </div>
+                </div>
+
+                <div class="metric-row" style="border-top:1px solid #eee; padding-top:10px; margin-top:5px;">
+                    <div>
+                        <div style="font-size:0.7rem; color:#666; font-weight:bold;">HARDWARE MODE</div>
+                        <div style="margin-top:4px;">
+                            <span id="hwBadge" class="hw-badge hw-eff">Initializing...</span>
+                        </div>
+                        <div id="hwLabel" style="font-size:0.65rem; color:#888; margin-top:4px; font-family:'JetBrains Mono';">Profiling System...</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:0.7rem; color:#666; font-weight:bold;">PROGRESS</div>
                         <div class="metric-val" id="hudGen">0</div>
+                        <div style="font-size:0.65rem; color:#999; margin-top:2px;">target: <span id="hudTarget">--</span></div>
                     </div>
                 </div>
                 <div style="font-size:0.7rem; color:#666; font-weight:bold;">REAL-TIME OPERATIONS</div>
@@ -589,9 +625,9 @@
             ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
             if (!mat) {
                 ctx.fillStyle = '#f8f9fa'; ctx.fillRect(0, 0, W, H);
-                ctx.fillStyle = '#ccc'; ctx.font = '13px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#666'; ctx.font = '13px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 ctx.fillText('Initializing population...', W / 2, H / 2 - 10);
-                ctx.fillStyle = '#ddd'; ctx.font = '11px monospace';
+                ctx.fillStyle = '#888'; ctx.font = '11px monospace';
                 ctx.fillText('Building chromosomes and evaluating fitness', W / 2, H / 2 + 12);
                 requestAnimationFrame(draw); return;
             }
@@ -689,6 +725,24 @@
                             wC.innerText = hc > 0 ? hc + ' HC' : (sc1 + sc2 > 0 ? (sc1 + sc2) + ' SC' : '✓ 0');
                             var bd = document.getElementById('hudConflictBreakdown');
                             if (bd) bd.innerText = 'HC:' + hc + '  SC-I:' + sc1 + '  SC-II:' + sc2;
+
+                            // NEW HW TELEMETRY
+                            if (d.hardware) {
+                                var hw = d.hardware;
+                                var b = document.getElementById('hwBadge');
+                                var l = document.getElementById('hwLabel');
+                                var t = document.getElementById('hudTarget');
+                                var g = document.getElementById('hudGPS');
+
+                                if (b) {
+                                    b.innerText = hw.mode + ' Mode';
+                                    b.className = 'hw-badge ' + (hw.mode === 'Performance' ? 'hw-perf' : (hw.mode === 'Balanced' ? 'hw-bal' : 'hw-eff'));
+                                }
+                                if (l) l.innerText = hw.label;
+                                if (t && hw.target_gens) t.innerText = hw.target_gens.toLocaleString();
+                                if (g) g.innerText = (d.gen_per_sec || 0).toFixed(1);
+                            }
+
                             // Show init message when generation hasn't started yet
                             if (d.generation === 0 && !d.done) {
                                 fx.innerText = '=INITIALIZE(population=' + (d.pop_size || '...') + ')';

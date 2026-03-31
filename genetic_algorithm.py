@@ -1,8 +1,71 @@
 import os
 import random
 import time
+import psutil
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
+try:
+    from numba import cuda
+except ImportError:
+    cuda = None
+
+def get_hardware_profile():
+    """
+    Hardware-Aware Adaptive Scaling Engine.
+    Profiles CPU and GPU to determine optimal optimization depth (Generations/Population).
+    """
+    # 1. CPU Profiling (IPC / Core estimation)
+    cpu_count = os.cpu_count() or 4
+    cpu_freq  = psutil.cpu_freq().max if hasattr(psutil.cpu_freq(), 'max') else 3000
+    # Simple Throughout Estimation Formula (TEF) for CPU
+    cpu_score = cpu_count * (cpu_freq / 1000)
+
+    # 2. GPU Profiling (CUDA / Core estimation)
+    gpu_label = "None"
+    gpu_score = 0
+    if cuda and cuda.is_available():
+        try:
+            device = cuda.get_current_device()
+            gpu_label = device.name.decode()
+            # TEF for GPU: Multiprocessors * Compute Capability
+            gpu_score = device.MULTIPROCESSOR_COUNT * (device.compute_capability[0] + device.compute_capability[1]/10.0)
+        except Exception:
+            gpu_label = "Detection Error"
+
+    # 3. Mode Classification & Scaling
+    # Thresholds based on typical hardware (GTX 1050 Ti ~ Score 24+, Modern i7 ~ Score 16+)
+    total_score = cpu_score + (gpu_score * 2)  # GPU weighted higher for parallel GA tasks
+
+    if total_score >= 40:
+        return {
+            'label': f"{gpu_label}" if gpu_label != "None" else f"High-End CPU ({cpu_count} Cores)",
+            'mode': "Performance",
+            'target_gens': 24000,
+            'soft_gens': 5000,
+            'max_workers': cpu_count,
+            'pop_boost': 1.6,
+            'score': total_score
+        }
+    elif total_score >= 12:
+        return {
+            'label': f"{gpu_label}" if gpu_label != "None" else f"Mid-Range CPU ({cpu_count} Cores)",
+            'mode': "Balanced",
+            'target_gens': 8000,
+            'soft_gens': 1500,
+            'max_workers': min(12, cpu_count),
+            'pop_boost': 1.2,
+            'score': total_score
+        }
+    else:
+        return {
+            'label': f"Integrated Graphics / Low-End CPU",
+            'mode': "Efficiency",
+            'target_gens': 2000,
+            'soft_gens': 500,
+            'max_workers': min(4, cpu_count),
+            'pop_boost': 1.0,
+            'score': total_score
+        }
 
 # --- CONFIGURATION ---
 # POPULATION_SIZE is now computed dynamically inside run_algorithm() based on
@@ -12,7 +75,7 @@ POPULATION_SIZE   = 40       # fallback — overridden at runtime
 OFFSPRING_COUNT   = 20       # Soft-phase offspring per gen
 HARD_OFFSPRING    = 20       # Hard-phase CROSSOVER offspring (LNS adds on top)
 LNS_OFFSPRING     = 15       # LNS offspring per hard-phase gen (copy-best + repair only HC genes)
-MAX_GENERATIONS   = 2000     # Hard cap; early-exit logic fires well before this
+MAX_GENERATIONS   = 2000     # Static fallback; overridden by Hardware Engine
 SOFT_REFINE_GENS  = 800      # Soft refinement gens after SC-II phase starts
 
 # Stagnation thresholds — two independent counters so STAG_SEVERE can actually fire
@@ -173,6 +236,8 @@ class GeneticScheduler:
     def __init__(self, courses, sections, faculty, rooms, pre_assignments,
                  constraints_config, start_time=7, end_time=20, allowed_days=None,
                  split_assignments=None, fa_map=None, blocked_slots=None):
+        self.hardware_profile = get_hardware_profile()
+        self.max_workers = self.hardware_profile.get('max_workers', 8)
         self.courses     = courses
         self.sections    = sections
         self.faculty     = faculty
@@ -1473,7 +1538,7 @@ class GeneticScheduler:
         def _eval(c):
             self.calculate_fitness(c, hard_only=hard_only, sc1_only=sc1_only)
 
-        with ThreadPoolExecutor(max_workers=min(_N_WORKERS, n)) as executor:
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             list(executor.map(_eval, chromosomes))
 
     def randomize_gene_fast(self, gene, occ_room, occ_fac, occ_sec,
@@ -2829,16 +2894,21 @@ class GeneticScheduler:
             for sec in self.sections for cid in sec['course_ids']
             for cm in [self.course_map.get(cid, {})]
         )
+        # Apply Hardware Engine scaling to population size
+        _pop_boost = self.hardware_profile.get('pop_boost', 1.0)
         if seed_records:
             # Warm start: seed provides quality; small pop is sufficient, keep init fast
-            pop_size = max(12, min(20, int(n_genes_estimate * 0.05)))
+            pop_size = max(12, min(40, int(n_genes_estimate * 0.05 * _pop_boost)))
         else:
             # Cold start: slightly more diversity, still keep init fast
-            pop_size = max(15, min(30, int(n_genes_estimate * 0.08)))
+            pop_size = max(15, min(80, int(n_genes_estimate * 0.08 * _pop_boost)))
 
+        _target_gens = self.hardware_profile.get('target_gens', MAX_GENERATIONS)
+        _soft_max    = self.hardware_profile.get('soft_gens', SOFT_REFINE_GENS)
         print(f"GA Initializing: pop={pop_size} (genes≈{n_genes_estimate}, "
               f"{'warm' if seed_records else 'cold'}-start), lns/gen={LNS_OFFSPRING}, "
-              f"cross/gen={HARD_OFFSPRING}, max_gen={MAX_GENERATIONS}")
+              f"cross/gen={HARD_OFFSPRING}, max_gen={_target_gens}")
+        print(f"Hardware-Aware Mode: {self.hardware_profile['mode']} ({self.hardware_profile['label']})")
 
         # Track start time to enforce 5-minute strict timeout
         start_time_limit = time.time()
@@ -2852,6 +2922,12 @@ class GeneticScheduler:
                 'sc2_violations': 0,
                 'soft_score': 0,
                 'pop_size': pop_size,
+                'best_chromosome': None, # We'll send this after init pool is ready
+                'hardware': {
+                    'label': self.hardware_profile['label'],
+                    'mode': self.hardware_profile['mode'],
+                    'target_gens': _target_gens
+                }
             })
 
         # ── Initialise population ──────────────────────────────────────────
@@ -2928,7 +3004,27 @@ class GeneticScheduler:
 
         print(f"Init done. Best HC={best_schedule.hard_conflicts}, SS={best_schedule.soft_score}")
 
-        for generation in range(MAX_GENERATIONS):
+        # Signal UI again: Init done, send FIRST matrix to clear the blank screen
+        if progress_callback:
+            progress_callback({
+                'generation': 0,
+                'hard_conflicts': best_schedule.hard_conflicts,
+                'sc1_violations': best_schedule.sc1_violations,
+                'sc2_violations': best_schedule.sc2_violations,
+                'soft_score': best_schedule.soft_score,
+                'best_chromosome': best_schedule,
+                'hardware': {
+                    'label': self.hardware_profile['label'],
+                    'mode': self.hardware_profile['mode'],
+                    'target_gens': _target_gens
+                }
+            })
+
+        _algo_t0 = time.time()
+        for generation in range(1, _target_gens + 1):
+            # Calculate Gen/s for UI telemetry
+            _elapsed = time.time() - _algo_t0
+            gen_per_sec = round(generation / _elapsed, 2) if _elapsed > 0 else 0
             # ── Three-phase time limits ────────────────────────────────────
             if current_phase == 'hard':
                 if time.time() - start_time_limit > 1200:
@@ -3170,18 +3266,26 @@ class GeneticScheduler:
                           f"similarity={similarity:.0%} → 30% keep / 30% perturb / 40% fresh "
                           f"(HC={current_best.hard_conflicts})")
 
-            # ── Progress callback ──────────────────────────────────────────
+
+            # ── Telemetry Update ───────────────────────────────────────────
             if progress_callback:
+                prog_now = time.time()
+                prog_elapsed = prog_now - _algo_t0
+                gps = round(generation / prog_elapsed, 1) if prog_elapsed > 0 else 0
+                
                 progress_callback({
-                    'generation':      generation + 1,
-                    'hard_conflicts':  current_best.hard_conflicts,
-                    'sc1_violations':  current_best.sc1_violations,
-                    'sc2_violations':  current_best.sc2_violations,
-                    'soft_score':      current_best.soft_score,
-                    'best_fitness':    current_best.fitness,
+                    'generation': generation,
+                    'hard_conflicts': current_best.hard_conflicts,
+                    'soft_score': current_best.soft_score,
+                    'sc1_violations': current_best.sc1_violations,
+                    'sc2_violations': current_best.sc2_violations,
                     'best_chromosome': current_best,
-                    'phase':           current_phase,
-                    'pop_size':        pop_size,
+                    'gen_per_sec': gps,
+                    'hardware': {
+                        'label': self.hardware_profile['label'],
+                        'mode': self.hardware_profile['mode'],
+                        'target_gens': _target_gens
+                    }
                 })
 
             # ── Termination ────────────────────────────────────────────────
@@ -3190,8 +3294,8 @@ class GeneticScheduler:
                 if current_best.fitness == 0 and (generation - sc2_start_gen) >= 20:
                     print(f"🏆 Perfect schedule at Gen {generation}!")
                     break
-                # Gen cap for SC-II phase
-                if (generation - sc2_start_gen) >= SOFT_REFINE_GENS:
+                # Gen cap for SC-II phase: Uses hardware-aware scaling
+                if (generation - sc2_start_gen) >= _soft_max:
                     print(f"✅ SC-II optimisation complete at Gen {generation}.")
                     break
             elif current_phase == 'sc1' and current_best.hard_conflicts == 0:

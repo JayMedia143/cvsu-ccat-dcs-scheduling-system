@@ -230,7 +230,9 @@ generation_status = {
     'sc2_violations': 0,
     'soft_score': 0,
     'done': False,
-    'stop_requested': False
+    'stop_requested': False,
+    'hardware': None,
+    'gen_per_sec': 0
 }
 section_courses = db.Table('section_courses',
     db.Column('section_id', db.Integer, db.ForeignKey('section.id'), primary_key=True),
@@ -4167,9 +4169,11 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
             generation_status['sc1_violations'] = stats.get('sc1_violations', 0)
             generation_status['sc2_violations'] = stats.get('sc2_violations', 0)
             generation_status['soft_score']    = stats['soft_score']
+            generation_status['gen_per_sec']   = stats.get('gen_per_sec', 0)
+            generation_status['hardware']      = stats.get('hardware')
             if stats.get('pop_size'):
                 generation_status['pop_size'] = stats['pop_size']
-            if 'best_chromosome' in stats:
+            if stats.get('best_chromosome'):
                 matrix = scheduler.get_visualization_matrix(stats['best_chromosome'])
                 generation_status['visual_matrix'] = matrix
             if generation_status['stop_requested']: raise Exception("StoppedByUser")
@@ -4467,6 +4471,8 @@ def start_generation():
         'stop_requested': False,  # <--- IMPORTANTE: WAG KALIMUTAN ITO
         'pop_size': None,
         'phase': 'init',
+        'hardware': None,
+        'gen_per_sec': 0
     }
     
     settings_db = get_settings()
@@ -4611,6 +4617,9 @@ def start_generation():
         fa_map=fa_map,
         blocked_slots=_blocked_slots,
     )
+    
+    # Associate hardware profile with status
+    generation_status['hardware'] = scheduler.hardware_profile
     
     # 3. START THREAD (pass semester so save/seed are scoped correctly)
     thread = threading.Thread(target=run_ga_in_background, args=(scheduler, target_semester))
