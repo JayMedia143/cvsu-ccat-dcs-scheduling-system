@@ -904,44 +904,79 @@ def dashboard():
         return render_template('dashboard.html', stats=stats)
 
     # ── Live Mode Dashboard ─────────────────────────────────────────────────
-    # 1. Bilangin ang mga basic data
-    total_courses = Course.query.count()
+    # Get Current Semester Filter
+    selected_semester = session.get('selected_semester', 'All')
+
+    # 1. Stat Card Counts (Filtered by Semester)
+    course_q = Course.query.filter_by(is_archived=False)
+    if selected_semester != 'All':
+        course_q = course_q.filter_by(semester_offered=selected_semester)
+    total_courses = course_q.count()
+
+    # Sections that have at least one course assigned in this semester's curriculum
+    section_q = Section.query.filter_by(is_archived=False)
+    if selected_semester != 'All':
+        section_q = (section_q
+                     .join(section_courses)
+                     .join(Course)
+                     .filter(Course.semester_offered == selected_semester)
+                     .distinct())
+    total_sections = section_q.count()
+
     total_faculty = Faculty.query.count()
-    total_rooms = Room.query.count()
-    total_sections = Section.query.count()
+    total_rooms   = Room.query.filter_by(is_archived=False).count()
     
-    # 2. COMPUTATION NG COMPLETION RATE (filtered by selected departments from generate schedule)
-    selected_depts = session.get('scheduled_depts', SCHEDULED_DEPARTMENTS)
-    dept_list = list(selected_depts) if selected_depts else list(SCHEDULED_DEPARTMENTS)
+    # 2. COMPLETION RATE (Scoped by Semester)
+    # FOR DASHBOARD OVERVIEW: We want the total completion across ALL departments in that semester.
+    # This provides a true campus-wide accurately as requested by the user.
+    all_depts_q = db.session.query(Course.department).filter(Course.is_archived == False)
+    if selected_semester != 'All':
+        all_depts_q = all_depts_q.filter(Course.semester_offered == selected_semester)
+    dept_list = [d[0] for d in all_depts_q.distinct().all() if d[0]]
+    
+    print(f"DEBUG DASHBOARD: semester={selected_semester}, dept_list={dept_list}")
 
+    # total_needed calculation
     from sqlalchemy import text as sa_text
-    # total_needed = expected gene count for selected departments only
-    placeholders = ','.join([f':d{i}' for i in range(len(dept_list))])
-    dept_params  = {f'd{i}': v for i, v in enumerate(dept_list)}
-    result = db.session.execute(sa_text(f"""
-        SELECT SUM(
-            CASE WHEN c.synchronous_lec_hours > 0 THEN 1 ELSE 0 END +
-            CASE WHEN c.synchronous_lab_hours > 0 THEN 1 ELSE 0 END +
-            CASE WHEN (c.asynchronous_lec_hours > 0 OR c.asynchronous_lab_hours > 0) THEN 1 ELSE 0 END
-        ) FROM section_courses sc
-        JOIN section s ON sc.section_id = s.id
-        JOIN course c ON sc.course_id = c.id
-        WHERE s.is_archived = 0 AND c.is_archived = 0
-          AND c.department IN ({placeholders})
-    """), dept_params).fetchone()
-    total_needed = int(result[0] or 0)
+    total_needed = 0
+    if dept_list:
+        placeholders = ','.join([f':d{i}' for i in range(len(dept_list))])
+        params = {f'd{i}': v for i, v in enumerate(dept_list)}
 
-    # total_scheduled = only classes whose course belongs to selected departments
-    total_scheduled = (
-        db.session.query(ScheduledClass)
-        .join(Course, ScheduledClass.course_id == Course.id)
-        .filter(Course.department.in_(dept_list))
-        .count()
-    )
+        sql = f"""
+            SELECT SUM(
+                CASE WHEN c.synchronous_lec_hours > 0 THEN 1 ELSE 0 END +
+                CASE WHEN c.synchronous_lab_hours > 0 THEN 1 ELSE 0 END +
+                CASE WHEN (c.asynchronous_lec_hours > 0 OR c.asynchronous_lab_hours > 0) THEN 1 ELSE 0 END
+            ) FROM section_courses sc
+            JOIN section s ON sc.section_id = s.id
+            JOIN course c ON sc.course_id = c.id
+            WHERE s.is_archived = 0 AND c.is_archived = 0
+              AND c.department IN ({placeholders})
+        """
+        if selected_semester != 'All':
+            sql += " AND c.semester_offered = :semester"
+            params['semester'] = selected_semester
+
+        result = db.session.execute(sa_text(sql), params).fetchone()
+        total_needed = int(result[0] or 0)
+
+    # total_scheduled calculation
+    total_scheduled = 0
+    if dept_list:
+        sched_q = (db.session.query(ScheduledClass)
+                   .join(Course, ScheduledClass.course_id == Course.id)
+                   .filter(Course.department.in_(dept_list)))
+        if selected_semester != 'All':
+            sched_q = sched_q.filter(ScheduledClass.semester == selected_semester)
+        total_scheduled = sched_q.count()
 
     completion_rate = 0
     if total_needed > 0:
         completion_rate = min(100, int((total_scheduled / total_needed) * 100))
+    elif total_courses > 0 and total_needed == 0:
+        # Avoid showing 0% if no section-courses are mapped yet but courses exist
+        completion_rate = 0 
 
     stats = {
         'courses': total_courses,
@@ -1426,8 +1461,56 @@ def delete_code_rule_forever(rule_id):
 @login_required
 @role_required('admin', 'superadmin')
 def code_rules_archive():
-    archived_rules = CodePrefixRule.query.filter_by(is_archived=True).order_by(CodePrefixRule.code).all()
-    return render_template('code_rules_archive.html', archived_rules=archived_rules)
+    search_query = request.args.get('search', '').strip()
+    sort_by = request.args.get('sort', 'default')
+    page = request.args.get('page', 1, type=int)
+
+    query = CodePrefixRule.query.filter_by(is_archived=True)
+    if search_query:
+        query = query.filter(
+            db.or_(
+                CodePrefixRule.code.ilike(f'%{search_query}%'),
+                CodePrefixRule.department.ilike(f'%{search_query}%')
+            )
+        )
+    if sort_by == 'newest':
+        query = query.order_by(CodePrefixRule.id.desc())
+    else:
+        query = query.order_by(CodePrefixRule.code)
+
+    pagination = query.paginate(page=page, per_page=20, error_out=False)
+    archived_rules = pagination.items
+
+    return render_template('code_rules_archive.html',
+        archived_rules=archived_rules,
+        pagination=pagination,
+        current_sort=sort_by,
+        search_query=search_query)
+
+
+@app.route('/manage/courses/code-assignment/bulk-restore', methods=['POST'])
+@login_required
+@role_required('admin', 'superadmin')
+def bulk_restore_code_rules():
+    ids = request.form.getlist('row_ids')
+    if ids:
+        CodePrefixRule.query.filter(CodePrefixRule.id.in_(ids)).update({'is_archived': False}, synchronize_session=False)
+        db.session.commit()
+        flash(f'{len(ids)} rule(s) restored.', 'success')
+    return redirect(url_for('code_rules_archive'))
+
+
+@app.route('/manage/courses/code-assignment/bulk-delete', methods=['POST'])
+@login_required
+@role_required('admin', 'superadmin')
+def bulk_delete_code_rules():
+    ids = request.form.getlist('row_ids')
+    if ids:
+        CodePrefixRule.query.filter(CodePrefixRule.id.in_(ids)).delete(synchronize_session=False)
+        db.session.commit()
+        flash(f'{len(ids)} rule(s) permanently deleted.', 'danger')
+    return redirect(url_for('code_rules_archive'))
+
 
 @app.route('/api/prefix-courses')
 @login_required
@@ -2922,10 +3005,17 @@ def view_timetable():
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
         
-        # 1. Fetch historical dropdown data
-        all_sections = get_archive_entities(archive_id, 'Section')
-        all_faculty  = get_archive_entities(archive_id, 'Faculty')
-        all_rooms    = get_archive_entities(archive_id, 'Room')
+        # 1. Fetch historical dropdown data (sorted A-Z, T.B.A. last)
+        _sec_raw = get_archive_entities(archive_id, 'Section')
+        _fac_raw = get_archive_entities(archive_id, 'Faculty')
+        _rom_raw = get_archive_entities(archive_id, 'Room')
+        all_sections = sorted(_sec_raw, key=lambda s: s.section_name)
+        _fac_sorted  = sorted(_fac_raw, key=lambda f: f.full_name)
+        all_faculty  = [f for f in _fac_sorted if not f.full_name.startswith('T.B.A.')] + \
+                       [f for f in _fac_sorted if f.full_name.startswith('T.B.A.')]
+        _rom_sorted  = sorted(_rom_raw, key=lambda r: r.room_name)
+        all_rooms    = [r for r in _rom_sorted if r.room_name != 'T.B.A.'] + \
+                       [r for r in _rom_sorted if r.room_name == 'T.B.A.']
         
         # 2. Get target name for filtering
         selected_name = "Historical Schedule"
@@ -2983,9 +3073,13 @@ def view_timetable():
         default_sem = available_semesters[0] if available_semesters else '1st Semester'
         current_semester = request.args.get('semester', default_sem)
 
-        all_sections = Section.query.order_by(Section.year_level, Section.section_name).all()
-        all_faculty = Faculty.query.order_by(Faculty.full_name).all()
-        all_rooms = Room.query.order_by(Room.room_name).all()
+        all_sections = Section.query.filter_by(is_archived=False).order_by(Section.year_level, Section.section_name).all()
+        _fac_live    = Faculty.query.filter_by(is_archived=False).order_by(Faculty.full_name).all()
+        all_faculty  = [f for f in _fac_live if not f.full_name.startswith('T.B.A.')] + \
+                       [f for f in _fac_live if f.full_name.startswith('T.B.A.')]
+        _rom_live    = Room.query.filter_by(is_archived=False).order_by(Room.room_name).all()
+        all_rooms    = [r for r in _rom_live if r.room_name != 'T.B.A.'] + \
+                       [r for r in _rom_live if r.room_name == 'T.B.A.']
 
         query = ScheduledClass.query.filter_by(semester=current_semester)
         selected_name = "Master Schedule"
@@ -3220,9 +3314,7 @@ def api_layout_variables(layout_type):
 @role_required('admin', 'superadmin')
 def api_room_utilization():
     """Return per-room utilization stats based on currently saved ScheduledClasses.
-
-    Each room's utilization = (scheduled hours) / (total available hours) × 100.
-    Total available hours = operating_hours_per_day × number_of_active_days.
+    Now respects the global semester filter and provides total class counts.
     """
     settings  = get_settings()
     start_h   = settings.start_hour if settings else 7
@@ -3231,30 +3323,41 @@ def api_room_utilization():
     active_days = len(settings.allowed_days.split(',')) if settings and settings.allowed_days else 6
     total_avail_h = day_hours * active_days   # per-room available hours per week
 
-    # Gather all non-null room schedules
-    schedules = (ScheduledClass.query
-                 .filter(ScheduledClass.room_id.isnot(None))
-                 .all())
+    # 1. Get Global Semester Filter
+    selected_sem = session.get('selected_semester', 'All')
 
-    # Accumulate used hours per room
+    # 2. Count Total Scheduled Classes (Regardless of room)
+    total_q = ScheduledClass.query
+    if selected_sem != 'All':
+        total_q = total_q.filter_by(semester=selected_sem)
+    total_scheduled_classes = total_q.count()
+
+    # 3. Gather room schedules filtered by semester
+    room_q = ScheduledClass.query.filter(ScheduledClass.room_id.isnot(None))
+    if selected_sem != 'All':
+        room_q = room_q.filter_by(semester=selected_sem)
+    schedules = room_q.all()
+
+    # Accumulate used hours and class counts per room
     room_used  = {}   # room_id → float hours
+    room_count = {}   # room_id → int
     room_names = {}   # room_id → str
 
     for sc in schedules:
-        if sc.room_id is None:
-            continue
+        rid = sc.room_id
         try:
-            # start_time / end_time stored as "HH:MM"
             sh, sm = map(int, sc.start_time.split(':'))
             eh, em = map(int, sc.end_time.split(':'))
             dur_h  = (eh * 60 + em - sh * 60 - sm) / 60.0
         except Exception:
             dur_h = 0.0
-        room_used[sc.room_id] = room_used.get(sc.room_id, 0.0) + dur_h
-        if sc.room_id not in room_names and sc.room:
-            room_names[sc.room_id] = sc.room.room_name
+        
+        room_used[rid] = room_used.get(rid, 0.0) + dur_h
+        room_count[rid] = room_count.get(rid, 0) + 1
+        if rid not in room_names and sc.room:
+            room_names[rid] = sc.room.room_name
 
-    # All rooms (active, non-TBA)
+    # All active rooms (non-TBA)
     all_rooms = Room.query.filter(
         Room.is_archived == False,
         Room.room_name != 'T.B.A.'
@@ -3266,6 +3369,7 @@ def api_room_utilization():
 
     for r in all_rooms:
         used_h  = room_used.get(r.id, 0.0)
+        c_count = room_count.get(r.id, 0)
         pct     = round(min(used_h / total_avail_h * 100, 100), 1) if total_avail_h > 0 else 0.0
         rooms_data.append({
             'room_id':   r.id,
@@ -3274,6 +3378,7 @@ def api_room_utilization():
             'used_hours':  round(used_h, 1),
             'avail_hours': total_avail_h,
             'utilization': pct,
+            'class_count': c_count
         })
         total_used_sum  += used_h
         total_avail_sum += total_avail_h
@@ -3282,12 +3387,14 @@ def api_room_utilization():
 
     return jsonify({
         'overall_utilization': overall_pct,
+        'total_scheduled_classes': total_scheduled_classes,
         'rooms': rooms_data,
         'settings': {
             'start_hour': start_h,
             'end_hour':   end_h,
             'day_hours':  day_hours,
             'active_days': active_days,
+            'selected_semester': selected_sem
         }
     })
 

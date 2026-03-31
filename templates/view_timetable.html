@@ -270,11 +270,11 @@
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.2);
-        padding: 10px 20px;
+        padding: 8px 14px;
         border-radius: 50px;
         display: flex;
         align-items: center;
-        gap: 15px;
+        gap: 8px;
         box-shadow: 0 8px 32px rgba(0,0,0,0.1);
         z-index: 1000;
         transition: all 0.3s ease;
@@ -380,19 +380,27 @@
     </div>
     
     <div class="hud-item border-end pe-3">
+        <span class="hud-label">Sort:</span>
+        <select id="sortSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold" onchange="applySort()">
+            <option value="asc">A → Z</option>
+            <option value="desc">Z → A</option>
+        </select>
+    </div>
+
+    <div class="hud-item border-end pe-3">
         <span class="hud-label">Search:</span>
-        <div class="input-group input-group-sm" style="width: 200px;">
+        <div class="input-group input-group-sm" style="width: 160px;">
             <input type="text" id="canvasSearch" class="form-control border-0 bg-transparent" placeholder="Find schedule..." onkeyup="searchCanvas(this.value)">
             <span class="input-group-text border-0 bg-transparent"><i class="bi bi-search"></i></span>
         </div>
     </div>
 
-    <div class="hud-item">
-        <button class="btn btn-sm btn-success rounded-pill px-3 fw-bold" onclick="resetView()" title="Center Workspace">
-            <i class="bi bi-arrows-fullscreen me-1"></i> Center
+    <div class="hud-item d-flex align-items-center">
+        <button class="btn btn-sm btn-success rounded-pill px-4 fw-bold d-inline-flex align-items-center gap-2" style="white-space: nowrap;" onclick="resetView()" title="Center Workspace">
+            <i class="bi bi-arrows-fullscreen"></i> Center
         </button>
-        <button class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold ms-1" onclick="fitView()" title="Fit All Content">
-            <i class="bi bi-aspect-ratio me-1"></i> Fit All
+        <button class="btn btn-sm btn-outline-success rounded-pill px-4 fw-bold ms-1 d-inline-flex align-items-center gap-2" style="white-space: nowrap;" onclick="fitView()" title="Fit All Content">
+            <i class="bi bi-aspect-ratio"></i> Fit All
         </button>
         
         <div class="vr mx-2" style="height: 20px;"></div>
@@ -463,7 +471,20 @@
     const _sec = {{ sections_json | tojson | safe }};
     const _fac = {{ faculty_json  | tojson | safe }};
     const _rom = {{ rooms_json    | tojson | safe }};
-    const listMap = { section: _sec, faculty: _fac, room: _rom };
+    const listMap = { section: [..._sec], faculty: [..._fac], room: [..._rom] };
+
+    window.applySort = function() {
+        const dir = document.getElementById('sortSelect').value;
+        [['section', _sec], ['faculty', _fac], ['room', _rom]].forEach(([type, orig]) => {
+            const nonTba = orig.filter(x => !x.label.startsWith('T.B.A.'));
+            const tba    = orig.filter(x =>  x.label.startsWith('T.B.A.'));
+            nonTba.sort((a, b) => dir === 'asc'
+                ? a.label.localeCompare(b.label)
+                : b.label.localeCompare(a.label));
+            listMap[type] = [...nonTba, ...tba];
+        });
+        loadCanvas();
+    };
 
     let currentType = '{{ current_type }}';
     let currentSemester = '{{ current_semester }}';
@@ -813,7 +834,7 @@
     }
 
     window.addEventListener('load', () => {
-        loadCanvas();
+        applySort();
         resetView();
     });
 

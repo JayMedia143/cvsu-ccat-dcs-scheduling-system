@@ -38,18 +38,6 @@
     {% endif %}
 </div>
 
-<!-- Flash messages -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-{% for category, message in messages %}
-<div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
-    {{ message }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-{% endfor %}
-{% endif %}
-{% endwith %}
-
 <!-- HOW IT WORKS LEGEND -->
 <div class="card border shadow-sm mb-4">
     <div class="card-body py-2 px-4 d-flex align-items-center gap-4 flex-wrap" style="font-size:0.82rem;">
@@ -111,7 +99,7 @@
                         <td class="text-center pe-4">
                             {% if not is_hist %}
                             <button type="button" class="btn btn-link text-danger p-1" title="Move to Recycle Bin"
-                                onclick="archiveRule({{ rule.id }}, '{{ rule.code }}')">
+                                onclick="openArchiveRuleModal({{ rule.id }}, '{{ rule.code }}')">
                                 <i class="bi bi-trash"></i>
                             </button>
                             {% endif %}
@@ -236,7 +224,7 @@
                         <td class="text-center pe-4">
                             {% if not is_hist %}
                             <button type="button" class="btn btn-link text-danger p-1" title="Move to Recycle Bin"
-                                onclick="archiveRule({{ rule.id }}, '{{ rule.code }}')">
+                                onclick="openArchiveRuleModal({{ rule.id }}, '{{ rule.code }}')">
                                 <i class="bi bi-trash"></i>
                             </button>
                             {% endif %}
@@ -295,6 +283,28 @@
 
 <div style="height:80px;"></div>
 
+<!-- ============================= ARCHIVE RULE MODAL ============================= -->
+<div class="modal fade" id="archiveRuleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Move to Recycle Bin?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p>Are you sure you want to move rule <strong id="archiveRuleCode"></strong> to the recycle bin?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
+                <form id="archiveRuleForm" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-archive-confirm">Yes, Move to Recycle Bin</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ============================= COURSE PREVIEW MODAL ============================= -->
 <div class="modal fade" id="coursePreviewModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-below-nav modal-lg">
@@ -343,14 +353,11 @@
 
 {% block scripts %}
 <script>
-    // ===================== ARCHIVE RULE (avoids nested-form bug) =====================
-    function archiveRule(ruleId, code) {
-        if (!confirm(`Move rule "${code}" to recycle bin?`)) return;
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/manage/courses/code-assignment/archive/${ruleId}`;
-        document.body.appendChild(form);
-        form.submit();
+    // ===================== ARCHIVE RULE MODAL =====================
+    function openArchiveRuleModal(ruleId, code) {
+        document.getElementById('archiveRuleCode').textContent = code;
+        document.getElementById('archiveRuleForm').action = `/manage/courses/code-assignment/archive/${ruleId}`;
+        new bootstrap.Modal(document.getElementById('archiveRuleModal')).show();
     }
 
     // ===================== COURSE PREVIEW (BADGE CLICK) =====================

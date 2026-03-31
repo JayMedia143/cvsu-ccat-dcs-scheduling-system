@@ -109,8 +109,8 @@
             document.getElementById('util-subtitle').textContent =
                 `Operating hours: ${s.start_hour}:00–${s.end_hour}:00 · ${s.active_days} days/week (${s.day_hours}h/day per room)`;
 
-            // Classes stat (count rows)
-            document.getElementById('stat-classes').textContent = data.rooms.reduce((a, r) => a + (r.class_count || 0), 0);
+            // Classes stat (Use grand total from API)
+            document.getElementById('stat-classes').textContent = data.total_scheduled_classes || 0;
 
             // Table
             const tbody = document.getElementById('util-table-body');

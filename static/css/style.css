@@ -1447,7 +1447,8 @@ html.login-loading #page-loader { display: flex !important; }
 /* SELECTED STATE - FORCE GREEN */
 table.table tbody tr.course-row.selected td,
 table.table tbody tr.section-row.selected td,
-table.table tbody tr.faculty-row.selected td {
+table.table tbody tr.faculty-row.selected td,
+table.table tbody tr.rule-row.selected td {
     background-color: #e6f4ea !important;
     /* Light Green */
     transition: background-color 0.2s ease;
@@ -1456,7 +1457,8 @@ table.table tbody tr.faculty-row.selected td {
 /* Ensure hover doesn't remove the selection color */
 table.table tbody tr.course-row.selected:hover td,
 table.table tbody tr.section-row.selected:hover td,
-table.table tbody tr.faculty-row.selected:hover td {
+table.table tbody tr.faculty-row.selected:hover td,
+table.table tbody tr.rule-row.selected:hover td {
     background-color: #dcece0 !important;
     /* Slightly darker green on hover */
 }
@@ -2529,6 +2531,14 @@ table.table tbody tr.irreg-row.selected:hover td {
 .no-caret::after {
     display: none !important;
 }
+/* Profile/settings modals must appear above the historical-mode-banner (z-index: 1065) */
+#settingsModal,
+#changeUsernameModal,
+#changePasswordModal,
+#uploadProfilePicModal {
+    z-index: 1075 !important;
+}
+
 .dropdown-menu-primary .dropdown-item:hover {
     background-color: #f1f5f9;
 }
