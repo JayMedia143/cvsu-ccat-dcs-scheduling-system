@@ -180,8 +180,10 @@
                 <table class="table table-hover align-middle mb-0" id="roomTable">
                     <thead class="table-light">
                         <tr>
+                            {% if not is_hist %}
                             <th class="select-cell"><input class="form-check-input" type="checkbox"
                                     id="selectAllCheckbox"></th>
+                            {% endif %}
                             <th class="ps-2" style="width: 15%;">Room Name</th>
                             <th style="width: 15%;">Building</th>
                             <th class="text-center">Departments</th>
@@ -195,10 +197,12 @@
                     <tbody id="roomTableBody">
                         {% for room in rooms %}
                         <tr class="course-row room-row" data-id="{{ room.id }}">
+                            {% if not is_hist %}
                             <td class="select-cell">
                                 <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
                                     value="{{ room.id }}">
                             </td>
+                            {% endif %}
 
                             <td class="fw-bold text-dark ps-2">{{ room.room_name }}</td>
                             <td class="text-muted small">{{ room.building }}</td>
@@ -267,7 +271,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="9" class="text-center py-5 text-muted">No rooms found.</td>
+                            <td colspan="{% if is_hist %}8{% else %}9{% endif %}" class="text-center py-5 text-muted">No rooms found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -645,9 +649,9 @@
                 const row = cb.closest('tr');
                 if (cb.checked) {
                     count++;
-                    row.classList.add('selected');
+                    {% if not is_hist %}row.classList.add('selected');{% endif %}
                 } else {
-                    row.classList.remove('selected');
+                    {% if not is_hist %}row.classList.remove('selected');{% endif %}
                 }
             });
 

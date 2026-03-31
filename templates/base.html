@@ -273,10 +273,35 @@
                 Reports
             </a>
 
-            <a class="menu-item {% if 'student_portal' in request.endpoint %}active{% endif %}"
-                href="{{ url_for('student_portal') }}">
-                Portal
-            </a>
+            <!-- C. STUDENT PORTAL — also shown in archive mode -->
+            <div class="dropdown">
+                <a class="menu-item dropdown-toggle {% if request.endpoint in ['student_portal', 'student_schedule'] %}active{% endif %}"
+                    href="#" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                    <i class="bi bi-people me-1"></i> Portal
+                </a>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="{{ url_for('student_portal') }}">
+                            <i class="bi bi-box-arrow-up-right me-2"></i> Open Student Portal
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li class="px-3 py-2">
+                        <span class="text-muted small d-block mb-1">Share with students:</span>
+                        <div class="d-flex gap-2">
+                            <input type="text" class="form-control form-control-sm font-monospace"
+                                id="portalUrlInputArchive"
+                                value="{{ request.host_url }}student-portal"
+                                readonly style="font-size:0.72rem; min-width:0;">
+                            <button class="btn btn-sm btn-outline-secondary flex-shrink-0"
+                                onclick="navigator.clipboard.writeText(document.getElementById('portalUrlInputArchive').value); this.innerHTML='<i class=&quot;bi bi-check-lg&quot;></i>'; setTimeout(()=>this.innerHTML='<i class=&quot;bi bi-clipboard&quot;></i>',1500);"
+                                title="Copy URL">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </li>
+                </ul>
+            </div>
             {% endif %}
 
             {% else %}
@@ -799,8 +824,8 @@
                     </form>
                 </div>
                 <div class="modal-footer bg-light border-0">
-                    <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" id="archiveConfirmBtn" class="btn btn-warning px-4 fw-bold" onclick="startArchivingProcess(this)">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="archiveConfirmBtn" class="btn btn-warning px-4" onclick="startArchivingProcess(this)">
                         Create Archive <i class="bi bi-arrow-right ms-1"></i>
                     </button>
                 </div>

@@ -158,9 +158,11 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead>
                         <tr>
+                            {% if not is_hist %}
                             <th class="select-cell text-center" style="width: 40px;">
                                 <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
                             </th>
+                            {% endif %}
                             <th style="width: 14%;">STUDENT ID</th>
                             <th style="width: 24%;">FULL NAME</th>
                             <th style="width: 9%;" class="text-center">YEAR</th>
@@ -173,10 +175,12 @@
                     <tbody>
                         {% for student in students %}
                         <tr class="student-row" data-id="{{ student.id }}" data-irregular="{{ '1' if student.is_irregular else '0' }}">
+                            {% if not is_hist %}
                             <td class="select-cell text-center">
                                 <input class="form-check-input row-checkbox" type="checkbox"
                                     name="row_ids" value="{{ student.id }}">
                             </td>
+                            {% endif %}
                             <td class="fw-bold text-black font-monospace">{{ student.student_id }}</td>
                             <td class="fw-bold text-dark">{{ student.full_name }}</td>
                             <td class="text-center">
@@ -244,7 +248,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="8" class="text-center py-5 text-muted">No students found.</td>
+                            <td colspan="{% if is_hist %}7{% else %}8{% endif %}" class="text-center py-5 text-muted">No students found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -344,7 +348,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary px-4">Add Student</button>
+                    <button type="submit" class="btn btn-success px-4">Add Student</button>
                 </div>
             </form>
         </div>
@@ -364,9 +368,9 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger px-4"
+                <button type="button" class="btn btn-archive-confirm"
                     onclick="document.getElementById('bulkActionForm').action='{{ url_for('bulk_archive_students') }}'; document.getElementById('bulkActionForm').submit();">
-                    Yes, Move
+                    Yes, Move to Recycle Bin
                 </button>
             </div>
         </div>
@@ -426,7 +430,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+                    <button type="submit" class="btn btn-success px-4">Save Changes</button>
                 </div>
             </form>
         </div>
@@ -444,11 +448,11 @@
             <div class="modal-body p-4 text-center">
                 <p>Move <strong>{{ student.full_name }}</strong> to Recycle Bin?</p>
             </div>
-            <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
                 <form action="{{ url_for('archive_student', student_pk=student.id) }}" method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger px-4">Yes, Move</button>
+                    <button type="submit" class="btn btn-archive-confirm">Yes, Move to Recycle Bin</button>
                 </form>
             </div>
         </div>
@@ -460,7 +464,7 @@
 <div class="modal fade" id="irregConfirmModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
         <div class="modal-content">
-            <div class="modal-header border-0 pb-0">
+            <div class="modal-header">
                 <h5 class="modal-title">
                     <i class="bi bi-person-exclamation me-2" style="color:#7c3aed;"></i>
                     Confirm Action
@@ -476,9 +480,9 @@
                     </label>
                 </div>
             </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary px-4" onclick="doIrregConfirm()">Confirm</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success px-4" onclick="doIrregConfirm()">Confirm</button>
             </div>
         </div>
     </div>
@@ -543,8 +547,8 @@ document.addEventListener('DOMContentLoaded', function () {
         let count = 0;
         rowCheckboxes.forEach(cb => {
             const row = cb.closest('tr');
-            if (cb.checked) { count++; row.classList.add('selected'); }
-            else { row.classList.remove('selected'); }
+            if (cb.checked) { count++; {% if not is_hist %}row.classList.add('selected');{% endif %} }
+            else { {% if not is_hist %}row.classList.remove('selected');{% endif %} }
         });
         selectedCountSpan.textContent = count;
         if (bulkArchiveCount) bulkArchiveCount.textContent = count;

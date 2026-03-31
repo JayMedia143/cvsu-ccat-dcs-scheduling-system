@@ -200,9 +200,11 @@
             <table class="table table-hover align-middle mb-0" id="coursesTable">
                 <thead class="table-light">
                     <tr>
+                        {% if not is_hist %}
                         <th class="select-cell">
                             <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
                         </th>
+                        {% endif %}
 
                         <!-- 1. CODE -->
                         <th class="ps-2" style="width: 100px;">Code</th>
@@ -233,10 +235,12 @@
                 <tbody>
                     {% for course in courses %}
                     <tr class="course-row" data-id="{{ course.id }}">
+                        {% if not is_hist %}
                         <td class="select-cell">
                             <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
                                 value="{{ course.id }}">
                         </td>
+                        {% endif %}
 
                         <!-- 1. CODE -->
                         <td class="fw-bold text-dark ps-2">{{ course.course_code }}</td>
@@ -462,7 +466,8 @@
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
-                    <button type="submit" class="btn btn-primary px-4">Save</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success px-4">Save</button>
                 </div>
             </form>
         </div>
@@ -571,7 +576,8 @@
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
-                    <button type="submit" class="btn btn-primary px-4">Update</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success px-4">Update</button>
                 </div>
             </form>
         </div>
@@ -643,6 +649,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-danger">Import & Auto-Assign</button>
                 </div>
             </form>
@@ -698,7 +705,8 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary">Import & Auto-Assign</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success px-4">Import & Auto-Assign</button>
                 </div>
             </form>
         </div>
@@ -759,9 +767,9 @@
                 const row = cb.closest('tr');
                 if (cb.checked) {
                     count++;
-                    row.classList.add('selected');
+                    {% if not is_hist %}row.classList.add('selected');{% endif %}
                 } else {
-                    row.classList.remove('selected');
+                    {% if not is_hist %}row.classList.remove('selected');{% endif %}
                 }
             });
 

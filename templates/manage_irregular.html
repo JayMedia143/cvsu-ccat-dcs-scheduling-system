@@ -168,10 +168,12 @@
             <table class="table table-hover mb-0" style="font-size:0.9rem;">
                 <thead class="table-light">
                     <tr>
+                        {% if not is_hist %}
                         <th style="width:40px;" class="text-center border-bottom">
                             <input class="form-check-input" type="checkbox" id="selectAllChk"
                                 onchange="toggleSelectAll(this)">
                         </th>
+                        {% endif %}
                         <th class="border-bottom" style="width:14%;">STUDENT ID</th>
                         <th class="border-bottom" style="width:26%;">FULL NAME</th>
                         <th class="border-bottom text-center" style="width:9%;">YEAR</th>
@@ -185,10 +187,12 @@
                     {% for student in students %}
                     {% set a = assignments.get(student.id) %}
                     <tr class="irreg-row" data-id="{{ student.id }}" style="cursor:pointer;">
+                        {% if not is_hist %}
                         <td class="text-center" onclick="event.stopPropagation()">
                             <input class="form-check-input row-checkbox" type="checkbox"
                                 value="{{ student.id }}" onchange="updateSelection()">
                         </td>
+                        {% endif %}
                         <td class="fw-bold font-monospace">{{ student.student_id }}</td>
                         <td class="fw-bold text-dark">
                             {{ student.full_name }}
@@ -239,7 +243,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="8" class="text-center py-5 text-muted">
+                        <td colspan="{% if is_hist %}7{% else %}8{% endif %}" class="text-center py-5 text-muted">
                             <i class="bi bi-person-exclamation fs-2 d-block mb-2 opacity-25"></i>
                             No irregular students found.
                             {% if search_query or current_filter_by %}
@@ -386,9 +390,9 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="modal-cancel-btn" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                 {% if not is_hist %}
-                <button type="button" class="btn btn-primary" onclick="submitAddIrreg()">
+                <button type="button" class="btn btn-success px-4" onclick="submitAddIrreg()">
                     <i class="bi bi-person-exclamation me-1"></i>Mark as Irregular
                 </button>
                 {% endif %}
@@ -401,7 +405,7 @@
 <div class="modal fade" id="irregConfirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
         <div class="modal-content">
-            <div class="modal-header border-0 pb-0">
+            <div class="modal-header">
                 <h5 class="modal-title">
                     <i class="bi bi-person-exclamation me-2" style="color:#7c3aed;"></i>Confirm Action
                 </h5>
@@ -416,9 +420,9 @@
                     </label>
                 </div>
             </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="modal-cancel-btn" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="doIrregConfirm()">Confirm</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success px-4" onclick="doIrregConfirm()">Confirm</button>
             </div>
         </div>
     </div>
@@ -479,8 +483,8 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="runBatch()">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success px-4" onclick="runBatch()">
                     <i class="bi bi-play-fill me-1"></i>Run for All Selected
                 </button>
             </div>
@@ -515,7 +519,7 @@ function updateSelection() {
     // Green highlight
     document.querySelectorAll('.irreg-row').forEach(row => {
         const cb = row.querySelector('.row-checkbox');
-        if (cb && cb.checked) row.classList.add('selected'); else row.classList.remove('selected');
+        if (cb && cb.checked) { {% if not is_hist %}row.classList.add('selected');{% endif %} } else { {% if not is_hist %}row.classList.remove('selected');{% endif %} }
     });
 }
 

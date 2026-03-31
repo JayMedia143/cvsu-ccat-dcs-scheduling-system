@@ -1088,6 +1088,8 @@ html.login-loading #page-loader { display: flex !important; }
 
 /* 3. MODAL HEADERS (Green Top) */
 .modal-header {
+    display: flex;
+    align-items: center;
     border-bottom: 1px solid #dadce0;
     background-color: #f8f9fa;
 }
@@ -1601,8 +1603,10 @@ table.table tbody tr.irreg-row.selected:hover td {
 }
 
 .modal-header {
+    display: flex;
+    align-items: center;
     border-bottom: none;
-    padding: 24px 24px 0 24px;
+    padding: 14px 24px 14px 24px;
 }
 
 .modal-title {
@@ -1619,19 +1623,34 @@ table.table tbody tr.irreg-row.selected:hover td {
 
 .modal-footer {
     border-top: none;
-    padding: 8px 24px 24px 24px;
+    background-color: #f8f9fa !important;
+    padding: 14px 24px 14px 24px;
     justify-content: flex-end;
     gap: 10px;
+}
+
+.modal-footer .btn {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.modal-footer .btn-light {
+    padding: 8px 24px;
+}
+
+.modal-footer .btn-light:hover {
+    background-color: #e2e6ea;
+    border-color: #e2e6ea;
+    color: #212529;
 }
 
 /* Archive/Delete Confirm Button (Red) */
 .btn-archive-confirm {
     background-color: #d93025;
     color: white;
-    font-weight: 500;
     border: none;
     padding: 8px 24px;
-    border-radius: 4px;
+    border-radius: 0.375rem;
     transition: background 0.2s;
 }
 
@@ -1639,21 +1658,53 @@ table.table tbody tr.irreg-row.selected:hover td {
     background-color: #b31412;
 }
 
-/* Cancel Button */
+/* Cancel Button — standardized to btn-light */
 .btn-archive-cancel {
-    color: #5f6368;
-    font-weight: 500;
-    background: white;
-    border: 1px solid #dadce0;
+    color: #212529;
+    background-color: #f8f9fa;
+    border-color: #f8f9fa;
     padding: 8px 24px;
-    border-radius: 4px;
+    border-radius: 0.375rem;
     transition: background 0.2s;
 }
 
 .btn-archive-cancel:hover {
-    background-color: #f1f3f4;
-    color: #202124;
+    background-color: #e2e6ea;
+    border-color: #e2e6ea;
+    color: #212529;
 }
+
+/* modal-cancel-btn — used in irregular modals */
+.modal-cancel-btn {
+    color: #212529;
+    background-color: #f8f9fa;
+    border-color: #f8f9fa;
+    border-radius: 0.375rem;
+    padding: 6px 12px;
+    font-size: 1rem;
+    transition: background 0.2s;
+}
+
+.modal-cancel-btn:hover {
+    background-color: #e2e6ea;
+    border-color: #e2e6ea;
+}
+
+/* btn-secondary / btn-outline-secondary in modal footers → btn-light style */
+.modal-footer .btn-secondary,
+.modal-footer .btn-outline-secondary {
+    color: #212529;
+    background-color: #f8f9fa;
+    border-color: #f8f9fa;
+}
+
+.modal-footer .btn-secondary:hover,
+.modal-footer .btn-outline-secondary:hover {
+    background-color: #e2e6ea;
+    border-color: #e2e6ea;
+    color: #212529;
+}
+
 
 /* =================================================================== */
 /*           GOOGLE STYLE CONTROLS (Checkbox & Pagination)             */

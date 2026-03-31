@@ -1112,6 +1112,12 @@ def manage_courses():
 @login_required
 @role_required('admin', 'superadmin')
 def add_course():
+    course_code = request.form.get('course_code')
+    existing = Course.query.filter_by(course_code=course_code, is_archived=False).first()
+    if existing:
+        flash(f"Course code '{course_code}' already exists!", "danger")
+        return redirect(url_for('manage_courses'))
+
     db.session.add(Course(
         course_code=request.form.get('course_code'), 
         course_name=request.form.get('course_name'), 
@@ -1133,7 +1139,12 @@ def add_course():
 @role_required('admin', 'superadmin')
 def update_course(course_id):
     course = Course.query.get_or_404(course_id)
-    course.course_code = request.form.get('course_code')
+    new_code = request.form.get('course_code')
+    existing = Course.query.filter(Course.course_code == new_code, Course.id != course_id, Course.is_archived == False).first()
+    if existing:
+        flash(f"Course code '{new_code}' is already taken.", "danger")
+        return redirect(url_for('manage_courses'))
+    course.course_code = new_code
     course.course_name = request.form.get('course_name')
     course.program = request.form.get('program') # <--- ADD THIS
     course.department = request.form.get('department')
@@ -1624,6 +1635,11 @@ def add_room():
         if capacity <= 0:
             flash('Error: Room capacity must be greater than 0.', 'danger')
             return redirect(url_for('manage_rooms'))
+        room_name = request.form.get('room_name')
+        existing = Room.query.filter_by(room_name=room_name, is_archived=False).first()
+        if existing:
+            flash(f"Error: Room name '{room_name}' already exists!", "danger")
+            return redirect(url_for('manage_rooms'))
             
         db.session.add(Room(
             room_name=request.form.get('room_name'),
@@ -1670,7 +1686,12 @@ def update_room(room_id):
     if room.room_name == 'T.B.A.':
         flash('T.B.A. room cannot be edited.', 'warning')
         return redirect(url_for('manage_rooms'))
-    room.room_name = request.form.get('room_name')
+    new_name = request.form.get('room_name')
+    existing = Room.query.filter(Room.room_name == new_name, Room.id != room_id, Room.is_archived == False).first()
+    if existing:
+        flash(f"Error: Room name '{new_name}' is already taken.", 'danger')
+        return redirect(url_for('manage_rooms'))
+    room.room_name = new_name
     room.building = request.form.get('building')
     room.capabilities = ",".join(request.form.getlist('capabilities'))
     room.status = request.form.get('status')
@@ -2042,6 +2063,12 @@ def manage_sections():
 @login_required
 @role_required('admin', 'superadmin')
 def add_section():
+    section_name = request.form.get('section_name')
+    existing = Section.query.filter_by(section_name=section_name, is_archived=False).first()
+    if existing:
+        flash(f"Section name '{section_name}' already exists!", "danger")
+        return redirect(url_for('manage_sections'))
+
     db.session.add(Section(section_name=request.form.get('section_name'), year_level=int(request.form.get('year_level')), number_of_students=int(request.form.get('number_of_students', 40))))
     db.session.commit()
     return redirect(url_for('manage_sections'))
@@ -2051,7 +2078,13 @@ def add_section():
 @role_required('admin', 'superadmin')
 def update_section(section_id):
     section = Section.query.get_or_404(section_id)
-    section.section_name, section.year_level, section.number_of_students = request.form.get('section_name'), int(request.form.get('year_level')), int(request.form.get('number_of_students', 40))
+    new_name = request.form.get('section_name')
+    existing = Section.query.filter(Section.section_name == new_name, Section.id != section_id, Section.is_archived == False).first()
+    if existing:
+        flash(f"Error: Section name '{new_name}' is already taken.", 'danger')
+        return redirect(url_for('manage_sections'))
+        
+    section.section_name, section.year_level, section.number_of_students = new_name, int(request.form.get('year_level')), int(request.form.get('number_of_students', 40))
     db.session.commit()
     return redirect(url_for('manage_sections'))
 
@@ -2313,7 +2346,7 @@ def manage_faculty():
 
         return render_template(
             'manage_faculty.html',
-            faculty=items,
+            faculty_list=items,
             pagination=pagination,
             courses_by_sem=courses_by_sem,
             all_sections_json=all_sections_json,
@@ -2323,7 +2356,14 @@ def manage_faculty():
             selected_semester=selected_semester,
             current_filter_by=filter_by,
             current_filter_val=filter_val,
-            split_data_by_faculty={} # Assignment logic hidden in Ghost Mode
+            split_data_by_faculty={}, # Assignment logic hidden in Ghost Mode
+            faculty_profiles=[],
+            workload_map={},
+            sc_course_ids_by_faculty={},
+            sc_pairs_by_faculty={},
+            others_taken_by_faculty={},
+            fa_split_hours_map={},
+            all_faculty_for_modals=items,
         )
 
     # ── Live Mode ───────────────────────────────────────────────────────────
@@ -2585,6 +2625,12 @@ def add_faculty():
             flash('Error: Max weekly hours must be between 1 and 60.', 'danger')
             return redirect(url_for('manage_faculty'))
 
+        employee_id = request.form.get('employee_id')
+        existing = Faculty.query.filter_by(employee_id=employee_id, is_archived=False).first()
+        if existing:
+            flash(f"Error: Faculty Employee ID '{employee_id}' already exists!", "danger")
+            return redirect(url_for('manage_faculty'))
+
         avail_days = ','.join(request.form.getlist('available_days')) or 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'
         db.session.add(Faculty(
             employee_id=request.form.get('employee_id'),
@@ -2632,7 +2678,12 @@ def quick_add_tba_faculty():
 @role_required('admin', 'superadmin')
 def update_faculty(faculty_id):
     faculty = Faculty.query.get_or_404(faculty_id)
-    faculty.employee_id = request.form.get('employee_id')
+    new_id = request.form.get('employee_id')
+    existing = Faculty.query.filter(Faculty.employee_id == new_id, Faculty.id != faculty_id, Faculty.is_archived == False).first()
+    if existing:
+        flash(f"Faculty Employee ID '{new_id}' is already taken.", "danger")
+        return redirect(url_for('manage_faculty'))
+    faculty.employee_id = new_id
     faculty.full_name = request.form.get('full_name')
     faculty.department = request.form.get('department')
     faculty.employment_status = request.form.get('employment_status')
@@ -11392,7 +11443,7 @@ def manage_irregular():
     # ── Time Machine: Historical Mode ───────────────────────────────────────
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
-        all_objs = [o for o in get_archive_entities(archive_id, 'Student') if getattr(o, 'is_irregular', False)]
+        all_objs = get_archive_entities(archive_id, 'IrregularStudent')
         
         # 1. Apply Filtering
         if search_query:

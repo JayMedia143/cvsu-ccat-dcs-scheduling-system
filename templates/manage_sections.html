@@ -176,9 +176,11 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead>
                         <tr>
+                            {% if not is_hist %}
                             <th class="select-cell text-center" style="width: 40px;">
                                 <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
                             </th>
+                            {% endif %}
                             <!-- Adjusted Widths for Compact Look -->
                             <th style="width: 20%;">SECTION NAME</th>
                             <th style="width: 12%;" class="text-center">YEAR LEVEL</th>
@@ -190,10 +192,12 @@
                     <tbody class="section-table-body">
                         {% for section in sections %}
                         <tr class="section-row" data-id="{{ section.id }}">
+                            {% if not is_hist %}
                             <td class="select-cell text-center">
                                 <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
                                     value="{{ section.id }}">
                             </td>
+                            {% endif %}
 
                             <!-- Pure Black Section Name -->
                             <td class="fw-bold text-black">{{ section.section_name }}</td>
@@ -266,7 +270,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">No sections found.</td>
+                            <td colspan="{% if is_hist %}5{% else %}6{% endif %}" class="text-center py-5 text-muted">No sections found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -495,10 +499,9 @@
                         <i class="bi bi-info-circle me-1"></i> Review selections before saving.
                     </div>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-outline-secondary px-4 fw-bold"
+                        <button type="button" class="btn btn-light"
                             data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn text-white px-5 fw-bold shadow-sm"
-                            style="background-color: #217346; font-size: 1rem;">
+                        <button type="submit" class="btn btn-success px-4">
                             <i class="bi bi-save2-fill me-2"></i> Save Assignments
                         </button>
                     </div>
@@ -594,7 +597,8 @@
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
-                    <button type="submit" class="btn btn-primary px-4">Save</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success px-4">Save</button>
                 </div>
             </form>
         </div>
@@ -634,7 +638,8 @@
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
-                    <button type="submit" class="btn btn-primary px-4">Update</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success px-4">Update</button>
                 </div>
             </form>
         </div>
@@ -738,7 +743,7 @@
 
             <!-- Footer — back button only (no "proceed anyway") -->
             <div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end">
-                <button type="button" class="btn btn-danger px-5 fw-bold rounded-pill shadow-sm"
+                <button type="button" class="btn btn-danger px-4"
                     data-bs-dismiss="modal">
                     <i class="bi bi-arrow-left me-2"></i> Go Back & Fix
                 </button>
@@ -815,9 +820,9 @@
                 const row = cb.closest('tr');
                 if (cb.checked) {
                     count++;
-                    row.classList.add('selected');
+                    {% if not is_hist %}row.classList.add('selected');{% endif %}
                 } else {
-                    row.classList.remove('selected');
+                    {% if not is_hist %}row.classList.remove('selected');{% endif %}
                 }
             });
 
