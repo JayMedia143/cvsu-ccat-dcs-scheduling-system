@@ -169,18 +169,18 @@
                 <thead class="table-light">
                     <tr>
                         {% if not is_hist %}
-                        <th style="width:40px;" class="text-center border-bottom">
+                        <th style="width: 1%; white-space: nowrap;" class="text-center ps-0 pe-0">
                             <input class="form-check-input" type="checkbox" id="selectAllChk"
                                 onchange="toggleSelectAll(this)">
                         </th>
                         {% endif %}
-                        <th class="border-bottom" style="width:14%;">STUDENT ID</th>
-                        <th class="border-bottom" style="width:26%;">FULL NAME</th>
-                        <th class="border-bottom text-center" style="width:9%;">YEAR</th>
-                        <th class="border-bottom" style="width:16%;">HOME SECTION</th>
-                        <th class="border-bottom" style="width:14%;">SUBJECTS</th>
-                        <th class="border-bottom" style="width:10%;">SEMESTER</th>
-                        <th class="border-bottom text-center" style="width:11%;">ACTIONS</th>
+                        <th class="ps-0 text-start" style="width: 14%;">STUDENT ID</th>
+                        <th class="text-start" style="width: 26%;">FULL NAME</th>
+                        <th class="text-center" style="width: 9%;">YEAR</th>
+                        <th class="text-start" style="width: 16%;">HOME SECTION</th>
+                        <th class="text-start" style="width: 14%;">SUBJECTS</th>
+                        <th class="text-start" style="width: 10%;">SEMESTER</th>
+                        <th class="text-center pe-0" style="width: 1%; white-space: nowrap;">ACTIONS</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -188,13 +188,13 @@
                     {% set a = assignments.get(student.id) %}
                     <tr class="irreg-row" data-id="{{ student.id }}" style="cursor:pointer;">
                         {% if not is_hist %}
-                        <td class="text-center" onclick="event.stopPropagation()">
+                        <td class="text-center ps-0 pe-0" onclick="event.stopPropagation()">
                             <input class="form-check-input row-checkbox" type="checkbox"
                                 value="{{ student.id }}" onchange="updateSelection()">
                         </td>
                         {% endif %}
-                        <td class="fw-bold font-monospace">{{ student.student_id }}</td>
-                        <td class="fw-bold text-dark">
+                        <td class="fw-bold font-monospace ps-0 text-start">{% if is_hist and not student.student_id %}&nbsp;{% endif %}{{ student.student_id }}</td>
+                        <td class="fw-bold text-dark text-start">
                             {{ student.full_name }}
                             <span class="badge ms-1" style="background:#7c3aed;font-size:0.62rem;">IRREG</span>
                         </td>
@@ -207,24 +207,24 @@
                                 {% else %}{{ student.year_level }}{% endif %}
                             </span>
                         </td>
-                        <td>
+                        <td class="text-start">
                             {% if student.section %}
                             <span class="badge-clean">{{ student.section.section_name }}</span>
                             {% else %}
                             <span class="text-muted small fst-italic">Unassigned</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td class="text-start">
                             {% if a and a.assignments_json and a.assignments_json != '[]' %}
                             <span class="badge bg-success-subtle text-success border border-success-subtle">Assigned</span>
                             {% else %}
                             <span class="text-muted small fst-italic">Not set</span>
                             {% endif %}
                         </td>
-                        <td class="text-muted small">
+                        <td class="text-muted small text-start">
                             {% if a %}{{ a.semester }}{% else %}—{% endif %}
                         </td>
-                        <td class="text-center" onclick="event.stopPropagation()">
+                        <td class="text-center pe-0" onclick="event.stopPropagation()">
                             <button type="button" class="btn-icon view"
                                 onclick="viewSchedule('student', {{ student.id }})" title="View Schedule">
                                 <i class="bi bi-calendar-week"></i>

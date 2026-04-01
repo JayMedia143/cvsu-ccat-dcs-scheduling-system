@@ -909,17 +909,11 @@
                 <i class="bi bi-chevron-down" style="font-size:.65rem;opacity:.6"></i>
             </button>
             {% if not is_hist %}
-            {% if session.get('role') in ['admin','superadmin'] %}
             <button class="btn btn-sm btn-success" id="publishDraftBtn" style="display:none" onclick="publishDraft()"><i
                     class="bi bi-cloud-upload me-1"></i>Publish</button>
-            {% endif %}
-            {% endif %}
-            {% if not is_hist %}
-            {% if session.get('role') in ['admin','superadmin'] %}
             <button id="previewDraftBtn" class="btn btn-sm btn-success d-none" onclick="openDraftPreview()" title="Full-Screen Draft Preview">
                 <i class="bi bi-eye-fill me-1"></i> Preview
             </button>
-            {% endif %}
             {% endif %}
             <button id="undoBtn" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="undoLast()" title="Undo (Ctrl+Z)" disabled>
                 <i class="bi bi-arrow-counterclockwise"></i>
@@ -1135,7 +1129,8 @@
             </div>
             <div class="modal-body p-4">
 
-                <!-- STEP 1: CHOOSE SYSTEM MODE -->
+                <!-- STEP 1: CHOOSE SYSTEM MODE (admin/superadmin only) -->
+                {% if session.get('role') in ['admin','superadmin'] %}
                 <div id="mpStep1">
                     <p class="text-muted mb-4 small">Choose how you want to edit the schedule. Direct Mode edits the
                         live database immediately. Draft Mode allows you to create working copies without affecting the
@@ -1172,6 +1167,7 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
 
                 <!-- STEP 2: SELECT DRAFT -->
                 <div id="mpStep2" style="display: none;">
@@ -1741,9 +1737,8 @@
         wrap.className = 'cal-wrap';
         wrap.addEventListener('click', (e) => {
             // Revert to add mode when clicking background (empty space)
-            if (e.target.classList.contains('cal-wrap') || 
-                e.target.classList.contains('cal-body') || 
-                e.target.classList.contains('cal-day-col') ||
+            if (e.target.classList.contains('cal-wrap') ||
+                e.target.classList.contains('cal-body') ||
                 e.target.classList.contains('cal-time-gutter')) {
                 setSidebarMode('add');
             }
@@ -1807,12 +1802,10 @@
             });
             col.addEventListener('click', e => {
                 if (IS_HIST) return;
-                if (e.target === col) {
-                    setSidebarMode('add');
-                    // Use offsetY for absolute local precision
-                    const rawMin = START_HOUR * 60 + e.offsetY;
-                    quickFillAddForm(day, minToStr(snapTo15(rawMin)));
-                }
+                if (e.target.closest('.sched-block')) return; // clicking a block = edit, not auto-fill
+                setSidebarMode('add');
+                const rawMin = START_HOUR * 60 + (e.clientY - col.getBoundingClientRect().top);
+                quickFillAddForm(day, minToStr(snapTo15(rawMin)));
             });
 
             daysWrap.appendChild(col);
@@ -2488,11 +2481,17 @@
     //  MODE PICKER
     // ════════════════════════════════════════
     function openModePicker() {
+        if (!IS_ADMIN) {
+            showDraftPicker();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('editorModeModal')).show();
+            return;
+        }
         showModeStep1();
         bootstrap.Modal.getOrCreateInstance(document.getElementById('editorModeModal')).show();
     }
     function showModeStep1() {
-        document.getElementById('mpStep1').style.display = '';
+        const s1 = document.getElementById('mpStep1');
+        if (s1) s1.style.display = '';
         document.getElementById('mpStep2').style.display = 'none';
         const backBtn = document.getElementById('mpStep2BackBtn');
         if (backBtn) backBtn.style.display = 'none';
@@ -2502,10 +2501,11 @@
         else { showDraftPicker(); }
     }
     function showDraftPicker() {
-        document.getElementById('mpStep1').style.display = 'none';
+        const s1 = document.getElementById('mpStep1');
+        if (s1) s1.style.display = 'none';
         document.getElementById('mpStep2').style.display = '';
         const backBtn = document.getElementById('mpStep2BackBtn');
-        if (backBtn) backBtn.style.display = '';
+        if (backBtn) backBtn.style.display = IS_ADMIN ? '' : 'none';
         renderPickerDrafts();
     }
     function renderPickerDrafts() {
@@ -2776,9 +2776,9 @@
             badge.className = 'mode-badge badge-draft';
             icon.className = 'bi bi-layers';
             label.textContent = `Draft: ${draftName}`;
-            if (publishBtn) publishBtn.style.display = IS_ADMIN && currentDraftId ? '' : 'none';
+            if (publishBtn) publishBtn.style.display = currentDraftId ? '' : 'none';
         const previewBtn = document.getElementById('previewDraftBtn');
-        if (previewBtn) previewBtn.classList.toggle('d-none', !(IS_ADMIN && currentDraftId));
+        if (previewBtn) previewBtn.classList.toggle('d-none', !currentDraftId);
         }
         updateLockBanner();
     }
@@ -3388,9 +3388,9 @@
             // Admin/superadmin must consciously choose a mode before anything loads
             openModePicker();
         } else {
-            // Regular user: no mode picker — goes straight to draft-only view
-            if (SECTIONS.length > 0) loadGrid();
-            onDraftChange();
+            // User role: must select a draft before using the editor
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('editorModeModal')).show();
+            showDraftPicker();
         }
     });
 

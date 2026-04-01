@@ -145,10 +145,10 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th class="ps-4" style="width: 110px;">Category</th>
-                        <th style="width: 28%;">Rule Name</th>
-                        <th>Description</th>
-                        <th class="text-center pe-4" style="min-width: 230px; width: 230px;">Priority Setting</th>
+                        <th class="ps-0 text-start" style="width: 110px;">Category</th>
+                        <th class="text-start" style="width: 28%;">Rule Name</th>
+                        <th class="text-start">Description</th>
+                        <th class="text-center pe-0" style="min-width: 230px; width: 230px;">Priority Setting</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -163,22 +163,22 @@
                         data-weight="{{ item.weight }}">
 
                         <!-- Category -->
-                        <td class="ps-4">
+                        <td class="ps-0 text-start">
                             <span class="badge bg-light text-secondary border">{{ item.category }}</span>
                         </td>
 
                         <!-- Name -->
-                        <td>
+                        <td class="text-start">
                             <span class="fw-bold text-dark">{{ item.name }}</span>
                         </td>
 
                         <!-- Description (truncated, full text on hover) -->
-                        <td style="max-width: 0;">
+                        <td class="text-start" style="max-width: 0;">
                             <span class="text-muted small d-block text-truncate" title="{{ item.description }}">{{ item.description }}</span>
                         </td>
 
                         <!-- Setting Dropdown — stop row-click propagation -->
-                        <td class="text-center pe-4" onclick="event.stopPropagation()">
+                        <td class="text-center pe-0" onclick="event.stopPropagation()">
                             {% if not is_hist %}
                             <div class="d-flex flex-column gap-2 align-items-stretch">
                                 <select name="type_{{ item.id }}" class="form-select form-select-sm fw-bold border-0 bg-light

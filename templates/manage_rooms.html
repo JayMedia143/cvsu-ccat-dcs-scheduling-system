@@ -181,34 +181,37 @@
                     <thead class="table-light">
                         <tr>
                             {% if not is_hist %}
-                            <th class="select-cell"><input class="form-check-input" type="checkbox"
-                                    id="selectAllCheckbox"></th>
+                            <th class="select-cell ps-0 pe-0 text-center" style="width: 1%; white-space: nowrap;">
+                                <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                            </th>
                             {% endif %}
-                            <th class="ps-2" style="width: 15%;">Room Name</th>
-                            <th style="width: 15%;">Building</th>
-                            <th class="text-center">Departments</th>
-                            <th class="text-center" style="width: 100px;">Capacity</th>
-                            <th class="text-center" style="width: 100px;">PCs</th>
-                            <th class="text-center">Capabilities</th>
-                            <th class="text-center" style="width: 120px;">Status</th>
-                            <th class="text-center" style="width: 140px;">Actions</th>
+                            <th class="ps-0 text-start" style="width: 20%;">Room Name</th>
+                            <th class="text-start" style="width: 20%;">Building</th>
+                            <th class="text-start">Departments</th>
+                            {% if session.get('role') != 'user' %}
+                            <th class="text-start" style="width: 100px;">Capacity</th>
+                            <th class="text-start" style="width: 100px;">PCs</th>
+                            <th class="text-start">Capabilities</th>
+                            <th class="text-start" style="width: 120px;">Status</th>
+                            {% endif %}
+                            <th class="text-center pe-0" style="width: 1%; white-space: nowrap;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="roomTableBody">
                         {% for room in rooms %}
                         <tr class="course-row room-row" data-id="{{ room.id }}">
                             {% if not is_hist %}
-                            <td class="select-cell">
+                            <td class="select-cell ps-0 pe-0 text-center">
                                 <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
                                     value="{{ room.id }}">
                             </td>
                             {% endif %}
 
-                            <td class="fw-bold text-dark ps-2">{{ room.room_name }}</td>
-                            <td class="text-muted small">{{ room.building }}</td>
-                            <td class="text-center">
+                            <td class="fw-bold text-dark ps-0 text-start">{{ room.room_name }}</td>
+                            <td class="text-muted small text-start">{{ room.building }}</td>
+                            <td class="text-start">
                                 {% if room.room_departments %}
-                                <div class="d-flex flex-wrap justify-content-center gap-1">
+                                <div class="d-flex flex-wrap justify-content-start gap-1">
                                     {% for dept in room.room_departments.split(',') %}
                                     {% if dept.strip() %}
                                     <span class="badge-clean">{{ dept.strip() }}</span>
@@ -219,12 +222,13 @@
                                 <span class="text-muted small">All</span>
                                 {% endif %}
                             </td>
-                            <td class="text-center text-secondary fw-medium">{{ room.capacity }}</td>
-                            <td class="text-center text-secondary">{{ room.functional_computers }}</td>
+                            {% if session.get('role') != 'user' %}
+                            <td class="text-start text-secondary fw-medium">{{ room.capacity }}</td>
+                            <td class="text-start text-secondary">{{ room.functional_computers }}</td>
 
                             <!-- CAPABILITIES (UPDATED TO BADGE-CLEAN STYLE) -->
-                            <td class="text-center">
-                                <div class="d-flex flex-wrap justify-content-center gap-1">
+                            <td class="text-start">
+                                <div class="d-flex flex-wrap justify-content-start gap-1">
                                     {% for cap in room.capabilities.split(',') %}
                                     <span class="badge-clean">{{ cap }}</span>
                                     {% endfor %}
@@ -237,7 +241,7 @@
                                 </div>
                             </td>
 
-                            <td class="text-center">
+                            <td class="text-start">
                                 {% if room.status == 'Available' %}
                                 <span
                                     class="badge bg-success bg-opacity-10 text-success border border-success fw-normal">Available</span>
@@ -246,11 +250,14 @@
                                     class="badge bg-warning bg-opacity-10 text-warning border border-warning fw-normal">Maintenance</span>
                                 {% endif %}
                             </td>
+                            {% endif %}
 
-                            <td class="text-center text-nowrap" onclick="event.stopPropagation()">
+                            <td class="text-center pe-0 text-nowrap" onclick="event.stopPropagation()">
+                                {% if session.get('role') in ['admin', 'superadmin'] %}
                                 <button type="button" class="btn-icon view"
                                     onclick="viewSchedule('room', {{ room.id }})" title="View Schedule"><i
                                         class="bi bi-calendar-week"></i></button>
+                                {% endif %}
 
                                 {% if not is_hist %}
                                 {% if room.room_name != 'T.B.A.' %}
@@ -258,9 +265,11 @@
                                     data-bs-target="#editRoomModal{{ room.id }}" title="Edit Room"><i
                                         class="bi bi-pencil"></i></button>
                                 {% endif %}
+                                {% if session.get('role') != 'user' %}
                                 <button type="button" class="btn-icon" style="color: var(--color-primary);" data-bs-toggle="modal"
                                     data-bs-target="#specialCoursesModal{{ room.id }}" title="Special Course Assignment"><i
                                         class="bi bi-pin-angle"></i></button>
+                                {% endif %}
                                 {% if room.room_name != 'T.B.A.' %}
                                 <button type="button" class="btn-icon delete" title="Move to Recycle Bin"
                                     data-bs-toggle="modal" data-bs-target="#archiveModal{{ room.id }}"><i
@@ -370,6 +379,7 @@
                         <input type="text" class="form-control" name="building" placeholder="e.g. ICT Building"
                             required>
                     </div>
+                    {% if session.get('role') != 'user' %}
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label small text-muted fw-bold">SEAT CAPACITY</label>
@@ -400,6 +410,7 @@
                             <option>Unavailable (Maintenance)</option>
                         </select>
                     </div>
+                    {% endif %}
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">DEPARTMENT ACCESS</label>
                         <p class="text-muted small mb-2">Leave all unchecked = available to all departments.</p>
@@ -443,6 +454,7 @@
                         <label class="form-label small text-muted fw-bold">BUILDING</label>
                         <input type="text" class="form-control" name="building" value="{{ room.building }}" required>
                     </div>
+                    {% if session.get('role') != 'user' %}
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label small text-muted fw-bold">CAPACITY</label>
@@ -460,13 +472,13 @@
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" value="Lecture" name="capabilities"
                                 id="editCheckLecture{{ room.id }}" {% if 'Lecture' in room.capabilities %}checked{%
-                                endif %}>
+                                 endif %}>
                             <label class="form-check-label" for="editCheckLecture{{ room.id }}">Lecture</label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" value="Computer Lab" name="capabilities"
                                 id="editCheckLab{{ room.id }}" {% if 'Computer Lab' in room.capabilities %}checked{%
-                                endif %}>
+                                 endif %}>
                             <label class="form-check-label" for="editCheckLab{{ room.id }}">Computer Laboratory</label>
                         </div>
                     </div>
@@ -478,6 +490,8 @@
                                 (Maintenance)</option>
                         </select>
                     </div>
+                    {% endif %}
+
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">DEPARTMENT ACCESS</label>
                         <p class="text-muted small mb-2">Leave all unchecked = available to all departments.</p>

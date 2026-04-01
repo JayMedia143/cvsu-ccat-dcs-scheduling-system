@@ -405,6 +405,7 @@ class Course(db.Model):
     asynchronous_lab_hours = db.Column(db.Integer, default=0)
     is_archived = db.Column(db.Boolean, default=False, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -426,6 +427,7 @@ class Room(db.Model):
     deleted_at = db.Column(db.DateTime, nullable=True)
     special_course_ids = db.Column(db.Text, nullable=True, default='')
     room_departments = db.Column(db.Text, nullable=True, default='')  # comma-separated dept names; empty = all depts
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
 class Section(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -434,6 +436,7 @@ class Section(db.Model):
     number_of_students = db.Column(db.Integer, nullable=False, default=40)
     is_archived = db.Column(db.Boolean, default=False, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     courses = db.relationship('Course', secondary=section_courses, lazy='subquery', backref=db.backref('sections', lazy=True))
 
 class Faculty(db.Model):
@@ -449,6 +452,7 @@ class Faculty(db.Model):
     available_days = db.Column(db.Text, nullable=False, default='Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday')
     is_archived = db.Column(db.Boolean, default=False, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     courses = db.relationship('Course', secondary=faculty_courses, lazy='subquery', backref=db.backref('faculty_can_teach', lazy=True))
 
 class FacultyAssignment(db.Model):
@@ -997,7 +1001,6 @@ def dashboard():
 
 @app.route('/manage/courses')
 @login_required
-@role_required('admin', 'superadmin')
 def manage_courses():
     page = request.args.get('page', 1, type=int)
     sort_by = request.args.get('sort', 'default', type=str)
@@ -1078,6 +1081,10 @@ def manage_courses():
     # Base Query
     query = Course.query.filter_by(is_archived=False)
 
+    # DATA ISOLATION: Standard users only see what they created
+    if session.get('role') == 'user':
+        query = query.filter_by(created_by_id=session.get('user_id'))
+
     # 1. Apply Semester Filter
     if selected_semester != 'All':
         query = query.filter_by(semester_offered=selected_semester)
@@ -1113,15 +1120,25 @@ def manage_courses():
     pagination = sort_query.paginate(page=page, per_page=10, error_out=False)
     courses_on_page = pagination.items
     
-    all_courses_for_modals = Course.query.filter_by(is_archived=False).all()
+    # DATA ISOLATION for modals and dropdowns
+    modal_query = Course.query.filter_by(is_archived=False)
+    if session.get('role') == 'user':
+        modal_query = modal_query.filter_by(created_by_id=session.get('user_id'))
+    all_courses_for_modals = modal_query.all()
 
     # --- DATA FOR FILTER DROPDOWNS ---
     # Get Unique Departments
-    unique_depts = db.session.query(Course.department).filter_by(is_archived=False).distinct().all()
+    dept_query = db.session.query(Course.department).filter_by(is_archived=False)
+    if session.get('role') == 'user':
+        dept_query = dept_query.filter_by(created_by_id=session.get('user_id'))
+    unique_depts = dept_query.distinct().all()
     unique_depts = [d[0] for d in unique_depts if d[0]] # Flatten list
     
     # Get Unique Course Prefixes (e.g., COSC, DCIT, GNED)
-    all_codes = db.session.query(Course.course_code).filter_by(is_archived=False).all()
+    prefix_query = db.session.query(Course.course_code).filter_by(is_archived=False)
+    if session.get('role') == 'user':
+        prefix_query = prefix_query.filter_by(created_by_id=session.get('user_id'))
+    all_codes = prefix_query.all()
     unique_prefixes = set()
     for code in all_codes:
         # Assuming format "ABCD 123", split by space and take first part
@@ -1147,7 +1164,6 @@ def manage_courses():
 
 @app.route('/manage/course/add', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def add_course():
     course_code = request.form.get('course_code')
     existing = Course.query.filter_by(course_code=course_code, is_archived=False).first()
@@ -1158,24 +1174,28 @@ def add_course():
     db.session.add(Course(
         course_code=request.form.get('course_code'), 
         course_name=request.form.get('course_name'), 
-        program=request.form.get('program'), # <--- ADD THIS
+        program=request.form.get('program', 'Both'), 
         department=request.form.get('department'),
         lec_units=int(request.form.get('lec_units', 0)), 
         lab_units=int(request.form.get('lab_units', 0)), 
         synchronous_lec_hours=int(request.form.get('synchronous_lec_hours', 0)), 
         synchronous_lab_hours=int(request.form.get('synchronous_lab_hours', 0)), 
-        semester_offered=request.form.get('semester_offered'), 
+        semester_offered=request.form.get('semester_offered', '1st Semester'), 
         asynchronous_lec_hours=int(request.form.get('asynchronous_lec_hours', 0)), 
-        asynchronous_lab_hours=int(request.form.get('asynchronous_lab_hours', 0))
+        asynchronous_lab_hours=int(request.form.get('asynchronous_lab_hours', 0)),
+        created_by_id=session.get('user_id') # Track creator
     ))
     db.session.commit()
     return redirect(url_for('manage_courses'))
 
 @app.route('/manage/course/update/<int:course_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def update_course(course_id):
-    course = Course.query.get_or_404(course_id)
+    # Role-based access check
+    if session.get('role') == 'user' and course.created_by_id != session.get('user_id'):
+        flash("You are not authorized to update this course.", "danger")
+        return redirect(url_for('manage_courses'))
+
     new_code = request.form.get('course_code')
     existing = Course.query.filter(Course.course_code == new_code, Course.id != course_id, Course.is_archived == False).first()
     if existing:
@@ -1183,28 +1203,39 @@ def update_course(course_id):
         return redirect(url_for('manage_courses'))
     course.course_code = new_code
     course.course_name = request.form.get('course_name')
-    course.program = request.form.get('program') # <--- ADD THIS
+    if request.form.get('program'):
+        course.program = request.form.get('program')
     course.department = request.form.get('department')
-    # ... (rest of the fields same as before) ...
-    course.lec_units = int(request.form.get('lec_units', 0))
-    course.lab_units = int(request.form.get('lab_units', 0))
-    course.synchronous_lec_hours = int(request.form.get('synchronous_lec_hours', 0))
-    course.synchronous_lab_hours = int(request.form.get('synchronous_lab_hours', 0))
-    course.semester_offered = request.form.get('semester_offered')
-    course.asynchronous_lec_hours = int(request.form.get('asynchronous_lec_hours', 0))
-    course.asynchronous_lab_hours = int(request.form.get('asynchronous_lab_hours', 0))
+    
+    # Only update restricted data if present in form (preventing overwrite if hidden)
+    if 'lec_units' in request.form:
+        course.lec_units = int(request.form.get('lec_units', 0))
+    if 'lab_units' in request.form:
+        course.lab_units = int(request.form.get('lab_units', 0))
+    if 'synchronous_lec_hours' in request.form:
+        course.synchronous_lec_hours = int(request.form.get('synchronous_lec_hours', 0))
+    if 'synchronous_lab_hours' in request.form:
+        course.synchronous_lab_hours = int(request.form.get('synchronous_lab_hours', 0))
+    if 'semester_offered' in request.form:
+        course.semester_offered = request.form.get('semester_offered')
+    if 'asynchronous_lec_hours' in request.form:
+        course.asynchronous_lec_hours = int(request.form.get('asynchronous_lec_hours', 0))
+    if 'asynchronous_lab_hours' in request.form:
+        course.asynchronous_lab_hours = int(request.form.get('asynchronous_lab_hours', 0))
+        
     db.session.commit()
     return redirect(url_for('manage_courses'))
 
 @app.route('/manage/courses/archive')
 @login_required
-@role_required('admin', 'superadmin')
 def courses_archive():
     page = request.args.get('page', 1, type=int) # Add Page param
     sort_by = request.args.get('sort', 'default', type=str)
     search_query = request.args.get('search', '', type=str)
 
     query = Course.query.filter_by(is_archived=True)
+    if session.get('role') == 'user':
+        query = query.filter_by(created_by_id=session.get('user_id'))
 
     if search_query:
         search_term = f"%{search_query}%"
@@ -1232,9 +1263,14 @@ def courses_archive():
 
 @app.route('/manage/course/archive/<int:course_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def archive_course(course_id):
     course = Course.query.get_or_404(course_id)
+    
+    # Role-based access check
+    if session.get('role') == 'user' and course.created_by_id != session.get('user_id'):
+        flash("You are not authorized to archive this course.", "danger")
+        return redirect(url_for('manage_courses'))
+
     course.is_archived = True
     course.deleted_at = datetime.utcnow()
     db.session.commit()
@@ -1243,7 +1279,6 @@ def archive_course(course_id):
 
 @app.route('/manage/course/restore/<int:course_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def restore_course(course_id):
     course = Course.query.get_or_404(course_id)
     course.is_archived = False
@@ -1535,7 +1570,6 @@ def api_prefix_courses():
 # I-UPDATE ANG LUMANG delete_course FUNCTION
 @app.route('/manage/course/delete/<int:course_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def delete_course(course_id):
     course = Course.query.get_or_404(course_id)
     ScheduledClass.query.filter_by(course_id=course_id).delete(synchronize_session=False)
@@ -1548,7 +1582,6 @@ def delete_course(course_id):
 
 @app.route('/manage/courses/bulk_archive', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def bulk_archive_courses():
     # Kunin ang listahan ng IDs mula sa form (checkboxes named 'row_ids')
     course_ids = request.form.getlist('row_ids')
@@ -1567,7 +1600,6 @@ def bulk_archive_courses():
 
 @app.route('/manage/courses/bulk_restore', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def bulk_restore_courses():
     course_ids = request.form.getlist('row_ids')
     
@@ -1580,7 +1612,6 @@ def bulk_restore_courses():
 
 @app.route('/manage/courses/bulk_delete', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def bulk_delete_courses():
     course_ids = request.form.getlist('row_ids')
     
@@ -1596,7 +1627,6 @@ def bulk_delete_courses():
 
 @app.route('/manage/rooms')
 @login_required
-@role_required('admin', 'superadmin')
 def manage_rooms():
     # 1. Get Parameters
     page = request.args.get('page', 1, type=int)
@@ -1659,6 +1689,10 @@ def manage_rooms():
     # 2. Base Query
     query = Room.query.filter_by(is_archived=False)
     
+    # DATA ISOLATION: Standard users only see what they created
+    if session.get('role') == 'user':
+        query = query.filter_by(created_by_id=session.get('user_id'))
+    
     # 3. Apply Search
     if search_query:
         search_term = f"%{search_query}%"
@@ -1710,41 +1744,40 @@ def manage_rooms():
 
 @app.route('/manage/room/add', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def add_room():
-    try:
-        capacity = int(request.form.get('capacity', 0))
-        pcs = int(request.form.get('functional_computers', 0))
-        
-        # Validation
-        if capacity <= 0:
-            flash('Error: Room capacity must be greater than 0.', 'danger')
-            return redirect(url_for('manage_rooms'))
-        room_name = request.form.get('room_name')
-        existing = Room.query.filter_by(room_name=room_name, is_archived=False).first()
-        if existing:
-            flash(f"Error: Room name '{room_name}' already exists!", "danger")
-            return redirect(url_for('manage_rooms'))
-            
-        db.session.add(Room(
-            room_name=request.form.get('room_name'),
-            building=request.form.get('building'),
-            capabilities=",".join(request.form.getlist('capabilities')),
-            status=request.form.get('status'),
-            capacity=capacity,
-            functional_computers=pcs,
-            room_departments=",".join(request.form.getlist('room_departments'))
-        ))
-        db.session.commit()
-        flash('Room added successfully.', 'success')
-    except Exception as e:
-        flash(f'Error adding room: {str(e)}', 'danger')
-        
+    # Only allow non-archive mode to add
+    if session.get('historical_mode_active'):
+        flash('Action not allowed in Archive Mode.', 'danger')
+        return redirect(url_for('manage_rooms'))
+
+    room_name = request.form.get('room_name')
+    existing = Room.query.filter_by(room_name=room_name, is_archived=False).first()
+    if existing:
+        flash(f"Error: Room '{room_name}' already exists!", "danger")
+        return redirect(url_for('manage_rooms'))
+
+    # Default capabilities to Lecture if none provided (hidden for user)
+    cap_list = request.form.getlist('capabilities')
+    if not cap_list:
+        cap_list = ['Lecture']
+    caps = ",".join(cap_list)
+    
+    db.session.add(Room(
+        room_name=request.form.get('room_name'),
+        building=request.form.get('building'),
+        capabilities=caps,
+        status=request.form.get('status', 'Available'),
+        capacity=int(request.form.get('capacity', 40)),
+        functional_computers=int(request.form.get('functional_computers', 40)),
+        room_departments=",".join(request.form.getlist('room_departments')),
+        created_by_id=session.get('user_id') # Track creator
+    ))
+    db.session.commit()
+    flash('Room added successfully.', 'success')
     return redirect(url_for('manage_rooms'))
 
 @app.route('/manage/room/quick-add-tba', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def quick_add_tba_room():
     if Room.query.filter_by(room_name='T.B.A.').first():
         flash('T.B.A. room already exists.', 'warning')
@@ -1765,9 +1798,13 @@ def quick_add_tba_room():
 
 @app.route('/manage/room/update/<int:room_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def update_room(room_id):
     room = Room.query.get_or_404(room_id)
+    
+    # Role-based access check
+    if session.get('role') == 'user' and room.created_by_id != session.get('user_id'):
+        flash("You are not authorized to update this room.", "danger")
+        return redirect(url_for('manage_rooms'))
     if room.room_name == 'T.B.A.':
         flash('T.B.A. room cannot be edited.', 'warning')
         return redirect(url_for('manage_rooms'))
@@ -1778,10 +1815,17 @@ def update_room(room_id):
         return redirect(url_for('manage_rooms'))
     room.room_name = new_name
     room.building = request.form.get('building')
-    room.capabilities = ",".join(request.form.getlist('capabilities'))
-    room.status = request.form.get('status')
-    room.capacity = int(request.form.get('capacity', 40))
-    room.functional_computers = int(request.form.get('functional_computers', 40))
+    
+    # Conditional updates for restricted fields
+    if 'capabilities' in request.form:
+        room.capabilities = ",".join(request.form.getlist('capabilities'))
+    if 'status' in request.form:
+        room.status = request.form.get('status')
+    if 'capacity' in request.form:
+        room.capacity = int(request.form.get('capacity', 40))
+    if 'functional_computers' in request.form:
+        room.functional_computers = int(request.form.get('functional_computers', 40))
+        
     room.room_departments = ",".join(request.form.getlist('room_departments'))
     db.session.commit()
     return redirect(url_for('manage_rooms'))
@@ -1895,7 +1939,6 @@ def save_room_special_courses(room_id):
 
 @app.route('/manage/rooms/bulk_archive', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def bulk_archive_rooms():
     room_ids = request.form.getlist('row_ids')
     
@@ -1912,7 +1955,6 @@ def bulk_archive_rooms():
 
 @app.route('/manage/rooms/bulk_restore', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def bulk_restore_rooms():
     room_ids = request.form.getlist('row_ids')
     
@@ -1925,7 +1967,6 @@ def bulk_restore_rooms():
 
 @app.route('/manage/rooms/bulk_delete', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def bulk_delete_rooms():
     room_ids = request.form.getlist('row_ids')
 
@@ -1940,7 +1981,6 @@ def bulk_delete_rooms():
 
 @app.route('/manage/rooms/archive')
 @login_required
-@role_required('admin', 'superadmin')
 def rooms_archive():
     # --- KUNIN ANG MGA PARAMETERS ---
     sort_by = request.args.get('sort', 'default', type=str)
@@ -1948,6 +1988,8 @@ def rooms_archive():
 
     # Magsimula sa pag-filter ng mga NAKA-ARCHIVE na rooms
     query = Room.query.filter_by(is_archived=True)
+    if session.get('role') == 'user':
+        query = query.filter_by(created_by_id=session.get('user_id'))
 
     # I-apply ang search filter kung mayroon
     if search_query:
@@ -1974,7 +2016,6 @@ def rooms_archive():
 
 @app.route('/manage/room/archive/<int:room_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def archive_room(room_id):
     room = Room.query.get_or_404(room_id)
     if room.room_name == 'T.B.A.':
@@ -1988,7 +2029,6 @@ def archive_room(room_id):
 
 @app.route('/manage/room/restore/<int:room_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def restore_room(room_id):
     room = Room.query.get_or_404(room_id)
     room.is_archived = False
@@ -2000,7 +2040,6 @@ def restore_room(room_id):
 # I-UPDATE ANG delete_room FUNCTION
 @app.route('/manage/room/delete/<int:room_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def delete_room(room_id):
     room = Room.query.get_or_404(room_id)
     if room.room_name == 'T.B.A.':
@@ -2015,7 +2054,6 @@ def delete_room(room_id):
 
 @app.route('/manage/sections')
 @login_required
-@role_required('admin', 'superadmin')
 def manage_sections():
     # 1. Get Parameters
     page = request.args.get('page', 1, type=int)
@@ -2087,9 +2125,10 @@ def manage_sections():
             current_filter_val=filter_val
         )
 
-    # ── Live Mode ───────────────────────────────────────────────────────────
     # 2. Base Query (exclude T.B.A. system section)
     query = Section.query.filter_by(is_archived=False).filter(Section.section_name != 'T.B.A.')
+    
+    # DATA ISOLATION: Removed for Sections as per requirements; standard users see all sections.
     
     # 3. Apply Search
     if search_query:
@@ -2120,14 +2159,18 @@ def manage_sections():
     sections_on_page = pagination.items
     
     # 7. Prepare Data for Assignment Modals
-    all_courses_for_modal = Course.query.filter_by(is_archived=False).order_by(Course.course_code).all()
+    course_query = Course.query.filter_by(is_archived=False)
+    if session.get('role') == 'user':
+        course_query = course_query.filter_by(created_by_id=session.get('user_id'))
+    all_courses_for_modal = course_query.order_by(Course.course_code).all()
     courses_by_sem = {'1st Semester': [], '2nd Semester': [], 'Midyear': []}
     for c in all_courses_for_modal:
         if c.semester_offered in courses_by_sem: 
             courses_by_sem[c.semester_offered].append(c)
 
     # 8. GET UNIQUE YEARS FOR FILTER DROPDOWN
-    unique_years = db.session.query(Section.year_level).filter_by(is_archived=False).distinct().order_by(Section.year_level).all()
+    year_query = db.session.query(Section.year_level).filter_by(is_archived=False)
+    unique_years = year_query.distinct().order_by(Section.year_level).all()
     unique_years = [y[0] for y in unique_years]
 
     return render_template(
@@ -2146,7 +2189,6 @@ def manage_sections():
 
 @app.route('/manage/section/add', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def add_section():
     section_name = request.form.get('section_name')
     existing = Section.query.filter_by(section_name=section_name, is_archived=False).first()
@@ -2154,23 +2196,36 @@ def add_section():
         flash(f"Section name '{section_name}' already exists!", "danger")
         return redirect(url_for('manage_sections'))
 
-    db.session.add(Section(section_name=request.form.get('section_name'), year_level=int(request.form.get('year_level')), number_of_students=int(request.form.get('number_of_students', 40))))
+    db.session.add(Section(
+        section_name=request.form.get('section_name'), 
+        year_level=int(request.form.get('year_level')), 
+        number_of_students=int(request.form.get('number_of_students', 40)),
+        created_by_id=session.get('user_id') # Track creator
+    ))
     db.session.commit()
+    flash('Section added successfully.', 'success')
     return redirect(url_for('manage_sections'))
 
 @app.route('/manage/section/update/<int:section_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def update_section(section_id):
     section = Section.query.get_or_404(section_id)
+    # Role-based authorization removed for Sections (standard users share the section pool)
     new_name = request.form.get('section_name')
     existing = Section.query.filter(Section.section_name == new_name, Section.id != section_id, Section.is_archived == False).first()
     if existing:
         flash(f"Error: Section name '{new_name}' is already taken.", 'danger')
         return redirect(url_for('manage_sections'))
         
-    section.section_name, section.year_level, section.number_of_students = new_name, int(request.form.get('year_level')), int(request.form.get('number_of_students', 40))
+    section.section_name = new_name
+    section.year_level = int(request.form.get('year_level'))
+    
+    # Conditional update for hidden fields
+    if 'number_of_students' in request.form:
+        section.number_of_students = int(request.form.get('number_of_students', 40))
+        
     db.session.commit()
+    flash('Section updated successfully.', 'success')
     return redirect(url_for('manage_sections'))
 
 # app.py
@@ -2220,7 +2275,6 @@ def get_section_courses(section_id):
 
 @app.route('/manage/sections/bulk_archive', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def bulk_archive_sections():
     # Kunin ang mga IDs mula sa checkboxes
     section_ids = request.form.getlist('row_ids')
@@ -2240,7 +2294,6 @@ def bulk_archive_sections():
 
 @app.route('/manage/sections/bulk_restore', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def bulk_restore_sections():
     section_ids = request.form.getlist('row_ids')
     
@@ -2263,7 +2316,6 @@ def get_or_create_tba_section():
 
 @app.route('/manage/sections/bulk_delete', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def bulk_delete_sections():
     section_ids = request.form.getlist('row_ids')
     
@@ -2281,7 +2333,6 @@ def bulk_delete_sections():
 
 @app.route('/manage/sections/archive')
 @login_required
-@role_required('admin', 'superadmin')
 def sections_archive():
     # Get parameters
     page = request.args.get('page', 1, type=int)
@@ -2290,6 +2341,7 @@ def sections_archive():
 
     # Base Query (Filtered by Archived)
     query = Section.query.filter_by(is_archived=True)
+    # DATA ISOLATION: Removed for Sections as per requirements.
 
     # Search Filter
     if search_query:
@@ -2319,7 +2371,6 @@ def sections_archive():
 
 @app.route('/manage/section/archive/<int:section_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def archive_section(section_id):
     section = Section.query.get_or_404(section_id)
     if section.section_name == 'T.B.A.':
@@ -2333,7 +2384,6 @@ def archive_section(section_id):
 
 @app.route('/manage/section/restore/<int:section_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def restore_section(section_id):
     section = Section.query.get_or_404(section_id)
     section.is_archived = False
@@ -2345,7 +2395,6 @@ def restore_section(section_id):
 # I-UPDATE ANG delete_section FUNCTION
 @app.route('/manage/section/delete/<int:section_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def delete_section(section_id):
     section = Section.query.get_or_404(section_id)
     tba_section = get_or_create_tba_section()
@@ -2371,7 +2420,6 @@ def assign_courses_to_year(year_level):
 
 @app.route('/manage/faculty')
 @login_required
-@role_required('admin', 'superadmin')
 def manage_faculty():
     # 1. Get Parameters
     page = request.args.get('page', 1, type=int)
@@ -2454,6 +2502,10 @@ def manage_faculty():
     # ── Live Mode ───────────────────────────────────────────────────────────
     # 2. Base Query
     query = Faculty.query.filter_by(is_archived=False)
+    
+    # DATA ISOLATION: Standard users only see what they created
+    if session.get('role') == 'user':
+        query = query.filter_by(created_by_id=session.get('user_id'))
 
     # 3. Apply Search
     if search_query:
@@ -2482,7 +2534,10 @@ def manage_faculty():
     
     # 7. Get Data for Modals & Filters
     # For Assignment Modal Logic
-    course_query = Course.query
+    course_query = Course.query.filter_by(is_archived=False)
+    if session.get('role') == 'user':
+        course_query = course_query.filter_by(created_by_id=session.get('user_id'))
+    
     if selected_semester != 'All':
         course_query = course_query.filter_by(semester_offered=selected_semester)
 
@@ -2492,11 +2547,17 @@ def manage_faculty():
         if c.semester_offered in courses_by_sem:
             courses_by_sem[c.semester_offered].append(c)
 
-    all_sections = Section.query.order_by(Section.section_name).all()
+    section_query = Section.query.filter_by(is_archived=False)
+    if session.get('role') == 'user':
+        section_query = section_query.filter_by(created_by_id=session.get('user_id'))
+    all_sections = section_query.order_by(Section.section_name).all()
     all_sections_json = [{'id': s.id, 'name': s.section_name, 'course_ids': [c.id for c in s.courses]} for s in all_sections]
 
     # GET UNIQUE DEPARTMENTS FOR FILTER
-    unique_depts = db.session.query(Faculty.department).filter_by(is_archived=False).distinct().all()
+    dept_query = db.session.query(Faculty.department).filter_by(is_archived=False)
+    if session.get('role') == 'user':
+        dept_query = dept_query.filter_by(created_by_id=session.get('user_id'))
+    unique_depts = dept_query.distinct().all()
     unique_depts = [d[0] for d in unique_depts if d[0]]
 
     # Build split data dict: {faculty_id: {"course_id-section_id": {lab and lec split fields}}}
@@ -2700,44 +2761,51 @@ def manage_faculty():
 
 @app.route('/manage/faculty/add', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def add_faculty():
-    try:
-        hours = int(request.form.get('max_weekly_hours', 0))
-        
-        # Validation
+    # Only allow non-archive mode to add
+    if session.get('historical_mode_active'):
+        flash('Action not allowed in Archive Mode.', 'danger')
+        return redirect(url_for('manage_faculty'))
+
+    employee_id = request.form.get('employee_id')
+    existing = Faculty.query.filter_by(employee_id=employee_id, is_archived=False).first()
+    if existing:
+        flash(f"Error: Faculty Employee ID '{employee_id}' already exists!", "danger")
+        return redirect(url_for('manage_faculty'))
+
+    # Provide defaults for hidden/restricted fields
+    hours = int(request.form.get('max_weekly_hours', 35))
+    status = request.form.get('employment_status', 'Full-time')
+    day_list = request.form.getlist('available_days')
+    if not day_list:
+        avail_days = 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'
+    else:
+        avail_days = ','.join(day_list)
+
+    # Simplified validation: only if value was actually sent (admin role)
+    if 'max_weekly_hours' in request.form:
         if hours <= 0 or hours > 60:
             flash('Error: Max weekly hours must be between 1 and 60.', 'danger')
             return redirect(url_for('manage_faculty'))
 
-        employee_id = request.form.get('employee_id')
-        existing = Faculty.query.filter_by(employee_id=employee_id, is_archived=False).first()
-        if existing:
-            flash(f"Error: Faculty Employee ID '{employee_id}' already exists!", "danger")
-            return redirect(url_for('manage_faculty'))
-
-        avail_days = ','.join(request.form.getlist('available_days')) or 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'
-        db.session.add(Faculty(
-            employee_id=request.form.get('employee_id'),
-            full_name=request.form.get('full_name'),
-            department=request.form.get('department'),
-            employment_status=request.form.get('employment_status'),
-            highest_educational_attainment=request.form.get('highest_educational_attainment', ''),
-            academic_rank=request.form.get('academic_rank', ''),
-            sex=request.form.get('sex', '') or None,
-            max_weekly_hours=hours,
-            available_days=avail_days
-        ))
-        db.session.commit()
-        flash('Faculty added successfully.', 'success')
-    except Exception as e:
-        flash(f'Error adding faculty: {str(e)}', 'danger')
-
+    db.session.add(Faculty(
+        employee_id=employee_id,
+        full_name=request.form.get('full_name'),
+        department=request.form.get('department'),
+        employment_status=status,
+        highest_educational_attainment=request.form.get('highest_educational_attainment', ''),
+        academic_rank=request.form.get('academic_rank', ''),
+        sex=request.form.get('sex', '') or None,
+        max_weekly_hours=hours,
+        available_days=avail_days,
+        created_by_id=session.get('user_id') # Track creator
+    ))
+    db.session.commit()
+    flash('Faculty added successfully.', 'success')
     return redirect(url_for('manage_faculty'))
 
 @app.route('/manage/faculty/quick-add-tba', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def quick_add_tba_faculty():
     existing_tba = Faculty.query.filter_by(full_name='T.B.A.').all()
     existing_ids = {f.employee_id for f in existing_tba}
@@ -2760,9 +2828,13 @@ def quick_add_tba_faculty():
 
 @app.route('/manage/faculty/update/<int:faculty_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def update_faculty(faculty_id):
     faculty = Faculty.query.get_or_404(faculty_id)
+    
+    # Role-based access check
+    if session.get('role') == 'user' and faculty.created_by_id != session.get('user_id'):
+        flash("You are not authorized to update this faculty.", "danger")
+        return redirect(url_for('manage_faculty'))
     new_id = request.form.get('employee_id')
     existing = Faculty.query.filter(Faculty.employee_id == new_id, Faculty.id != faculty_id, Faculty.is_archived == False).first()
     if existing:
@@ -2771,20 +2843,27 @@ def update_faculty(faculty_id):
     faculty.employee_id = new_id
     faculty.full_name = request.form.get('full_name')
     faculty.department = request.form.get('department')
-    faculty.employment_status = request.form.get('employment_status')
+    
+    # Conditional updates for restricted fields
+    if 'employment_status' in request.form:
+        faculty.employment_status = request.form.get('employment_status')
+    if 'max_weekly_hours' in request.form:
+        faculty.max_weekly_hours = int(request.form.get('max_weekly_hours', 35))
+    if 'available_days' in request.form:
+        faculty.available_days = ",".join(request.form.getlist('available_days')) or 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'
+        
     faculty.highest_educational_attainment = request.form.get('highest_educational_attainment', '')
     faculty.academic_rank = request.form.get('academic_rank', '')
     faculty.sex = request.form.get('sex', '') or None
-    faculty.max_weekly_hours = int(request.form.get('max_weekly_hours', 35))
-    faculty.available_days = ','.join(request.form.getlist('available_days')) or 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'
+    
     db.session.commit()
+    flash('Faculty updated successfully.', 'success')
     return redirect(url_for('manage_faculty'))
 
 # --- BULK ACTIONS FOR FACULTY ---
 
 @app.route('/manage/faculty/bulk_archive', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def bulk_archive_faculty():
     faculty_ids = request.form.getlist('row_ids')
     
@@ -2801,7 +2880,6 @@ def bulk_archive_faculty():
 
 @app.route('/manage/faculty/bulk_restore', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def bulk_restore_faculty():
     faculty_ids = request.form.getlist('row_ids')
     
@@ -2814,7 +2892,6 @@ def bulk_restore_faculty():
 
 @app.route('/manage/faculty/bulk_delete', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def bulk_delete_faculty():
     faculty_ids = request.form.getlist('row_ids')
     
@@ -2831,7 +2908,6 @@ def bulk_delete_faculty():
 
 @app.route('/manage/faculty/archive')
 @login_required
-@role_required('admin', 'superadmin')
 def faculty_archive():
     # --- KUNIN ANG MGA PARAMETERS ---
     sort_by = request.args.get('sort', 'default', type=str)
@@ -2839,6 +2915,8 @@ def faculty_archive():
 
     # Magsimula sa pag-filter ng mga NAKA-ARCHIVE na faculty
     query = Faculty.query.filter_by(is_archived=True)
+    if session.get('role') == 'user':
+        query = query.filter_by(created_by_id=session.get('user_id'))
 
     # I-apply ang search filter kung mayroon
     if search_query:
@@ -2865,7 +2943,6 @@ def faculty_archive():
 
 @app.route('/manage/faculty/archive/<int:faculty_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def archive_faculty(faculty_id):
     faculty = Faculty.query.get_or_404(faculty_id)
     faculty.is_archived = True
@@ -2876,7 +2953,6 @@ def archive_faculty(faculty_id):
 
 @app.route('/manage/faculty/restore/<int:faculty_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def restore_faculty(faculty_id):
     faculty = Faculty.query.get_or_404(faculty_id)
     faculty.is_archived = False
@@ -2888,7 +2964,6 @@ def restore_faculty(faculty_id):
 # I-UPDATE ANG delete_faculty FUNCTION
 @app.route('/manage/faculty/delete/<int:faculty_id>', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def delete_faculty(faculty_id):
     faculty = Faculty.query.get_or_404(faculty_id)
     FacultyAssignment.query.filter_by(faculty_id=faculty_id).delete(synchronize_session=False)
@@ -3075,11 +3150,22 @@ def view_timetable():
         default_sem = available_semesters[0] if available_semesters else '1st Semester'
         current_semester = request.args.get('semester', default_sem)
 
-        all_sections = Section.query.filter_by(is_archived=False).order_by(Section.year_level, Section.section_name).all()
-        _fac_live    = Faculty.query.filter_by(is_archived=False).order_by(Faculty.full_name).all()
+        all_sections = Section.query.filter_by(is_archived=False)
+        all_sections = all_sections.order_by(Section.year_level, Section.section_name).all()
+
+        _fac_live = Faculty.query.filter_by(is_archived=False)
+        if session.get('role') == 'user':
+            _fac_live = _fac_live.filter_by(created_by_id=session.get('user_id'))
+        _fac_live = _fac_live.order_by(Faculty.full_name).all()
+
         all_faculty  = [f for f in _fac_live if not f.full_name.startswith('T.B.A.')] + \
                        [f for f in _fac_live if f.full_name.startswith('T.B.A.')]
-        _rom_live    = Room.query.filter_by(is_archived=False).order_by(Room.room_name).all()
+
+        _rom_live = Room.query.filter_by(is_archived=False)
+        if session.get('role') == 'user':
+            _rom_live = _rom_live.filter_by(created_by_id=session.get('user_id'))
+        _rom_live = _rom_live.order_by(Room.room_name).all()
+
         all_rooms    = [r for r in _rom_live if r.room_name != 'T.B.A.'] + \
                        [r for r in _rom_live if r.room_name == 'T.B.A.']
 
@@ -5827,11 +5913,14 @@ def api_draft_entries(draft_id):
 
 @app.route('/api/draft/<int:draft_id>/publish', methods=['POST'])
 @login_required
-@role_required('admin', 'superadmin')
 def api_draft_publish(draft_id):
+    role = session.get('role')
+    user_id = session.get('user_id')
     dv = DraftVersion.query.get(draft_id)
     if not dv:
         return jsonify({'ok': False, 'error': 'Draft not found'}), 404
+    if role == 'user' and dv.created_by != user_id:
+        return jsonify({'ok': False, 'error': 'Not authorized to publish this draft'}), 403
     if dv.is_published:
         return jsonify({'ok': False, 'error': 'Already published'}), 400
 
@@ -6218,10 +6307,25 @@ def archive_export_excel(archive_id):
 @login_required
 def schedule_editor():
     settings  = SystemSettings.query.first()
-    sections  = Section.query.filter_by(is_archived=False).order_by(Section.section_name).all()
-    faculties = Faculty.query.filter_by(is_archived=False).order_by(Faculty.full_name).all()
-    rooms     = Room.query.filter_by(is_archived=False).order_by(Room.room_name).all()
-    courses   = Course.query.filter_by(is_archived=False).order_by(Course.course_code).all()
+    
+    is_user = session.get('role') == 'user'
+    uid = session.get('user_id')
+
+    section_q = Section.query.filter_by(is_archived=False)
+    faculty_q = Faculty.query.filter_by(is_archived=False)
+    room_q    = Room.query.filter_by(is_archived=False)
+    course_q  = Course.query.filter_by(is_archived=False)
+
+    if is_user:
+        # DATA ISOLATION: Removed for Sections
+        faculty_q = faculty_q.filter_by(created_by_id=uid)
+        room_q    = room_q.filter_by(created_by_id=uid)
+        course_q  = course_q.filter_by(created_by_id=uid)
+
+    sections  = section_q.order_by(Section.section_name).all()
+    faculties = faculty_q.order_by(Faculty.full_name).all()
+    rooms     = room_q.order_by(Room.room_name).all()
+    courses   = course_q.order_by(Course.course_code).all()
     semesters = ['1st Semester', '2nd Semester', 'Summer']
 
     role    = session.get('role', 'user')

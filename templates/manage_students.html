@@ -159,30 +159,30 @@
                     <thead>
                         <tr>
                             {% if not is_hist %}
-                            <th class="select-cell text-center" style="width: 40px;">
+                            <th class="select-cell ps-0 pe-0 text-center" style="width: 1%; white-space: nowrap;">
                                 <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
                             </th>
                             {% endif %}
-                            <th style="width: 14%;">STUDENT ID</th>
-                            <th style="width: 24%;">FULL NAME</th>
-                            <th style="width: 9%;" class="text-center">YEAR</th>
-                            <th style="width: 16%;">SECTION</th>
-                            <th style="width: 16%;">EMAIL</th>
-                            <th style="width: 7%;" class="text-center">STATUS</th>
-                            <th style="width: 14%;" class="text-center">ACTIONS</th>
+                            <th class="{% if is_hist %}ps-0{% else %}ps-0{% endif %} text-start" style="width: 12%;">STUDENT ID</th>
+                            <th style="width: 25%;" class="text-start">FULL NAME</th>
+                            <th style="width: 8%;" class="text-center">YEAR</th>
+                            <th style="width: 15%;" class="text-start">SECTION</th>
+                            <th style="width: 20%;" class="text-start">EMAIL</th>
+                            <th style="width: 8%;" class="text-center">STATUS</th>
+                            <th style="width: 1%; white-space: nowrap;" class="text-center pe-0">ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for student in students %}
                         <tr class="student-row" data-id="{{ student.id }}" data-irregular="{{ '1' if student.is_irregular else '0' }}">
                             {% if not is_hist %}
-                            <td class="select-cell text-center">
+                            <td class="select-cell ps-0 pe-0 text-center">
                                 <input class="form-check-input row-checkbox" type="checkbox"
                                     name="row_ids" value="{{ student.id }}">
                             </td>
                             {% endif %}
-                            <td class="fw-bold text-black font-monospace">{{ student.student_id }}</td>
-                            <td class="fw-bold text-dark">{{ student.full_name }}</td>
+                            <td class="fw-bold text-black font-monospace ps-0 text-start">{% if is_hist and not student.student_id %}&nbsp;{% endif %}{{ student.student_id }}</td>
+                            <td class="fw-bold text-dark text-start">{{ student.full_name }}</td>
                             <td class="text-center">
                                 <span class="badge-clean">
                                     {% if student.year_level == 1 %}1st
@@ -192,7 +192,7 @@
                                     {% else %}{{ student.year_level }}{% endif %}
                                 </span>
                             </td>
-                            <td>
+                            <td class="text-start">
                                 {% if student.archived_section_name %}
                                 <span class="badge-clean">{{ student.archived_section_name }}</span>
                                 {% elif student.section %}
@@ -201,7 +201,7 @@
                                 <span class="text-muted small fst-italic">Unassigned</span>
                                 {% endif %}
                             </td>
-                            <td class="text-muted small">
+                            <td class="text-muted small text-start">
                                 {% if student.email %}{{ student.email }}{% else %}—{% endif %}
                             </td>
                             <td class="text-center">
@@ -211,7 +211,7 @@
                                 <span class="text-muted small">—</span>
                                 {% endif %}
                             </td>
-                            <td class="text-center" onclick="event.stopPropagation()">
+                            <td class="text-center pe-0" onclick="event.stopPropagation()">
                                 <button type="button" class="btn-icon view"
                                     onclick="viewSchedule('student', {{ student.id }})" title="View Schedule">
                                     <i class="bi bi-calendar-week"></i>

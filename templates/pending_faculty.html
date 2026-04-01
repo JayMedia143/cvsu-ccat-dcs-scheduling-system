@@ -92,17 +92,17 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-4" style="width: 25%;">Course Details</th>
-                            <th class="text-center" style="width: 20%;">Section</th>
-                            <th style="width: 25%;">Schedule Info</th>
-                            <th class="text-center" style="width: 30%;">Assign Faculty</th>
+                            <th class="ps-0 text-start" style="width: 25%;">Course Details</th>
+                            <th class="text-center" style="width: 15%;">Section</th>
+                            <th class="text-start" style="width: 25%;">Schedule Info</th>
+                            <th class="text-center pe-0" style="width: 35%;">Assign Faculty</th>
                         </tr>
                     </thead>
                     <tbody id="unassignedTableBody">
                         {% for sc in unassigned_scs %}
                         <tr class="unassigned-row data-row">
                             <!-- Course Info -->
-                            <td class="ps-4 search-target">
+                            <td class="ps-0 search-target text-start">
                                 <div class="d-flex flex-column">
                                     <span class="fw-bold text-dark">{{ sc.course.course_code }}</span>
                                     <span class="text-muted small">{{ sc.course.course_name }}</span>
@@ -120,10 +120,10 @@
                             </td>
 
                             <!-- Schedule Info -->
-                            <td>
-                                <div class="d-flex align-items-center text-muted small">
+                            <td class="text-start">
+                                <div class="d-flex align-items-center text-muted small text-start">
                                     <i class="bi bi-calendar3 me-2"></i>
-                                    <div>
+                                    <div class="text-start">
                                         <span class="d-block text-dark fw-medium">
                                             {{ sc.day }}, {{ sc.start_time }}–{{ sc.end_time }}
                                         </span>
@@ -133,7 +133,7 @@
                             </td>
 
                             <!-- Assign Dropdown (dept-filtered) -->
-                            <td class="pe-4">
+                            <td class="pe-0">
                                 {% set dept_faculty = sc_faculty_options.get(sc.id, all_faculty) %}
                                 <select class="form-select form-select-sm border-secondary" name="assignment_{{ sc.id }}" required>
                                     <option value="" selected disabled>-- Select Faculty --</option>

@@ -86,17 +86,17 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-4" style="width: 25%;">Course Details</th>
-                            <th style="width: 20%;">Faculty</th>
-                            <th style="width: 25%;">Schedule Info</th>
-                            <th class="text-center" style="width: 30%;">Assign Room</th>
+                            <th class="ps-0 text-start" style="width: 25%;">Course Details</th>
+                            <th class="text-start" style="width: 20%;">Faculty</th>
+                            <th class="text-start" style="width: 25%;">Schedule Info</th>
+                            <th class="text-center pe-0" style="width: 30%;">Assign Room</th>
                         </tr>
                     </thead>
                     <tbody id="pendingTableBody">
                         {% for tba in tba_classes %}
                         <tr class="data-row">
                             <!-- Course Info -->
-                            <td class="ps-4 search-target">
+                            <td class="ps-0 search-target text-start">
                                 <div class="d-flex flex-column">
                                     <span class="fw-bold text-dark">{{ tba.course.course_code if tba.course else '—' }}</span>
                                     <span class="text-muted small">{{ tba.course.course_name if tba.course else '—' }}</span>
@@ -107,17 +107,17 @@
                             </td>
 
                             <!-- Faculty -->
-                            <td class="search-target">
+                            <td class="search-target text-start">
                                 <span class="{% if tba.faculty %}fw-medium text-dark{% else %}text-muted fst-italic{% endif %}">
                                     {{ tba.faculty.full_name if tba.faculty else 'T.B.A.' }}
                                 </span>
                             </td>
 
                             <!-- Schedule Info -->
-                            <td class="search-target">
+                            <td class="search-target text-start">
                                 <div class="d-flex align-items-center text-muted small">
                                     <i class="bi bi-calendar3 me-2"></i>
-                                    <div>
+                                    <div class="text-start">
                                         <span class="d-block text-dark fw-medium">
                                             {{ tba.day }}, {{ tba.start_time }}–{{ tba.end_time }}
                                         </span>
@@ -127,7 +127,7 @@
                             </td>
 
                             <!-- Room Dropdown -->
-                            <td class="pe-4">
+                            <td class="pe-0">
                                 <select class="form-select form-select-sm border-secondary" name="assignment_{{ tba.id }}" required>
                                     <option value="" selected disabled>-- Select Room --</option>
                                     {% for room in all_rooms %}

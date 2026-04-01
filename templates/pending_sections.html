@@ -86,17 +86,17 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-4" style="width: 25%;">Course Details</th>
-                            <th style="width: 20%;">Faculty</th>
-                            <th style="width: 25%;">Schedule Info</th>
-                            <th class="text-center" style="width: 30%;">Assign Section</th>
+                            <th class="ps-0 text-start" style="width: 25%;">Course Details</th>
+                            <th class="text-start" style="width: 20%;">Faculty</th>
+                            <th class="text-start" style="width: 25%;">Schedule Info</th>
+                            <th class="text-center pe-0" style="width: 30%;">Assign Section</th>
                         </tr>
                     </thead>
                     <tbody id="pendingTableBody">
                         {% for sc in orphaned_scs %}
                         <tr class="pending-row data-row">
                             <!-- Course Info -->
-                            <td class="ps-4 search-target">
+                            <td class="ps-0 search-target text-start">
                                 <div class="d-flex flex-column">
                                     <span class="fw-bold text-dark">{{ sc.course.course_code if sc.course else '—' }}</span>
                                     <span class="text-muted small">{{ sc.course.course_name if sc.course else '—' }}</span>
@@ -107,17 +107,17 @@
                             </td>
 
                             <!-- Faculty -->
-                            <td class="search-target">
+                            <td class="search-target text-start">
                                 <span class="{% if sc.faculty %}fw-medium text-dark{% else %}text-muted fst-italic{% endif %}">
                                     {{ sc.faculty.full_name if sc.faculty else 'T.B.A.' }}
                                 </span>
                             </td>
 
                             <!-- Schedule Info -->
-                            <td>
-                                <div class="d-flex align-items-center text-muted small">
+                            <td class="text-start">
+                                <div class="d-flex align-items-center text-muted small text-start">
                                     <i class="bi bi-calendar3 me-2"></i>
-                                    <div>
+                                    <div class="text-start">
                                         <span class="d-block text-dark fw-medium">
                                             {{ sc.day }}, {{ sc.start_time }}–{{ sc.end_time }}
                                         </span>
@@ -127,7 +127,7 @@
                             </td>
 
                             <!-- Section Dropdown -->
-                            <td class="pe-4">
+                            <td class="pe-0">
                                 <select class="form-select form-select-sm border-secondary" name="assignment_{{ sc.id }}" required>
                                     <option value="" selected disabled>-- Select Section --</option>
                                     {% for section in all_sections %}

@@ -12,6 +12,7 @@
     </div>
     {% if not is_hist %}
     <div class="d-flex align-items-center gap-3">
+        {% if session.get('role') in ['admin', 'superadmin'] %}
         <button class="btn-google-action" data-bs-toggle="modal"
             data-bs-target="#importPdfModal">
             <i class="bi bi-file-earmark-pdf-fill"></i>
@@ -29,6 +30,7 @@
             <i class="bi bi-diagram-3-fill"></i>
             <span>Dept. Assignment</span>
         </a>
+        {% endif %}
 
         <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addCourseModal">
             <i class="bi bi-plus-lg"></i>
@@ -201,55 +203,43 @@
                 <thead class="table-light">
                     <tr>
                         {% if not is_hist %}
-                        <th class="select-cell">
+                        <th class="select-cell ps-0 pe-0 text-center" style="width: 1%; white-space: nowrap;">
                             <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
                         </th>
                         {% endif %}
 
                         <!-- 1. CODE -->
-                        <th class="ps-2" style="width: 100px;">Code</th>
-
-                        <!-- 2. NAME -->
-                        <th style="width: 25%;">Course Name</th>
-
-                        <!-- 3. PROGRAM (BSCS/BSIT) -->
-                        <th style="width: 10%;">Program</th>
-
-                        <!-- 4. DEPARTMENT -->
-                        <th style="width: 15%;">Department</th>
-
-                        <!-- 5. UNITS -->
-                        <th class="text-center" style="width: 8%;">Units</th>
-
-                        <!-- 6. HOURS -->
-                        <th class="text-center" style="width: 8%;">Sync</th>
-                        <th class="text-center" style="width: 8%;">Async</th>
-
-                        <!-- 7. SEMESTER -->
-                        <th class="text-center" style="width: 10%;">Semester</th>
-
-                        <!-- 8. ACTIONS -->
-                        <th class="text-center" style="width: 100px;">Actions</th>
+                        <th class="ps-0 text-start" style="width: 15%;">Code</th>
+                        <th class="text-start" style="width: 25%;">Course Name</th>
+                        <th class="text-start" style="width: 15%;">Program</th>
+                        <th class="text-start" style="width: 20%;">Department</th>
+                        {% if session.get('role') != 'user' %}
+                        <th class="text-start" style="width: 8%;">Units</th>
+                        <th class="text-start" style="width: 8%;">Sync</th>
+                        <th class="text-start" style="width: 8%;">Async</th>
+                        <th class="text-start" style="width: 10%;">Semester</th>
+                        {% endif %}
+                        <th class="text-center pe-0" style="width: 1%; white-space: nowrap;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for course in courses %}
                     <tr class="course-row" data-id="{{ course.id }}">
                         {% if not is_hist %}
-                        <td class="select-cell">
+                        <td class="select-cell ps-0 pe-0 text-center">
                             <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
                                 value="{{ course.id }}">
                         </td>
                         {% endif %}
 
                         <!-- 1. CODE -->
-                        <td class="fw-bold text-dark ps-2">{{ course.course_code }}</td>
+                        <td class="fw-bold text-dark ps-0 text-start">{{ course.course_code }}</td>
 
                         <!-- 2. NAME (Isa lang dapat ito!) -->
-                        <td>{{ course.course_name }}</td>
+                        <td class="text-start">{{ course.course_name }}</td>
 
                         <!-- 3. PROGRAM (Badges) -->
-                        <td>
+                        <td class="text-start">
                             {% if course.program == 'Both' %}
                             <span class="badge bg-secondary">Common</span>
                             {% elif course.program == 'BSCoS' %}
@@ -263,40 +253,39 @@
                         </td>
 
                         <!-- 4. DEPARTMENT -->
-                        <td>
+                        <td class="text-start">
                             <span class="badge-clean">{{ course.department }}</span>
                         </td>
 
+                        {% if session.get('role') != 'user' %}
                         <!-- 5. UNITS -->
-                        <td class="text-center text-muted fw-medium">{{ course.lec_units }} / {{ course.lab_units }}
-                        </td>
+                        <td class="text-start text-muted fw-medium">{{ course.lec_units }} / {{ course.lab_units }}</td>
 
                         <!-- 6. HOURS -->
-                        <td class="text-center text-muted small">{{ course.synchronous_lec_hours }} / {{
-                            course.synchronous_lab_hours }}</td>
-                        <td class="text-center text-muted small">{{ course.asynchronous_lec_hours }} / {{
-                            course.asynchronous_lab_hours }}</td>
+                        <td class="text-start text-muted small">{{ course.synchronous_lec_hours }} / {{ course.synchronous_lab_hours }}</td>
+                        <td class="text-start text-muted small">{{ course.asynchronous_lec_hours }} / {{ course.asynchronous_lab_hours }}</td>
 
                         <!-- 7. SEMESTER -->
-                        <td class="text-center">
+                        <td class="text-start">
                             {% if course.semester_offered == '1st Semester' %}
-                            <span class="badge bg-success bg-opacity-10 text-success border border-success">1st
-                                Sem</span>
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success">1st Sem</span>
                             {% elif course.semester_offered == '2nd Semester' %}
-                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">2nd
-                                Sem</span>
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">2nd Sem</span>
                             {% else %}
                             <span class="badge bg-warning bg-opacity-10 text-dark border border-warning">Midyear</span>
                             {% endif %}
                         </td>
+                        {% endif %}
 
                         <!-- 8. ACTIONS -->
-                        <td class="text-center">
-                            <!-- 3rd button: Schedule -->
+                        <td class="text-center pe-0">
+                            <!-- 3rd button: Schedule (admin only) -->
+                            {% if session.get('role') in ['admin', 'superadmin'] %}
                             <button type="button" class="btn-icon view"
                                 onclick="viewSchedule('course', {{ course.id }})" title="View Schedule">
                                 <i class="bi bi-calendar-week"></i>
                             </button>
+                            {% endif %}
                             {% if not is_hist %}
                             <button type="button" class="btn-icon edit" data-bs-toggle="modal"
                                 data-bs-target="#editCourseModal{{ course.id }}"><i class="bi bi-pencil"></i></button>
@@ -423,6 +412,7 @@
                         </select>
                     </div>
 
+                    {% if session.get('role') != 'user' %}
                     <!-- Units & Hours Grid -->
                     <div class="row g-2">
                         <div class="col-4 border-end">
@@ -464,6 +454,7 @@
                             <option>Midyear</option>
                         </select>
                     </div>
+                    {% endif %}
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -533,6 +524,7 @@
                         </select>
                     </div>
 
+                    {% if session.get('role') != 'user' %}
                     <!-- Units/Hours -->
                     <div class="row g-2">
                         <div class="col-4 border-end">
@@ -574,6 +566,7 @@
                             <option {% if course.semester_offered=='Midyear' %}selected{% endif %}>Midyear</option>
                         </select>
                     </div>
+                    {% endif %}
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>

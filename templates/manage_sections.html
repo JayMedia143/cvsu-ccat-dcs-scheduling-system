@@ -12,7 +12,7 @@
     </div>
 
     <!-- Updated Buttons: Clean Style -->
-    {% if not is_hist %}
+    {% if not is_hist and session.get('role') != 'user' %}
     <div class="d-flex align-items-center gap-3">
         <!-- New Section (Clean Style like Manage Courses) -->
         <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addSectionModal">
@@ -26,7 +26,7 @@
 <!-- 2. SEARCH & FILTER TOOLBAR -->
 <div class="row mb-4 position-relative align-items-center" style="height: 50px;">
 
-    {% if not is_hist %}
+    {% if not is_hist and session.get('role') != 'user' %}
     <!-- A. BULK ACTION BAR (Overlay) -->
     <!-- bulkActionBar div -->
     <div class="bulk-action-bar" id="bulkActionBar">
@@ -38,6 +38,7 @@
         </div>
 
         <div class="d-flex align-items-center gap-2">
+            {% if session.get('role') != 'user' %}
             <!-- PASTE BUTTON (Lalabas lang kapag may laman ang clipboard) -->
             <button type="button" id="mainPasteBtn" class="btn btn-sm btn-outline-dark rounded-pill px-3 fw-bold"
                 style="display: none;" onclick="bulkPasteToSections()">
@@ -47,6 +48,7 @@
             <button type="button" class="btn-simple-assign" onclick="openBulkAssignModal()">
                 <i class="bi bi-journal-plus me-2 fs-5"></i> Assign Curriculum
             </button>
+            {% endif %}
 
             <div class="vr mx-2"></div>
 
@@ -174,36 +176,40 @@
 
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead>
+                    <thead class="table-light">
                         <tr>
-                            {% if not is_hist %}
-                            <th class="select-cell text-center" style="width: 40px;">
+                            {% if not is_hist and session.get('role') != 'user' %}
+                            <th class="select-cell ps-0 pe-0 text-center" style="width: 1%; white-space: nowrap;">
                                 <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
                             </th>
                             {% endif %}
                             <!-- Adjusted Widths for Compact Look -->
-                            <th style="width: 20%;">SECTION NAME</th>
-                            <th style="width: 12%;" class="text-center">YEAR LEVEL</th>
-                            <th style="width: 12%;" class="text-center">POPULATION</th>
-                            <th style="width: 40%;">ASSIGNED COURSES</th>
-                            <th style="width: 16%;" class="text-center">ACTIONS</th>
+                            <th class="ps-0 text-start" style="width: 25%;">SECTION NAME</th>
+                            <th class="text-start" style="width: 15%;">YEAR LEVEL</th>
+                            {% if session.get('role') != 'user' %}
+                            <th class="text-start" style="width: 12%;">POPULATION</th>
+                            <th class="text-start" style="width: 40%;">ASSIGNED COURSES</th>
+                            {% endif %}
+                            {% if session.get('role') != 'user' %}
+                            <th class="text-center pe-0" style="width: 1%; white-space: nowrap;">ACTIONS</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody class="section-table-body">
                         {% for section in sections %}
                         <tr class="section-row" data-id="{{ section.id }}">
-                            {% if not is_hist %}
-                            <td class="select-cell text-center">
+                            {% if not is_hist and session.get('role') != 'user' %}
+                            <td class="select-cell ps-0 pe-0 text-center">
                                 <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
                                     value="{{ section.id }}">
                             </td>
                             {% endif %}
 
                             <!-- Pure Black Section Name -->
-                            <td class="fw-bold text-black">{{ section.section_name }}</td>
+                            <td class="fw-bold text-dark ps-0 text-start">{{ section.section_name }}</td>
 
                             <!-- Simple Badge -->
-                            <td class="text-center">
+                            <td class="text-start">
                                 <span class="badge-clean">
                                     {% if section.year_level == 1 %}1st Year
                                     {% elif section.year_level == 2 %}2nd Year
@@ -213,7 +219,8 @@
                                 </span>
                             </td>
 
-                            <td class="text-center text-dark">{{ section.number_of_students }}</td>
+                            {% if session.get('role') != 'user' %}
+                            <td class="text-start text-dark">{{ section.number_of_students }}</td>
 
                             <!-- Compact Course List -->
                             <td>
@@ -234,9 +241,11 @@
                                 <span class="text-muted small fst-italic">--</span>
                                 {% endif %}
                             </td>
+                            {% endif %}
 
                             <!-- Sa loob ng Actions column -->
-                            <td class="text-center" onclick="event.stopPropagation()">
+                            {% if session.get('role') != 'user' %}
+                            <td class="text-center pe-0" onclick="event.stopPropagation()">
                                 {% if not is_hist %}
                                 <button type="button" class="btn-icon"
                                     onclick="copyCurriculum({{ section.id }}, '{{ section.section_name }}')"
@@ -245,11 +254,13 @@
                                 </button>
                                 {% endif %}
 
-                                <!-- 3rd: Schedule Viewer -->
+                                <!-- 3rd: Schedule Viewer (admin only) -->
+                                {% if session.get('role') in ['admin', 'superadmin'] %}
                                 <button type="button" class="btn-icon view"
                                     onclick="viewSchedule('section', {{ section.id }})" title="View Schedule">
                                     <i class="bi bi-calendar-week"></i>
                                 </button>
+                                {% endif %}
 
                                 {% if not is_hist %}
                                 <!-- 3. Edit -->
@@ -267,6 +278,7 @@
                                 {% endif %}
                                 {% endif %}
                             </td>
+                            {% endif %}
                         </tr>
                         {% else %}
                         <tr>

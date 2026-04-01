@@ -102,22 +102,23 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th class="select-cell"><input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                        <th class="select-cell ps-0 pe-0 text-center" style="width: 1%; white-space: nowrap;">
+                            <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
                         </th>
-                        <th class="ps-2" style="width: 35%;">Assignment Details</th>
-                        <th style="width: 18%;">In Trash Since</th>
-                        <th class="text-center" style="width: 17%;">Actions</th>
+                        <th class="ps-0 text-start" style="width: 50%;">Assignment Details</th>
+                        <th class="text-start">In Trash Since</th>
+                        <th class="text-center pe-0" style="width: 1%; white-space: nowrap;">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="archiveTableBody">
                     {% for pa in pre_assignments %}
                     <tr class="pa-row course-row" data-id="{{ pa.id }}">
-                        <td class="select-cell">
+                        <td class="select-cell ps-0 pe-0 text-center">
                             <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
                                 value="{{ pa.id }}">
                         </td>
 
-                        <td class="ps-2 search-target">
+                        <td class="ps-0 search-target text-start">
                             <div>
                                 <strong class="text-dark">{{ pa.course.course_code }}</strong>
                                 <span class="badge bg-light border text-dark ms-2">{{ pa.section.section_name }}</span>
@@ -127,7 +128,7 @@
                                 </div>
                             </div>
                         </td>
-                        <td>
+                        <td class="text-start">
                             {% if pa.deleted_at %}
                             {% set days = (now - pa.deleted_at).days %}
                             <span class="text-muted small">{{ days }}d ago</span>
@@ -139,7 +140,7 @@
                             {% endif %}
                         </td>
 
-                        <td class="text-center" onclick="event.stopPropagation()">
+                        <td class="text-center pe-0" onclick="event.stopPropagation()">
                             <button type="button" class="btn-icon text-success" title="Restore"
                                 data-bs-toggle="modal" data-bs-target="#restoreModal{{ pa.id }}">
                                 <i class="bi bi-arrow-counterclockwise"></i>

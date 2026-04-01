@@ -101,26 +101,27 @@
                 <thead class="table-light">
                     <tr>
                         {% if not is_hist %}
-                        <th class="select-cell"><input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                        <th class="select-cell ps-0 pe-0 text-center" style="width: 1%; white-space: nowrap;">
+                            <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
                         </th>
                         {% endif %}
-                        <th class="ps-2" style="width: 40%;">Class Details</th>
-                        <th style="width: 30%;">Schedule</th>
-                        <th style="width: 20%;">Instructor</th>
-                        <th class="text-center" style="width: 10%;">Actions</th>
+                        <th class="ps-0 text-start" style="width: 40%;">Class Details</th>
+                        <th class="text-start" style="width: 30%;">Schedule</th>
+                        <th class="text-start" style="width: 20%;">Instructor</th>
+                        <th class="text-center pe-0" style="width: 1%; white-space: nowrap;">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="preAssignmentTableBody">
                     {% for pa in pre_assignments %}
                     <tr class="pa-row course-row" data-id="{{ pa.id }}">
                         {% if not is_hist %}
-                        <td class="select-cell">
+                        <td class="select-cell ps-0 pe-0 text-center">
                             <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
                                 value="{{ pa.id }}">
                         </td>
                         {% endif %}
 
-                        <td class="ps-2 search-target">
+                        <td class="ps-0 text-start search-target">
                             <div class="d-flex flex-column">
                                 <span class="fw-bold text-dark">{{ pa.course.course_code }}</span>
                                 <span class="text-muted small">{{ pa.course.course_name }}</span>
@@ -130,7 +131,7 @@
                             </div>
                         </td>
 
-                        <td class="search-target">
+                        <td class="text-start search-target">
                             <div class="d-flex flex-column">
                                 <span class="fw-bold text-primary">{{ pa.day }}</span>
                                 <span class="text-dark small">{{ pa.start_time }} - {{ pa.end_time }}</span>
@@ -139,7 +140,7 @@
                             </div>
                         </td>
 
-                        <td class="search-target">
+                        <td class="text-start search-target">
                             <div class="d-flex align-items-center">
                                 <div class="stat-icon-bg bg-light text-secondary me-2 rounded-circle d-flex align-items-center justify-content-center"
                                     style="width:32px; height:32px;">
@@ -150,7 +151,7 @@
                         </td>
 
                         {% if not is_hist %}
-                        <td class="text-center" onclick="event.stopPropagation()">
+                        <td class="text-center pe-0" onclick="event.stopPropagation()">
                             <button type="button" class="btn-icon delete" title="Move to Recycle Bin"
                                 data-bs-toggle="modal" data-bs-target="#archiveModal{{ pa.id }}">
                                 <i class="bi bi-trash"></i>

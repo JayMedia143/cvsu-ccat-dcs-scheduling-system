@@ -28,16 +28,16 @@
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
-                        <th style="width: 25%;" class="ps-4">USERNAME</th>
-                        <th style="width: 20%;">ROLE</th>
-                        <th style="width: 20%;" class="text-center">ACTIONS</th>
+                        <th style="width: 50%;" class="ps-0 text-start">USERNAME</th>
+                        <th style="width: 25%;" class="text-start">ROLE</th>
+                        <th style="width: 1%; white-space: nowrap;" class="text-center pe-0">ACTIONS</th>
                     </tr>
                 </thead>
                 <tbody class="user-table-body">
                     {% for user in users %}
                     <tr class="user-row" data-id="{{ user.id }}">
-                        <td class="fw-bold text-black ps-4">{{ user.username }}</td>
-                        <td>
+                        <td class="fw-bold text-black ps-0 text-start">{{ user.username }}</td>
+                        <td class="text-start">
                             <span class="badge-clean">
                                 {% if user.role == 'superadmin' %}
                                 <i class="bi bi-shield-lock-fill text-danger me-1"></i> Superadmin
@@ -48,7 +48,7 @@
                                 {% endif %}
                             </span>
                         </td>
-                        <td class="text-center">
+                        <td class="text-center pe-0">
                             {% if current_user_id != user.id %}
                             {% if not is_hist %}
                             <button type="button" class="btn-icon delete" data-bs-toggle="modal"

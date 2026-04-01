@@ -14,12 +14,14 @@
     <!-- Updated Buttons: Clean Style -->
     {% if not is_hist %}
     <div class="d-flex align-items-center gap-3">
+        {% if session.get('role') in ['admin', 'superadmin'] %}
         <!-- IMPORT BUTTON -->
         <button class="btn-google-action" data-bs-toggle="modal"
             data-bs-target="#importLoadingModal">
             <i class="bi bi-file-earmark-spreadsheet-fill"></i>
             <span>Import Faculty Loading</span>
         </button>
+        {% endif %}
 
         <!-- New Faculty (Existing) -->
         <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addFacultyModal">
@@ -177,39 +179,43 @@
                     <thead class="table-light">
                         <tr>
                             {% if not is_hist %}
-                            <th class="select-cell"><input class="form-check-input" type="checkbox"
-                                    id="selectAllCheckbox"></th>
+                            <th class="select-cell ps-0 pe-0 text-center" style="width: 1%; white-space: nowrap;">
+                                <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                            </th>
                             {% endif %}
-                            <th class="ps-2" style="width: 15%;">Employee ID</th>
-                            <th style="width: 20%;">Full Name</th>
-                            <th style="width: 20%;">Department</th> <!-- NEW COLUMN -->
-                            <th class="text-center" style="width: 10%;">Status</th>
-                            <th class="text-center" style="width: 8%;">Availability</th>
-                            <th class="text-center" style="width: 10%;">Max Hrs</th>
-                            <th class="text-center" style="width: 10%;">Workload</th>
-                            <th class="text-center" style="width: 15%;">Actions</th>
+                            <th class="ps-0 text-start" style="width: 15%;">Employee ID</th>
+                            <th class="text-start" style="width: 25%;">Full Name</th>
+                            <th class="text-start" style="width: 25%;">Department</th>
+                            {% if session.get('role') != 'user' %}
+                            <th class="text-start" style="width: 10%;">Status</th>
+                            <th class="text-start" style="width: 8%;">Availability</th>
+                            <th class="text-start" style="width: 10%;">Max Hrs</th>
+                            <th class="text-start" style="width: 10%;">Workload</th>
+                            {% endif %}
+                            <th class="text-center pe-0" style="width: 1%; white-space: nowrap;">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="faculty-table-body">
                         {% for faculty in faculty_list %}
                         <tr class="course-row faculty-row" data-id="{{ faculty.id }}">
                             {% if not is_hist %}
-                            <td class="select-cell">
+                            <td class="select-cell ps-0 pe-0 text-center">
                                 <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
                                     value="{{ faculty.id }}">
                             </td>
                             {% endif %}
 
-                            <td class="text-dark font-monospace ps-2">{{ faculty.employee_id }}</td>
-                            <td class="fw-bold text-dark">{{ faculty.full_name }}</td>
+                            <td class="text-dark font-monospace ps-0 text-start">{{ faculty.employee_id }}</td>
+                            <td class="fw-bold text-dark text-start">{{ faculty.full_name }}</td>
 
-                            <!-- Department Column (Updated to Clean Style) -->
-                            <td>
+                            <td class="text-start">
                                 <span class="badge-clean">
                                     {{ 'All Departments' if faculty.department == 'Unassigned' else faculty.department }}
                                 </span>
                             </td>
-                            <td class="text-center">
+
+                            {% if session.get('role') != 'user' %}
+                            <td class="text-start">
                                 {% if faculty.employment_status == 'Full-time' %}
                                 <span
                                     class="badge bg-success bg-opacity-10 text-success border border-success fw-normal">Full-time</span>
@@ -219,7 +225,7 @@
                                 {% endif %}
                             </td>
 
-                            <td class="text-center">
+                            <td class="text-start">
                                 {% set avail_list = (faculty.available_days or '').split(',') | select | list %}
                                 {% set avail_count = avail_list | length %}
                                 <span class="badge bg-secondary rounded-pill cursor-help" style="padding: 5px 10px;"
@@ -228,9 +234,9 @@
                                 </span>
                             </td>
 
-                            <td class="text-center text-muted fw-medium">{{ faculty.max_weekly_hours }}</td>
+                            <td class="text-start text-muted fw-medium">{{ faculty.max_weekly_hours }}</td>
 
-                            <td class="text-center">
+                            <td class="text-start">
                                 <!-- Total scheduled hours from GA-generated schedule -->
                                 {% set wload = workload_map.get(faculty.id, 0) %}
                                 <span class="badge bg-secondary rounded-pill cursor-help" style="padding: 5px 10px;"
@@ -238,28 +244,33 @@
                                     {{ wload }}
                                 </span>
                             </td>
+                            {% endif %}
 
                             <!-- Hanapin ang Actions column sa table loop -->
-                             <td class="text-center text-nowrap" onclick="event.stopPropagation()">
-                                <!-- View Profile -->
+                             <td class="text-center pe-0 text-nowrap" onclick="event.stopPropagation()">
+                                {% if session.get('role') in ['admin', 'superadmin'] %}
+                                <!-- View Profile (admin only) -->
                                 <button type="button" class="btn-icon"
                                     onclick="openFacultyProfile({{ loop.index0 }})" title="View Profile">
                                     <i class="bi bi-eye"></i>
                                 </button>
+                                {% endif %}
 
-                                {% if not is_hist %}
-                                <!-- Workload -->
+                                {% if not is_hist and session.get('role') in ['admin', 'superadmin'] %}
+                                <!-- Workload (admin only) -->
                                 <button type="button" class="btn-icon" style="color: #188038;" data-bs-toggle="modal"
                                     data-bs-target="#assignCoursesModal{{ faculty.id }}" title="Assign Workload">
                                     <i class="bi bi-clipboard-check"></i>
                                 </button>
                                 {% endif %}
 
-                                <!-- Schedule Viewer -->
+                                <!-- Schedule Viewer (admin only) -->
+                                {% if session.get('role') in ['admin', 'superadmin'] %}
                                 <button type="button" class="btn-icon view"
                                     onclick="viewSchedule('faculty', {{ faculty.id }})" title="View Schedule">
                                     <i class="bi bi-calendar-week"></i>
                                 </button>
+                                {% endif %}
 
                                 {% if not is_hist %}
                                 <!-- Edit -->
@@ -377,6 +388,7 @@
                         <label class="form-label small text-muted fw-bold">FULL NAME</label>
                         <input type="text" class="form-control" name="full_name" required>
                     </div>
+                    {% if session.get('role') != 'user' %}
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label small text-muted fw-bold">STATUS</label>
@@ -390,6 +402,7 @@
                             <input type="number" class="form-control" name="max_weekly_hours" value="35">
                         </div>
                     </div>
+                    {% endif %}
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
                         <select class="form-select" name="department">
@@ -422,6 +435,7 @@
                             </div>
                         </div>
                     </div>
+                    {% if session.get('role') != 'user' %}
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">AVAILABLE DAYS</label>
                         <div class="d-flex flex-wrap gap-2 mt-1">
@@ -434,6 +448,7 @@
                             {% endfor %}
                         </div>
                     </div>
+                    {% endif %}
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -467,6 +482,7 @@
                         <input type="text" class="form-control" name="full_name" value="{{ faculty.full_name }}"
                             required>
                     </div>
+                    {% if session.get('role') != 'user' %}
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label small text-muted fw-bold">STATUS</label>
@@ -483,6 +499,7 @@
                                 value="{{ faculty.max_weekly_hours }}">
                         </div>
                     </div>
+                    {% endif %}
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
                         <select class="form-select" name="department">
@@ -526,6 +543,7 @@
                             </div>
                         </div>
                     </div>
+                    {% if session.get('role') != 'user' %}
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">AVAILABLE DAYS</label>
                         <div class="d-flex flex-wrap gap-2 mt-1">
@@ -540,6 +558,7 @@
                             {% endfor %}
                         </div>
                     </div>
+                    {% endif %}
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
