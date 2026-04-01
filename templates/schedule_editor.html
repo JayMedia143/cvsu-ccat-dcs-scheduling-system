@@ -746,6 +746,122 @@
     .bulk-archive-toggle:hover {
         transform: scale(1.1);
     }
+
+    /* ── DRAFT PREVIEW CANVAS (scoped) ──────────────────────── */
+    #pvViewport {
+        background-color: #f8fafc;
+        background-image: radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px);
+        background-size: 30px 30px;
+        user-select: none;
+    }
+    #pvCanvas { transition: transform 0.05s linear; }
+    .pv-card {
+        background: transparent;
+        border-radius: 0;
+        box-shadow: none;
+        border: none;
+        overflow: visible;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        padding: 0;
+    }
+    .pv-card:hover { transform: translateY(-5px) scale(1.02); z-index: 20; }
+    .pv-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: url('https://www.transparenttextures.com/patterns/paper.png');
+        opacity: 0.1;
+        pointer-events: none;
+        z-index: 1;
+    }
+    .pv-card .card-iframe-wrap { width: 800px; height: 1130px; background: transparent; position: relative; overflow: hidden; }
+    .pv-card .card-iframe-wrap iframe { width: 800px; height: 1130px; border: none; pointer-events: none; transform: scale(1.0); transform-origin: top left; transition: opacity 0.3s ease; overflow: hidden; }
+    .pv-card .card-header-label { position: absolute; top: -30px; left: 0; background: #198754; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; box-shadow: 0 4px 10px rgba(25,135,84,0.3); z-index: 5; white-space: nowrap; }
+    .pv-card .btn-maximize { position: absolute; top: -30px; right: 0; background: rgba(0,0,0,0.6); color: white; border: none; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 5; transition: background 0.3s; }
+    .pv-card .btn-maximize:hover { background: #198754; }
+    #pvZoomBadge { position: absolute; bottom: 20px; left: 20px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); padding: 5px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; color: #198754; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 20; pointer-events: none; }
+    /* Cinema Overlay (scoped to preview modal) */
+    #pvCinemaOverlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.9);
+        backdrop-filter: blur(10px);
+        z-index: 500;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: grab;
+        user-select: none;
+    }
+    #pvCinemaOverlay.active { display: flex; }
+    #pvCinemaOverlay:active { cursor: grabbing; }
+    .pv-pres-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+    .pv-pres-iframe-wrap { width: 800px; height: 1130px; background: white; box-shadow: 0 0 100px rgba(0,0,0,0.8); transform-origin: center center; transition: transform 0.05s linear; pointer-events: auto; flex-shrink: 0; }
+    .pv-pres-iframe-wrap iframe { width: 100%; height: 100%; border: none; pointer-events: none; }
+    .pv-pres-nav-btn { position: absolute; top: 50%; transform: translateY(-50%); width: 70px; height: 70px; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; cursor: pointer; z-index: 10; transition: all 0.3s; }
+    .pv-pres-nav-btn:hover { background: #198754; border-color: #198754; transform: translateY(-50%) scale(1.1); }
+    .pv-pres-prev { left: 30px; }
+    .pv-pres-next { right: 30px; }
+    .pv-pres-close { position: absolute; top: 20px; right: 20px; color: rgba(255,255,255,0.4); font-size: 2.5rem; cursor: pointer; z-index: 10; transition: color 0.3s; line-height: 1; background: none; border: none; }
+    .pv-pres-close:hover { color: white; }
+    .pv-pres-footer { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.5); font-size: 0.9rem; letter-spacing: 1px; white-space: nowrap; }
+    .btn-sync-grid {
+        background: #fff !important;
+        border: 1px solid #dadce0 !important;
+        color: #3c4043 !important;
+        border-radius: 24px !important;
+        padding: 6px 14px !important;
+        font-size: .78rem !important;
+        font-weight: 600 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        cursor: pointer !important;
+        box-shadow: 0 1px 3px rgba(60, 64, 67, 0.3) !important;
+        outline: none !important;
+        border: none !important;
+    }
+
+    .btn-sync-grid:hover {
+        background: #f1f3f4 !important;
+        color: #1a73e8 !important;
+        box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15) !important;
+        transform: translateY(-1px);
+    }
+
+    .btn-sync-grid:active {
+        background: #e8f0fe !important;
+        transform: translateY(0);
+        box-shadow: inset 0 1px 2px rgba(60, 64, 67, 0.3) !important;
+    }
+
+    .btn-sync-grid .sync-icon {
+        display: inline-block;
+        font-size: 1rem;
+        transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-sync-grid.spinning .sync-icon {
+        animation: spin-sync 0.8s infinite linear;
+    }
+
+    @keyframes spin-sync {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    @keyframes pulse-highlight {
+        0% { background-color: #fff; }
+        30% { background-color: #e8f0fe; box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.1); }
+        100% { background-color: #fff; }
+    }
+
+    .field-pulse {
+        animation: pulse-highlight 0.6s ease-in-out 2;
+        border-color: #1a73e8 !important;
+    }
 </style>
 
 <div class="editor-wrapper">
@@ -798,8 +914,23 @@
                     class="bi bi-cloud-upload me-1"></i>Publish</button>
             {% endif %}
             {% endif %}
-            <button class="btn btn-sm btn-outline-secondary" onclick="loadGrid()" title="Refresh"><i
-                    class="bi bi-arrow-clockwise"></i></button>
+            {% if not is_hist %}
+            {% if session.get('role') in ['admin','superadmin'] %}
+            <button id="previewDraftBtn" class="btn btn-sm btn-success d-none" onclick="openDraftPreview()" title="Full-Screen Draft Preview">
+                <i class="bi bi-eye-fill me-1"></i> Preview
+            </button>
+            {% endif %}
+            {% endif %}
+            <button id="undoBtn" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="undoLast()" title="Undo (Ctrl+Z)" disabled>
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+            <button id="redoBtn" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="redoLast()" title="Redo (Ctrl+Y)" disabled>
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+            <button class="btn-sync-grid" id="syncGridBtn" onclick="loadGrid()" title="Sync schedule grid with server">
+                <i class="bi bi-arrow-clockwise sync-icon"></i>
+                <span>Sync Grid</span>
+            </button>
         </div>
     </div>
 
@@ -822,7 +953,10 @@
         <!-- LEFT PANEL -->
         <div class="editor-left-panel">
             <div>
-                <div class="panel-section-title">Add New Schedule</div>
+                <div class="panel-section-title d-flex justify-content-between align-items-center">
+                    <span id="addFormTitle">Add New Schedule</span>
+                    <button id="btnCancelEdit" class="btn btn-link btn-sm text-muted p-0 d-none" onclick="setSidebarMode('add')" style="font-size:0.7rem;text-decoration:none">Cancel</button>
+                </div>
                 <div class="add-form d-flex flex-column gap-2">
                     <div>
                         <label class="form-label mb-1" style="font-size:.75rem">Course</label>
@@ -843,7 +977,7 @@
                     <div>
                         <label class="form-label mb-1" style="font-size:.75rem">Faculty</label>
                         <select id="addFaculty" class="form-select form-select-sm">
-                            <option value="">T.B.A.</option>
+                            <option value="">— select faculty —</option>
                             {% for f in faculties %}<option value="{{ f.id }}">{{ f.full_name }}</option>{% endfor %}
                         </select>
                     </div>
@@ -882,9 +1016,8 @@
                     </div>
                     <div id="addLockBanner" class="add-lock-banner mt-1"><i class="bi bi-lock-fill"></i><span>Schedule
                             locked — select a draft first.</span></div>
-                    <div id="addFormError" class="alert alert-danger py-1 px-2 mb-0"
-                        style="font-size:.78rem;display:none"></div>
-                    <button class="btn-add-sched mt-1" onclick="submitAddSchedule()">
+                    <div id="addFormError" class="alert alert-danger py-1 px-2 mb-0" style="font-size:.78rem;display:none"></div>
+                    <button id="btnAddSchedule" class="btn-add-sched mt-1" onclick="submitAddSchedule()">
                         <i class="bi bi-plus-circle me-1"></i>Add Schedule
                     </button>
                 </div>
@@ -1402,81 +1535,7 @@
     </div>
 </div>
 
-<!-- EDIT ENTRY MODAL -->
-<div class="modal fade" id="editEntryModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Schedule Entry</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="editEntryId">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Course</label>
-                    <input type="text" class="form-control" id="editCourseDisplay" readonly style="background:#f8f9fa">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Section</label>
-                    <input type="text" class="form-control" id="editSectionDisplay" readonly style="background:#f8f9fa">
-                </div>
-                <div class="row g-3 mb-3">
-                    <div class="col-6">
-                        <label class="form-label fw-semibold">Faculty</label>
-                        <select class="form-select" id="editFaculty">
-                            <option value="">T.B.A.</option>
-                            {% for f in faculties %}<option value="{{ f.id }}">{{ f.full_name }}</option>{% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label fw-semibold">Room</label>
-                        <select class="form-select" id="editRoom">
-                            <option value="">— none —</option>
-                            {% for r in rooms %}<option value="{{ r.id }}">{{ r.room_name }}</option>{% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="row g-3 mb-3">
-                    <div class="col-6">
-                        <label class="form-label fw-semibold">Day</label>
-                        <select class="form-select" id="editDay">
-                            {% for d in allowed_days %}<option>{{ d }}</option>{% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label fw-semibold">Type</label>
-                        <select class="form-select" id="editType">
-                            <option>Lec</option>
-                            <option>Lab</option>
-                            <option>Async</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="row g-3 mb-2">
-                    <div class="col-6">
-                        <label class="form-label fw-semibold">Start</label>
-                        <select class="form-select" id="editStart"></select>
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label fw-semibold">End</label>
-                        <select class="form-select" id="editEnd"></select>
-                    </div>
-                </div>
-                <div id="editLockWarning" class="edit-lock-warning" style="display:none">
-                    <i class="bi bi-lock-fill"></i>
-                    <span>This entry is GA-locked. Only admins can make changes.</span>
-                </div>
-                <div id="editFormError" class="alert alert-danger py-1 px-2 mb-0" style="font-size:.82rem;display:none">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success px-4" id="editSaveBtn" onclick="submitEditEntry()"><i
-                        class="bi bi-check-lg me-1"></i>Save Changes</button>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <script>
     // ════════════════════════════════════════
@@ -1519,6 +1578,8 @@
     let DRAFTS_DATA = [{% for dv in drafts %}{ id:{{ dv.id }}, name:{{ dv.name|tojson }}, semester:{{ dv.semester|tojson }}, department:{{ (dv.department or '')|tojson }}, notes:{{ (dv.notes or '')|tojson }}, is_published:{{ 'true' if dv.is_published else 'false' }} }{% if not loop.last %},{% endif %}{% endfor %}];
     let _editDraftId = null;
     let _newDraftCtx = 'picker'; // 'picker' | 'manage'
+    let sidebarMode = 'add'; // 'add' | 'edit'
+    let editEntryId = null;
 
     function getCsrf() { return document.getElementById('csrfToken').value; }
 
@@ -1537,6 +1598,7 @@
     //  TIME SELECTORS
     // ════════════════════════════════════════
     function buildTimeOpts(sel) {
+        if (!sel) return;
         sel.innerHTML = '';
         for (let h = START_HOUR; h <= END_HOUR; h++) {
             for (let m of [0, 30]) {
@@ -1547,7 +1609,7 @@
         }
     }
     (function initSelectors() {
-        ['addStart', 'addEnd', 'editStart', 'editEnd'].forEach(id => buildTimeOpts(document.getElementById(id)));
+        ['addStart', 'addEnd'].forEach(id => buildTimeOpts(document.getElementById(id)));
         document.getElementById('addStart').value = minToStr(START_HOUR * 60);
         document.getElementById('addEnd').value = minToStr(Math.min((START_HOUR + 3) * 60, END_HOUR * 60));
         // When start changes, shift end by same 3h default (preserving existing gap if user edited end)
@@ -1596,12 +1658,18 @@
     //  LOAD GRID
     // ════════════════════════════════════════
     async function loadGrid() {
+        const syncBtn = document.getElementById('syncGridBtn');
+        if (syncBtn) syncBtn.classList.add('spinning');
+
         const vt = document.getElementById('viewTypeSel').value;
         const entityId = parseInt(document.getElementById('entitySel').value);
         currentSemester = document.getElementById('semesterSel').value;
         currentViewType = vt;
         currentEntityId = entityId;
-        if (!entityId) return;
+        if (!entityId) {
+            if (syncBtn) syncBtn.classList.remove('spinning');
+            return;
+        }
 
         // Auto-fill add form
         if (vt === 'section') document.getElementById('addSection').value = entityId;
@@ -1621,7 +1689,16 @@
                     : Promise.resolve([]),
             ]);
             masterEntries = Array.isArray(mRes) ? mRes : [];
-            draftEntries = Array.isArray(dRes) ? dRes : [];
+            const rawDrafts = Array.isArray(dRes) ? dRes : [];
+
+            // FILTER: Only show draft entries for current view/entity
+            draftEntries = rawDrafts.filter(e => {
+                // Defensive: ensure comparison works if IDs are strings or integers
+                if (vt === 'section') return Number(e.section_id) === entityId;
+                if (vt === 'faculty') return Number(e.faculty_id) === entityId;
+                if (vt === 'room')    return Number(e.room_id)    === entityId;
+                return false; // Strictly isolate: don't show if view type is unknown or mismatched
+            });
 
             // Update draft option + panel item with entry count
             if (currentDraftId) {
@@ -1645,6 +1722,8 @@
         } finally {
             document.getElementById('gridSpinner').style.display = 'none';
             document.getElementById('calGrid').style.display = '';
+            // Stop spinning after a slight delay for better UX
+            if (syncBtn) setTimeout(() => syncBtn.classList.remove('spinning'), 600);
         }
         renderGrid();
     }
@@ -1660,6 +1739,15 @@
 
         const wrap = document.createElement('div');
         wrap.className = 'cal-wrap';
+        wrap.addEventListener('click', (e) => {
+            // Revert to add mode when clicking background (empty space)
+            if (e.target.classList.contains('cal-wrap') || 
+                e.target.classList.contains('cal-body') || 
+                e.target.classList.contains('cal-day-col') ||
+                e.target.classList.contains('cal-time-gutter')) {
+                setSidebarMode('add');
+            }
+        });
 
         // Header
         const hdr = document.createElement('div');
@@ -1720,8 +1808,9 @@
             col.addEventListener('click', e => {
                 if (IS_HIST) return;
                 if (e.target === col) {
-                    const rect = col.getBoundingClientRect();
-                    const rawMin = START_HOUR * 60 + (e.clientY - rect.top);
+                    setSidebarMode('add');
+                    // Use offsetY for absolute local precision
+                    const rawMin = START_HOUR * 60 + e.offsetY;
                     quickFillAddForm(day, minToStr(snapTo15(rawMin)));
                 }
             });
@@ -1778,6 +1867,15 @@
         const editOnclick = isMasterInDraftMode
             ? `showToast('Switch to Direct Edit Mode to modify master entries.','error');event.stopPropagation()`
             : `openEditModal(${entry.id},event)`;
+
+        block.onclick = (e) => {
+            if (isMasterInDraftMode) {
+                showToast('Switch to Direct Edit Mode to modify master entries.','error');
+            } else {
+                setSidebarMode('edit', entry);
+            }
+        };
+
         const deleteOnclick = isMasterInDraftMode
             ? `showToast('Switch to Direct Edit Mode to delete master entries.','error');event.stopPropagation()`
             : `confirmDeleteEntry(${entry.id},event)`;
@@ -1872,29 +1970,46 @@
 
         if (newStart === draggingEntry.start_time && newDay === draggingEntry.day) return;
 
-        const cf = await checkConflicts({
-            day: newDay, start: newStart, end: newEnd,
-            faculty_id: draggingEntry.faculty_id, room_id: draggingEntry.room_id,
-            section_id: draggingEntry.section_id, semester: currentSemester,
-            exclude_id: draggingEntry.id, draft_version_id: currentDraftId,
-        });
-        if (cf.hard_conflicts && cf.hard_conflicts.length) {
-            col.classList.add('conflict-flash');
-            setTimeout(() => col.classList.remove('conflict-flash'), 1400);
-            showToast(cf.hard_conflicts[0].label, 'error');
-            return;
+        // Client-side conflict pre-check (blocks non-admins; admins get server-side check + force override)
+        if (!IS_ADMIN) {
+            const cf = await checkConflicts({
+                day: newDay, start: newStart, end: newEnd,
+                faculty_id: draggingEntry.faculty_id, room_id: draggingEntry.room_id,
+                section_id: draggingEntry.section_id, semester: currentSemester,
+                exclude_id: draggingEntry.id, draft_version_id: currentDraftId,
+            });
+            if (cf.hard_conflicts && cf.hard_conflicts.length) {
+                col.classList.add('conflict-flash');
+                setTimeout(() => col.classList.remove('conflict-flash'), 1400);
+                showToast(cf.hard_conflicts[0].label, 'error');
+                return;
+            }
         }
 
         const movedId = draggingEntry.id;
         const oldDay = draggingEntry.day;
         const oldStart = draggingEntry.start_time;
         const oldEnd = draggingEntry.end_time;
+        await doMoveClass(movedId, newDay, newStart, newEnd, oldDay, oldStart, oldEnd, col);
+    }
+
+    async function doMoveClass(movedId, newDay, newStart, newEnd, oldDay, oldStart, oldEnd, col, force = false) {
         try {
-            const res = await fetch('/api/move-class', {
+            const raw = await fetch('/api/move-class', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
-                body: JSON.stringify({ sched_id: movedId, day: newDay, start: newStart, end: newEnd }),
-            }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+                body: JSON.stringify({ sched_id: movedId, day: newDay, start: newStart, end: newEnd, force_override: force }),
+            });
+            const res = await raw.json().catch(() => ({ ok: false, error: `Server error (${raw.status})` }));
+            if (raw.status === 409 && IS_ADMIN && res.conflicts?.length) {
+                const msg = res.conflicts.join('\n');
+                if (confirm(`Conflict detected:\n${msg}\n\nForce override this move?`)) {
+                    await doMoveClass(movedId, newDay, newStart, newEnd, oldDay, oldStart, oldEnd, col, true);
+                } else {
+                    if (col) { col.classList.add('conflict-flash'); setTimeout(() => col.classList.remove('conflict-flash'), 1400); }
+                }
+                return;
+            }
             if (!res.ok) { showToast(res.error || 'Could not move entry.', 'error'); return; }
             pushHistory(
                 async () => { await silentMove(movedId, oldDay, oldStart, oldEnd); },
@@ -1948,23 +2063,82 @@
     //  ADD SCHEDULE
     // ════════════════════════════════════════
     function quickFillAddForm(day, time) {
-        document.getElementById('addDay').value = day;
-        document.getElementById('addStart').value = time;
-        document.getElementById('addEnd').value = minToStr(Math.min(toMin(time) + 180, END_HOUR * 60));
+        const dInput = document.getElementById('addDay');
+        const sInput = document.getElementById('addStart');
+        const eInput = document.getElementById('addEnd');
+
+        if (dInput) dInput.value = day;
+        if (sInput) sInput.value = time;
+        // Default 2 hours (120 minutes) as per user request
+        if (eInput) eInput.value = minToStr(Math.min(toMin(time) + 120, END_HOUR * 60));
+
+        // Visual feedback Pulse
+        [dInput, sInput, eInput].forEach(inp => {
+            if (inp) {
+                inp.classList.remove('field-pulse');
+                void inp.offsetWidth; // Trigger reflow
+                inp.classList.add('field-pulse');
+                setTimeout(() => inp.classList.remove('field-pulse'), 1500);
+            }
+        });
     }
 
     function showAddError(msg) {
         const err = document.getElementById('addFormError');
-        err.textContent = msg;
-        err.style.display = '';
-        err.classList.remove('shake');
-        void err.offsetWidth; // reflow to restart animation
-        err.classList.add('shake');
-        err.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (err) {
+            err.textContent = msg;
+            err.style.display = '';
+            err.classList.remove('shake');
+            void err.offsetWidth; // reflow to restart animation
+            err.classList.add('shake');
+            err.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        showToast(msg, 'error');
+    }
+
+    function setSidebarMode(mode, entry = null) {
+        sidebarMode = mode;
+        const title = document.getElementById('addFormTitle');
+        const btn = document.getElementById('btnAddSchedule');
+        const cancelBtn = document.getElementById('btnCancelEdit');
+        const err = document.getElementById('addFormError');
+        if (err) err.style.display = 'none';
+
+        if (mode === 'edit' && entry) {
+            editEntryId = entry.id;
+            title.textContent = 'Edit Schedule';
+            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Update Schedule';
+            cancelBtn.classList.remove('d-none');
+            // Pre-fill fields
+            document.getElementById('addCourse').value = entry.course_id;
+            document.getElementById('addSection').value = entry.section_id;
+            document.getElementById('addFaculty').value = entry.faculty_id || '';
+            document.getElementById('addRoom').value = entry.room_id || '';
+            document.getElementById('addDay').value = entry.day;
+            document.getElementById('addStart').value = entry.start_time;
+            document.getElementById('addEnd').value = entry.end_time;
+            document.getElementById('addType').value = entry.session_type || 'Lec';
+        } else {
+            editEntryId = null;
+            title.textContent = 'Add New Schedule';
+            btn.innerHTML = '<i class="bi bi-plus-circle me-1"></i>Add Schedule';
+            cancelBtn.classList.add('d-none');
+            // Reset to defaults or current grid context
+            document.getElementById('addCourse').value = '';
+            const vt = document.getElementById('viewTypeSel').value;
+            const ent = document.getElementById('entitySel').value;
+            document.getElementById('addSection').value = (vt === 'section') ? ent : '';
+            document.getElementById('addFaculty').value = (vt === 'faculty') ? ent : '';
+            document.getElementById('addRoom').value = (vt === 'room') ? ent : '';
+            document.getElementById('addDay').selectedIndex = 0;
+            document.getElementById('addType').selectedIndex = 0;
+            // Time defaults are handled by initSelectors generally, but good to reset if needed
+        }
     }
     async function submitAddSchedule() {
         const err = document.getElementById('addFormError');
-        err.style.display = 'none';
+        if (err) err.style.display = 'none';
+
         const courseId = document.getElementById('addCourse').value;
         const sectionId = document.getElementById('addSection').value;
         const facultyId = document.getElementById('addFaculty').value || null;
@@ -1974,54 +2148,86 @@
         const end = document.getElementById('addEnd').value;
         const sType = document.getElementById('addType').value;
 
-        // Mode enforcement: admin must have chosen a mode first
-        if (IS_ADMIN && editorMode === null) { openModePicker(); return; }
-        if (IS_ADMIN && editorMode === 'draft' && !currentDraftId) { openModePicker(); return; }
-
-        if (!courseId || !sectionId || !day || !start || !end) {
-            showAddError('Course, section, day, and time are required.'); return;
+        // Validation
+        if (!courseId || !sectionId || !roomId || !day || !start || !end) {
+            showAddError('Course, section, room, day, and time are required.'); return;
         }
         if (toMin(start) >= toMin(end)) {
             showAddError('End time must be after start time.'); return;
         }
 
-        const cf = await checkConflicts({
-            day, start, end, faculty_id: facultyId, room_id: roomId,
-            section_id: sectionId, semester: currentSemester, draft_version_id: currentDraftId
-        });
-        if (cf.hard_conflicts && cf.hard_conflicts.length) {
-            showAddError(cf.hard_conflicts[0].label); return;
+        // Mode enforcement: admin must have chosen a mode first
+        if (IS_ADMIN && editorMode === null) { openModePicker(); return; }
+        if (IS_ADMIN && editorMode === 'draft' && !currentDraftId) { openModePicker(); return; }
+
+        const btn = document.getElementById('btnAddSchedule');
+        const loadingText = (sidebarMode === 'edit') ? 'Updating...' : 'Adding...';
+        const defaultText = (sidebarMode === 'edit') ? 'Update Schedule' : 'Add Schedule';
+        const defaultIcon = (sidebarMode === 'edit') ? 'check-circle' : 'plus-circle';
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<i class="bi bi-hourglass-split me-1"></i>${loadingText}`;
         }
 
         try {
-            const res = await fetch('/api/schedule/add', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
-                body: JSON.stringify({
-                    course_id: parseInt(courseId), section_id: parseInt(sectionId),
-                    faculty_id: facultyId ? parseInt(facultyId) : null,
-                    room_id: roomId ? parseInt(roomId) : null,
-                    day, start_time: start, end_time: end, semester: currentSemester,
-                    session_type: sType, draft_version_id: currentDraftId || null,
-                }),
-            }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
-            if (!res.ok) { showAddError(res.error || 'Failed to add.'); return; }
-            showToast('Schedule entry added.', 'success');
-            pushHistory(
-                async () => { await silentDelete(res.entry.id); },
-                async () => {
-                    const r2 = await silentAdd({
+            // Conflict check
+            const cf = await checkConflicts({
+                day, start, end, faculty_id: facultyId, room_id: roomId,
+                section_id: sectionId, semester: currentSemester, draft_version_id: currentDraftId,
+                exclude_id: sidebarMode === 'edit' ? editEntryId : null
+            });
+            if (cf.hard_conflicts && cf.hard_conflicts.length) {
+                showAddError(cf.hard_conflicts[0].label);
+                if (btn) { btn.disabled = false; btn.innerHTML = `<i class="bi bi-${defaultIcon} me-1"></i>${defaultText}`; }
+                return;
+            }
+
+            if (sidebarMode === 'edit') {
+                // ── EDIT MODE (PATCH) ─────────────────────────────────
+                const raw = await fetch(`/api/schedule/${editEntryId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                    body: JSON.stringify({
+                        faculty_id: facultyId ? parseInt(facultyId) : null,
+                        room_id: roomId ? parseInt(roomId) : null,
+                        day, start_time: start, end_time: end, session_type: sType
+                    }),
+                });
+                const res = await raw.json().catch(() => ({ ok: false, error: 'Server error' }));
+                if (!res.ok) {
+                    showAddError(res.error || 'Failed to update.'); return;
+                }
+                showToast('Schedule updated.', 'success');
+                setSidebarMode('add'); // revert to add mode after success
+            } else {
+                // ── ADD MODE (POST) ───────────────────────────────────
+                const raw = await fetch('/api/schedule/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                    body: JSON.stringify({
                         course_id: parseInt(courseId), section_id: parseInt(sectionId),
                         faculty_id: facultyId ? parseInt(facultyId) : null,
                         room_id: roomId ? parseInt(roomId) : null,
                         day, start_time: start, end_time: end, semester: currentSemester,
                         session_type: sType, draft_version_id: currentDraftId || null,
-                    });
-                    return r2;
+                    }),
+                });
+                const res = await raw.json().catch(() => ({ ok: false, error: 'Server error' }));
+                if (!res.ok) {
+                    showAddError(res.error || 'Failed to add.'); return;
                 }
-            );
+                showToast('Schedule added.', 'success');
+            }
             loadGrid();
-        } catch { showAddError('Network error — please try again.'); }
+        } catch {
+            showAddError('Network error — please try again.');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-${defaultIcon} me-1"></i>${defaultText}`;
+            }
+        }
     }
 
     // ════════════════════════════════════════
@@ -2034,7 +2240,7 @@
         document.getElementById('deleteConfirmBtn').onclick = doDeleteEntry;
         bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteConfirmModal')).show();
     }
-    async function doDeleteEntry() {
+   async function doDeleteEntry() {
         bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteConfirmModal')).hide();
         // Capture full entry data before deleting so undo can re-add it
         const savedEntry = [...masterEntries, ...draftEntries].find(x => x.id === pendingDeleteId);
@@ -2070,76 +2276,7 @@
         if (e) e.stopPropagation();
         if (wasDragging) return;
         const entry = [...masterEntries, ...draftEntries].find(x => x.id === entryId);
-        if (!entry) return;
-
-        document.getElementById('editEntryId').value = entry.id;
-        document.getElementById('editCourseDisplay').value = `${entry.course_code} — ${entry.course_name}`;
-        document.getElementById('editSectionDisplay').value = entry.section_name;
-        document.getElementById('editFaculty').value = entry.faculty_id || '';
-        document.getElementById('editRoom').value = entry.room_id || '';
-        document.getElementById('editDay').value = entry.day;
-        document.getElementById('editType').value = entry.session_type || 'Lec';
-        document.getElementById('editStart').value = minToStr(toMin(entry.start_time));
-        document.getElementById('editEnd').value = minToStr(toMin(entry.end_time));
-        document.getElementById('editFormError').style.display = 'none';
-        document.getElementById('editLockWarning').style.display = 'none';
-
-        // Fix 3: disable fields for locked GA entries (non-admin users)
-        const isLockedGA = lockStatus && entry.source === 'ga' && USER_ROLE === 'user';
-        const editFields = document.querySelectorAll('#editEntryModal select, #editEntryModal input:not([type=hidden])');
-        editFields.forEach(f => { f.disabled = isLockedGA; });
-        document.getElementById('editSaveBtn').style.display = isLockedGA ? 'none' : '';
-        document.getElementById('editLockWarning').style.display = isLockedGA ? '' : 'none';
-
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('editEntryModal')).show();
-    }
-
-    async function submitEditEntry() {
-        const errDiv = document.getElementById('editFormError');
-        errDiv.style.display = 'none';
-        const id = parseInt(document.getElementById('editEntryId').value);
-        const facultyId = document.getElementById('editFaculty').value || null;
-        const roomId = document.getElementById('editRoom').value || null;
-        const day = document.getElementById('editDay').value;
-        const start = document.getElementById('editStart').value;
-        const end = document.getElementById('editEnd').value;
-        const sType = document.getElementById('editType').value;
-
-        if (toMin(start) >= toMin(end)) {
-            errDiv.textContent = 'End time must be after start time.'; errDiv.style.display = ''; return;
-        }
-        // Capture old values for undo before patching
-        const oldEntry = [...masterEntries, ...draftEntries].find(x => x.id === id);
-        const oldData = oldEntry ? {
-            faculty_id: oldEntry.faculty_id || null, room_id: oldEntry.room_id || null,
-            day: oldEntry.day, start_time: oldEntry.start_time,
-            end_time: oldEntry.end_time, session_type: oldEntry.session_type || 'Lec',
-        } : null;
-        const newData = {
-            faculty_id: facultyId ? parseInt(facultyId) : null,
-            room_id: roomId ? parseInt(roomId) : null,
-            day, start_time: start, end_time: end, session_type: sType,
-        };
-        try {
-            const res = await fetch(`/api/schedule/${id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
-                body: JSON.stringify(newData),
-            }).then(async r => {
-                const j = await r.json();
-                if (!r.ok) throw new Error((j.conflicts && j.conflicts[0]) || j.error || r.status);
-                return j;
-            });
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('editEntryModal')).hide();
-            showToast('Entry updated.', 'success');
-            if (oldData) {
-                pushHistory(
-                    async () => { await silentPatch(id, oldData); },
-                    async () => { await silentPatch(id, newData); }
-                );
-            }
-            loadGrid();
-        } catch (err) { errDiv.textContent = err.message || 'Network error.'; errDiv.style.display = ''; }
+        if (entry) setSidebarMode('edit', entry);
     }
 
     // ════════════════════════════════════════
@@ -2246,13 +2383,7 @@
             chooseDraft(id, name);
         }, { once: true });
     }
-    function backToStep2() {
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('allDraftsModal')).hide();
-        document.getElementById('allDraftsModal').addEventListener('hidden.bs.modal', () => {
-            showDraftPicker();
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('editorModeModal')).show();
-        }, { once: true });
-    }
+
 
     async function publishDraft() {
         if (!currentDraftId || !confirm('Publish this draft? All entries will be moved to the master schedule.')) return;
@@ -2646,6 +2777,8 @@
             icon.className = 'bi bi-layers';
             label.textContent = `Draft: ${draftName}`;
             if (publishBtn) publishBtn.style.display = IS_ADMIN && currentDraftId ? '' : 'none';
+        const previewBtn = document.getElementById('previewDraftBtn');
+        if (previewBtn) previewBtn.classList.toggle('d-none', !(IS_ADMIN && currentDraftId));
         }
         updateLockBanner();
     }
@@ -2908,7 +3041,7 @@
                 showToast('Draft created.', 'success');
             }
         } catch (e) {
-            console.error(e);
+
             if (els.err) { els.err.textContent = 'Network error — please try again.'; els.err.style.display = ''; }
         } finally {
             if (els.submitBtn) els.submitBtn.disabled = false;
@@ -3088,9 +3221,16 @@
     // ════════════════════════════════════════
     //  UNDO / REDO
     // ════════════════════════════════════════
+    function syncUndoRedoBtns() {
+        const u = document.getElementById('undoBtn');
+        const r = document.getElementById('redoBtn');
+        if (u) u.disabled = !undoStack.length;
+        if (r) r.disabled = !redoStack.length;
+    }
     function pushHistory(undoFn, redoFn) {
         undoStack.push({ undo: undoFn, redo: redoFn });
         redoStack = []; // clear redo on new action
+        syncUndoRedoBtns();
     }
     async function silentDelete(id) {
         await fetch(`/api/schedule/${id}`, { method: 'DELETE', headers: { 'X-CSRFToken': getCsrf() } });
@@ -3123,6 +3263,7 @@
             showToast('Undone.', 'success');
             loadGrid();
         } catch { showToast('Undo failed.', 'error'); undoStack.push(entry); }
+        syncUndoRedoBtns();
     }
     async function redoLast() {
         if (!redoStack.length) { showToast('Nothing to redo.', 'error'); return; }
@@ -3133,6 +3274,7 @@
             showToast('Redone.', 'success');
             loadGrid();
         } catch { showToast('Redo failed.', 'error'); redoStack.push(entry); }
+        syncUndoRedoBtns();
     }
     document.addEventListener('keydown', e => {
         // 1. ALL DRAFTS MODAL KEYBOARD NAVIGATION
@@ -3251,5 +3393,464 @@
             onDraftChange();
         }
     });
+
+    // ════════════════════════════════════════
+    //  DRAFT CANVAS PREVIEW
+    // ════════════════════════════════════════
+    // Build [{id, label}] arrays for the preview canvas
+    const _pvSec = SECTIONS.map((id, i) => ({ id, label: SEC_NAMES[i] || String(id) }));
+    const _pvFac = FAC_IDS.map((id, i) => ({ id, label: FAC_NAMES[i] || String(id) }));
+    const _pvRom = ROOM_IDS.map((id, i) => ({ id, label: ROOM_NAMES[i] || String(id) }));
+
+    let pvTranslateX = 0, pvTranslateY = 0, pvScale = 1.0;
+    let pvIsDragging = false, pvStartX = 0, pvStartY = 0;
+    let pvCurrentType = 'section';
+    let pvListMap = { section: [..._pvSec], faculty: [..._pvFac], room: [..._pvRom] };
+
+    // Cinema state
+    let pvPresIndex = -1, pvPresScale = 1.0, pvPresX = 0, pvPresY = 0;
+    let pvPresIsDragging = false, pvPresStartX = 0, pvPresStartY = 0;
+
+    function pvUpdatePresTransform() {
+        const wrap = document.getElementById('pvPresWrap');
+        if (wrap) wrap.style.transform = `translate(${pvPresX}px,${pvPresY}px) scale(${pvPresScale})`;
+    }
+
+    window.pvOpenPresentation = function(index) {
+        const list = pvListMap[pvCurrentType] || [];
+        if (index < 0 || index >= list.length) return;
+        pvPresIndex = index;
+        const item = list[index];
+        const sem = encodeURIComponent(currentSemester);
+        const draftId = currentDraftId;
+        const urlMap = {
+            section: id => `/section-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
+            faculty: id => `/faculty-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
+            room:    id => `/room-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
+        };
+        pvPresScale = Math.min(1.0, (window.innerHeight * 0.9) / 1130);
+        pvPresX = 0; pvPresY = 0;
+        pvUpdatePresTransform();
+        const iframe = document.getElementById('pvPresIframe');
+        if (iframe) iframe.src = urlMap[pvCurrentType](item.id);
+        const label = document.getElementById('pvPresLabel');
+        if (label) label.textContent = item.label;
+        const overlay = document.getElementById('pvCinemaOverlay');
+        if (overlay) overlay.classList.add('active');
+    };
+
+    window.pvClosePresentation = function() {
+        const overlay = document.getElementById('pvCinemaOverlay');
+        if (overlay) overlay.classList.remove('active');
+        const iframe = document.getElementById('pvPresIframe');
+        if (iframe) iframe.src = '';
+    };
+
+    window.pvShowNext = function() {
+        const list = pvListMap[pvCurrentType] || [];
+        pvOpenPresentation(pvPresIndex < list.length - 1 ? pvPresIndex + 1 : 0);
+    };
+
+    window.pvShowPrev = function() {
+        const list = pvListMap[pvCurrentType] || [];
+        pvOpenPresentation(pvPresIndex > 0 ? pvPresIndex - 1 : list.length - 1);
+    };
+
+    window.openDraftPreview = function() {
+        if (!currentDraftId) { showToast('Select a draft first.', 'error'); return; }
+        pvCurrentType = document.getElementById('viewTypeSel').value || 'section';
+        pvListMap = { section: [..._pvSec], faculty: [..._pvFac], room: [..._pvRom] };
+        pvTranslateX = 0; pvTranslateY = 0; pvScale = 1.0;
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('draftPreviewModal'));
+        modal.show();
+        document.getElementById('draftPreviewModal').addEventListener('shown.bs.modal', function onShown() {
+            this.removeEventListener('shown.bs.modal', onShown);
+            pvApplySort(); // loads canvas after sort
+        });
+    };
+
+    function pvUpdateTransform() {
+        const canvas = document.getElementById('pvCanvas');
+        if (canvas) canvas.style.transform = `translate(${pvTranslateX}px,${pvTranslateY}px) scale(${pvScale})`;
+        pvUpdateMinimap();
+        const pct = Math.round(pvScale * 100) + '%';
+        const zl = document.getElementById('pvZoomLevel');
+        if (zl) zl.textContent = pct;
+        const zb = document.getElementById('pvZoomBadge');
+        if (zb) zb.textContent = 'Zoom: ' + pct;
+    }
+
+    function pvApplySort() {
+        const sel = document.getElementById('pvSortSelect');
+        const dir = sel ? sel.value : 'asc';
+        [['section', _pvSec], ['faculty', _pvFac], ['room', _pvRom]].forEach(([type, orig]) => {
+            const nonTba = orig.filter(x => !x.label.startsWith('T.B.A.'));
+            const tba    = orig.filter(x =>  x.label.startsWith('T.B.A.'));
+            nonTba.sort((a, b) => dir === 'asc' ? a.label.localeCompare(b.label) : b.label.localeCompare(a.label));
+            pvListMap[type] = [...nonTba, ...tba];
+        });
+        pvLoadCanvas();
+    }
+
+    function pvFocusCard(card) {
+        const vp = document.getElementById('pvViewport');
+        if (!vp || !card) return;
+        const rect = vp.getBoundingClientRect();
+        const cardX = card.offsetLeft + (card.offsetWidth / 2);
+        const cardY = card.offsetTop + (card.offsetHeight / 2);
+        pvScale = 0.8;
+        pvTranslateX = rect.width / 2 - cardX * pvScale;
+        pvTranslateY = rect.height / 2 - cardY * pvScale;
+        const cvs = document.getElementById('pvCanvas');
+        if (cvs) cvs.style.transition = 'transform 0.5s cubic-bezier(0.4,0,0.2,1)';
+        pvUpdateTransform();
+        setTimeout(() => { const c = document.getElementById('pvCanvas'); if (c) c.style.transition = 'transform 0.05s linear'; }, 500);
+    }
+
+    function pvSearchCanvas(q) {
+        const canvas = document.getElementById('pvCanvas');
+        if (!canvas) return;
+        let found = null;
+        canvas.querySelectorAll('.pv-card').forEach(card => {
+            const match = !q || card.dataset.label.includes(q.toLowerCase());
+            card.style.opacity = match ? '1' : '0.15';
+            if (match && q && !found) found = card;
+        });
+        if (found && q.length > 2) pvFocusCard(found);
+    }
+
+    function pvLoadCanvas() {
+        const canvas = document.getElementById('pvCanvas');
+        if (!canvas) return;
+        canvas.innerHTML = '';
+        const list = pvListMap[pvCurrentType] || [];
+        const cols = 5;
+        const sem = encodeURIComponent(currentSemester);
+        const draftId = currentDraftId;
+        const urlMap = {
+            section: id => `/section-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
+            faculty: id => `/faculty-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
+            room:    id => `/room-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
+        };
+        list.forEach((item, index) => {
+            const col = index % cols;
+            const row = Math.floor(index / cols);
+            const card = document.createElement('div');
+            card.className = 'pv-card';
+            card.dataset.label = item.label.toLowerCase();
+            card.dataset.index = index;
+            card.style.cssText = `position:absolute;left:${col * 950 + 500}px;top:${row * 1300 + 500}px;`;
+
+            card.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                pvOpenPresentation(index);
+            });
+
+            const maxBtn = document.createElement('button');
+            maxBtn.className = 'btn-maximize';
+            maxBtn.innerHTML = '<i class="bi bi-arrows-angle-expand"></i>';
+            maxBtn.title = 'Full Screen Cinema';
+            maxBtn.onclick = (e) => { e.stopPropagation(); pvOpenPresentation(index); };
+
+            const lbl = document.createElement('div');
+            lbl.className = 'card-header-label';
+            lbl.textContent = item.label;
+
+            const wrap = document.createElement('div');
+            wrap.className = 'card-iframe-wrap';
+
+            const iframe = document.createElement('iframe');
+            iframe.src = urlMap[pvCurrentType](item.id);
+            iframe.loading = 'lazy';
+
+            wrap.appendChild(iframe);
+            card.appendChild(maxBtn);
+            card.appendChild(lbl);
+            card.appendChild(wrap);
+            canvas.appendChild(card);
+        });
+        pvResetView();
+        setTimeout(pvInitMinimap, 200);
+    }
+
+    function pvGetBounds() {
+        const canvas = document.getElementById('pvCanvas');
+        if (!canvas || !canvas.children.length) return null;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        canvas.querySelectorAll('.pv-card').forEach(el => {
+            const l = el.offsetLeft, t = el.offsetTop;
+            const w = el.offsetWidth || 800, h = el.offsetHeight || 1130;
+            minX = Math.min(minX, l); minY = Math.min(minY, t);
+            maxX = Math.max(maxX, l + w); maxY = Math.max(maxY, t + h);
+        });
+        return { minX, minY, width: maxX - minX, height: maxY - minY };
+    }
+
+    function pvResetView() {
+        const vp = document.getElementById('pvViewport');
+        if (!vp) return;
+        const bounds = pvGetBounds();
+        if (!bounds) return;
+        const rect = vp.getBoundingClientRect();
+        pvScale = 0.8;
+        pvTranslateX = rect.width / 2 - (bounds.minX + 400) * pvScale;
+        pvTranslateY = rect.height / 2 - (bounds.minY + 560) * pvScale;
+        const cvs = document.getElementById('pvCanvas');
+        if (cvs) cvs.style.transition = 'transform 0.6s cubic-bezier(0.34,1.56,0.64,1)';
+        pvUpdateTransform();
+        setTimeout(() => { const c = document.getElementById('pvCanvas'); if (c) c.style.transition = 'transform 0.05s linear'; }, 600);
+    }
+
+    function pvFitView() {
+        const vp = document.getElementById('pvViewport');
+        if (!vp) return;
+        const bounds = pvGetBounds();
+        if (!bounds) return;
+        const rect = vp.getBoundingClientRect();
+        const pad = 80;
+        pvScale = Math.min((rect.width - pad) / bounds.width, (rect.height - pad) / bounds.height, 0.5);
+        pvTranslateX = rect.width / 2 - (bounds.minX + bounds.width / 2) * pvScale;
+        pvTranslateY = rect.height / 2 - (bounds.minY + bounds.height / 2) * pvScale;
+        const cvs = document.getElementById('pvCanvas');
+        if (cvs) cvs.style.transition = 'transform 0.6s cubic-bezier(0.34,1.56,0.64,1)';
+        pvUpdateTransform();
+        setTimeout(() => { const c = document.getElementById('pvCanvas'); if (c) c.style.transition = 'transform 0.05s linear'; }, 600);
+    }
+
+    function pvZoom(delta) {
+        pvScale = Math.max(0.05, Math.min(3.0, pvScale + delta));
+        pvUpdateTransform();
+    }
+
+    // Minimap
+    function pvInitMinimap() {
+        const mm = document.getElementById('pvMinimap');
+        const mmContent = document.getElementById('pvMinimapContent');
+        if (!mm || !mmContent) return;
+        const bounds = pvGetBounds();
+        if (!bounds) return;
+        mmContent.innerHTML = '';
+        const margin = 1000;
+        const totalW = bounds.width + margin * 2;
+        const totalH = bounds.height + margin * 2;
+        const startX = bounds.minX - margin;
+        const startY = bounds.minY - margin;
+        window.pvMiniBounds = { totalW, totalH, startX, startY };
+        const mmW = mm.offsetWidth, mmH = mm.offsetHeight;
+        document.getElementById('pvCanvas').querySelectorAll('.pv-card').forEach(card => {
+            const dot = document.createElement('div');
+            dot.className = 'minimap-dot';
+            dot.style.cssText = `position:absolute;width:8px;height:10px;border-radius:2px;background:#198754;opacity:.7;
+                left:${((card.offsetLeft - startX) / totalW * mmW).toFixed(1)}px;
+                top:${((card.offsetTop - startY) / totalH * mmH).toFixed(1)}px;`;
+            mmContent.appendChild(dot);
+        });
+        pvUpdateMinimap();
+    }
+
+    function pvUpdateMinimap() {
+        const mm = document.getElementById('pvMinimap');
+        const vp = document.getElementById('pvViewport');
+        const box = document.getElementById('pvMinimapBox');
+        if (!mm || !vp || !box || !window.pvMiniBounds) return;
+        const { totalW, totalH, startX, startY } = window.pvMiniBounds;
+        const rect = vp.getBoundingClientRect();
+        const mmW = mm.offsetWidth, mmH = mm.offsetHeight;
+        const vW = rect.width / pvScale, vH = rect.height / pvScale;
+        const vX = -pvTranslateX / pvScale, vY = -pvTranslateY / pvScale;
+        box.style.width  = Math.min((vW / totalW) * mmW, mmW) + 'px';
+        box.style.height = Math.min((vH / totalH) * mmH, mmH) + 'px';
+        box.style.left   = ((vX - startX) / totalW) * mmW + 'px';
+        box.style.top    = ((vY - startY) / totalH) * mmH + 'px';
+    }
+
+    // Wire events after modal DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+        const pvModal = document.getElementById('draftPreviewModal');
+        if (!pvModal) return;
+
+        // Type change
+        document.getElementById('pvTypeSelect')?.addEventListener('change', function() {
+            pvCurrentType = this.value; pvApplySort();
+        });
+
+        // Viewport pan + zoom
+        const vp = document.getElementById('pvViewport');
+        if (vp) {
+            vp.addEventListener('mousedown', e => {
+                pvIsDragging = true; pvStartX = e.clientX - pvTranslateX; pvStartY = e.clientY - pvTranslateY;
+                vp.style.cursor = 'grabbing';
+            });
+            vp.addEventListener('mousemove', e => {
+                if (!pvIsDragging) return;
+                pvTranslateX = e.clientX - pvStartX; pvTranslateY = e.clientY - pvStartY;
+                pvUpdateTransform();
+            });
+            ['mouseup','mouseleave'].forEach(ev => vp.addEventListener(ev, () => {
+                pvIsDragging = false; vp.style.cursor = 'grab';
+            }));
+            vp.addEventListener('wheel', e => {
+                e.preventDefault();
+                if (e.ctrlKey) {
+                    const rect = vp.getBoundingClientRect();
+                    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+                    const oldScale = pvScale;
+                    pvScale = Math.max(0.05, Math.min(3.0, pvScale - e.deltaY * 0.001));
+                    pvTranslateX -= (mx - pvTranslateX) * (pvScale / oldScale - 1);
+                    pvTranslateY -= (my - pvTranslateY) * (pvScale / oldScale - 1);
+                } else if (e.shiftKey) {
+                    pvTranslateX -= e.deltaY;
+                } else {
+                    pvTranslateY -= e.deltaY;
+                }
+                pvUpdateTransform();
+            }, { passive: false });
+            vp.addEventListener('contextmenu', e => e.preventDefault());
+        }
+
+        // Minimap click-to-navigate
+        const pvMm = document.getElementById('pvMinimap');
+        if (pvMm) {
+            pvMm.addEventListener('click', e => {
+                if (!window.pvMiniBounds) return;
+                const rect = pvMm.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width;
+                const y = (e.clientY - rect.top) / rect.height;
+                const { totalW, totalH, startX, startY } = window.pvMiniBounds;
+                const targetX = startX + x * totalW;
+                const targetY = startY + y * totalH;
+                const vp2 = document.getElementById('pvViewport');
+                if (!vp2) return;
+                const viewRect = vp2.getBoundingClientRect();
+                pvTranslateX = viewRect.width / 2 - targetX * pvScale;
+                pvTranslateY = viewRect.height / 2 - targetY * pvScale;
+                const cvs = document.getElementById('pvCanvas');
+                if (cvs) cvs.style.transition = 'transform 0.6s cubic-bezier(0.4,0,0.2,1)';
+                pvUpdateTransform();
+                setTimeout(() => { const c = document.getElementById('pvCanvas'); if (c) c.style.transition = 'transform 0.05s linear'; }, 600);
+            });
+        }
+
+        // Cinema events
+        const cinemaOverlay = document.getElementById('pvCinemaOverlay');
+        if (cinemaOverlay) {
+            cinemaOverlay.addEventListener('mousedown', e => {
+                if (e.target.closest('.pv-pres-nav-btn') || e.target.closest('.pv-pres-close')) return;
+                pvPresIsDragging = true;
+                pvPresStartX = e.clientX - pvPresX;
+                pvPresStartY = e.clientY - pvPresY;
+            });
+            cinemaOverlay.addEventListener('mousemove', e => {
+                if (!pvPresIsDragging) return;
+                pvPresX = e.clientX - pvPresStartX;
+                pvPresY = e.clientY - pvPresStartY;
+                pvUpdatePresTransform();
+            });
+            ['mouseup', 'mouseleave'].forEach(ev => cinemaOverlay.addEventListener(ev, () => { pvPresIsDragging = false; }));
+            cinemaOverlay.addEventListener('wheel', e => {
+                if (!cinemaOverlay.classList.contains('active')) return;
+                e.preventDefault();
+                pvPresScale = Math.max(0.4, Math.min(4.0, pvPresScale - e.deltaY * 0.0015));
+                pvUpdatePresTransform();
+            }, { passive: false });
+            cinemaOverlay.addEventListener('click', e => {
+                if (e.target.id === 'pvPresBackdrop' || e.target.id === 'pvCinemaOverlay') pvClosePresentation();
+            });
+            const pvPresWrapEl = document.getElementById('pvPresWrap');
+            if (pvPresWrapEl) pvPresWrapEl.addEventListener('click', e => e.stopPropagation());
+        }
+
+        // Cinema keyboard
+        document.addEventListener('keydown', e => {
+            const overlay = document.getElementById('pvCinemaOverlay');
+            if (!overlay?.classList.contains('active')) return;
+            if (e.key === 'ArrowRight') pvShowNext();
+            else if (e.key === 'ArrowLeft') pvShowPrev();
+            else if (e.key === 'Escape') pvClosePresentation();
+        });
+
+        // Search
+        document.getElementById('pvSearch')?.addEventListener('keyup', function() { pvSearchCanvas(this.value.toLowerCase()); });
+    });
 </script>
+
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<!--  DRAFT CANVAS PREVIEW MODAL                                       -->
+<!-- ══════════════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="draftPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content" style="background:#f1f5f9;">
+            <!-- Topbar -->
+            <div class="modal-header py-2 px-3 border-bottom" style="background:#fff;z-index:10;gap:8px;flex-wrap:wrap;">
+                <span class="fw-bold text-success me-2"><i class="bi bi-eye-fill me-1"></i>Draft Preview</span>
+                <!-- View -->
+                <div class="d-flex align-items-center gap-1 border-end pe-3">
+                    <span class="hud-label">View:</span>
+                    <select id="pvTypeSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width:auto">
+                        <option value="section">Sections</option>
+                        <option value="faculty">Faculty</option>
+                        <option value="room">Rooms</option>
+                    </select>
+                </div>
+                <!-- Sort -->
+                <div class="d-flex align-items-center gap-1 border-end pe-3">
+                    <span class="hud-label">Sort:</span>
+                    <select id="pvSortSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width:auto" onchange="pvApplySort()">
+                        <option value="asc">A → Z</option>
+                        <option value="desc">Z → A</option>
+                    </select>
+                </div>
+                <!-- Search -->
+                <div class="d-flex align-items-center gap-1 border-end pe-3">
+                    <span class="hud-label">Search:</span>
+                    <input type="text" id="pvSearch" class="form-control form-control-sm border-0 bg-transparent" placeholder="Find…" style="width:140px">
+                </div>
+                <!-- Navigation buttons -->
+                <button class="btn btn-sm btn-success rounded-pill px-3 fw-bold" onclick="pvResetView()" title="Center"><i class="bi bi-arrows-fullscreen me-1"></i>Center</button>
+                <button class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold" onclick="pvFitView()" title="Fit All"><i class="bi bi-aspect-ratio me-1"></i>Fit All</button>
+                <div class="vr mx-1" style="height:20px;"></div>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-secondary" onclick="pvZoom(-0.2)" title="Zoom Out"><i class="bi bi-dash-lg"></i></button>
+                    <button class="btn btn-outline-secondary px-3 fw-bold" onclick="pvScale=1;pvUpdateTransform()" title="Reset Zoom"><span id="pvZoomLevel">100%</span></button>
+                    <button class="btn btn-outline-secondary" onclick="pvZoom(0.2)" title="Zoom In"><i class="bi bi-plus-lg"></i></button>
+                </div>
+                <div class="ms-auto">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <!-- Canvas viewport -->
+            <div class="modal-body p-0 position-relative overflow-hidden" style="flex:1;">
+                <div id="pvViewport" style="position:absolute;inset:0;overflow:hidden;cursor:grab;">
+                    <div id="pvCanvas" style="position:absolute;transform-origin:0 0;will-change:transform;"></div>
+                </div>
+                <!-- Zoom Badge -->
+                <div id="pvZoomBadge">Zoom: 100%</div>
+                <!-- Minimap -->
+                <div id="pvMinimap" style="position:absolute;bottom:20px;right:20px;width:180px;height:135px;
+                     background:rgba(255,255,255,0.85);backdrop-filter:blur(8px);border-radius:10px;
+                     border:1px solid rgba(0,0,0,0.1);box-shadow:0 4px 16px rgba(0,0,0,0.1);overflow:hidden;z-index:20;cursor:pointer;">
+                    <div id="pvMinimapContent" style="position:absolute;inset:0;"></div>
+                    <div id="pvMinimapBox" style="position:absolute;border:2px solid #198754;background:rgba(25,135,84,0.1);pointer-events:none;"></div>
+                </div>
+                <!-- Cinema / Presentation Overlay -->
+                <div id="pvCinemaOverlay">
+                    <button class="pv-pres-close" onclick="pvClosePresentation()"><i class="bi bi-x-lg"></i></button>
+                    <button class="pv-pres-nav-btn pv-pres-prev" onclick="pvShowPrev()"><i class="bi bi-chevron-left"></i></button>
+                    <button class="pv-pres-nav-btn pv-pres-next" onclick="pvShowNext()"><i class="bi bi-chevron-right"></i></button>
+                    <div class="pv-pres-container" id="pvPresBackdrop">
+                        <div class="pv-pres-iframe-wrap" id="pvPresWrap">
+                            <iframe id="pvPresIframe"></iframe>
+                        </div>
+                    </div>
+                    <div class="pv-pres-footer">
+                        <span id="pvPresLabel">...</span> &nbsp;|&nbsp;
+                        Press <kbd style="color:#aaa;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:3px;padding:1px 5px;">ESC</kbd> to exit &nbsp;|&nbsp;
+                        Drag to Pan &nbsp;|&nbsp; Scroll to Zoom
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

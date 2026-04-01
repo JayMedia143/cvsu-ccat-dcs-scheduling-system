@@ -5086,12 +5086,13 @@ def view_schedule_modal(view_type, entity_id):
 @app.route('/api/move-class', methods=['POST'])
 @login_required
 def api_move_class():
-    data      = request.get_json(force=True) or {}
-    sched_id  = data.get('sched_id')
-    new_day   = data.get('day')
-    new_start = data.get('start')
-    new_end   = data.get('end')
-    new_room  = data.get('room_id')
+    data           = request.get_json(force=True) or {}
+    sched_id       = data.get('sched_id')
+    new_day        = data.get('day')
+    new_start      = data.get('start')
+    new_end        = data.get('end')
+    new_room       = data.get('room_id')
+    force_override = data.get('force_override', False)
 
     sched = ScheduledClass.query.get(sched_id)
     if not sched:
@@ -5108,6 +5109,53 @@ def api_move_class():
     if role == 'user' and not sched.is_draft:
         return jsonify({'ok': False,
                         'error': 'Regular users can only move draft entries.'}), 403
+    # Security: force_override only allowed for admins
+    if force_override and role not in ('admin', 'superadmin'):
+        return jsonify({'ok': False, 'error': 'Force override requires admin role.'}), 403
+
+    # Conflict check (skipped if admin force-overrides)
+    if not force_override:
+        fmt = '%H:%M'
+        try:
+            t_start = datetime.strptime(new_start, fmt).time()
+            t_end   = datetime.strptime(new_end,   fmt).time()
+        except (ValueError, TypeError):
+            return jsonify({'ok': False, 'error': 'Invalid time format'}), 400
+
+        effective_room = new_room or sched.room_id
+        candidates = ScheduledClass.query.options(
+            joinedload(ScheduledClass.course),
+            joinedload(ScheduledClass.section),
+            joinedload(ScheduledClass.faculty),
+            joinedload(ScheduledClass.room),
+        ).filter_by(day=new_day, semester=sched.semester, is_draft=sched.is_draft).all()
+
+        conflicts = []
+        for other in candidates:
+            if other.id == sched_id:
+                continue
+            try:
+                o_start = datetime.strptime(other.start_time, fmt).time()
+                o_end   = datetime.strptime(other.end_time,   fmt).time()
+            except ValueError:
+                continue
+            if not (t_end <= o_start or t_start >= o_end):
+                cc   = other.course.course_code if other.course else str(other.course_id)
+                slot = f'{other.start_time}–{other.end_time}'
+                if sched.faculty_id and other.faculty_id == sched.faculty_id:
+                    fn = other.faculty.full_name if other.faculty else None
+                    if fn and fn != 'T.B.A.':
+                        conflicts.append(f'{fn} already has {cc} on {new_day} {slot}')
+                if effective_room and other.room_id == effective_room:
+                    rn = other.room.room_name if other.room else None
+                    if rn and rn not in ('T.B.A.', 'University Field'):
+                        conflicts.append(f'{rn} already has {cc} on {new_day} {slot}')
+                if other.section_id == sched.section_id:
+                    sn = other.section.section_name if other.section else str(other.section_id)
+                    conflicts.append(f'{sn} already has {cc} on {new_day} {slot}')
+
+        if conflicts:
+            return jsonify({'ok': False, 'conflicts': conflicts}), 409
 
     sched.day        = new_day
     sched.start_time = new_start
@@ -5483,6 +5531,46 @@ def api_add_schedule():
         if role == 'user' and dv.created_by != session.get('user_id'):
             return jsonify({'ok': False, 'error': 'Not authorized to write to this draft'}), 403
 
+    # Conflict check before insert
+    fmt = '%H:%M'
+    try:
+        t_start = datetime.strptime(start_time, fmt).time()
+        t_end   = datetime.strptime(end_time,   fmt).time()
+    except ValueError:
+        return jsonify({'ok': False, 'error': 'Invalid time format'}), 400
+
+    candidates = ScheduledClass.query.options(
+        joinedload(ScheduledClass.course),
+        joinedload(ScheduledClass.section),
+        joinedload(ScheduledClass.faculty),
+        joinedload(ScheduledClass.room),
+    ).filter_by(day=day, semester=semester, is_draft=is_draft).all()
+
+    conflicts = []
+    for other in candidates:
+        try:
+            o_start = datetime.strptime(other.start_time, fmt).time()
+            o_end   = datetime.strptime(other.end_time,   fmt).time()
+        except ValueError:
+            continue
+        if not (t_end <= o_start or t_start >= o_end):
+            cc   = other.course.course_code if other.course else str(other.course_id)
+            slot = f'{other.start_time}–{other.end_time}'
+            if faculty_id and other.faculty_id == faculty_id:
+                fn = other.faculty.full_name if other.faculty else None
+                if fn and fn != 'T.B.A.':
+                    conflicts.append(f'{fn} already has {cc} on {day} {slot}')
+            if room_id and other.room_id == room_id:
+                rn = other.room.room_name if other.room else None
+                if rn and rn not in ('T.B.A.', 'University Field'):
+                    conflicts.append(f'{rn} already has {cc} on {day} {slot}')
+            if other.section_id == section_id:
+                sn = other.section.section_name if other.section else str(other.section_id)
+                conflicts.append(f'{sn} already has {cc} on {day} {slot}')
+
+    if conflicts:
+        return jsonify({'ok': False, 'conflicts': conflicts}), 409
+
     new_sc = ScheduledClass(
         course_id=course_id, section_id=section_id,
         faculty_id=faculty_id, room_id=room_id,
@@ -5572,7 +5660,12 @@ def api_patch_schedule(sched_id):
         if not dv or dv.created_by != user_id:
             return jsonify({'ok': False, 'error': 'Not authorized to edit this draft entry'}), 403
 
-    data         = request.get_json(force=True) or {}
+    data           = request.get_json(force=True) or {}
+    force_override = data.get('force_override', False)
+    # Security: force_override only allowed for admins
+    if force_override and role not in ('admin', 'superadmin'):
+        return jsonify({'ok': False, 'error': 'Force override requires admin role.'}), 403
+
     faculty_id   = data.get('faculty_id',   sc.faculty_id)
     room_id      = data.get('room_id',      sc.room_id)
     day          = data.get('day',          sc.day)
@@ -5580,47 +5673,48 @@ def api_patch_schedule(sched_id):
     end_time     = data.get('end_time',     sc.end_time)
     session_type = data.get('session_type', sc.session_type)
 
-    # Conflict check (exclude self)
-    fmt = '%H:%M'
-    try:
-        t_start = datetime.strptime(start_time, fmt).time()
-        t_end   = datetime.strptime(end_time,   fmt).time()
-    except ValueError:
-        return jsonify({'ok': False, 'error': 'Invalid time format'}), 400
-
-    candidates = ScheduledClass.query.options(
-        joinedload(ScheduledClass.course),
-        joinedload(ScheduledClass.section),
-        joinedload(ScheduledClass.faculty),
-        joinedload(ScheduledClass.room),
-    ).filter_by(day=day, semester=sc.semester, is_draft=sc.is_draft).all()
-
-    conflicts = []
-    for other in candidates:
-        if other.id == sched_id:
-            continue
+    # Conflict check (exclude self; skipped if admin force-overrides)
+    if not force_override:
+        fmt = '%H:%M'
         try:
-            o_start = datetime.strptime(other.start_time, fmt).time()
-            o_end   = datetime.strptime(other.end_time,   fmt).time()
+            t_start = datetime.strptime(start_time, fmt).time()
+            t_end   = datetime.strptime(end_time,   fmt).time()
         except ValueError:
-            continue
-        if not (t_end <= o_start or t_start >= o_end):
-            cc   = other.course.course_code if other.course else str(other.course_id)
-            slot = f'{other.start_time}–{other.end_time}'
-            if faculty_id and other.faculty_id == faculty_id:
-                fn = other.faculty.full_name if other.faculty else None
-                if fn and fn != 'T.B.A.':
-                    conflicts.append(f'{fn} already has {cc} on {day} {slot}')
-            if room_id and other.room_id == room_id:
-                rn = other.room.room_name if other.room else None
-                if rn and rn not in ('T.B.A.', 'University Field'):
-                    conflicts.append(f'{rn} already has {cc} on {day} {slot}')
-            if other.section_id == sc.section_id:
-                sn = other.section.section_name if other.section else str(other.section_id)
-                conflicts.append(f'{sn} already has {cc} on {day} {slot}')
+            return jsonify({'ok': False, 'error': 'Invalid time format'}), 400
 
-    if conflicts:
-        return jsonify({'ok': False, 'conflicts': conflicts}), 409
+        candidates = ScheduledClass.query.options(
+            joinedload(ScheduledClass.course),
+            joinedload(ScheduledClass.section),
+            joinedload(ScheduledClass.faculty),
+            joinedload(ScheduledClass.room),
+        ).filter_by(day=day, semester=sc.semester, is_draft=sc.is_draft).all()
+
+        conflicts = []
+        for other in candidates:
+            if other.id == sched_id:
+                continue
+            try:
+                o_start = datetime.strptime(other.start_time, fmt).time()
+                o_end   = datetime.strptime(other.end_time,   fmt).time()
+            except ValueError:
+                continue
+            if not (t_end <= o_start or t_start >= o_end):
+                cc   = other.course.course_code if other.course else str(other.course_id)
+                slot = f'{other.start_time}–{other.end_time}'
+                if faculty_id and other.faculty_id == faculty_id:
+                    fn = other.faculty.full_name if other.faculty else None
+                    if fn and fn != 'T.B.A.':
+                        conflicts.append(f'{fn} already has {cc} on {day} {slot}')
+                if room_id and other.room_id == room_id:
+                    rn = other.room.room_name if other.room else None
+                    if rn and rn not in ('T.B.A.', 'University Field'):
+                        conflicts.append(f'{rn} already has {cc} on {day} {slot}')
+                if other.section_id == sc.section_id:
+                    sn = other.section.section_name if other.section else str(other.section_id)
+                    conflicts.append(f'{sn} already has {cc} on {day} {slot}')
+
+        if conflicts:
+            return jsonify({'ok': False, 'conflicts': conflicts}), 409
 
     # Apply changes
     sc.faculty_id   = faculty_id
@@ -9214,12 +9308,26 @@ def section_timetable_html(section_id):
             # If it's our mock 'Unassigned' section, don't query the database
             schedules = []
         else:
-            schedules = ScheduledClass.query.options(
+            draft_id = request.args.get('draft_id', type=int)
+            _opts = [
                 joinedload(ScheduledClass.course),
                 joinedload(ScheduledClass.section),
                 joinedload(ScheduledClass.faculty),
                 joinedload(ScheduledClass.room),
-            ).filter_by(section_id=section_id, semester=semester, is_draft=False).all()
+            ]
+            if draft_id:
+                schedules = ScheduledClass.query.options(*_opts).filter(
+                    ScheduledClass.section_id == section_id,
+                    ScheduledClass.semester == semester,
+                    db.or_(
+                        ScheduledClass.is_draft == False,
+                        ScheduledClass.draft_version_id == draft_id
+                    )
+                ).all()
+            else:
+                schedules = ScheduledClass.query.options(*_opts).filter_by(
+                    section_id=section_id, semester=semester, is_draft=False
+                ).all()
 
     ws, grid_info, bounds = _get_cached_template(path)
 
@@ -10109,12 +10217,26 @@ def faculty_timetable_html(faculty_id):
         _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
         semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
 
-        schedules = ScheduledClass.query.options(
+        draft_id = request.args.get('draft_id', type=int)
+        _opts_f = [
             joinedload(ScheduledClass.course),
             joinedload(ScheduledClass.section),
             joinedload(ScheduledClass.faculty),
             joinedload(ScheduledClass.room),
-        ).filter_by(faculty_id=faculty_id, semester=semester, is_draft=False).all()
+        ]
+        if draft_id:
+            schedules = ScheduledClass.query.options(*_opts_f).filter(
+                ScheduledClass.faculty_id == faculty_id,
+                ScheduledClass.semester == semester,
+                db.or_(
+                    ScheduledClass.is_draft == False,
+                    ScheduledClass.draft_version_id == draft_id
+                )
+            ).all()
+        else:
+            schedules = ScheduledClass.query.options(*_opts_f).filter_by(
+                faculty_id=faculty_id, semester=semester, is_draft=False
+            ).all()
 
         prep_count  = db.session.query(ScheduledClass.course_id).filter_by(
                           faculty_id=faculty_id, semester=semester, is_draft=False).distinct().count()
@@ -10258,12 +10380,26 @@ def room_timetable_html(room_id):
         semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
         sem_ay    = request.args.get('sem_ay', '')
 
-        schedules = ScheduledClass.query.options(
+        draft_id = request.args.get('draft_id', type=int)
+        _opts_r = [
             joinedload(ScheduledClass.course),
             joinedload(ScheduledClass.section),
             joinedload(ScheduledClass.faculty),
             joinedload(ScheduledClass.room),
-        ).filter_by(room_id=room_id, semester=semester, is_draft=False).all()
+        ]
+        if draft_id:
+            schedules = ScheduledClass.query.options(*_opts_r).filter(
+                ScheduledClass.room_id == room_id,
+                ScheduledClass.semester == semester,
+                db.or_(
+                    ScheduledClass.is_draft == False,
+                    ScheduledClass.draft_version_id == draft_id
+                )
+            ).all()
+        else:
+            schedules = ScheduledClass.query.options(*_opts_r).filter_by(
+                room_id=room_id, semester=semester, is_draft=False
+            ).all()
 
     # Define path to room template
     path = os.path.join(basedir, 'static', 'assets', 'room_template.xlsx')
