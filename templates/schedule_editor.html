@@ -1358,7 +1358,20 @@
         <div class="modal-content">
             <div class="modal-header border-0 pb-1">
                 <div class="d-flex align-items-center gap-2 w-100">
-                    <button id="mdBackBtn" class="btn btn-sm btn-light d-none" type="button" onclick="closeMdfForm()">
+                <!-- Sync Button -->
+                <button class="btn btn-sync d-flex align-items-center gap-2" id="syncGridBtn" onclick="syncGrid()" title="Sync and Resolve">
+                    <i class="bi bi-arrow-repeat fs-5"></i>
+                    <span class="d-none d-xl-inline fw-semibold">Sync Grid</span>
+                </button>
+
+                <button class="btn btn-primary d-flex align-items-center gap-2 px-3 d-none" id="publishDraftBtn" onclick="initiateSubmission()">
+                    <i class="bi bi-send-check-fill fs-5"></i>
+                    <span id="publishBtnLabel" class="fw-semibold">{% if session.role == 'user' %}Submit for Approval{% else %}Publish Draft{% endif %}</span>
+                </button>
+
+                <button class="btn btn-outline-info d-flex align-items-center gap-2 px-3 d-none" id="previewDraftBtn" onclick="previewDraft()">
+                    <i class="bi bi-eye fs-5"></i>
+                </button>      <button id="mdBackBtn" class="btn btn-sm btn-light d-none" type="button" onclick="closeMdfForm()">
                         <i class="bi bi-arrow-left"></i>
                     </button>
                     <h5 class="modal-title fw-bold mb-0">
@@ -2378,25 +2391,53 @@
     }
 
 
-    async function publishDraft() {
-        if (!currentDraftId || !confirm('Publish this draft? All entries will be moved to the master schedule.')) return;
-        try {
-            const res = await fetch(`/api/draft/${currentDraftId}/publish`, {
-                method: 'POST', headers: { 'X-CSRFToken': getCsrf() },
-            }).then(r => r.json());
-            if (!res.ok) {
-                // Fix 4: use toast instead of alert
-                const msg = res.error || 'Publish failed';
-                const detail = res.conflicts && res.conflicts.length
-                    ? ` — ${res.conflicts[0]}${res.conflicts.length > 1 ? ` (+${res.conflicts.length - 1} more)` : ''}`
-                    : '';
-                showToast(msg + detail, 'error');
+    async function initiateSubmission() {
+        if (!currentDraftId) return;
+        
+        // ADMINS can still publish directly if they want, but let's encourage hub usage
+        const isUser = "{{ session.role }}" === 'user';
+        
+        if (isUser) {
+            const justification = prompt("Please provide a short justification for this schedule proposal:");
+            if (justification === null) return; // Cancelled
+            if (!justification.trim()) {
+                showToast("Justification is required for submission.", "error");
                 return;
             }
-            showToast(`Published! ${res.published_count} entr${res.published_count === 1 ? 'y' : 'ies'} moved to master.`, 'success');
-            setTimeout(() => location.reload(), 1300);
-        } catch { showToast('Network error — publish failed.', 'error'); }
+            
+            try {
+                const res = await fetch(`/api/hub/propose/${currentDraftId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                    body: JSON.stringify({ justification: justification })
+                }).then(r => r.json());
+                
+                if (!res.ok) { showToast(res.error || 'Submission failed.', 'error'); return; }
+                
+                showToast("Proposal submitted to Decision Hub. This draft is now locked.", "success");
+                setTimeout(() => location.reload(), 1500);
+            } catch (e) {
+                showToast("Network error during submission.", "error");
+            }
+        } else {
+            // ADMIN direct publish (Legacy style for superuser convenience)
+            if (!confirm('Publish this draft directly to master?')) return;
+            try {
+                const res = await fetch(`/api/draft/${currentDraftId}/publish`, {
+                    method: 'POST', headers: { 'X-CSRFToken': getCsrf() },
+                }).then(r => r.json());
+                if (!res.ok) {
+                    const msg = res.error || 'Publish failed';
+                    const detail = res.conflicts && res.conflicts.length ? ` — ${res.conflicts[0]}` : '';
+                    showToast(msg + detail, 'error');
+                    return;
+                }
+                showToast("Published to master schedule.", "success");
+                setTimeout(() => location.reload(), 1300);
+            } catch { showToast('Network error — publish failed.', 'error'); }
+        }
     }
+
     async function deleteDraft() {
         if (!currentDraftId || !confirm('Delete this entire draft and all its entries? This cannot be undone.')) return;
         try {

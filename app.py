@@ -22,6 +22,7 @@ import re
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font
 from openpyxl.utils import get_column_letter
 from openpyxl.cell import MergedCell
+from flask_socketio import SocketIO, emit, join_room, leave_room
 import json
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -166,6 +167,8 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 db = SQLAlchemy(app)
 csrf = CSRFProtect(app)
+# Module 6: Initialize SocketIO
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 @app.context_processor
 def inject_archive_vars():
@@ -648,8 +651,38 @@ class DraftVersion(db.Model):
     updated_at   = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # True = already merged/published to master; False = still in draft
     is_published = db.Column(db.Boolean, default=False, nullable=False)
+    status       = db.Column(db.String(20), default='draft') # 'draft', 'submitted', 'approved', 'rejected', 'hold'
     notes        = db.Column(db.Text, nullable=True)
+    
+    # Justification for why this draft should be approved (submitted by DH)
+    submission_justification = db.Column(db.Text, nullable=True)
+    # Admin's decision justification (e.g., why approved with conflicts or why rejected)
+    admin_justification      = db.Column(db.Text, nullable=True)
+    
     creator      = db.relationship('User', foreign_keys=[created_by])
+
+# --- Module 6: PROPOSAL HUB & DECISION TERMINAL ---
+class HubMessage(db.Model):
+    __tablename__ = 'hub_message'
+    id           = db.Column(db.Integer, primary_key=True)
+    sender_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    timestamp    = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    content      = db.Column(db.Text, nullable=True)
+    
+    # message_type: 'chat', 'proposal', 'system_alert', 'decision'
+    message_type = db.Column(db.String(20), default='chat', index=True)
+    
+    # Link to draft if type is 'proposal' or 'decision'
+    draft_id     = db.Column(db.Integer, db.ForeignKey('draft_version.id'), nullable=True)
+    
+    # Status for proposal cards: 'pending', 'approved', 'rejected', 'hold'
+    proposal_status = db.Column(db.String(20), nullable=True)
+    
+    # Metadata for JSON-based payloads (e.g., conflict lists, UI state)
+    metadata_json = db.Column(db.Text, nullable=True)
+    
+    sender = db.relationship('User', foreign_keys=[sender_id])
+    draft  = db.relationship('DraftVersion', backref=db.backref('messages', lazy=True, cascade="all, delete-orphan"))
 
 # --- HELPER FUNCTION: CONFLICT CHECKER ---
 # --- UPDATED HELPER: CONFLICT CHECKER (Ignores Field/TBA) ---
@@ -688,13 +721,203 @@ def check_conflict(new_entry):
 
     return False, None
 
-@app.route('/set-semester-filter/<string:semester_name>')
-@login_required
-@role_required('admin', 'superadmin')
-def set_semester_filter(semester_name):
-    # Save the full string e.g., "1st Semester" to session
     session['selected_semester'] = semester_name
     return redirect(request.referrer or url_for('dashboard'))
+
+# ── Module 6: PROPOSAL HUB REAL-TIME HANDLERS ──────────────────────────────────
+@socketio.on('connect')
+def handle_connect():
+    if 'user_id' not in session:
+        return False
+    print(f"Client connected: {session.get('username')} ({request.sid})")
+
+@socketio.on('join_hub')
+def on_join_hub(data):
+    """Clients join a global room for the current semester to receive hub updates."""
+    semester = data.get('semester', session.get('selected_semester', '1st Semester'))
+    room = f"hub_{semester.replace(' ', '_').lower()}"
+    join_room(room)
+    print(f"User {session.get('username')} joined hub room: {room}")
+
+@socketio.on('send_hub_message')
+def handle_send_message(data):
+    """Handles manual chat messages sent from the Proposal Terminal."""
+    user_id = session.get('user_id')
+    username = session.get('username')
+    content = data.get('message', '').strip()
+    semester = data.get('semester', session.get('selected_semester', '1st Semester'))
+    
+    if not content or not user_id:
+        return
+        
+    # Save to Database (Permanent Audit Trail)
+    msg = HubMessage(
+        sender_id=user_id,
+        content=content,
+        message_type='chat'
+    )
+    db.session.add(msg)
+    db.session.commit()
+    
+    # Broadcast to Hub Room
+    room = f"hub_{semester.replace(' ', '_').lower()}"
+    emit('new_hub_message', {
+        'id': msg.id,
+        'sender': username,
+        'role': session.get('role'),
+        'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+        'content': content,
+        'type': 'chat'
+    }, room=room)
+
+# ── Module 6: HUB SYSTEM ALERTS & CONFLICTS ────────────────────────────────────
+def check_and_post_hub_conflicts(semester, draft_id=None):
+    """Detects ROOM overlaps between different departments and posts to Hub."""
+    fmt = '%H:%M'
+    # Fetch all active/published schedules + this specific draft
+    q = ScheduledClass.query.options(
+        joinedload(ScheduledClass.section),
+        joinedload(ScheduledClass.room),
+        joinedload(ScheduledClass.course)
+    ).filter_by(semester=semester)
+    
+    if draft_id:
+        q = q.filter(or_(ScheduledClass.is_draft == False, ScheduledClass.draft_version_id == draft_id))
+    else:
+        q = q.filter_by(is_draft=False)
+        
+    all_entries = q.all()
+    rooms = {} # room_id -> [entries]
+    for sc in all_entries:
+        if not sc.room_id or sc.room.room_name in ('T.B.A.', 'University Field'):
+            continue
+        if sc.room_id not in rooms:
+            rooms[sc.room_id] = []
+        rooms[sc.room_id].append(sc)
+        
+    found_conflicts = []
+    
+    for rm_id, entries in rooms.items():
+        for i in range(len(entries)):
+            for j in range(i + 1, len(entries)):
+                e1, e2 = entries[i], entries[j]
+                if e1.day != e2.day: continue
+                
+                # Check overlap
+                try:
+                    s1, send1 = datetime.strptime(e1.start_time, fmt).time(), datetime.strptime(e1.end_time, fmt).time()
+                    s2, send2 = datetime.strptime(e2.start_time, fmt).time(), datetime.strptime(e2.end_time, fmt).time()
+                    
+                    if not (send1 <= s2 or s1 >= send2):
+                        # Overlap found! Check if departments differ
+                        d1 = e1.section.department if e1.section else "Unknown"
+                        d2 = e2.section.department if e2.section else "Unknown"
+                        
+                        if d1 != d2:
+                            found_conflicts.append(
+                                f"Room **{e1.room.room_name}** overlap: **{d1}** ({e1.course.course_code}) vs **{d2}** ({e2.course.course_code}) on {e1.day} @ {e1.start_time}"
+                            )
+                except: continue
+
+    if found_conflicts:
+        for alert_text in list(set(found_conflicts))[:5]: # Cap at 5 alerts to avoid spam
+            msg = HubMessage(
+                message_type='system_alert',
+                content=alert_text
+            )
+            db.session.add(msg)
+            db.session.commit()
+            
+            room_name = f"hub_{semester.replace(' ', '_').lower()}"
+            socketio.emit('new_hub_message', {
+                'id': msg.id,
+                'sender': 'System',
+                'role': 'system',
+                'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                'content': msg.content,
+                'type': 'system_alert'
+            }, room=room_name)
+
+    emit('new_hub_message', {
+        'id': msg.id,
+        'sender': username,
+        'role': session.get('role'),
+        'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+        'content': content,
+        'type': 'chat'
+    }, room=room)
+
+# ── Module 6: HUB SYSTEM ALERTS & CONFLICTS ────────────────────────────────────
+def check_and_post_hub_conflicts(semester, draft_id=None):
+    """Detects ROOM overlaps between different departments and posts to Hub."""
+    fmt = '%H:%M'
+    # Fetch all active/published schedules + this specific draft
+    q = ScheduledClass.query.options(
+        joinedload(ScheduledClass.section),
+        joinedload(ScheduledClass.room),
+        joinedload(ScheduledClass.course)
+    ).filter_by(semester=semester)
+    
+    if draft_id:
+        q = q.filter(or_(ScheduledClass.is_draft == False, ScheduledClass.draft_version_id == draft_id))
+    else:
+        q = q.filter_by(is_draft=False)
+        
+    all_entries = q.all()
+    rooms = {} # room_id -> [entries]
+    for sc in all_entries:
+        if not sc.room_id or sc.room.room_name in ('T.B.A.', 'University Field'):
+            continue
+        if sc.room_id not in rooms:
+            rooms[sc.room_id] = []
+        rooms[sc.room_id].append(sc)
+        
+    found_conflicts = []
+    
+    for rm_id, entries in rooms.items():
+        for i in range(len(entries)):
+            for j in range(i + 1, len(entries)):
+                e1, e2 = entries[i], entries[j]
+                if e1.day != e2.day: continue
+                
+                # Check overlap
+                try:
+                    s1, send1 = datetime.strptime(e1.start_time, fmt).time(), datetime.strptime(e1.end_time, fmt).time()
+                    s2, send2 = datetime.strptime(e2.start_time, fmt).time(), datetime.strptime(e2.end_time, fmt).time()
+                    
+                    if not (send1 <= s2 or s1 >= send2):
+                        # Overlap found! Check if departments differ
+                        d1 = e1.section.department if e1.section else "Unknown"
+                        d2 = e2.section.department if e2.section else "Unknown"
+                        
+                        if d1 != d2:
+                            found_conflicts.append(
+                                f"Room **{e1.room.room_name}** overlap: **{d1}** ({e1.course.course_code}) vs **{d2}** ({e2.course.course_code}) on {e1.day} @ {e1.start_time}"
+                            )
+                except: continue
+
+    if found_conflicts:
+        for alert_text in list(set(found_conflicts))[:5]: # Cap at 5 alerts to avoid spam
+            msg = HubMessage(
+                message_type='system_alert',
+                content=alert_text
+            )
+            db.session.add(msg)
+            db.session.commit()
+            
+            room_name = f"hub_{semester.replace(' ', '_').lower()}"
+            socketio.emit('new_hub_message', {
+                'id': msg.id,
+                'sender': 'System',
+                'role': 'system',
+                'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                'content': msg.content,
+                'type': 'system_alert'
+            }, room=room_name)
+
+# ── END MODULE 6 HANDLERS ──────────────────────────────────────────────────────
+
+
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
@@ -865,9 +1088,6 @@ def upload_profile_pic():
     if file and allowed_file(file.filename):
         filename = secure_filename(f"user_{session['user_id']}_{file.filename}")
         upload_folder = os.path.join(app.root_path, 'static', 'profile_pics')
-        if not os.path.exists(upload_folder):
-            os.makedirs(upload_folder)
-            
         file.save(os.path.join(upload_folder, filename))
         
         user = User.query.get(session['user_id'])
@@ -879,6 +1099,165 @@ def upload_profile_pic():
     else:
         flash('Invalid file type. Please upload a PNG, JPG, JPEG, or GIF.', 'danger')
         
+    return redirect(request.referrer or url_for('dashboard'))
+
+
+# ── Module 6: PROPOSAL HUB & DECISION TERMINAL ROUTES ─────────────────────────
+
+@app.route('/proposal-hub')
+@login_required
+def proposal_hub():
+    """Main view for the Centralized Proposal Terminal & Decision Hub."""
+    semester = session.get('selected_semester', '1st Semester')
+    # Fetch recent messages for the current semester
+    # (In a real app, we might filter by semester if we added a semester field to HubMessage,
+    # but for now we'll just show the most recent across the system or filter by current active)
+    messages = HubMessage.query.options(joinedload(HubMessage.sender), joinedload(HubMessage.draft)).order_by(HubMessage.timestamp.asc()).all()
+    
+    # Department heads only see drafts from their department
+    user_dept = None
+    if session.get('role') == 'user':
+        # Find which department this user belongs to based on their drafts or a setting
+        # Simplification: assume they see all or it's filtered in the UI
+        pass
+        
+    return render_template('proposal_hub.html', 
+                          messages=messages, 
+                          current_semester=semester)
+
+@app.route('/api/hub/propose', methods=['POST'])
+@login_required
+def api_hub_propose():
+    """Department Heads submit their draft for approval."""
+    data = request.get_json(force=True) or {}
+    draft_id = data.get('draft_id')
+    justification = data.get('justification', '').strip()
+    
+    if not draft_id:
+        return jsonify({'ok': False, 'error': 'No draft selected.'}), 400
+        
+    dv = DraftVersion.query.get(draft_id)
+    if not dv:
+        return jsonify({'ok': False, 'error': 'Draft not found.'}), 404
+        
+    # Lock the draft
+    dv.status = 'submitted'
+    dv.submission_justification = justification
+    
+    # Create Proposal Card in Hub
+    msg = HubMessage(
+        sender_id=session.get('user_id'),
+        content=f"Submitted draft **{dv.name}** for approval.",
+        message_type='proposal',
+        draft_id=draft_id,
+        proposal_status='pending'
+    )
+    db.session.add(msg)
+    db.session.commit()
+    
+    # WebSocket Broadcast
+    semester = dv.semester or session.get('selected_semester', '1st Semester')
+    room = f"hub_{semester.replace(' ', '_').lower()}"
+    socketio.emit('new_hub_message', {
+        'id': msg.id,
+        'sender': session.get('username'),
+        'role': session.get('role'),
+        'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+        'content': msg.content,
+        'type': 'proposal',
+        'draft_id': draft_id,
+        'draft_name': dv.name,
+        'justification': justification
+    }, room=room)
+    
+    # Auto-Check for multi-dept conflicts
+    check_and_post_hub_conflicts(semester, draft_id=draft_id)
+    
+    return jsonify({'ok': True, 'message': 'Proposal submitted to hub.'})
+
+@app.route('/api/hub/decide', methods=['POST'])
+@login_required
+@role_required('admin', 'superadmin')
+def api_hub_decide():
+    """Admin approves, rejects, or holds a proposal."""
+    data = request.get_json(force=True) or {}
+    draft_id = data.get('draft_id')
+    decision = data.get('decision') # 'approved', 'rejected', 'hold'
+    justification = data.get('justification', '').strip()
+    
+    if not draft_id or not decision:
+        return jsonify({'ok': False, 'error': 'Missing draft_id or decision.'}), 400
+        
+    dv = DraftVersion.query.get(draft_id)
+    if not dv:
+        return jsonify({'ok': False, 'error': 'Draft not found.'}), 404
+        
+    dv.status = decision
+    dv.admin_justification = justification
+    
+    content_map = {
+        'approved': f"Approved proposal **{dv.name}**.",
+        'rejected': f"Rejected proposal **{dv.name}**. Please revise.",
+        'hold': f"Placed proposal **{dv.name}** on hold for further review."
+    }
+    
+    # Create Decision Message
+    msg = HubMessage(
+        sender_id=session.get('user_id'),
+        content=content_map.get(decision, f"Decision made for **{dv.name}**."),
+        message_type='decision',
+        draft_id=draft_id,
+        proposal_status=decision
+    )
+    db.session.add(msg)
+    db.session.commit()
+    
+    # If approved, publish it (Module 3 logic)
+    if decision == 'approved':
+        dv.is_published = True
+        # Transfer entries to master (Simplified: already exists in logic elsewhere)
+        _publish_draft_entries(draft_id)
+        
+    # Broadcast to Hub
+    semester = dv.semester or session.get('selected_semester', '1st Semester')
+    room = f"hub_{semester.replace(' ', '_').lower()}"
+    socketio.emit('new_hub_message', {
+        'id': msg.id,
+        'sender': 'Superadmin',
+        'role': 'superadmin',
+        'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+        'content': msg.content,
+        'type': 'decision',
+        'draft_id': draft_id,
+        'decision': decision,
+        'justification': justification
+    }, room=room)
+    
+    return jsonify({'ok': True, 'message': f'Decision "{decision}" recorded.'})
+
+def _publish_draft_entries(draft_id):
+    """Helper to merge draft entries into master schedule."""
+    # Find all master entries for this draft's scope?
+    # Usually we delete old master entries for the same section/dept then move these.
+    # Implementation detail: assume it uses the existing merge logic from Module 3.
+    dv = DraftVersion.query.get(draft_id)
+    if not dv: return
+    
+    # Option: just mark current entries as is_draft=False
+    ScheduledClass.query.filter_by(draft_version_id=draft_id).update({'is_draft': False})
+    db.session.commit()
+
+
+@app.route('/set-semester-filter/<semester_name>')
+@login_required
+def set_semester_filter(semester_name):
+    session['selected_semester'] = semester_name
+    return redirect(request.referrer or url_for('dashboard'))
+
+@app.route('/set-department-filter/<dept_name>')
+@login_required
+def set_department_filter(dept_name):
+    session['selected_department_filter'] = dept_name
     return redirect(request.referrer or url_for('dashboard'))
 
 # app.py

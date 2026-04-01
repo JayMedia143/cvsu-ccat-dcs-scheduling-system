@@ -129,6 +129,12 @@
                 Dashboard
             </a>
 
+            <a class="menu-item {% if 'proposal_hub' in request.endpoint %}active{% endif %}"
+                href="{{ url_for('proposal_hub') }}">
+                <i class="bi bi-terminal me-1"></i> Decision Hub
+            </a>
+
+
             <!-- Moved Users to the end -->
             <div class="dropdown">
                 <a class="menu-item dropdown-toggle {% if 'manage' in request.endpoint and 'layouts' not in request.endpoint and 'users' not in request.endpoint and 'assignments' not in request.endpoint and 'constraints' not in request.endpoint %}active{% endif %}"
@@ -318,6 +324,10 @@
                     <li><a class="dropdown-item" href="{{ url_for('manage_rooms') }}"><i class="bi bi-door-open me-2"></i> Rooms</a></li>
                 </ul>
             </div>
+            <a class="menu-item {% if 'proposal_hub' in request.endpoint %}active{% endif %}"
+                href="{{ url_for('proposal_hub') }}">
+                <i class="bi bi-terminal me-1"></i> Proposal Terminal
+            </a>
             <a class="menu-item {% if 'schedule_editor' in request.endpoint %}active{% endif %}"
                 href="{{ url_for('schedule_editor') }}">
                 <i class="bi bi-pencil-square me-1"></i> Schedule Editor
