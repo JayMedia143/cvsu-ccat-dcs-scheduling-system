@@ -1,171 +1,157 @@
 {% extends "base.html" %}
 
-{% block title %}CvSU Scheduling System | Proposal Terminal{% endblock %}
+{% block title %}CvSU Scheduling System | Decision Hub{% endblock %}
 
 {% block content %}
-<div class="proposal-hub-container mt-4 animate__animated animate__fadeIn">
-    <!-- 1. HUB HEADER (Glassmorphic) -->
-    <div class="hub-header mb-4 p-4 d-flex justify-content-between align-items-center shadow-sm">
-        <div>
-            <h2 class="mb-0 fw-bold header-gradient text-uppercase tracking-wider">
-                <i class="bi bi-terminal-fill me-2"></i>Proposal Terminal
-            </h2>
-            <p class="text-secondary mb-0 opacity-75">
-                Centralized Decision Hub & Negotiation Log &bull; {{ selected_semester }}
-            </p>
+<div class="messenger-hub-wrapper">
+    <!-- 1. CONVO LIST -->
+    <div class="messenger-sidebar">
+        <div class="sidebar-header-main p-3">
+            <h4 class="fw-bold mb-3">Chats</h4>
+            <div class="messenger-search">
+                <i class="bi bi-search"></i>
+                <input type="text" placeholder="Search Messenger" oninput="filterConvos(this.value)">
+            </div>
         </div>
-        <div class="d-flex gap-3">
-            <div class="hub-stat-card px-3 py-2">
-                <span class="label">STATUS</span>
-                <span class="value text-success">CONNECTED</span>
-            </div>
-            <div class="hub-stat-card px-3 py-2">
-                <span class="label">PENDING PROPOSALS</span>
-                <span class="value text-warning" id="pendingCount">{{ pending_proposals|length }}</span>
-            </div>
+        <div class="messenger-convo-list custom-scrollbar" id="convoList">
+            <!-- Loading state -->
+            <div class="p-4 text-center"><div class="spinner-border text-primary spinner-border-sm"></div></div>
         </div>
     </div>
 
-    <div class="row g-4">
-        <!-- 2. MAIN LOG AREA (Left/Center) -->
-        <div class="col-lg-8">
-            <div class="terminal-card shadow-lg border-0 d-flex flex-column" style="height: 700px;">
-                <!-- Terminal Header -->
-                <div class="terminal-nav px-3 py-2 d-flex align-items-center">
-                    <div class="window-controls d-flex gap-2 me-3">
-                        <span class="dot red"></span>
-                        <span class="dot yellow"></span>
-                        <span class="dot green"></span>
-                    </div>
-                    <span class="text-muted small font-monospace">system_audit_trail_{{ selected_semester | lower | replace(' ', '_') }}.log</span>
+    <!-- 2. ACTIVE CHAT -->
+    <div class="messenger-chat-pane">
+        <!-- Header -->
+        <div class="chat-header-main">
+            <div class="d-flex align-items-center gap-2">
+                <div class="avatar-header" id="activeAvatarHeader">E</div>
+                <div>
+                    <div class="fw-bold fs-6" id="activePartnerName">Everyone</div>
+                    <div class="small text-muted" id="activePartnerStatus">Online</div>
                 </div>
-
-                <!-- Chat Messages Area -->
-                <div id="chatLog" class="terminal-body p-4 flex-grow-1 overflow-auto font-monospace custom-scrollbar">
-                    {% if not messages %}
-                    <div class="text-muted opacity-50 text-center mt-5">
-                        <i class="bi bi-info-circle me-2"></i> Terminal initialized. Waiting for incoming data...
-                    </div>
-                    {% endif %}
-                    
-                    {% for msg in messages %}
-                    <div class="message-entry mb-3 type-{{ msg.message_type }} animate__animated animate__fadeInUp">
-                        <div class="d-flex justify-content-between mb-1 opacity-50 small">
-                            <span class="sender-name">
-                                <span class="role-badge role-{{ msg.sender.role if msg.sender else 'system' }}">{{ (msg.sender.role if msg.sender else 'system') | upper }}</span>
-                                {{ msg.sender.username if msg.sender else 'System' }}
-                            </span>
-                            <span class="timestamp">[{{ msg.timestamp.strftime('%H:%M:%S') }}]</span>
-                        </div>
-                        
-                        <div class="message-bubble bubble-{{ msg.message_type }} {{ 'border-warning' if msg.message_type == 'proposal' else 'border-danger' if msg.message_type == 'system_alert' else 'border-info' if msg.message_type == 'decision' else 'border-primary' }}">
-                            {% if msg.message_type == 'chat' %}
-                                {{ msg.content }}
-                            {% elif msg.message_type == 'proposal' %}
-                                <div class="d-flex align-items-center mb-2">
-                                    <i class="bi bi-file-earmark-diff-fill text-warning me-2 fs-4"></i>
-                                    <h6 class="mb-0 text-warning fw-bold text-uppercase">Schedule Proposal Submitted</h6>
-                                </div>
-                                <p class="mb-1"><strong>Draft:</strong> {{ msg.draft.name if msg.draft else "Unknown Draft" }}</p>
-                                {% if msg.draft and msg.draft.submission_justification %}
-                                <div class="justification-box p-2 mt-2 bg-dark rounded border-start border-warning">
-                                    <small class="text-muted d-block mb-1 text-uppercase tracking-tighter" style="font-size: 0.6rem;">Justification:</small>
-                                    <span class="text-light fs-7 italic">"{{ msg.draft.submission_justification }}"</span>
-                                </div>
-                                {% endif %}
-                            {% elif msg.message_type == 'decision' %}
-                                <div class="d-flex align-items-center">
-                                    <i class="bi {{ 'bi-check-circle-fill text-success' if msg.proposal_status == 'approved' else 'bi-x-circle-fill text-danger' if msg.proposal_status == 'rejected' else 'bi-pause-circle-fill text-info' }} me-2 fs-5"></i>
-                                    <span class="fw-bold">{{ msg.content }}</span>
-                                </div>
-                                {% if session.role in ['admin', 'superadmin'] and msg.draft and msg.draft.admin_justification %}
-                                <div class="justification-box p-2 mt-2 bg-dark rounded border-start border-{{ 'success' if msg.proposal_status == 'approved' else 'danger' }}">
-                                    <small class="text-muted d-block mb-1 text-uppercase tracking-tighter" style="font-size: 0.6rem;">Admin Note (Private):</small>
-                                    <span class="text-light fs-7 italic">"{{ msg.draft.admin_justification }}"</span>
-                                </div>
-                                {% endif %}
-                            {% elif msg.message_type == 'system_alert' %}
-                                <span class="text-danger fw-bold">⚠️ SYSTEM ALERT:</span> {{ msg.content }}
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-
-                <!-- Chat Input -->
-                <div class="terminal-footer p-3 border-top border-secondary border-opacity-25 bg-dark">
-                    <form id="chatForm" class="d-flex gap-2">
-                        <div class="input-prefix text-success font-monospace me-1 align-self-center">> </div>
-                        <input type="text" id="chatInput" autocomplete="off" class="form-control terminal-input border-0 shadow-none bg-transparent text-light font-monospace" placeholder="Type message or system command...">
-                        <button type="submit" class="btn btn-primary btn-terminal shadow-sm px-4 rounded-pill">
-                            <i class="bi bi-send-fill"></i>
-                        </button>
-                    </form>
-                </div>
+            </div>
+            <div class="ms-auto d-flex align-items-center gap-2">
+                <button class="btn btn-messenger-icon" title="View Info"><i class="bi bi-info-circle-fill"></i></button>
             </div>
         </div>
 
-        <!-- 3. ACTIONS & IMPACT (Right) -->
-        <div class="col-lg-4">
-            <!-- PENDING PROPOSALS LIST -->
-            <div class="terminal-card border-0 mb-4 animate__animated animate__fadeInRight animate__delay-1s overflow-hidden">
-                <div class="terminal-nav px-3 py-2">
-                    <span class="small font-monospace text-uppercase opacity-75">Pending Approvals</span>
-                </div>
-                <div class="terminal-body p-0 custom-scrollbar" style="max-height: 400px; overflow-y: auto;">
-                    <div id="proposalList" class="list-group list-group-flush bg-transparent">
-                        {% for dv in pending_proposals %}
-                        <div class="list-group-item bg-transparent border-secondary border-opacity-10 p-3 proposal-item" id="proposal-item-{{ dv.id }}">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h6 class="mb-0 text-light fw-bold">{{ dv.name }}</h6>
-                                <span class="badge bg-dark border border-secondary text-secondary">{{ dv.department or "ALL" }}</span>
-                            </div>
-                            <div class="d-flex gap-2 mb-3">
-                                <small class="text-muted"><i class="bi bi-clock me-1"></i> {{ dv.updated_at.strftime('%m/%d %H:%M') }}</small>
-                            </div>
-                            
-                            {% if session.role in ['admin', 'superadmin'] %}
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-sm btn-success-soft flex-grow-1" onclick="handleDecision({{ dv.id }}, 'approved')">Approve</button>
-                                <button class="btn btn-sm btn-danger-soft flex-grow-1" onclick="handleDecision({{ dv.id }}, 'rejected')">Reject</button>
-                            </div>
-                            {% else %}
-                            <div class="text-center">
-                                <small class="text-warning italic"><i class="bi bi-hourglass-split me-1"></i> Waiting for Superadmin...</small>
-                            </div>
-                            {% endif %}
-                        </div>
-                        {% else %}
-                        <div class="p-4 text-center text-muted opacity-50">
-                            No pending proposals.
-                        </div>
-                        {% endfor %}
-                    </div>
+        <!-- Log -->
+        <div class="chat-log-main custom-scrollbar" id="chatLog">
+            <!-- Messages pop here -->
+        </div>
+
+        <!-- Input -->
+        <div class="chat-input-main">
+            <!-- Attachment Preview Area -->
+            <div id="attachmentPreview" class="attachment-preview-container d-none">
+                <div class="draft-preview-card">
+                    <i class="bi bi-file-earmark-text-fill text-success"></i>
+                    <span id="previewDraftName" class="text-truncate">Experimental Draft 1</span>
+                    <button class="btn-close-preview" onclick="clearDraftAttachment()"><i class="bi bi-x-circle-fill"></i></button>
                 </div>
             </div>
 
-            <!-- SYSTEM STATUS -->
-            <div class="terminal-card border-0 animate__animated animate__fadeInRight animate__delay-2s overflow-hidden">
-                <div class="terminal-nav px-3 py-2">
-                    <span class="small font-monospace text-uppercase opacity-75">Network Status</span>
+            <form id="chatForm" class="chat-form-main">
+                <div class="input-tools">
+                    <button type="button" class="btn-messenger-icon text-primary" onclick="toggleDraftPicker(true)"><i class="bi bi-plus-circle-fill"></i></button>
+                    <button type="button" class="btn-messenger-icon text-primary"><i class="bi bi-image"></i></button>
                 </div>
-                <div class="terminal-body p-3 font-monospace shadow-inner">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-secondary small">WEB_SOCKET_STATE:</span>
-                        <span class="text-success small fw-bold" id="socketStatus">ONLINE</span>
+                <div class="flex-grow-1 position-relative">
+                    <textarea id="chatInput" rows="1" placeholder="Aa" class="form-control messenger-textarea"></textarea>
+                </div>
+                <div class="input-send">
+                    <button type="submit" class="btn-send-messenger" id="sendMsgBtn">
+                        <i class="bi bi-send-fill" id="sendIcon"></i>
+                        <span class="spinner-border spinner-border-sm d-none" id="sendSpinner"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. RIGHT SIDEBAR (META) -->
+    <div class="messenger-details-pane custom-scrollbar" id="detailsPane">
+        <div class="p-3">
+            <h6 class="text-uppercase text-muted fw-bold x-small mb-3">Pending Review</h6>
+            <div id="proposalList">
+                {% for dv in pending_proposals %}
+                <div class="proposal-mini-card mb-3" id="proposal-item-{{ dv.id }}">
+                    <div class="fw-bold small text-truncate">{{ dv.name }}</div>
+                    <div class="small text-muted mb-2">{{ dv.department or "ALL" }} &bull; {{ dv.updated_at.strftime('%m/%d') }}</div>
+                    {% if session.role in ['admin', 'superadmin'] %}
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-messenger-sm btn-success flex-grow-1" onclick="handleDecision({{ dv.id }}, 'approved')">Approve</button>
+                        <button class="btn btn-messenger-sm btn-danger flex-grow-1" onclick="handleDecision({{ dv.id }}, 'rejected')">Reject</button>
                     </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-secondary small">CURRENT_ROOM:</span>
-                        <span class="text-info small fw-bold">{{ selected_semester | lower | replace(' ', '_') }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-secondary small">LOG_MODE:</span>
-                        <span class="text-warning small fw-bold">PERMANENT_AUDIT</span>
-                    </div>
-                    <hr class="border-secondary border-opacity-25 my-3">
-                    <small class="text-muted d-block italic line-height-sm" style="font-size: 0.75rem;">
-                        "Decisions made in this hub are permanent and recorded for university transparency."
-                    </small>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-muted text-center py-3 small">All proposals handled.</div>
+                {% endfor %}
+            </div>
+
+            <hr class="my-4 op-10">
+            
+            <h6 class="text-uppercase text-muted fw-bold x-small mb-3">System Updates</h6>
+            <div class="small">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Semester</span>
+                    <span class="fw-semibold">{{ selected_semester }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Socket</span>
+                    <span class="text-success fw-semibold" id="socketStatus">Online</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DRAFT PICKER OVERLAY -->
+<div id="draftPickerOverlay" class="messenger-overlay shadow-lg d-none">
+    <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
+        <h6 class="mb-0 fw-bold">Attach Draft Version</h6>
+        <button class="btn-close" onclick="toggleDraftPicker(false)"></button>
+    </div>
+    <div class="picker-search-box p-2">
+         <input type="text" class="form-control form-control-sm rounded-pill" placeholder="Search drafts..." oninput="filterDraftsInPicker(this.value)">
+    </div>
+    <div class="picker-list-box custom-scrollbar" id="draftPickerList">
+        <!-- Drafts populated by JS -->
+    </div>
+</div>
+
+<!-- INFINITE CANVAS MODAL -->
+<div class="modal fade" id="hubPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content" style="background:#f0f2f5;">
+            <div class="modal-header py-1 px-3 bg-white border-bottom shadow-sm">
+                <div class="d-flex align-items-center gap-2">
+                    <h6 id="pvModalTitle" class="mb-0 fw-bold">Draft Preview</h6>
+                    <select id="pvTypeSelect" class="form-select form-select-sm border-0 fw-bold bg-light" style="width:auto">
+                        <option value="section">Sections</option>
+                        <option value="faculty">Faculty</option>
+                        <option value="room">Rooms</option>
+                    </select>
+                </div>
+                <div class="ms-auto d-flex align-items-center gap-2">
+                    <div id="pvZoomLevel" class="badge bg-white text-dark border small py-2 px-3">100%</div>
+                    <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="pvResetView()">Reset View</button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0 overflow-hidden position-relative" style="background: radial-gradient(circle, #d0d0d0 1px, transparent 1px); background-size: 20px 20px;">
+                <div id="pvViewport" class="w-100 h-100" style="cursor:grab;">
+                    <div id="pvCanvas" style="position:absolute; transform-origin: 0 0;"></div>
+                </div>
+                <div id="pvMinimap">
+                    <div id="pvMinimapContent"></div>
+                    <div id="pvMinimapBox"></div>
+                </div>
+                <!-- Cinema Overlay -->
+                <div id="pvCinemaOverlay">
+                    <button class="btn-close-cinema" onclick="pvClosePresentation()">&times;</button>
+                    <div class="pv-pres-wrap"><iframe id="pvPresIframe"></iframe></div>
                 </div>
             </div>
         </div>
@@ -174,224 +160,561 @@
 
 <!-- JUSTIFICATION MODAL -->
 <div class="modal fade" id="justificationModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content glass-morphism border-0 shadow-lg text-light" style="background: rgba(22, 27, 34, 0.95); backdrop-filter: blur(20px);">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:15px;">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title header-gradient fw-bold">Admin Decision Note</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <h6 class="modal-title fw-bold">Add Note</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
-                <p class="text-secondary small mb-3">Please provide a justification for this decision. (Visible only to Admins in history).</p>
-                <textarea id="adminJustification" class="form-control bg-dark border-secondary text-light font-monospace" rows="4" placeholder="Explain the rationale for this action..."></textarea>
+            <div class="modal-body">
+                <textarea id="adminNote" class="form-control" rows="3" placeholder="Why is this decision being made? (Optional)"></textarea>
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-dark px-4" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary px-4" id="confirmDecisionBtn">Confirm Action</button>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-primary w-100 rounded-pill" id="confirmDecisionBtn">Confirm</button>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-/* Hub CSS */
-.proposal-hub-container {
-    max-width: 1400px;
-    margin-left: auto;
-    margin-right: auto;
-    padding-bottom: 50px;
+/* ──────── MESSENGER UI ENGINE ──────── */
+:root {
+    --ms-blue: #0084ff;
+    --ms-bg: #fff;
+    --ms-sidebar-bg: #fff;
+    --ms-bubble-me: #0084ff;
+    --ms-bubble-them: #e4e6eb;
+    --ms-text-me: #fff;
+    --ms-text-them: #050505;
+    --ms-border: #f0f0f0;
 }
 
-.hub-header {
-    background: rgba(13, 17, 23, 0.4);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+
+.messenger-hub-wrapper {
+    display: flex;
+    height: calc(100vh - 65px);
+    width: 100%;
+    overflow: hidden;
+    margin: -1.5rem; /* Cancel typical template padding */
+}
+
+/* 1. SIDEBAR */
+.messenger-sidebar {
+    width: 360px;
+    border-right: 1px solid var(--ms-border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+.sidebar-header-main h4 { font-size: 1.5rem; color: #050505; margin: 0; }
+.messenger-search {
+    background: #f0f2f5;
     border-radius: 20px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.messenger-search i { color: #65676b; }
+.messenger-search input { 
+    background: transparent; 
+    border: none; 
+    width: 100%; 
+    outline: none; 
+    font-size: 0.95rem; 
 }
 
-.hub-stat-card {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
+.messenger-convo-list { flex-grow: 1; overflow-y: auto; padding-top: 8px; }
+.convo-item {
+    display: flex;
+    padding: 8px 12px;
+    margin: 0 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    align-items: center;
+    gap: 12px;
+    transition: background 0.15s;
+}
+.convo-item:hover { background: #f5f5f5; }
+.convo-item.active { background: #e7f3ff; }
+.convo-avatar {
+    width: 50px; height: 50px; border-radius: 50%; background: #ccc;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; font-weight: bold; color: white; flex-shrink: 0;
+    position: relative;
+}
+.online-dot-mini {
+    position: absolute; bottom: 2px; right: 2px; width: 14px; height: 14px;
+    background: #31a24c; border: 3px solid #fff; border-radius: 50%;
+}
+.convo-body { flex-grow: 1; min-width: 0; }
+.convo-header { display: flex; justify-content: space-between; align-items: baseline; }
+.convo-name { font-weight: 600; color: #050505; font-size: 0.95rem; }
+.convo-time { font-size: 0.75rem; color: #65676b; }
+.convo-preview {
+    font-size: 0.8rem; color: #65676b; white-space: nowrap; 
+    overflow: hidden; text-overflow: ellipsis; max-width: 180px; 
+}
+.convo-item.unread .convo-preview { font-weight: bold; color: #050505; }
+.unread-dot {
+    width: 10px; height: 10px; background: var(--ms-blue); 
+    border-radius: 50%; margin-left: 10px;
 }
 
-.hub-stat-card .label { display: block; font-size: 0.6rem; color: rgba(255, 255, 255, 0.4); font-weight: 800; letter-spacing: 0.1rem; }
-.hub-stat-card .value { display: block; font-size: 1.1rem; font-weight: 700; }
-
-.terminal-card {
-    background: #0d1117;
-    border-radius: 16px;
-    color: #e6edf3;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+/* 2. CHAT PANE */
+.messenger-chat-pane {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: #fff;
+}
+.chat-header-main {
+    height: 60px; padding: 0 16px; border-bottom: 1px solid var(--ms-border);
+    display: flex; align-items: center; background: #fff; z-index: 10;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.avatar-header {
+    width: 40px; height: 40px; border-radius: 50%; background: var(--ms-blue);
+    display: flex; align-items: center; justify-content: center; color: white;
+    font-weight: bold; font-size: 1.1rem;
 }
 
-.terminal-nav {
-    background: #161b22;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+.chat-log-main {
+    flex-grow: 1; padding: 20px; overflow-y: auto; 
+    display: flex; flex-direction: column; gap: 4px;
 }
 
-.window-controls .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
-.dot.red { background: #ff5f56; }
-.dot.yellow { background: #ffbd2e; }
-.dot.green { background: #27c93f; }
+/* BUBBLES WITH TAILS */
+.bubble-wrap { display: flex; width: 100%; margin-bottom: 2px; }
+.bubble-wrap.me { justify-content: flex-end; }
+.bubble-wrap.them { justify-content: flex-start; }
 
-.terminal-input:focus { color: #8ade80; }
-
-.message-bubble {
-    padding: 12px 16px;
-    border-radius: 4px 16px 16px 16px;
-    background: rgba(255, 255, 255, 0.02);
-    border-left: 4px solid #30363d;
-    max-width: 90%;
-    font-size: 0.9rem;
+.bubble {
+    max-width: 65%;
+    padding: 8px 14px;
+    font-size: 0.95rem;
     line-height: 1.4;
+    position: relative;
+    word-break: break-all;
+}
+.bubble-wrap.me .bubble {
+    background: var(--ms-bubble-me);
+    color: var(--ms-text-me);
+    border-radius: 18px 18px 4px 18px;
+}
+.bubble-wrap.them .bubble {
+    background: var(--ms-bubble-them);
+    color: var(--ms-text-them);
+    border-radius: 18px 18px 18px 4px;
 }
 
-.role-badge { font-size: 0.5rem; padding: 1px 5px; border-radius: 4px; font-weight: 900; margin-right: 5px; }
-.role-SUPERADMIN { background: #f85149; }
-.role-ADMIN { background: #f0883e; }
-.role-USER { background: #388bfd; }
-.role-SYSTEM { background: #8b949e; }
-
-.btn-success-soft { background: rgba(46, 160, 67, 0.1); color: #3fb950; border: 1px solid rgba(46, 160, 67, 0.2); }
-.btn-success-soft:hover { background: #2ea043; color: white; }
-.btn-danger-soft { background: rgba(248, 81, 73, 0.1); color: #f85149; border: 1px solid rgba(248, 81, 73, 0.2); }
-.btn-danger-soft:hover { background: #f85149; color: white; }
-
-.header-gradient {
-    background: linear-gradient(135deg, #fff 0%, #8b949e 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+/* TAIL ARROWS (Tail Corner) */
+.bubble-wrap.me .bubble::after {
+    content: ''; position: absolute; bottom: 0; right: -5px; width: 15px; height: 15px;
+    background: var(--ms-bubble-me); clip-path: polygon(0 0, 0% 100%, 100% 100%);
+    z-index: -1;
+}
+.bubble-wrap.them .bubble::after {
+    content: ''; position: absolute; bottom: 0; left: -5px; width: 15px; height: 15px;
+    background: var(--ms-bubble-them); clip-path: polygon(100% 0, 0 100%, 100% 100%);
+    z-index: -1;
 }
 
+.bubble-time { font-size: 0.65rem; color: #8a8d91; margin: 2px 8px; }
+.bubble-wrap.me .bubble-time { text-align: right; }
+
+/* Special Bubbles */
+.bubble.system_alert {
+    background: #fff0f0 !important; border: 1px solid #ffcccc; color: #d00;
+    width: 100%; max-width: 100%; text-align: center; border-radius: 8px !important;
+}
+.bubble.system_alert::after { display:none }
+
+/* Draft Card */
+.msg-draft-card {
+    background: rgba(255,255,255,0.2) !important; color: inherit;
+    border-radius: 12px; padding: 10px; margin-top: 8px;
+    border: 1px solid rgba(255,255,255,0.3); display: block; text-decoration: none !important;
+    transition: background 0.2s;
+}
+.bubble-wrap.them .msg-draft-card { background: #fff !important; border-color: #ddd; }
+.msg-draft-card:hover { background: rgba(255,255,255,0.3) !important; }
+
+/* 3. INPUT */
+.chat-input-main { padding: 12px 16px; border-top: 1px solid var(--ms-border); background: #fff; }
+.chat-form-main { display: flex; align-items: flex-end; gap: 8px; }
+.input-tools { display: flex; gap: 8px; margin-bottom: 2px; }
+.btn-messenger-icon { width: 34px; height: 34px; border-radius: 50%; border: none; background: transparent; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: background 0.2s; }
+.btn-messenger-icon:hover { background: #f0f2f5; }
+.messenger-textarea {
+    background: #f0f2f5; border: none; border-radius: 20px; padding: 9px 15px;
+    resize: none; max-height: 120px; font-size: 0.95rem; line-height: 1.4;
+}
+.messenger-textarea:focus { background: #f0f2f5; box-shadow: none; border: none; }
+.btn-send-messenger {
+    width: 34px; height: 34px; border-radius: 50%; border: none; background: transparent;
+    color: var(--ms-blue); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
+}
+
+/* 4. ATTACHMENT PREVIEW */
+.attachment-preview-container { padding: 10px 0; }
+.draft-preview-card {
+    background: #f0fdf4; border: 1px solid #c3e6cb; border-radius: 12px;
+    padding: 8px 12px; display: inline-flex; align-items: center; gap: 10px;
+    box-shadow: 0 4px 12px rgba(49,162,76,0.1);
+}
+.btn-close-preview { background: none; border: none; color: #65676b; font-size: 1.1rem; padding: 0; line-height: 0; cursor: pointer; }
+.btn-close-preview:hover { color: #d00; }
+
+/* 5. SIDEBAR META */
+.messenger-details-pane { width: 300px; border-left: 1px solid var(--ms-border); background: #fff; flex-shrink: 0; }
+@media (max-width: 1100px) { .messenger-details-pane { display: none; } }
+.x-small { font-size: 0.7rem; }
+.op-10 { opacity: 0.1; }
+.proposal-mini-card { background: #fff; border: 1px solid var(--ms-border); border-radius: 10px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.btn-messenger-sm { font-size: 0.75rem; font-weight: 600; padding: 4px 8px; border-radius: 8px; }
+
+/* 6. OVERLAYS */
+.messenger-overlay {
+    position: fixed; bottom: 80px; left: 380px; width: 320px; 
+    background: #fff; border-radius: 12px; z-index: 1000;
+    display: flex; flex-direction: column; overflow: hidden;
+}
+.picker-list-box { max-height: 300px; overflow-y: auto; }
+.picker-item {
+    padding: 10px 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.2s;
+}
+.picker-item:hover { background: #f9f9f9; }
+
+/* 7. PREVIEW MODAL */
+#pvMinimap { position: absolute; bottom: 20px; right: 20px; width: 220px; height: 150px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); border-radius: 12px; border: 1px solid #ddd; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+#pvMinimapBox { border: 2px solid var(--ms-blue); background: rgba(0,132,255,0.1); border-radius: 4px; pointer-events: none; }
+.pv-card { background: #fff; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+#pvCinemaOverlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 500; display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+.pv-pres-wrap { width: 800px; height: 1100px; background: white; box-shadow: 0 0 100px rgba(0,0,0,0.5); }
+.btn-close-cinema { position: absolute; top: 20px; right: 30px; font-size: 3rem; color: white; background: none; border: none; opacity: 0.5; transition: opacity 0.3s; }
+.btn-close-cinema:hover { opacity: 1; }
+
+/* Scrollbars */
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
-
-.italic { font-style: italic; }
-.fs-7 { font-size: 0.8rem; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #bcc0c4; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 </style>
 
-<script src="https://cdn.socketio.org/4.7.2/socketio.min.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
+    // System Config
+    const SECTIONS  = {{ sections  | map(attribute='id')           | list | tojson }};
+    const SEC_NAMES = {{ sections  | map(attribute='section_name') | list | tojson }};
+    const FAC_IDS   = {{ faculties | map(attribute='id')           | list | tojson }};
+    const FAC_NAMES = {{ faculties | map(attribute='full_name')    | list | tojson }};
+    const ROOM_IDS  = {{ rooms     | map(attribute='id')           | list | tojson }};
+    const ROOM_NAMES= {{ rooms     | map(attribute='room_name')    | list | tojson }};
+
+    // Chat State
     const socket = io();
-    const chatLog = document.getElementById('chatLog');
-    const chatForm = document.getElementById('chatForm');
-    const chatInput = document.getElementById('chatInput');
+    const currentUsername = "{{ session.get('username') }}";
     const currentSemester = "{{ selected_semester }}";
+    let activePartner = 'Everyone';
+    let conversations = [];
+    let attachedDraftId = null;
+    let attachedDraftName = null;
 
-    socket.on('connect', () => {
-        document.getElementById('socketStatus').textContent = 'ONLINE';
-        document.getElementById('socketStatus').className = 'text-success small fw-bold';
-        socket.emit('join_hub', { semester: currentSemester });
+    // DOM Elements
+    const chatLog = document.getElementById('chatLog');
+    const chatInput = document.getElementById('chatInput');
+    const convoList = document.getElementById('convoList');
+    const draftPickerList = document.getElementById('draftPickerList');
+
+    // ──────────────── INITIALIZATION ────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        loadConversations();
+        switchConversation('Everyone');
+
+        socket.on('connect', () => {
+            console.log("Connected to Hub");
+            document.getElementById('socketStatus').textContent = 'Online';
+            socket.emit('join_hub', { semester: currentSemester });
+        });
+
+        socket.on('new_hub_message', (data) => {
+            // Contextual routing: only append if it belongs to current active view
+            const msgChannel = data.recipient_name ? (data.sender === currentUsername ? data.recipient_name : data.sender) : 'Everyone';
+            
+            if (activePartner === msgChannel) {
+                appendMessage(data);
+                if (data.sender !== currentUsername) markRead(msgChannel);
+            }
+            updateSidebarPreview(msgChannel, data);
+        });
+
+        socket.on('hub_users_update', (data) => {
+            const onlineCount = data.users.length;
+            // update statuses in UI if needed
+        });
     });
 
-    socket.on('disconnect', () => {
-        document.getElementById('socketStatus').textContent = 'OFFLINE';
-        document.getElementById('socketStatus').className = 'text-danger small fw-bold';
-    });
+    // ──────────────── DATA FETCHING ────────────────
+    async function loadConversations() {
+        const r = await fetch('/api/hub/conversations');
+        conversations = await r.json();
+        renderConvoList();
+    }
 
-    socket.on('new_hub_message', (data) => {
-        appendMessage(data);
-    });
+    function renderConvoList() {
+        convoList.innerHTML = '';
+        conversations.forEach(c => {
+            const div = document.createElement('div');
+            div.className = `convo-item ${activePartner === c.name ? 'active' : ''} ${c.unread_count > 0 ? 'unread' : ''}`;
+            div.onclick = () => switchConversation(c.name);
 
-    chatForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const msg = chatInput.value.trim();
-        if(!msg) return;
-        socket.emit('send_hub_message', { message: msg, semester: currentSemester });
-        chatInput.value = '';
-    });
+            const bg = c.name === 'Everyone' ? '#31a24c' : (c.role === 'admin' ? '#f59e0b' : '#0084ff');
+            const initials = c.name === 'Everyone' ? 'E' : c.name.charAt(0).toUpperCase();
 
+            div.innerHTML = `
+                <div class="convo-avatar" style="background:${bg}">
+                    ${initials}
+                    ${c.name !== 'Everyone' ? '<div class="online-dot-mini"></div>' : ''}
+                </div>
+                <div class="convo-body">
+                    <div class="convo-header">
+                        <span class="convo-name">${c.name}</span>
+                        <span class="convo-time">${c.timestamp ? formatTimestamp(c.timestamp) : ''}</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="convo-preview">${c.last_message || 'Start a conversation...'}</div>
+                        ${c.unread_count > 0 ? '<div class="unread-dot"></div>' : ''}
+                    </div>
+                </div>
+            `;
+            convoList.appendChild(div);
+        });
+    }
+
+    async function switchConversation(partner) {
+        activePartner = partner;
+        
+        // Header Update
+        document.getElementById('activePartnerName').textContent = partner;
+        const headAvatar = document.getElementById('activeAvatarHeader');
+        headAvatar.textContent = partner.charAt(0).toUpperCase();
+        headAvatar.style.background = partner === 'Everyone' ? '#31a24c' : '#0084ff';
+
+        // Message Loading
+        chatLog.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
+        const r = await fetch(`/api/hub/messages?partner=${encodeURIComponent(partner)}`);
+        const msgs = await r.json();
+        
+        chatLog.innerHTML = '';
+        if (msgs.length === 0) {
+            chatLog.innerHTML = `<div class="text-muted text-center mt-5 small">No messages yet. Say hi!</div>`;
+        } else {
+            msgs.forEach(m => appendMessage(m));
+        }
+
+        if (partner !== 'Everyone') markRead(partner);
+        renderConvoList();
+    }
+
+    // ──────────────── MESSAGE HANDLING ────────────────
     function appendMessage(data) {
-        const div = document.createElement('div');
-        div.className = `message-entry mb-3 type-${data.type} animate__animated animate__fadeInUp`;
+        const isMe = data.sender === currentUsername;
+        const wrap = document.createElement('div');
+        wrap.className = `bubble-wrap ${isMe ? 'me' : 'them'}`;
         
-        let badgeColor = 'SYSTEM';
-        if(data.role) badgeColor = data.role.toUpperCase();
-        
-        const timestamp = data.timestamp ? data.timestamp.split(' ')[1] : new Date().toLocaleTimeString('en-US', {hour12: false});
+        // Draft Card markup
+        let draftHtml = '';
+        if (data.attached_draft) {
+            const d = data.attached_draft;
+            draftHtml = `
+                <a href="#" class="msg-draft-card" onclick="viewDraft(${d.id}, '${d.name}', '${currentSemester}'); return false;">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-file-earmark-text-fill h4 mb-0"></i>
+                        <div class="min-w-0">
+                            <div class="fw-bold small text-truncate" style="max-width:120px">${d.name}</div>
+                            <div class="x-small opacity-75">${d.status.toUpperCase()}</div>
+                        </div>
+                    </div>
+                </a>`;
+        }
 
-        div.innerHTML = `
-            <div class="d-flex justify-content-between mb-1 opacity-50 small">
-                <span class="sender-name">
-                    <span class="role-badge role-${badgeColor}">${badgeColor}</span>
-                    ${data.sender || 'System'}
-                </span>
-                <span class="timestamp">[${timestamp}]</span>
-            </div>
-            <div class="message-bubble bubble-${data.type} border-start border-4 ${getBorderClass(data)}">
-                ${formatContent(data)}
+        wrap.innerHTML = `
+            <div class="d-flex flex-column" style="max-width:70%">
+                ${!isMe && activePartner === 'Everyone' ? `<span class="small text-muted ms-2 mb-1" style="font-size:0.65rem">${data.sender}</span>` : ''}
+                <div class="bubble ${data.message_type || 'chat'}">
+                    ${data.content || ''}
+                    ${draftHtml}
+                </div>
+                <div class="bubble-time">${formatTimestamp(data.timestamp)}</div>
             </div>
         `;
-        chatLog.appendChild(div);
+        
+        chatLog.appendChild(wrap);
         chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    function getBorderClass(data) {
-        if(data.type === 'proposal') return 'border-warning';
-        if(data.type === 'system_alert') return 'border-danger';
-        if(data.type === 'decision') return (data.status === 'approved' ? 'border-success' : (data.status === 'rejected' ? 'border-danger' : 'border-info'));
-        return 'border-primary';
-    }
+    document.getElementById('chatForm').onsubmit = (e) => {
+        e.preventDefault();
+        const msg = chatInput.value.trim();
+        if (!msg && !attachedDraftId) return;
 
-    function formatContent(data) {
-        if(data.type === 'proposal') {
-            return `
-                <div class="d-flex align-items-center mb-2 text-warning fw-bold">
-                    <i class="bi bi-file-earmark-diff-fill me-2 fs-4"></i>
-                    <span>PROPOSAL SUBMITTED</span>
-                </div>
-                <p class="mb-1"><strong>Draft:</strong> ${data.draft_name}</p>
-                ${data.justification ? `
-                    <div class="justification-box p-2 mt-2 bg-dark rounded fs-7 italic">"${data.justification}"</div>
-                ` : ''}
-            `;
-        }
-        if(data.type === 'decision') {
-            return `
-                <div class="d-flex align-items-center fw-bold">
-                    <i class="bi bi-info-circle me-1"></i> ${data.content}
-                </div>
-                ${data.justification ? `
-                    <div class="p-2 mt-2 bg-dark rounded fs-7 italic text-muted">Note: "${data.justification}"</div>
-                ` : ''}
-            `;
-        }
-        return data.content;
-    }
+        // Visual feedback
+        const sendBtn = document.getElementById('sendMsgBtn');
+        const sendIcon = document.getElementById('sendIcon');
+        const spinner = document.getElementById('sendSpinner');
+        sendBtn.disabled = true;
+        sendIcon.classList.add('d-none');
+        spinner.classList.remove('d-none');
 
-    let activeDraftId = null;
-    let activeAction = null;
-    const jModal = new bootstrap.Modal(document.getElementById('justificationModal'));
+        const payload = {
+            message: msg,
+            semester: currentSemester,
+            recipient: activePartner === 'Everyone' ? '' : activePartner,
+            attached_draft_id: attachedDraftId
+        };
+        
+        console.log("Emitting message with draft:", attachedDraftId);
+        
+        // Use Socket with success callback
+        socket.emit('send_hub_message', payload, (ack) => {
+             console.log("Message receipt acknowledged by server");
+        });
 
-    window.handleDecision = (id, act) => {
-        activeDraftId = id;
-        activeAction = act;
-        document.getElementById('adminJustification').value = '';
-        jModal.show();
+        // Optimistic UI cleanup
+        chatInput.value = '';
+        clearDraftAttachment();
+        sendBtn.disabled = false;
+        sendIcon.classList.remove('d-none');
+        spinner.classList.add('d-none');
     };
 
-    document.getElementById('confirmDecisionBtn').addEventListener('click', async () => {
-        const note = document.getElementById('adminJustification').value.trim();
-        if(activeAction === 'rejected' && !note) {
-            alert('Rejection requires a reason.'); return;
-        }
+    // ──────────────── ATTACHMENT LOGIC ────────────────
+    function toggleDraftPicker(show) {
+        const overlay = document.getElementById('draftPickerOverlay');
+        overlay.classList.toggle('d-none', !show);
+        if (show) loadDraftsInPicker();
+    }
 
-        const resp = await fetch(`/api/hub/decide/${activeDraftId}`, {
+    async function loadDraftsInPicker() {
+        const list = document.getElementById('draftPickerList');
+        list.innerHTML = '<div class="p-3 text-center small text-muted">Refreshing...</div>';
+        const r = await fetch('/api/hub/drafts');
+        const drafts = await r.json();
+        
+        list.innerHTML = '';
+        drafts.forEach(d => {
+            const div = document.createElement('div');
+            div.className = 'picker-item';
+            div.innerHTML = `
+                <div class="fw-bold fs-6">${d.name}</div>
+                <div class="x-small text-muted">${d.department} &bull; ${d.status}</div>
+            `;
+            div.onclick = () => attachDraft(d.id, d.name);
+            list.appendChild(div);
+        });
+    }
+
+    function attachDraft(id, name) {
+        attachedDraftId = id;
+        attachedDraftName = name;
+        document.getElementById('previewDraftName').textContent = name;
+        document.getElementById('attachmentPreview').classList.remove('d-none');
+        toggleDraftPicker(false);
+    }
+
+    function clearDraftAttachment() {
+        attachedDraftId = null;
+        attachedDraftName = null;
+        document.getElementById('attachmentPreview').classList.add('d-none');
+    }
+
+    async function markRead(partner) {
+        await fetch(`/api/hub/mark_read?partner=${encodeURIComponent(partner)}`, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token() }}' } });
+        const c = conversations.find(x => x.name === partner);
+        if (c) c.unread_count = 0;
+        renderConvoList();
+    }
+
+    // ──────────────── HELPERS ────────────────
+    function formatTimestamp(ts) {
+        if (!ts) return '';
+        const d = new Date(ts);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+
+    function filterConvos(q) {
+        q = q.toLowerCase();
+        document.querySelectorAll('.convo-item').forEach(item => {
+            const name = item.querySelector('.convo-name').textContent.toLowerCase();
+            item.classList.toggle('d-none', !name.includes(q));
+        });
+    }
+
+    // Modal Decision
+    let activeDecisionId = null;
+    let activeDecisionType = null;
+
+    window.handleDecision = (id, type) => {
+        activeDecisionId = id; activeDecisionType = type;
+        new bootstrap.Modal(document.getElementById('justificationModal')).show();
+    };
+
+    document.getElementById('confirmDecisionBtn').onclick = async () => {
+        const note = document.getElementById('adminNote').value;
+        const res = await fetch(`/api/hub/decide/${activeDecisionId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
-            body: JSON.stringify({ action: activeAction, justification: note })
+            body: JSON.stringify({ action: activeDecisionType, justification: note })
         });
-        const res = await resp.json();
-        if(res.ok) {
-            jModal.hide();
-            document.getElementById(`proposal-item-${activeDraftId}`).remove();
-            const count = document.getElementById('pendingCount');
-            count.textContent = Math.max(0, parseInt(count.textContent) - 1);
-        } else {
-            alert(res.error);
-        }
-    });
+        if (res.ok) location.reload();
+    };
 
-    chatLog.scrollTop = chatLog.scrollHeight;
+    // ──────────────── INFINITE CANVAS PREVIEW ────────────────
+    let pvTranslateX = 0, pvTranslateY = 0, pvScale = 1.0;
+    let pvIsDragging = false, pvStartX = 0, pvStartY = 0;
+    let pvActiveDraft = null;
+    let pvCurrentType = 'section';
+
+    window.viewDraft = (id, name, sem) => {
+        pvActiveDraft = id;
+        document.getElementById('pvModalTitle').textContent = `Preview: ${name}`;
+        new bootstrap.Modal(document.getElementById('hubPreviewModal')).show();
+        setTimeout(pvLoadCards, 400);
+    };
+
+    function pvLoadCards() {
+        const canvas = document.getElementById('pvCanvas');
+        canvas.innerHTML = '';
+        const list = pvCurrentType === 'section' ? SECTIONS : (pvCurrentType === 'faculty' ? FAC_IDS : ROOM_IDS);
+        const names= pvCurrentType === 'section' ? SEC_NAMES : (pvCurrentType === 'faculty' ? FAC_NAMES : ROOM_NAMES);
+
+        list.forEach((id, idx) => {
+            const col = idx % 5; const row = Math.floor(idx / 5);
+            const card = document.createElement('div');
+            card.className = 'pv-card';
+            card.style.cssText = `position:absolute; left:${col*950+500}px; top:${row*1300+500}px; width:800px; height:1100px; background:#fff; z-index:1;`;
+            card.innerHTML = `<div style="padding:10px; background:#198754; color:white; font-weight:bold;">${names[idx]}</div><iframe src="/schedule/view/${pvCurrentType}/${id}?semester=${encodeURIComponent(currentSemester)}&draft_id=${pvActiveDraft}&canvas=true" style="width:100%; height:1050px; border:none; pointer-events:none;"></iframe>`;
+            canvas.appendChild(card);
+        });
+        pvResetView();
+    }
+
+    function pvResetView() { pvScale = 0.12; pvTranslateX = 100; pvTranslateY = 100; pvUpdate(); }
+    function pvUpdate() {
+        document.getElementById('pvCanvas').style.transform = `translate(${pvTranslateX}px, ${pvTranslateY}px) scale(${pvScale})`;
+        document.getElementById('pvZoomLevel').textContent = Math.round(pvScale*100)+'%';
+    }
+    
+    document.getElementById('pvViewport').onmousedown = e => { pvIsDragging = true; pvStartX = e.clientX-pvTranslateX; pvStartY = e.clientY-pvTranslateY; };
+    window.onmousemove = e => { if(!pvIsDragging) return; pvTranslateX = e.clientX-pvStartX; pvTranslateY = e.clientY-pvStartY; pvUpdate(); };
+    window.onmouseup = () => pvIsDragging = false;
+    document.getElementById('pvViewport').onwheel = e => { 
+        e.preventDefault(); 
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        pvScale = Math.max(0.02, Math.min(2, pvScale * delta));
+        pvUpdate();
+    };
 </script>
 {% endblock %}

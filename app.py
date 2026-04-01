@@ -5,7 +5,7 @@ import threading
 import time
 import copy
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import or_, cast
+from sqlalchemy import or_, and_, cast, desc, asc
 from sqlalchemy.orm import joinedload
 import os
 from flask import Response
@@ -168,7 +168,7 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 db = SQLAlchemy(app)
 csrf = CSRFProtect(app)
 # Module 6: Initialize SocketIO
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 @app.context_processor
 def inject_archive_vars():
@@ -681,6 +681,13 @@ class HubMessage(db.Model):
     # Metadata for JSON-based payloads (e.g., conflict lists, UI state)
     metadata_json = db.Column(db.Text, nullable=True)
     
+    # Persistent recipient for private messages (NULL = Everyone)
+    recipient_name = db.Column(db.String(50), nullable=True)
+
+    # Added for Messenger features
+    semester    = db.Column(db.String(30), nullable=True, index=True)
+    is_read     = db.Column(db.Boolean, default=False, nullable=False)
+    
     sender = db.relationship('User', foreign_keys=[sender_id])
     draft  = db.relationship('DraftVersion', backref=db.backref('messages', lazy=True, cascade="all, delete-orphan"))
 
@@ -725,6 +732,11 @@ def check_conflict(new_entry):
     return redirect(request.referrer or url_for('dashboard'))
 
 # ── Module 6: PROPOSAL HUB REAL-TIME HANDLERS ──────────────────────────────────
+# In-memory: { room_name: { sid: {username, role} } }
+hub_online_users = {}
+# In-memory: { sid: {username, role, user_id} } — for private message routing
+hub_sid_map = {}
+
 @socketio.on('connect')
 def handle_connect():
     if 'user_id' not in session:
@@ -737,115 +749,314 @@ def on_join_hub(data):
     semester = data.get('semester', session.get('selected_semester', '1st Semester'))
     room = f"hub_{semester.replace(' ', '_').lower()}"
     join_room(room)
-    print(f"User {session.get('username')} joined hub room: {room}")
+    uname = session.get('username', 'Unknown')
+    role  = session.get('role', 'user')
+    uid   = session.get('user_id')
+    # Track online user in room list
+    if room not in hub_online_users:
+        hub_online_users[room] = {}
+    hub_online_users[room][request.sid] = {'username': uname, 'role': role}
+    # Track SID globally for private routing
+    hub_sid_map[request.sid] = {'username': uname, 'role': role, 'user_id': uid}
+    socketio.emit('hub_users_update', {'users': list(hub_online_users[room].values())}, to=room)
+    print(f"User {uname} joined hub room: {room}")
+
+@socketio.on('disconnect')
+def on_hub_disconnect():
+    """Remove user from all hub rooms on disconnect and broadcast update."""
+    sid = request.sid
+    hub_sid_map.pop(sid, None)
+    for room, users in hub_online_users.items():
+        if sid in users:
+            del users[sid]
+            socketio.emit('hub_users_update', {'users': list(users.values())}, to=room)
+            break
 
 @socketio.on('send_hub_message')
 def handle_send_message(data):
     """Handles manual chat messages sent from the Proposal Terminal."""
-    user_id = session.get('user_id')
-    username = session.get('username')
-    content = data.get('message', '').strip()
-    semester = data.get('semester', session.get('selected_semester', '1st Semester'))
+    user_id           = session.get('user_id')
+    username          = session.get('username')
+    content           = data.get('message', '').strip()
+    semester          = data.get('semester', session.get('selected_semester', '1st Semester'))
+    recipient         = data.get('recipient', '').strip()
+    attached_raw      = data.get('attached_draft_id')
     
-    if not content or not user_id:
+    attached_draft_id = None
+    if attached_raw:
+        try:
+            attached_draft_id = int(attached_raw)
+        except (ValueError, TypeError):
+            attached_draft_id = None
+            
+    if not user_id:
         return
-        
-    # Save to Database (Permanent Audit Trail)
+    if not content and not attached_draft_id:
+        return # Need either text or a draft to proceed
+
+    # Save to Database
     msg = HubMessage(
-        sender_id=user_id,
-        content=content,
-        message_type='chat'
+        sender_id=user_id, 
+        content=content, 
+        message_type='chat',
+        semester=semester,
+        draft_id=attached_draft_id, 
+        recipient_name=recipient
     )
     db.session.add(msg)
     db.session.commit()
-    
-    # Broadcast to Hub Room
-    room = f"hub_{semester.replace(' ', '_').lower()}"
-    emit('new_hub_message', {
+
+    # Pre-fetch Draft Info for Payload
+    draft_info = None
+    if attached_draft_id:
+        dv = DraftVersion.query.get(attached_draft_id)
+        if dv:
+            draft_info = {'id': dv.id, 'name': dv.name, 'status': dv.status}
+
+    payload = {
         'id': msg.id,
         'sender': username,
         'role': session.get('role'),
         'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
         'content': content,
-        'type': 'chat'
-    }, room=room)
+        'message_type': 'chat',
+        'recipient_name': recipient,
+        'attached_draft': draft_info
+    }
 
-# ── Module 6: HUB SYSTEM ALERTS & CONFLICTS ────────────────────────────────────
-def check_and_post_hub_conflicts(semester, draft_id=None):
-    """Detects ROOM overlaps between different departments and posts to Hub."""
-    fmt = '%H:%M'
-    # Fetch all active/published schedules + this specific draft
-    q = ScheduledClass.query.options(
-        joinedload(ScheduledClass.section),
-        joinedload(ScheduledClass.room),
-        joinedload(ScheduledClass.course)
-    ).filter_by(semester=semester)
-    
-    if draft_id:
-        q = q.filter(or_(ScheduledClass.is_draft == False, ScheduledClass.draft_version_id == draft_id))
+    if recipient:
+        # Private: emit to target SID + echo back to sender
+        target_sid = next((s for s, u in hub_sid_map.items() if u['username'] == recipient), None)
+        emit('new_hub_message', payload) # echo to sender
+        if target_sid and target_sid != request.sid:
+            socketio.emit('new_hub_message', payload, to=target_sid)
     else:
-        q = q.filter_by(is_draft=False)
-        
-    all_entries = q.all()
-    rooms = {} # room_id -> [entries]
-    for sc in all_entries:
-        if not sc.room_id or sc.room.room_name in ('T.B.A.', 'University Field'):
-            continue
-        if sc.room_id not in rooms:
-            rooms[sc.room_id] = []
-        rooms[sc.room_id].append(sc)
-        
-    found_conflicts = []
+        # Broadcast to whole hub room
+        room = f"hub_{semester.replace(' ', '_').lower()}"
+        socketio.emit('new_hub_message', payload, room=room)
+
+@app.route('/api/hub/chat', methods=['POST'])
+@login_required
+def api_hub_chat():
+    """HTTP fallback for chat when WebSocket is disconnected."""
+    data              = request.get_json(force=True) or {}
+    user_id           = session.get('user_id')
+    username          = session.get('username')
+    content           = (data.get('message') or '').strip()
+    semester          = session.get('selected_semester', '1st Semester')
+    recipient         = (data.get('recipient') or '').strip()
+    attached_raw      = data.get('attached_draft_id')
     
-    for rm_id, entries in rooms.items():
-        for i in range(len(entries)):
-            for j in range(i + 1, len(entries)):
-                e1, e2 = entries[i], entries[j]
-                if e1.day != e2.day: continue
-                
-                # Check overlap
-                try:
-                    s1, send1 = datetime.strptime(e1.start_time, fmt).time(), datetime.strptime(e1.end_time, fmt).time()
-                    s2, send2 = datetime.strptime(e2.start_time, fmt).time(), datetime.strptime(e2.end_time, fmt).time()
-                    
-                    if not (send1 <= s2 or s1 >= send2):
-                        # Overlap found! Check if departments differ
-                        d1 = e1.section.department if e1.section else "Unknown"
-                        d2 = e2.section.department if e2.section else "Unknown"
-                        
-                        if d1 != d2:
-                            found_conflicts.append(
-                                f"Room **{e1.room.room_name}** overlap: **{d1}** ({e1.course.course_code}) vs **{d2}** ({e2.course.course_code}) on {e1.day} @ {e1.start_time}"
-                            )
-                except: continue
-
-    if found_conflicts:
-        for alert_text in list(set(found_conflicts))[:5]: # Cap at 5 alerts to avoid spam
-            msg = HubMessage(
-                message_type='system_alert',
-                content=alert_text
-            )
-            db.session.add(msg)
-            db.session.commit()
+    attached_draft_id = None
+    if attached_raw:
+        try:
+            attached_draft_id = int(attached_raw)
+        except (ValueError, TypeError):
+            attached_draft_id = None
             
-            room_name = f"hub_{semester.replace(' ', '_').lower()}"
-            socketio.emit('new_hub_message', {
-                'id': msg.id,
-                'sender': 'System',
-                'role': 'system',
-                'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-                'content': msg.content,
-                'type': 'system_alert'
-            }, room=room_name)
+    if not content and not attached_draft_id:
+        return jsonify({'ok': False, 'error': 'Empty message'}), 400
 
-    emit('new_hub_message', {
+    # Save to Database
+    msg = HubMessage(
+        sender_id=user_id, 
+        content=content, 
+        message_type='chat',
+        semester=semester,
+        draft_id=attached_draft_id, 
+        recipient_name=recipient
+    )
+    db.session.add(msg)
+    db.session.commit()
+
+    draft_info = None
+    if attached_draft_id:
+        dv = DraftVersion.query.get(attached_draft_id)
+        if dv:
+            draft_info = {'id': dv.id, 'name': dv.name, 'status': dv.status}
+
+    payload = {
         'id': msg.id,
         'sender': username,
         'role': session.get('role'),
         'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
         'content': content,
-        'type': 'chat'
-    }, room=room)
+        'message_type': 'chat',
+        'recipient_name': recipient,
+        'attached_draft': draft_info
+    }
+
+    # Broadcast via Socket.io to others
+    if recipient:
+        target_sid = next((s for s, u in hub_sid_map.items() if u['username'] == recipient), None)
+        if target_sid:
+            socketio.emit('new_hub_message', payload, to=target_sid)
+    else:
+        room = f"hub_{semester.replace(' ', '_').lower()}"
+        socketio.emit('new_hub_message', payload, room=room)
+
+    return jsonify({'ok': True, 'message': payload})
+
+@app.route('/api/hub/users')
+@login_required
+def api_hub_users():
+    """Returns list of users this person can privately message."""
+    role = session.get('role')
+    uid  = session.get('user_id')
+    if role in ['admin', 'superadmin']:
+        users = User.query.filter(User.id != uid).order_by(User.username).all()
+    else:
+        # Regular users can only message admins/superadmins
+        users = User.query.filter(User.role.in_(['admin', 'superadmin'])).order_by(User.username).all()
+    return jsonify([{'username': u.username, 'role': u.role} for u in users])
+
+@app.route('/api/hub/drafts')
+@login_required
+def api_hub_drafts():
+    """Returns drafts the current user can attach to a chat message."""
+    uid       = session.get('user_id')
+    user_dept = session.get('department')
+    user_role = session.get('role')
+    
+    if user_role in ['admin', 'superadmin']:
+        drafts = DraftVersion.query.order_by(DraftVersion.updated_at.desc()).all()
+    elif user_dept:
+        drafts = DraftVersion.query.filter(
+            or_(DraftVersion.created_by == uid, DraftVersion.department == user_dept)
+        ).order_by(DraftVersion.updated_at.desc()).all()
+    else:
+        drafts = DraftVersion.query.filter_by(created_by=uid)\
+            .order_by(DraftVersion.updated_at.desc()).all()
+    return jsonify([{
+        'id': d.id,
+        'name': d.name,
+        'status': d.status,
+        'semester': d.semester,
+        'department': d.department or 'ALL',
+        'updated_at': d.updated_at.strftime('%m/%d %H:%M')
+    } for d in drafts])
+
+@app.route('/api/hub/conversations')
+@login_required
+def api_hub_conversations():
+    """Returns a list of unique users the current user has chatted with, plus a global Everyone card."""
+    uid = session.get('user_id')
+    username = session.get('username')
+    semester = session.get('selected_semester', '1st Semester')
+    
+    # Get all users (for starting new chats)
+    role = session.get('role')
+    if role in ['admin', 'superadmin']:
+        all_potential = User.query.filter(User.username != username).all()
+    else:
+        all_potential = User.query.filter(User.role.in_(['admin', 'superadmin'])).all()
+    
+    potential_map = {u.username: u for u in all_potential}
+    
+    # 1. Fetch private messages for this user
+    private_msgs = HubMessage.query.filter(
+        or_(
+            HubMessage.recipient_name == username,
+            and_(HubMessage.sender_id == uid, HubMessage.recipient_name != None, HubMessage.recipient_name != '')
+        )
+    ).order_by(HubMessage.timestamp.desc()).all()
+    
+    # 2. Group by partner
+    convos = {}
+    for msg in private_msgs:
+        partner = msg.recipient_name if msg.sender_id == uid else msg.sender.username
+        if partner not in convos:
+            unread = HubMessage.query.filter_by(sender_id=msg.sender_id, recipient_name=username, is_read=False).count() \
+                     if partner == msg.sender.username else 0
+            
+            convos[partner] = {
+                'name': partner,
+                'last_message': msg.content[:40] + ('...' if len(msg.content or '') > 40 else ''),
+                'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                'unread_count': unread,
+                'is_global': False,
+                'role': potential_map[partner].role if partner in potential_map else 'user'
+            }
+            
+    # 3. Add global 'Everyone'
+    last_global = HubMessage.query.filter(
+        and_(HubMessage.recipient_name == None, HubMessage.semester == semester)
+    ).order_by(HubMessage.timestamp.desc()).first()
+    
+    global_card = {
+        'name': 'Everyone',
+        'last_message': last_global.content[:40] + '...' if last_global and last_global.content else 'No messages yet',
+        'timestamp': last_global.timestamp.strftime('%Y-%m-%d %H:%M:%S') if last_global else '',
+        'unread_count': 0,
+        'is_global': True,
+        'role': 'system'
+    }
+    
+    results = [global_card]
+    
+    # Add participants from private msgs
+    results.extend(convos.values())
+    
+    # Add potential partners who haven't chatted yet (optional: Messenger often hides them until search)
+    for uname, u in potential_map.items():
+        if uname not in convos:
+            results.append({
+                'name': uname,
+                'last_message': 'No conversation yet',
+                'timestamp': '',
+                'unread_count': 0,
+                'is_global': False,
+                'role': u.role
+            })
+
+    return jsonify(results)
+
+@app.route('/api/hub/messages')
+@login_required
+def api_hub_messages():
+    """Returns message history for a specific conversation."""
+    partner = request.args.get('partner', 'Everyone')
+    username = session.get('username')
+    uid = session.get('user_id')
+    semester = session.get('selected_semester', '1st Semester')
+    
+    if partner == 'Everyone':
+        msgs = HubMessage.query.filter(
+            and_(HubMessage.recipient_name == None, HubMessage.semester == semester)
+        ).order_by(HubMessage.timestamp.asc()).all()
+    else:
+        msgs = HubMessage.query.filter(
+            or_(
+                and_(HubMessage.recipient_name == username, HubMessage.sender_id == User.query.filter_by(username=partner).first().id),
+                and_(HubMessage.sender_id == uid, HubMessage.recipient_name == partner)
+            )
+        ).order_by(HubMessage.timestamp.asc()).all()
+        
+    return jsonify([{
+        'id': m.id,
+        'sender': m.sender.username if m.sender else 'System',
+        'role': m.sender.role if m.sender else 'system',
+        'content': m.content,
+        'timestamp': m.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+        'message_type': m.message_type,
+        'recipient_name': m.recipient_name,
+        'attached_draft': {'id': m.draft.id, 'name': m.draft.name, 'status': m.draft.status} if m.draft else None
+    } for m in msgs])
+
+@app.route('/api/hub/mark_read', methods=['POST'])
+@login_required
+def api_hub_mark_read():
+    partner = request.args.get('partner')
+    username = session.get('username')
+    if not partner: return jsonify(ok=False), 400
+    
+    partner_user = User.query.filter_by(username=partner).first()
+    if not partner_user: return jsonify(ok=False), 400
+    
+    HubMessage.query.filter_by(sender_id=partner_user.id, recipient_name=username, is_read=False).update({HubMessage.is_read: True})
+    db.session.commit()
+    return jsonify(ok=True)
+
 
 # ── Module 6: HUB SYSTEM ALERTS & CONFLICTS ────────────────────────────────────
 def check_and_post_hub_conflicts(semester, draft_id=None):
@@ -949,7 +1160,9 @@ def login():
             session.clear()
             session.permanent = True
             session['user_id'] = user.id
+            session['username'] = user.username
             session['role'] = user.role
+            session['department'] = user.department
             session['profile_pic'] = getattr(user, 'profile_pic', 'default.png') or 'default.png'
             # Redirect normal users directly to view_timetable
             if user.role == 'user':
@@ -1110,9 +1323,16 @@ def proposal_hub():
     """Main view for the Centralized Proposal Terminal & Decision Hub."""
     semester = session.get('selected_semester', '1st Semester')
     # Fetch recent messages for the current semester
-    # (In a real app, we might filter by semester if we added a semester field to HubMessage,
-    # but for now we'll just show the most recent across the system or filter by current active)
-    messages = HubMessage.query.options(joinedload(HubMessage.sender), joinedload(HubMessage.draft)).order_by(HubMessage.timestamp.asc()).all()
+    # (Filtering by privacy: Everyone OR me as recipient OR me as sender)
+    uid      = session.get('user_id')
+    username = session.get('username')
+    messages = HubMessage.query.options(joinedload(HubMessage.sender), joinedload(HubMessage.draft))\
+        .filter(or_(
+            HubMessage.recipient_name == None, 
+            HubMessage.recipient_name == '',
+            HubMessage.recipient_name == username,
+            HubMessage.sender_id == uid
+        )).order_by(HubMessage.timestamp.asc()).all()
     
     # Department heads only see drafts from their department
     user_dept = None
@@ -1121,9 +1341,18 @@ def proposal_hub():
         # Simplification: assume they see all or it's filtered in the UI
         pass
         
-    return render_template('proposal_hub.html', 
-                          messages=messages, 
-                          current_semester=semester)
+    pending_proposals = DraftVersion.query.filter_by(status='submitted')\
+        .order_by(DraftVersion.updated_at.desc()).all()
+    sections  = Section.query.filter_by(is_archived=False).order_by(Section.section_name).all()
+    faculties = Faculty.query.filter_by(is_archived=False).order_by(Faculty.full_name).all()
+    rooms     = Room.query.filter_by(is_archived=False).order_by(Room.room_name).all()
+    return render_template('proposal_hub.html',
+                          messages=messages,
+                          selected_semester=semester,
+                          pending_proposals=pending_proposals,
+                          sections=sections,
+                          faculties=faculties,
+                          rooms=rooms)
 
 @app.route('/api/hub/propose', methods=['POST'])
 @login_required
@@ -1175,16 +1404,15 @@ def api_hub_propose():
     
     return jsonify({'ok': True, 'message': 'Proposal submitted to hub.'})
 
-@app.route('/api/hub/decide', methods=['POST'])
+@app.route('/api/hub/decide/<int:draft_id>', methods=['POST'])
 @login_required
 @role_required('admin', 'superadmin')
-def api_hub_decide():
+def api_hub_decide(draft_id):
     """Admin approves, rejects, or holds a proposal."""
     data = request.get_json(force=True) or {}
-    draft_id = data.get('draft_id')
-    decision = data.get('decision') # 'approved', 'rejected', 'hold'
+    decision = data.get('action')  # frontend sends 'action': 'approved'/'rejected'/'hold'
     justification = data.get('justification', '').strip()
-    
+
     if not draft_id or not decision:
         return jsonify({'ok': False, 'error': 'Missing draft_id or decision.'}), 400
         
@@ -12967,4 +13195,4 @@ def run_pending_rooms():
 if __name__ == '__main__':
 
 
-    app.run(host='0.0.0.0', port=5000, debug=os.environ.get('FLASK_DEBUG', 'False') == 'True')
+    socketio.run(app, host='0.0.0.0', port=5000, debug=os.environ.get('FLASK_DEBUG', 'False') == 'True')
