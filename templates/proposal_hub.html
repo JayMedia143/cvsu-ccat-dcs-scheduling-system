@@ -54,7 +54,6 @@
             <form id="chatForm" class="chat-form-main">
                 <div class="input-tools">
                     <button type="button" class="btn-messenger-icon text-primary" onclick="toggleDraftPicker(true)"><i class="bi bi-plus-circle-fill"></i></button>
-                    <button type="button" class="btn-messenger-icon text-primary"><i class="bi bi-image"></i></button>
                 </div>
                 <div class="flex-grow-1 position-relative">
                     <textarea id="chatInput" rows="1" placeholder="Aa" class="form-control messenger-textarea"></textarea>
@@ -74,20 +73,7 @@
         <div class="p-3">
             <h6 class="text-uppercase text-muted fw-bold x-small mb-3">Pending Review</h6>
             <div id="proposalList">
-                {% for dv in pending_proposals %}
-                <div class="proposal-mini-card mb-3" id="proposal-item-{{ dv.id }}">
-                    <div class="fw-bold small text-truncate">{{ dv.name }}</div>
-                    <div class="small text-muted mb-2">{{ dv.department or "ALL" }} &bull; {{ dv.updated_at.strftime('%m/%d') }}</div>
-                    {% if session.role in ['admin', 'superadmin'] %}
-                    <div class="d-flex gap-1">
-                        <button class="btn btn-messenger-sm btn-success flex-grow-1" onclick="handleDecision({{ dv.id }}, 'approved')">Approve</button>
-                        <button class="btn btn-messenger-sm btn-danger flex-grow-1" onclick="handleDecision({{ dv.id }}, 'rejected')">Reject</button>
-                    </div>
-                    {% endif %}
-                </div>
-                {% else %}
-                <div class="text-muted text-center py-3 small">All proposals handled.</div>
-                {% endfor %}
+                <div class="text-center py-3"><div class="spinner-border spinner-border-sm text-secondary"></div></div>
             </div>
 
             <hr class="my-4 op-10">
@@ -134,9 +120,25 @@
                         <option value="room">Rooms</option>
                     </select>
                 </div>
-                <div class="ms-auto d-flex align-items-center gap-2">
-                    <div id="pvZoomLevel" class="badge bg-white text-dark border small py-2 px-3">100%</div>
-                    <button class="btn btn-sm btn-primary rounded-pill px-3" onclick="pvResetView()">Reset View</button>
+                <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
+                    <div class="input-group input-group-sm" style="width:150px;">
+                        <input type="text" id="pvSearch" class="form-control form-control-sm border-0 bg-light rounded-pill" placeholder="Find..." oninput="pvSearchCanvas(this.value)">
+                    </div>
+                    <select id="pvSortSelect" class="form-select form-select-sm border-0 bg-light fw-bold" style="width:auto" onchange="pvApplySort()">
+                        <option value="asc">A &#8594; Z</option>
+                        <option value="desc">Z &#8594; A</option>
+                    </select>
+                    <button class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold" onclick="pvFitView()">
+                        <i class="bi bi-aspect-ratio"></i> Fit All
+                    </button>
+                    <button class="btn btn-sm btn-success rounded-pill px-3 fw-bold" onclick="pvResetView()">
+                        <i class="bi bi-arrows-fullscreen"></i> Center
+                    </button>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary" onclick="pvZoomCanvas(-0.1)"><i class="bi bi-dash-lg"></i></button>
+                        <button class="btn btn-outline-secondary px-2 fw-bold" style="min-width:52px" id="pvZoomLevel">12%</button>
+                        <button class="btn btn-outline-secondary" onclick="pvZoomCanvas(0.1)"><i class="bi bi-plus-lg"></i></button>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
             </div>
@@ -148,10 +150,15 @@
                     <div id="pvMinimapContent"></div>
                     <div id="pvMinimapBox"></div>
                 </div>
-                <!-- Cinema Overlay -->
-                <div id="pvCinemaOverlay">
-                    <button class="btn-close-cinema" onclick="pvClosePresentation()">&times;</button>
-                    <div class="pv-pres-wrap"><iframe id="pvPresIframe"></iframe></div>
+                <!-- Presentation Overlay -->
+                <div id="pvPresOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.92);backdrop-filter:blur(10px);z-index:2000;display:none;align-items:center;justify-content:center;cursor:grab;">
+                    <button onclick="pvClosePresentation()" style="position:fixed;top:18px;right:28px;font-size:2.4rem;color:rgba(255,255,255,0.7);background:none;border:none;line-height:1;cursor:pointer;">&times;</button>
+                    <button class="pv-pres-nav" onclick="pvShowPrev()" style="position:fixed;left:24px;top:50%;transform:translateY(-50%);width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:1.8rem;display:flex;align-items:center;justify-content:center;cursor:pointer;">&#8249;</button>
+                    <button class="pv-pres-nav" onclick="pvShowNext()" style="position:fixed;right:24px;top:50%;transform:translateY(-50%);width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:1.8rem;display:flex;align-items:center;justify-content:center;cursor:pointer;">&#8250;</button>
+                    <div id="pvPresWrap" style="width:800px;height:1130px;background:#fff;box-shadow:0 0 100px rgba(0,0,0,0.8);transform-origin:center center;transition:transform 0.05s linear;">
+                        <iframe id="pvPresIframe" style="width:100%;height:100%;border:none;pointer-events:none;"></iframe>
+                    </div>
+                    <div id="pvPresLabel" style="position:fixed;bottom:18px;color:rgba(255,255,255,0.7);font-weight:700;font-size:0.95rem;"></div>
                 </div>
             </div>
         </div>
@@ -201,7 +208,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
 
 /* 1. SIDEBAR */
 .messenger-sidebar {
-    width: 360px;
+    width: 300px;
     border-right: 1px solid var(--ms-border);
     display: flex;
     flex-direction: column;
@@ -282,22 +289,22 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
 }
 
 .chat-log-main {
-    flex-grow: 1; padding: 20px; overflow-y: auto; 
+    flex-grow: 1; padding: 20px 20px 28px; overflow-y: auto;
     display: flex; flex-direction: column; gap: 4px;
 }
 
 /* BUBBLES WITH TAILS */
-.bubble-wrap { display: flex; width: 100%; margin-bottom: 2px; }
+.bubble-wrap { display: flex; width: 100%; margin-bottom: 2px; align-items: flex-end; }
 .bubble-wrap.me { justify-content: flex-end; }
 .bubble-wrap.them { justify-content: flex-start; }
 
 .bubble {
-    max-width: 65%;
+    max-width: 85%;
     padding: 8px 14px;
     font-size: 0.95rem;
     line-height: 1.4;
     position: relative;
-    word-break: break-all;
+    word-break: break-word;
 }
 .bubble-wrap.me .bubble {
     background: var(--ms-bubble-me);
@@ -334,16 +341,28 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
 
 /* Draft Card */
 .msg-draft-card {
-    background: rgba(255,255,255,0.2) !important; color: inherit;
-    border-radius: 12px; padding: 10px; margin-top: 8px;
-    border: 1px solid rgba(255,255,255,0.3); display: block; text-decoration: none !important;
-    transition: background 0.2s;
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(255,255,255,0.14) !important; color: inherit;
+    border: none; border-radius: 14px;
+    padding: 12px 14px; margin-top: 10px; text-decoration: none !important;
+    width: 100%; transition: background 0.2s; box-sizing: border-box;
 }
-.bubble-wrap.them .msg-draft-card { background: #fff !important; border-color: #ddd; }
-.msg-draft-card:hover { background: rgba(255,255,255,0.3) !important; }
+.bubble-wrap.them .msg-draft-card { background: #fff !important; border: 1px solid #e4e6eb; color: #050505; }
+.bubble-wrap.me .msg-draft-card:hover { background: rgba(255,255,255,0.22) !important; }
+.bubble-wrap.them .msg-draft-card:hover { background: #f5f6f7 !important; }
+.msg-draft-icon {
+    width: 42px; height: 42px; border-radius: 10px; flex-shrink: 0;
+    background: rgba(255,255,255,0.22); display: flex; align-items: center;
+    justify-content: center; font-size: 1.25rem;
+}
+.bubble-wrap.them .msg-draft-icon { background: #e4e6eb; color: #050505; }
+.msg-draft-info { flex: 1; min-width: 0; }
+.msg-draft-name { font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg-draft-sub { font-size: 0.72rem; opacity: 0.65; margin-top: 2px; letter-spacing: 0.2px; }
+.msg-draft-chevron { font-size: 0.8rem; opacity: 0.4; flex-shrink: 0; }
 
 /* 3. INPUT */
-.chat-input-main { padding: 12px 16px; border-top: 1px solid var(--ms-border); background: #fff; }
+.chat-input-main { padding: 12px 16px 36px; border-top: 1px solid var(--ms-border); background: #fff; }
 .chat-form-main { display: flex; align-items: flex-end; gap: 8px; }
 .input-tools { display: flex; gap: 8px; margin-bottom: 2px; }
 .btn-messenger-icon { width: 34px; height: 34px; border-radius: 50%; border: none; background: transparent; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: background 0.2s; }
@@ -369,7 +388,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
 .btn-close-preview:hover { color: #d00; }
 
 /* 5. SIDEBAR META */
-.messenger-details-pane { width: 300px; border-left: 1px solid var(--ms-border); background: #fff; flex-shrink: 0; }
+.messenger-details-pane { width: 260px; border-left: 1px solid var(--ms-border); background: #fff; flex-shrink: 0; }
 @media (max-width: 1100px) { .messenger-details-pane { display: none; } }
 .x-small { font-size: 0.7rem; }
 .op-10 { opacity: 0.1; }
@@ -396,6 +415,22 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
 .pv-pres-wrap { width: 800px; height: 1100px; background: white; box-shadow: 0 0 100px rgba(0,0,0,0.5); }
 .btn-close-cinema { position: absolute; top: 20px; right: 30px; font-size: 3rem; color: white; background: none; border: none; opacity: 0.5; transition: opacity 0.3s; }
 .btn-close-cinema:hover { opacity: 1; }
+
+/* Sent / Seen Status */
+.bubble-status { font-size: 0.6rem; color: #8a8d91; margin-top: 1px; text-align: right; padding-right: 2px; }
+.bubble-status .tick-seen { color: #0084ff; }
+
+/* Edit / Delete hover actions */
+.bubble-wrap.me .bubble-actions { display: none; }
+.bubble-wrap.me:hover .bubble-actions { display: flex; }
+.bubble-actions { align-items: center; gap: 4px; margin-bottom: 4px; justify-content: flex-end; }
+.bubble-action-btn {
+    width: 26px; height: 26px; border-radius: 50%; border: none;
+    background: #f0f2f5; color: #65676b; font-size: 0.7rem;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: background 0.15s;
+}
+.bubble-action-btn:hover { background: #dde1e7; }
 
 /* Scrollbars */
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -431,6 +466,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
     // ──────────────── INITIALIZATION ────────────────
     document.addEventListener('DOMContentLoaded', () => {
         loadConversations();
+        loadPendingDrafts();
         switchConversation('Everyone');
 
         socket.on('connect', () => {
@@ -448,13 +484,73 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
                 if (data.sender !== currentUsername) markRead(msgChannel);
             }
             updateSidebarPreview(msgChannel, data);
+            if (data.attached_draft) loadPendingDrafts();
         });
 
         socket.on('hub_users_update', (data) => {
-            const onlineCount = data.users.length;
-            // update statuses in UI if needed
+            const onlineSet = new Set(data.users.map(u => u.username));
+            conversations.forEach(c => { c.is_online = onlineSet.has(c.name); });
+            renderConvoList();
+        });
+
+        socket.on('hub_messages_seen', (data) => {
+            // Update the last "me" status indicator to "Seen"
+            if (data.reader === activePartner || activePartner === 'Everyone') {
+                const statusEls = chatLog.querySelectorAll('.bubble-status');
+                if (statusEls.length) {
+                    const last = statusEls[statusEls.length - 1];
+                    last.innerHTML = '<i class="bi bi-check2-all tick-seen"></i> Seen';
+                }
+            }
         });
     });
+
+    // ──────────────── PENDING REVIEW PANEL ────────────────
+    const _isAdmin = {{ 'true' if session.get('role') in ['admin','superadmin'] else 'false' }};
+
+    async function loadPendingDrafts() {
+        const r = await fetch('/api/hub/pending_drafts');
+        const drafts = await r.json();
+        renderPendingDrafts(drafts);
+    }
+
+    function renderPendingDrafts(drafts) {
+        const el = document.getElementById('proposalList');
+        if (!drafts.length) {
+            el.innerHTML = '<div class="text-muted text-center py-3 small">All proposals handled.</div>';
+            return;
+        }
+        el.innerHTML = drafts.map(dv => `
+            <div class="proposal-mini-card mb-3" id="proposal-item-${dv.id}">
+                <div class="fw-bold small text-truncate">${dv.name}</div>
+                <div class="small text-muted mb-1">${dv.department} &bull; ${dv.updated}</div>
+                <span class="badge bg-warning text-dark small mb-2">Pending</span>
+                ${_isAdmin ? `<div class="d-flex gap-1 mt-1">
+                    <button class="btn btn-messenger-sm btn-success flex-grow-1" onclick="handleDecision(${dv.id},'approved')">Approve</button>
+                    <button class="btn btn-messenger-sm btn-danger flex-grow-1" onclick="handleDecision(${dv.id},'rejected')">Reject</button>
+                </div>` : ''}
+            </div>`).join('');
+    }
+
+    // ──────────────── AVATAR HELPERS ────────────────
+    function getColorFromName(name) {
+        const palette = ['#0084ff','#e91e8c','#f59e0b','#10b981','#8b5cf6','#ef4444','#06b6d4','#f97316'];
+        let h = 0;
+        for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+        return palette[Math.abs(h) % palette.length];
+    }
+
+    function getAvatarHtml(name, profilePic, size, extraStyle, dotHtml) {
+        const initial = name === 'Everyone'
+            ? `<i class="bi bi-megaphone-fill" style="font-size:calc(${size} * 0.38);"></i>`
+            : name.charAt(0).toUpperCase();
+        const bg = name === 'Everyone' ? '#31a24c' : getColorFromName(name);
+        const base = `width:${size};height:${size};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;flex-shrink:0;position:relative;${extraStyle||''}`;
+        if (profilePic && profilePic !== 'default.png') {
+            return `<div style="${base}"><div style="position:absolute;inset:0;border-radius:50%;overflow:hidden;"><img src="/static/profile_pics/${profilePic}" style="width:100%;height:100%;object-fit:cover;"></div>${dotHtml||''}</div>`;
+        }
+        return `<div style="${base}background:${bg};font-size:calc(${size} * 0.4);">${initial}${dotHtml||''}</div>`;
+    }
 
     // ──────────────── DATA FETCHING ────────────────
     async function loadConversations() {
@@ -470,17 +566,14 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
             div.className = `convo-item ${activePartner === c.name ? 'active' : ''} ${c.unread_count > 0 ? 'unread' : ''}`;
             div.onclick = () => switchConversation(c.name);
 
-            const bg = c.name === 'Everyone' ? '#31a24c' : (c.role === 'admin' ? '#f59e0b' : '#0084ff');
-            const initials = c.name === 'Everyone' ? 'E' : c.name.charAt(0).toUpperCase();
+            const dotHtml = c.name !== 'Everyone' && c.is_online ? '<div class="online-dot-mini"></div>' : '';
+            const avatarHtml = getAvatarHtml(c.name, c.profile_pic, '50px', '', dotHtml);
 
             div.innerHTML = `
-                <div class="convo-avatar" style="background:${bg}">
-                    ${initials}
-                    ${c.name !== 'Everyone' ? '<div class="online-dot-mini"></div>' : ''}
-                </div>
+                ${avatarHtml}
                 <div class="convo-body">
                     <div class="convo-header">
-                        <span class="convo-name">${c.name}</span>
+                        <span class="convo-name">${c.name === 'Everyone' ? 'Announcements' : c.name}</span>
                         <span class="convo-time">${c.timestamp ? formatTimestamp(c.timestamp) : ''}</span>
                     </div>
                     <div class="d-flex align-items-center">
@@ -497,10 +590,25 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         activePartner = partner;
         
         // Header Update
-        document.getElementById('activePartnerName').textContent = partner;
+        document.getElementById('activePartnerName').textContent = partner === 'Everyone' ? 'Announcements' : partner;
         const headAvatar = document.getElementById('activeAvatarHeader');
-        headAvatar.textContent = partner.charAt(0).toUpperCase();
-        headAvatar.style.background = partner === 'Everyone' ? '#31a24c' : '#0084ff';
+        const activeConvo = conversations.find(c => c.name === partner);
+        const pic = activeConvo ? activeConvo.profile_pic : null;
+        if (pic && pic !== 'default.png') {
+            headAvatar.innerHTML = `<img src="/static/profile_pics/${pic}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+            headAvatar.style.background = 'transparent';
+            headAvatar.style.padding = '0';
+            headAvatar.style.overflow = 'hidden';
+        } else {
+            headAvatar.innerHTML = '';
+            headAvatar.textContent = partner.charAt(0).toUpperCase();
+            headAvatar.style.background = partner === 'Everyone' ? '#31a24c' : getColorFromName(partner);
+            headAvatar.style.padding = '';
+            headAvatar.style.overflow = '';
+        }
+        document.getElementById('activePartnerStatus').textContent =
+            partner === 'Everyone' ? 'Announcements channel'
+            : (activeConvo?.is_online ? 'Online' : 'Offline');
 
         // Message Loading
         chatLog.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
@@ -529,30 +637,79 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         if (data.attached_draft) {
             const d = data.attached_draft;
             draftHtml = `
-                <a href="#" class="msg-draft-card" onclick="viewDraft(${d.id}, '${d.name}', '${currentSemester}'); return false;">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="bi bi-file-earmark-text-fill h4 mb-0"></i>
-                        <div class="min-w-0">
-                            <div class="fw-bold small text-truncate" style="max-width:120px">${d.name}</div>
-                            <div class="x-small opacity-75">${d.status.toUpperCase()}</div>
-                        </div>
+                <a href="#" class="msg-draft-card" onclick="viewDraft(${d.id},'${d.name}','${currentSemester}');return false;">
+                    <div class="msg-draft-icon"><i class="bi bi-file-earmark-text-fill"></i></div>
+                    <div class="msg-draft-info">
+                        <div class="msg-draft-name">${d.name}</div>
+                        <div class="msg-draft-sub">Schedule Draft &bull; ${d.status}</div>
                     </div>
+                    <i class="bi bi-chevron-right msg-draft-chevron"></i>
                 </a>`;
         }
 
+        const inlineAvatar = !isMe
+            ? getAvatarHtml(data.sender, data.profile_pic, '28px', 'align-self:flex-end;margin-right:6px;', '')
+            : '';
+
+        const statusHtml = isMe
+            ? `<div class="bubble-status" data-msg-id="${data.id || ''}">
+                   ${data.is_read
+                       ? '<i class="bi bi-check2-all tick-seen"></i> Seen'
+                       : '<i class="bi bi-check2"></i>'}
+               </div>`
+            : '';
+
+        const actionsHtml = isMe && data.id
+            ? `<div class="bubble-actions">
+                   <button class="bubble-action-btn" title="Edit" onclick="editMessage(${data.id}, this)"><i class="bi bi-pencil-fill"></i></button>
+                   <button class="bubble-action-btn" title="Delete" onclick="deleteMessage(${data.id}, this)" style="color:#d00;"><i class="bi bi-trash-fill"></i></button>
+               </div>`
+            : '';
+
         wrap.innerHTML = `
-            <div class="d-flex flex-column" style="max-width:70%">
+            ${inlineAvatar}
+            <div class="d-flex flex-column" style="max-width:85%">
                 ${!isMe && activePartner === 'Everyone' ? `<span class="small text-muted ms-2 mb-1" style="font-size:0.65rem">${data.sender}</span>` : ''}
+                ${actionsHtml}
                 <div class="bubble ${data.message_type || 'chat'}">
                     ${data.content || ''}
                     ${draftHtml}
                 </div>
                 <div class="bubble-time">${formatTimestamp(data.timestamp)}</div>
+                ${statusHtml}
             </div>
         `;
         
         chatLog.appendChild(wrap);
         chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    async function editMessage(msgId, btn) {
+        const col = btn.closest('.d-flex.flex-column');
+        const bubbleEl = col ? col.querySelector('.bubble') : null;
+        if (!bubbleEl) return;
+        const oldText = bubbleEl.childNodes[0]?.textContent?.trim() || '';
+        const newText = prompt('Edit message:', oldText);
+        if (!newText || newText === oldText) return;
+        const r = await fetch(`/api/hub/message/${msgId}/edit`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
+            body: JSON.stringify({content: newText})
+        });
+        if ((await r.json()).ok) {
+            bubbleEl.childNodes[0].textContent = newText;
+        }
+    }
+
+    async function deleteMessage(msgId, btn) {
+        if (!confirm('Delete this message?')) return;
+        const r = await fetch(`/api/hub/message/${msgId}/delete`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': '{{ csrf_token() }}'}
+        });
+        if ((await r.json()).ok) {
+            btn.closest('.bubble-wrap').remove();
+        }
     }
 
     document.getElementById('chatForm').onsubmit = (e) => {
@@ -591,6 +748,8 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
     };
 
     // ──────────────── ATTACHMENT LOGIC ────────────────
+    let allDrafts = [];
+
     function toggleDraftPicker(show) {
         const overlay = document.getElementById('draftPickerOverlay');
         overlay.classList.toggle('d-none', !show);
@@ -599,21 +758,36 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
 
     async function loadDraftsInPicker() {
         const list = document.getElementById('draftPickerList');
-        list.innerHTML = '<div class="p-3 text-center small text-muted">Refreshing...</div>';
+        list.innerHTML = '<div class="p-3 text-center small text-muted">Loading...</div>';
         const r = await fetch('/api/hub/drafts');
-        const drafts = await r.json();
-        
+        allDrafts = await r.json();
+        renderDraftPicker(allDrafts);
+    }
+
+    function renderDraftPicker(drafts) {
+        const list = document.getElementById('draftPickerList');
         list.innerHTML = '';
+        if (!drafts.length) {
+            list.innerHTML = '<div class="p-3 text-center small text-muted">No drafts found.</div>';
+            return;
+        }
         drafts.forEach(d => {
             const div = document.createElement('div');
             div.className = 'picker-item';
-            div.innerHTML = `
-                <div class="fw-bold fs-6">${d.name}</div>
-                <div class="x-small text-muted">${d.department} &bull; ${d.status}</div>
-            `;
+            div.innerHTML = `<div class="fw-bold">${d.name}</div><div class="x-small text-muted">${d.department || 'All'} &bull; <span class="text-capitalize">${d.status}</span></div>`;
             div.onclick = () => attachDraft(d.id, d.name);
             list.appendChild(div);
         });
+    }
+
+    function filterDraftsInPicker(q) {
+        const lq = q.toLowerCase();
+        const filtered = allDrafts.filter(d =>
+            d.name.toLowerCase().includes(lq) ||
+            (d.department || '').toLowerCase().includes(lq) ||
+            d.status.toLowerCase().includes(lq)
+        );
+        renderDraftPicker(filtered);
     }
 
     function attachDraft(id, name) {
@@ -641,7 +815,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
     function formatTimestamp(ts) {
         if (!ts) return '';
         const d = new Date(ts);
-        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        return d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true });
     }
 
     function filterConvos(q) {
@@ -671,50 +845,309 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         if (res.ok) location.reload();
     };
 
-    // ──────────────── INFINITE CANVAS PREVIEW ────────────────
-    let pvTranslateX = 0, pvTranslateY = 0, pvScale = 1.0;
-    let pvIsDragging = false, pvStartX = 0, pvStartY = 0;
+    // ──────────────── INFINITE CANVAS PREVIEW (full parity with view_timetable.html) ────────────────
     let pvActiveDraft = null;
     let pvCurrentType = 'section';
+    let pvTranslateX = 0, pvTranslateY = 0, pvScale = 0.12;
+    let pvIsDragging = false, pvStartX = 0, pvStartY = 0;
+    let pvModalOpen = false;
 
-    window.viewDraft = (id, name, sem) => {
-        pvActiveDraft = id;
-        document.getElementById('pvModalTitle').textContent = `Preview: ${name}`;
-        new bootstrap.Modal(document.getElementById('hubPreviewModal')).show();
-        setTimeout(pvLoadCards, 400);
+    const pvListMap = {
+        section: SECTIONS.map((id, i) => ({ id, label: SEC_NAMES[i] })),
+        faculty: FAC_IDS.map((id, i) => ({ id, label: FAC_NAMES[i] })),
+        room:    ROOM_IDS.map((id, i) => ({ id, label: ROOM_NAMES[i] }))
+    };
+    const pvUrlMap = {
+        section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&draft_id=${pvActiveDraft}`,
+        faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&draft_id=${pvActiveDraft}`,
+        room:    id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&draft_id=${pvActiveDraft}`
     };
 
-    function pvLoadCards() {
+    let pvEntityMap = null;
+
+    window.viewDraft = async (id, name, sem) => {
+        pvActiveDraft = id;
+        pvCurrentType = 'section';
+        pvEntityMap = null;
+        document.getElementById('pvModalTitle').textContent = `Preview: ${name}`;
+        document.getElementById('pvTypeSelect').value = 'section';
+        const pvSearchEl = document.getElementById('pvSearch');
+        if (pvSearchEl) pvSearchEl.value = '';
+        try {
+            const r = await fetch(`/api/draft/${id}/entities`);
+            pvEntityMap = await r.json();
+        } catch(e) { pvEntityMap = null; }
+        const modal = new bootstrap.Modal(document.getElementById('hubPreviewModal'));
+        modal.show();
+        document.getElementById('hubPreviewModal').addEventListener('shown.bs.modal', () => {
+            pvModalOpen = true;
+            pvLoadCanvas();
+        }, { once: true });
+        document.getElementById('hubPreviewModal').addEventListener('hidden.bs.modal', () => {
+            pvModalOpen = false;
+        }, { once: true });
+    };
+
+    function pvGetCurrentList() {
+        const order = document.getElementById('pvSortSelect')?.value || 'asc';
+        let base;
+        if (pvEntityMap) {
+            base = pvEntityMap[pvCurrentType === 'section' ? 'sections'
+                : pvCurrentType === 'faculty' ? 'faculties' : 'rooms'] || [];
+        } else {
+            base = pvListMap[pvCurrentType] || [];
+        }
+        return [...base].sort((a, b) => order === 'asc'
+            ? a.label.localeCompare(b.label)
+            : b.label.localeCompare(a.label));
+    }
+
+    document.getElementById('pvTypeSelect').onchange = () => {
+        pvCurrentType = document.getElementById('pvTypeSelect').value;
+        pvLoadCanvas();
+    };
+
+    function pvLoadCanvas() {
         const canvas = document.getElementById('pvCanvas');
         canvas.innerHTML = '';
-        const list = pvCurrentType === 'section' ? SECTIONS : (pvCurrentType === 'faculty' ? FAC_IDS : ROOM_IDS);
-        const names= pvCurrentType === 'section' ? SEC_NAMES : (pvCurrentType === 'faculty' ? FAC_NAMES : ROOM_NAMES);
+        const list = pvGetCurrentList();
 
-        list.forEach((id, idx) => {
-            const col = idx % 5; const row = Math.floor(idx / 5);
+        list.forEach((item, idx) => {
+            const col = idx % 5;
+            const row = Math.floor(idx / 5);
             const card = document.createElement('div');
             card.className = 'pv-card';
-            card.style.cssText = `position:absolute; left:${col*950+500}px; top:${row*1300+500}px; width:800px; height:1100px; background:#fff; z-index:1;`;
-            card.innerHTML = `<div style="padding:10px; background:#198754; color:white; font-weight:bold;">${names[idx]}</div><iframe src="/schedule/view/${pvCurrentType}/${id}?semester=${encodeURIComponent(currentSemester)}&draft_id=${pvActiveDraft}&canvas=true" style="width:100%; height:1050px; border:none; pointer-events:none;"></iframe>`;
+            card.style.cssText = `position:absolute;left:${col*950+500}px;top:${row*1300+500}px;width:800px;height:1130px;background:#fff;border:1px solid #ddd;box-shadow:0 4px 15px rgba(0,0,0,0.08);cursor:pointer;`;
+
+            // Maximize button
+            const maxBtn = document.createElement('button');
+            maxBtn.style.cssText = 'position:absolute;top:6px;right:6px;z-index:10;background:rgba(0,0,0,0.5);color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:0.75rem;cursor:pointer;';
+            maxBtn.innerHTML = '<i class="bi bi-arrows-angle-expand"></i>';
+            maxBtn.onclick = e => { e.stopPropagation(); pvOpenPresentation(idx); };
+            card.appendChild(maxBtn);
+
+            const label = document.createElement('div');
+            label.style.cssText = 'padding:8px 12px;background:#198754;color:#fff;font-weight:700;font-size:0.85rem;';
+            label.textContent = item.label;
+
+            const iframe = document.createElement('iframe');
+            iframe.src = pvUrlMap[pvCurrentType](item.id);
+            iframe.loading = 'lazy';
+            iframe.style.cssText = 'width:100%;height:1080px;border:none;pointer-events:none;display:block;';
+
+            card.appendChild(label);
+            card.appendChild(iframe);
+            card.addEventListener('dblclick', e => { e.stopPropagation(); pvOpenPresentation(idx); });
             canvas.appendChild(card);
         });
-        pvResetView();
+
+        setTimeout(pvResetView, 100);
     }
 
-    function pvResetView() { pvScale = 0.12; pvTranslateX = 100; pvTranslateY = 100; pvUpdate(); }
-    function pvUpdate() {
-        document.getElementById('pvCanvas').style.transform = `translate(${pvTranslateX}px, ${pvTranslateY}px) scale(${pvScale})`;
-        document.getElementById('pvZoomLevel').textContent = Math.round(pvScale*100)+'%';
+    function pvGetContentBounds() {
+        const cards = document.getElementById('pvCanvas').querySelectorAll('.pv-card');
+        if (!cards.length) return null;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        cards.forEach(c => {
+            const x = c.offsetLeft, y = c.offsetTop;
+            minX = Math.min(minX, x); minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x + c.offsetWidth); maxY = Math.max(maxY, y + c.offsetHeight);
+        });
+        return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
     }
-    
-    document.getElementById('pvViewport').onmousedown = e => { pvIsDragging = true; pvStartX = e.clientX-pvTranslateX; pvStartY = e.clientY-pvTranslateY; };
-    window.onmousemove = e => { if(!pvIsDragging) return; pvTranslateX = e.clientX-pvStartX; pvTranslateY = e.clientY-pvStartY; pvUpdate(); };
-    window.onmouseup = () => pvIsDragging = false;
-    document.getElementById('pvViewport').onwheel = e => { 
-        e.preventDefault(); 
-        const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        pvScale = Math.max(0.02, Math.min(2, pvScale * delta));
-        pvUpdate();
+
+    window.pvResetView = function() {
+        const vp = document.getElementById('pvViewport');
+        const bounds = pvGetContentBounds();
+        if (!bounds) { pvScale = 0.12; pvTranslateX = 100; pvTranslateY = 100; pvUpdateTransform(); return; }
+        const vr = vp.getBoundingClientRect();
+        pvScale = 0.12;
+        const targetX = bounds.minX + 400;
+        const targetY = bounds.minY + 560;
+        pvTranslateX = vr.width / 2 - targetX * pvScale;
+        pvTranslateY = vr.height / 2 - targetY * pvScale;
+        const canvas = document.getElementById('pvCanvas');
+        canvas.style.transition = 'transform 0.6s cubic-bezier(0.34,1.56,0.64,1)';
+        pvUpdateTransform();
+        setTimeout(() => canvas.style.transition = 'transform 0.05s linear', 650);
     };
+
+    function pvUpdateTransform() {
+        document.getElementById('pvCanvas').style.transform = `translate(${pvTranslateX}px,${pvTranslateY}px) scale(${pvScale})`;
+        document.getElementById('pvZoomLevel').textContent = Math.round(pvScale * 100) + '%';
+    }
+
+    function pvZoomCanvas(delta) {
+        pvScale = Math.max(0.04, Math.min(2.0, pvScale + delta));
+        pvUpdateTransform();
+    }
+
+    function pvFitView() {
+        const bounds = pvGetContentBounds();
+        if (!bounds) return;
+        const vp = document.getElementById('pvViewport');
+        const vr = vp.getBoundingClientRect();
+        const scaleX = (vr.width - 100) / bounds.width;
+        const scaleY = (vr.height - 100) / bounds.height;
+        pvScale = Math.min(Math.min(scaleX, scaleY), 0.5);
+        pvTranslateX = vr.width / 2 - (bounds.minX + bounds.width / 2) * pvScale;
+        pvTranslateY = vr.height / 2 - (bounds.minY + bounds.height / 2) * pvScale;
+        const canvas = document.getElementById('pvCanvas');
+        canvas.style.transition = 'transform 0.6s cubic-bezier(0.34,1.56,0.64,1)';
+        pvUpdateTransform();
+        setTimeout(() => canvas.style.transition = 'transform 0.05s linear', 650);
+    }
+
+    function pvApplySort() { pvLoadCanvas(); }
+
+    function pvFocusCard(card) {
+        const vp = document.getElementById('pvViewport');
+        const vr = vp.getBoundingClientRect();
+        const cx = card.offsetLeft + card.offsetWidth / 2;
+        const cy = card.offsetTop  + card.offsetHeight / 2;
+        pvScale = 0.3;
+        pvTranslateX = vr.width / 2 - cx * pvScale;
+        pvTranslateY = vr.height / 2 - cy * pvScale;
+        const canvas = document.getElementById('pvCanvas');
+        canvas.style.transition = 'transform 0.5s cubic-bezier(0.4,0,0.2,1)';
+        pvUpdateTransform();
+        setTimeout(() => canvas.style.transition = 'transform 0.05s linear', 500);
+    }
+
+    function pvSearchCanvas(q) {
+        let found = null;
+        document.getElementById('pvCanvas').querySelectorAll('.pv-card').forEach(card => {
+            const lbl = card.querySelector('div') ? card.querySelector('div').textContent.toLowerCase() : '';
+            if (q && lbl.includes(q.toLowerCase())) {
+                if (!found) found = card;
+                card.style.opacity = '1';
+            } else if (q) {
+                card.style.opacity = '0.3';
+            } else {
+                card.style.opacity = '1';
+            }
+        });
+        if (found && q.length > 1) pvFocusCard(found);
+    }
+
+    // Drag
+    const pvVp = document.getElementById('pvViewport');
+    pvVp.addEventListener('mousedown', e => {
+        if (e.button === 0 || e.button === 1 || e.button === 2) {
+            pvIsDragging = true;
+            pvStartX = e.clientX - pvTranslateX;
+            pvStartY = e.clientY - pvTranslateY;
+            pvVp.style.cursor = 'grabbing';
+        }
+    });
+    pvVp.addEventListener('contextmenu', e => e.preventDefault());
+
+    window.addEventListener('mousemove', e => {
+        if (!pvIsDragging) return;
+        pvTranslateX = e.clientX - pvStartX;
+        pvTranslateY = e.clientY - pvStartY;
+        pvUpdateTransform();
+    });
+    window.addEventListener('mouseup', () => {
+        pvIsDragging = false;
+        pvVp.style.cursor = 'grab';
+    });
+
+    // Scroll: Ctrl=zoom, Shift=H-pan, plain=V-pan
+    pvVp.addEventListener('wheel', e => {
+        e.preventDefault();
+        if (e.ctrlKey) {
+            const zoomSpeed = 0.001;
+            const delta = -e.deltaY * zoomSpeed;
+            const oldScale = pvScale;
+            const newScale = Math.max(0.04, Math.min(2.0, pvScale + delta));
+            const rect = pvVp.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            pvTranslateX -= (mx - pvTranslateX) * (newScale / oldScale - 1);
+            pvTranslateY -= (my - pvTranslateY) * (newScale / oldScale - 1);
+            pvScale = newScale;
+        } else if (e.shiftKey) {
+            pvTranslateX -= e.deltaY;
+        } else {
+            pvTranslateY -= e.deltaY;
+        }
+        pvUpdateTransform();
+    }, { passive: false });
+
+    // ── Presentation Mode ───────────────────────────────────────
+    let pvPresIndex = -1;
+    let pvPresScale = 1.0, pvPresX = 0, pvPresY = 0;
+    let pvPresIsDragging = false, pvPresStartX = 0, pvPresStartY = 0;
+
+    const pvPresOverlay = document.getElementById('pvPresOverlay');
+    const pvPresWrap = document.getElementById('pvPresWrap');
+    const pvPresIframe = document.getElementById('pvPresIframe');
+    const pvPresLabel = document.getElementById('pvPresLabel');
+
+    function pvPresUpdateTransform() {
+        pvPresWrap.style.transform = `translate(${pvPresX}px,${pvPresY}px) scale(${pvPresScale})`;
+    }
+
+    window.pvOpenPresentation = function(index) {
+        pvPresIndex = index;
+        const list = pvGetCurrentList();
+        if (index < 0 || index >= list.length) return;
+        const baseScale = Math.min(1.0, (window.innerHeight * 0.9) / 1130);
+        pvPresScale = baseScale; pvPresX = 0; pvPresY = 0;
+        pvPresUpdateTransform();
+        const item = list[index];
+        pvPresIframe.src = pvUrlMap[pvCurrentType](item.id);
+        pvPresLabel.textContent = item.label;
+        pvPresOverlay.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    };
+
+    window.pvClosePresentation = function() {
+        pvPresOverlay.style.display = 'none';
+        pvPresIframe.src = '';
+        document.body.style.overflow = '';
+    };
+
+    window.pvShowNext = function() {
+        const list = pvGetCurrentList();
+        pvOpenPresentation(pvPresIndex < list.length - 1 ? pvPresIndex + 1 : 0);
+    };
+
+    window.pvShowPrev = function() {
+        const list = pvGetCurrentList();
+        pvOpenPresentation(pvPresIndex > 0 ? pvPresIndex - 1 : list.length - 1);
+    };
+
+    // Presentation drag
+    pvPresOverlay.addEventListener('mousedown', e => {
+        if (e.target.closest('.pv-pres-nav')) return;
+        pvPresIsDragging = true;
+        pvPresStartX = e.clientX - pvPresX;
+        pvPresStartY = e.clientY - pvPresY;
+    });
+    window.addEventListener('mousemove', e => {
+        if (!pvPresIsDragging || pvPresOverlay.style.display === 'none') return;
+        pvPresX = e.clientX - pvPresStartX;
+        pvPresY = e.clientY - pvPresStartY;
+        pvPresUpdateTransform();
+    });
+    window.addEventListener('mouseup', () => { pvPresIsDragging = false; });
+
+    // Presentation zoom
+    pvPresOverlay.addEventListener('wheel', e => {
+        if (pvPresOverlay.style.display === 'none') return;
+        e.preventDefault();
+        pvPresScale = Math.max(0.4, Math.min(4.0, pvPresScale + (-e.deltaY * 0.0015)));
+        pvPresUpdateTransform();
+    }, { passive: false });
+
+    // Keyboard: arrows + ESC
+    window.addEventListener('keydown', e => {
+        if (pvPresOverlay.style.display === 'none') return;
+        if (e.key === 'ArrowRight') pvShowNext();
+        else if (e.key === 'ArrowLeft') pvShowPrev();
+        else if (e.key === 'Escape') pvClosePresentation();
+    });
 </script>
 {% endblock %}

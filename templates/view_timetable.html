@@ -29,7 +29,7 @@
         bottom: 0;
         background-color: var(--canvas-bg);
         background-image: 
-            radial-gradient(var(--grid-color) 1px, transparent 1px);
+            radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px);
         background-size: 30px 30px;
         overflow: hidden;
         cursor: grab;
@@ -56,9 +56,9 @@
 
     /* ── STICKER CARDS (PAPER-ONLY REFINED) ────────────────── */
     .sticker-card {
-        background: transparent; /* No more white ground */
+        background: transparent; 
         border-radius: 0;
-        box-shadow: none; /* Shadow only on hover or paper itself */
+        box-shadow: none; 
         border: none;
         overflow: visible;
         transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -81,67 +81,64 @@
         z-index: 1;
     }
 
-
-
     .card-iframe-wrap {
-        width: 800px; /* Standard A4 width approx */
-        height: 1130px; /* Standard A4 height approx */
-        background: transparent;
+        width: 800px; 
+        height: 1130px; 
+        background: white;
+        border: 1px solid #ddd;
         position: relative;
         overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
     }
-
 
     .card-iframe-wrap iframe {
         width: 800px;
         height: 1130px;
         border: none;
         pointer-events: none;
-        transform: scale(1.0); /* 1:1 fit */
+        transform: scale(1.0); 
         transform-origin: top left;
         transition: opacity 0.3s ease;
         overflow: hidden;
     }
 
-
-    .card-header-label {
+    .card-header-bar {
         position: absolute;
-        top: -30px; /* Float above the paper */
+        top: 0;
         left: 0;
+        right: 0;
+        height: 34px;
         background: var(--accent-green);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
         color: white;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.7rem;
         font-weight: bold;
-        box-shadow: 0 4px 10px rgba(25, 135, 84, 0.3);
-        z-index: 5;
+        font-size: 0.85rem;
+        z-index: 10;
     }
 
-    .btn-maximize {
-        position: absolute;
-        top: -30px;
-        right: 0;
-        background: rgba(0,0,0,0.6);
+    .card-maximize-btn {
+        background: rgba(255,255,255,0.2);
         color: white;
         border: none;
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        z-index: 5;
-        transition: background 0.3s;
+        transition: all 0.2s;
+        font-size: 0.75rem;
     }
-    .btn-maximize:hover { background: var(--accent-green); }
+    .card-maximize-btn:hover { background: rgba(255,255,255,0.4); transform: scale(1.1); }
 
     #presentation-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.9);
-        backdrop-filter: blur(10px);
+        background: #000;
         z-index: 2000;
         display: none;
         flex-direction: column;
@@ -260,53 +257,37 @@
         letter-spacing: 1px;
     }
 
-    /* ── FLOATING HUD (GLASSMORPHISM) ────────────────────────── */
+    /* ── FLOATING HUD (PILL DESIGN) ────────────────────────── */
     .hud-controls {
         position: fixed;
         top: 110px;
         left: 50%;
         transform: translateX(-50%);
-        background: var(--hud-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        padding: 8px 14px;
+        background: #fff;
+        padding: 8px 18px;
         border-radius: 50px;
         display: flex;
         align-items: center;
-        gap: 8px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        gap: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.12);
         z-index: 1000;
+        border: 1px solid #e0e0e0;
         transition: all 0.3s ease;
     }
+    .hud-controls.focus-mode { display: none !important; }
 
-    body.dark-mode .hud-controls {
-        color: #f1f5f9;
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    body.dark-mode .hud-label { color: #94a3b8; }
-    body.dark-mode select { color: #f1f5f9; background-color: transparent !important; }
-    body.dark-mode input { color: #f1f5f9; }
-
-    .hud-controls:hover {
-        background: rgba(255, 255, 255, 0.95);
-        box-shadow: 0 12px 40px rgba(0,0,0,0.15);
-    }
-
-    .hud-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .hud-label {
-        font-size: 0.7rem;
-        font-weight: bold;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
+    .hud-title-pill { font-size: 0.9rem; font-weight: 800; color: var(--accent-green); display: flex; align-items: center; gap: 6px; padding-right: 15px; border-right: 1px solid #eee; }
+    .hud-pill-segment { display: flex; align-items: center; gap: 8px; background: #f8f9fa; border-radius: 30px; padding: 4px 12px; border: 1px solid #eee; }
+    .hud-pill-label { font-size: 0.75rem; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .hud-pill-select { border: none !important; background: transparent; font-weight: 700; font-size: 0.85rem; color: #333; cursor: pointer; padding: 0 5px !important; width: auto; }
+    .hud-search-pill { background: #f8f9fa; border-radius: 30px; padding: 4px 15px; border: 1px solid #eee; display: flex; align-items: center; gap: 8px; width: 180px; }
+    .hud-search-pill input { border: none !important; background: transparent !important; font-size: 0.85rem; outline: none; width: 100%; color: #333; }
+    .hud-pill-btn { border-radius: 30px !important; padding: 6px 16px !important; font-size: 0.8rem !important; font-weight: 700 !important; }
+    
+    .hud-zoom-pill { display: flex; align-items: center; background: #f8f9fa; border-radius: 30px; padding: 4px 8px; border: 1px solid #eee; gap: 10px; }
+    .hud-zoom-btn { width: 26px; height: 26px; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; background: #fff !important; border: 1px solid #ddd !important; padding: 0 !important; color: #666; transition: all 0.2s; cursor: pointer; }
+    .hud-zoom-btn:hover { background: #eee !important; color: #000; }
+    .hud-zoom-val { font-size: 0.85rem; font-weight: 700; color: var(--accent-green); min-width: 45px; text-align: center; }
 
     /* ── MINIMAP ────────────────────────────────────────────── */
     #minimap-container {
@@ -368,66 +349,46 @@
     }
 </style>
 
-<!-- FLOATING HUD -->
+<!-- REDESIGNED FLOATING HUD -->
 <div class="hud-controls">
-    <div class="hud-item border-end pe-3">
-        <span class="hud-label">View:</span>
-        <select id="typeSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold" onchange="resetAndLoad()">
+    <div class="hud-title-pill">
+        <i class="bi bi-calendar3-fill"></i> Timetable
+    </div>
+
+    <div class="hud-pill-segment">
+        <span class="hud-pill-label">View:</span>
+        <select id="typeSelect" class="hud-pill-select" onchange="resetAndLoad()">
             <option value="section" {% if current_type=='section' %}selected{% endif %}>Sections</option>
             <option value="faculty" {% if current_type=='faculty' %}selected{% endif %}>Faculty</option>
             <option value="room"    {% if current_type=='room' %}selected{% endif %}>Rooms</option>
         </select>
     </div>
     
-    <div class="hud-item border-end pe-3">
-        <span class="hud-label">Sort:</span>
-        <select id="sortSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold" onchange="applySort()">
+    <div class="hud-pill-segment">
+        <span class="hud-pill-label">Sort:</span>
+        <select id="sortSelect" class="hud-pill-select" onchange="applySort()">
             <option value="asc">A → Z</option>
             <option value="desc">Z → A</option>
         </select>
     </div>
 
-    <div class="hud-item border-end pe-3">
-        <span class="hud-label">Search:</span>
-        <div class="input-group input-group-sm" style="width: 160px;">
-            <input type="text" id="canvasSearch" class="form-control border-0 bg-transparent" placeholder="Find schedule..." onkeyup="searchCanvas(this.value)">
-            <span class="input-group-text border-0 bg-transparent"><i class="bi bi-search"></i></span>
-        </div>
+    <div class="hud-search-pill">
+        <i class="bi bi-search" style="color:#999; font-size:0.8rem;"></i>
+        <input type="text" id="canvasSearch" placeholder="Find schedule..." onkeyup="searchCanvas(this.value)">
     </div>
 
-    <div class="hud-item d-flex align-items-center">
-        <button class="btn btn-sm btn-success rounded-pill px-4 fw-bold d-inline-flex align-items-center gap-2" style="white-space: nowrap;" onclick="resetView()" title="Center Workspace">
-            <i class="bi bi-arrows-fullscreen"></i> Center
+    <div class="d-flex align-items-center gap-2">
+        <button class="btn btn-outline-success hud-pill-btn d-flex align-items-center gap-2" onclick="fitView()">
+            <i class="bi bi-arrows-angle-contract"></i> <span>Fit All</span>
         </button>
-        <button class="btn btn-sm btn-outline-success rounded-pill px-4 fw-bold ms-1 d-inline-flex align-items-center gap-2" style="white-space: nowrap;" onclick="fitView()" title="Fit All Content">
-            <i class="bi bi-aspect-ratio"></i> Fit All
+        <button class="btn btn-success hud-pill-btn d-flex align-items-center gap-2" onclick="resetView()">
+            <i class="bi bi-arrows-fullscreen"></i> <span>Center</span>
         </button>
         
-        <div class="vr mx-2" style="height: 20px;"></div>
-
-        <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-secondary" onclick="zoomCanvas(-0.2)" title="Zoom Out">
-                <i class="bi bi-dash-lg"></i>
-            </button>
-            <button class="btn btn-outline-secondary px-3 fw-bold" onclick="resetZoom()" title="Reset Zoom">
-                <span id="hud-zoom-level">100%</span>
-            </button>
-            <button class="btn btn-outline-secondary" onclick="zoomCanvas(0.2)" title="Zoom In">
-                <i class="bi bi-plus-lg"></i>
-            </button>
-        </div>
-
-        <div class="dropdown d-inline-block ms-2">
-            <button class="btn btn-sm btn-outline-secondary rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                Actions
-            </button>
-            <ul class="dropdown-menu shadow">
-                <li><a class="dropdown-item" href="#" onclick="exportAllPDF()"><i class="bi bi-file-earmark-pdf me-2"></i> Export All to PDF</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><span class="dropdown-header small">Canvas Tips</span></li>
-                <li><span class="dropdown-item-text small text-muted">Right-click + Drag to pan</span></li>
-                <li><span class="dropdown-item-text small text-muted">Ctrl + Scroll to zoom</span></li>
-            </ul>
+        <div class="hud-zoom-pill">
+            <div class="hud-zoom-btn" onclick="zoomCanvas(-0.1)"><i class="bi bi-dash"></i></div>
+            <span class="hud-zoom-val" id="hud-zoom-level">100%</span>
+            <div class="hud-zoom-btn" onclick="zoomCanvas(0.1)"><i class="bi bi-plus"></i></div>
         </div>
     </div>
 </div>
@@ -583,17 +544,31 @@
         
         document.getElementById('canvasSearch').value = '';
 
-        const cardWidth = 1050;  // 1000px + some gap
-        const cardHeight = 850;
         const columns = 5;       // Number of cards per row
+        const urlMap = {
+            section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`,
+            faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`,
+            room:    id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`
+        };
 
         list.forEach((item, index) => {
             const card = document.createElement('div');
             card.className = 'sticker-card';
             card.id = `card-${item.id}`;
             card.dataset.label = item.label.toLowerCase();
-
-            // Smart Grid Layout (Refined Spacing)
+            card.innerHTML = `
+                <div class="card-header-bar">
+                    <span>${item.label}</span>
+                    <button class="card-maximize-btn" onclick="openPresentation(${index})" title="Maximize">
+                        <i class="bi bi-fullscreen"></i>
+                    </button>
+                </div>
+                <div class="card-iframe-wrap">
+                    <iframe src="" data-src="${urlMap[currentType](item.id)}"></iframe>
+                </div>
+            `;
+            
+            // Smart Grid Layout
             const row = Math.floor(index / columns);
             const col = index % columns;
             card.style.position = 'absolute';
@@ -606,36 +581,6 @@
                 openPresentation(index);
             });
 
-            const maxBtn = document.createElement('button');
-            maxBtn.className = 'btn-maximize';
-            maxBtn.innerHTML = '<i class="bi bi-arrows-angle-expand"></i>';
-            maxBtn.title = "Full Screen Presentation";
-            maxBtn.onclick = (e) => {
-                e.stopPropagation();
-                openPresentation(index);
-            };
-            card.appendChild(maxBtn);
-
-            const label = document.createElement('div');
-            label.className = 'card-header-label';
-            label.textContent = item.label;
-
-            const wrap = document.createElement('div');
-            wrap.className = 'card-iframe-wrap';
-
-            const iframe = document.createElement('iframe');
-            const urlMap = {
-                section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`,
-                faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`,
-                room:    id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`
-            };
-            
-            iframe.src = urlMap[currentType](item.id);
-            iframe.loading = "lazy";
-
-            wrap.appendChild(iframe);
-            card.appendChild(label);
-            card.appendChild(wrap);
             canvas.appendChild(card);
         });
 
@@ -878,6 +823,24 @@
         presLabel.textContent = item.label;
         presOverlay.classList.add('active');
         document.body.style.overflow = 'hidden';
+
+        // FOCUS MODE: Hide HUD and main navbar
+        const hud = document.querySelector('.hud-controls');
+        if (hud) hud.classList.add('focus-mode');
+        const mainNav = document.querySelector('.sheets-menubar');
+        if (mainNav) mainNav.classList.add('d-none');
+    };
+
+    window.closePresentation = function() {
+        presOverlay.classList.remove('active');
+        presIframe.src = '';
+        document.body.style.overflow = 'auto';
+
+        // FOCUS MODE: Show HUD and main navbar
+        const hud = document.querySelector('.hud-controls');
+        if (hud) hud.classList.remove('focus-mode');
+        const mainNav = document.querySelector('.sheets-menubar');
+        if (mainNav) mainNav.classList.remove('d-none');
     };
 
     // Close on backdrop click (Only if clicking background, not paper)
@@ -926,11 +889,7 @@
         updatePresTransform();
     }, { passive: false });
 
-    window.closePresentation = function() {
-        presOverlay.classList.remove('active');
-        presIframe.src = '';
-        document.body.style.overflow = 'auto';
-    };
+
 
     window.showNext = function() {
         const list = listMap[currentType] || [];

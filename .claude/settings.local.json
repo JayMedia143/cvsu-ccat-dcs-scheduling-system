@@ -76,7 +76,8 @@
       "Bash(__NEW_LINE_8656a955dc7cf469__ grep:*)",
       "Bash(__NEW_LINE_c81e685c6902c3d8__ grep:*)",
       "Bash(__NEW_LINE_687508cfe24e8ef7__ grep:*)",
-      "Bash(grep -n classList.add.*selected '/c/WFH/jeremy/12. CvSU_Scheduling_System-Version-2.25_send/CvSU_Scheduling_System-Version-2 - antigravity_2_claude - Copy/templates/manage_courses.html')"
+      "Bash(grep -n classList.add.*selected '/c/WFH/jeremy/12. CvSU_Scheduling_System-Version-2.25_send/CvSU_Scheduling_System-Version-2 - antigravity_2_claude - Copy/templates/manage_courses.html')",
+      "Bash(cd /c/WFH/jeremy/12.*CvSU_Scheduling_System-Version-2.25*/CvSU_Scheduling_System-Version-2*Copy)"
     ],
     "additionalDirectories": [
       "\\tmp",

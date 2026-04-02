@@ -750,7 +750,8 @@
     /* ── DRAFT PREVIEW CANVAS (scoped) ──────────────────────── */
     #pvViewport {
         background-color: #f8fafc;
-        background-image: radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px);
+        background-image: 
+            radial-gradient(rgba(0,0,0,0.05) 1.2px, transparent 1.2px);
         background-size: 30px 30px;
         user-select: none;
     }
@@ -775,18 +776,72 @@
         pointer-events: none;
         z-index: 1;
     }
-    .pv-card .card-iframe-wrap { width: 800px; height: 1130px; background: transparent; position: relative; overflow: hidden; }
+    .pv-card .card-iframe-wrap { width: 800px; height: 1130px; background: white; border: 1px solid #ddd; position: relative; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
     .pv-card .card-iframe-wrap iframe { width: 800px; height: 1130px; border: none; pointer-events: none; transform: scale(1.0); transform-origin: top left; transition: opacity 0.3s ease; overflow: hidden; }
-    .pv-card .card-header-label { position: absolute; top: -30px; left: 0; background: #198754; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; box-shadow: 0 4px 10px rgba(25,135,84,0.3); z-index: 5; white-space: nowrap; }
-    .pv-card .btn-maximize { position: absolute; top: -30px; right: 0; background: rgba(0,0,0,0.6); color: white; border: none; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 5; transition: background 0.3s; }
-    .pv-card .btn-maximize:hover { background: #198754; }
+    .pv-card .card-header-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 34px;
+        background: #198754;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+        color: white;
+        font-weight: bold;
+        font-size: 0.85rem;
+        z-index: 10;
+    }
+    .pv-card .card-maximize-btn {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        border: none;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.75rem;
+    }
+    .pv-card .card-maximize-btn:hover { background: rgba(255,255,255,0.4); transform: scale(1.1); }
+
+    /* New Premium Topbar */
+    .pv-topbar {
+        background: #fff;
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        z-index: 100;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    .pv-topbar.focus-mode { display: none !important; }
+    .pv-title-pill { font-size: 0.95rem; font-weight: 800; color: #157347; display: flex; align-items: center; gap: 6px; padding-right: 15px; border-right: 1px solid #eee; }
+    .pv-pill-select-wrap { display: flex; align-items: center; gap: 8px; background: #f8f9fa; border-radius: 30px; padding: 4px 12px; border: 1px solid #eee; }
+    .pv-pill-label { font-size: 0.8rem; color: #666; font-weight: 600; }
+    .pv-pill-select { border: none !important; background: transparent; font-weight: 700; font-size: 0.85rem; color: #333; cursor: pointer; padding: 0 5px !important; width: auto; }
+    .pv-search-pill { background: #f8f9fa; border-radius: 30px; padding: 4px 15px; border: 1px solid #eee; display: flex; align-items: center; gap: 8px; min-width: 150px; }
+    .pv-search-pill input { border: none !important; background: transparent !important; font-size: 0.85rem; outline: none; width: 100%; }
+    .pv-pill-btn { border-radius: 30px !important; padding: 6px 16px !important; font-size: 0.8rem !important; font-weight: 700 !important; }
+    .pv-zoom-pill { display: flex; align-items: center; background: #f8f9fa; border-radius: 30px; padding: 4px 8px; border: 1px solid #eee; gap: 10px; }
+    .pv-zoom-btn { width: 26px; height: 26px; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; background: #fff !important; border: 1px solid #ddd !important; padding: 0 !important; color: #666; transition: all 0.2s; }
+    .pv-zoom-btn:hover { background: #eee !important; color: #000; }
+    .pv-zoom-val { font-size: 0.85rem; font-weight: 700; color: #157347; min-width: 45px; text-align: center; }
+    .pv-close-x { font-size: 1.5rem; color: #999; cursor: pointer; transition: color 0.2s; background: none; border: none; padding: 0; display: flex; align-items: center; }
+    .pv-close-x:hover { color: #333; }
+
     #pvZoomBadge { position: absolute; bottom: 20px; left: 20px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); padding: 5px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; color: #198754; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 20; pointer-events: none; }
+
     /* Cinema Overlay (scoped to preview modal) */
     #pvCinemaOverlay {
         position: absolute;
         inset: 0;
-        background: rgba(0,0,0,0.9);
-        backdrop-filter: blur(10px);
+        background: #000;
         z-index: 500;
         display: none;
         flex-direction: column;
@@ -3478,6 +3533,12 @@
         if (label) label.textContent = item.label;
         const overlay = document.getElementById('pvCinemaOverlay');
         if (overlay) overlay.classList.add('active');
+
+        // FOCUS MODE: Hide topbar and main navbar
+        const topbar = document.querySelector('.pv-topbar');
+        if (topbar) topbar.classList.add('focus-mode');
+        const mainNav = document.querySelector('.sheets-menubar');
+        if (mainNav) mainNav.classList.add('d-none');
     };
 
     window.pvClosePresentation = function() {
@@ -3485,6 +3546,12 @@
         if (overlay) overlay.classList.remove('active');
         const iframe = document.getElementById('pvPresIframe');
         if (iframe) iframe.src = '';
+
+        // FOCUS MODE: Show topbar and main navbar
+        const topbar = document.querySelector('.pv-topbar');
+        if (topbar) topbar.classList.remove('focus-mode');
+        const mainNav = document.querySelector('.sheets-menubar');
+        if (mainNav) mainNav.classList.remove('d-none');
     };
 
     window.pvShowNext = function() {
@@ -3587,27 +3654,17 @@
                 pvOpenPresentation(index);
             });
 
-            const maxBtn = document.createElement('button');
-            maxBtn.className = 'btn-maximize';
-            maxBtn.innerHTML = '<i class="bi bi-arrows-angle-expand"></i>';
-            maxBtn.title = 'Full Screen Cinema';
-            maxBtn.onclick = (e) => { e.stopPropagation(); pvOpenPresentation(index); };
-
-            const lbl = document.createElement('div');
-            lbl.className = 'card-header-label';
-            lbl.textContent = item.label;
-
-            const wrap = document.createElement('div');
-            wrap.className = 'card-iframe-wrap';
-
-            const iframe = document.createElement('iframe');
-            iframe.src = urlMap[pvCurrentType](item.id);
-            iframe.loading = 'lazy';
-
-            wrap.appendChild(iframe);
-            card.appendChild(maxBtn);
-            card.appendChild(lbl);
-            card.appendChild(wrap);
+            card.innerHTML = `
+                <div class="card-header-bar">
+                    <span>${item.label}</span>
+                    <button class="card-maximize-btn" onclick="pvOpenPresentation(${index})" title="Maximize">
+                        <i class="bi bi-fullscreen"></i>
+                    </button>
+                </div>
+                <div class="card-iframe-wrap">
+                    <iframe src="${urlMap[pvCurrentType](item.id)}"></iframe>
+                </div>
+            `;
             canvas.appendChild(card);
         });
         pvResetView();
@@ -3821,42 +3878,51 @@
 <div class="modal fade" id="draftPreviewModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen">
         <div class="modal-content" style="background:#f1f5f9;">
-            <!-- Topbar -->
-            <div class="modal-header py-2 px-3 border-bottom" style="background:#fff;z-index:10;gap:8px;flex-wrap:wrap;">
-                <span class="fw-bold text-success me-2"><i class="bi bi-eye-fill me-1"></i>Draft Preview</span>
-                <!-- View -->
-                <div class="d-flex align-items-center gap-1 border-end pe-3">
-                    <span class="hud-label">View:</span>
-                    <select id="pvTypeSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width:auto">
+            <!-- Redesigned Topbar (Pill Design) -->
+            <div class="pv-topbar">
+                <div class="pv-title-pill">
+                    <i class="bi bi-calendar3-fill me-2"></i>Draft Preview
+                </div>
+
+                <div class="pv-pill-select-wrap">
+                    <span class="pv-pill-label">View:</span>
+                    <select id="pvTypeSelect" class="form-select form-select-sm pv-pill-select">
                         <option value="section">Sections</option>
                         <option value="faculty">Faculty</option>
                         <option value="room">Rooms</option>
                     </select>
                 </div>
-                <!-- Sort -->
-                <div class="d-flex align-items-center gap-1 border-end pe-3">
-                    <span class="hud-label">Sort:</span>
-                    <select id="pvSortSelect" class="form-select form-select-sm border-0 bg-transparent fw-bold" style="width:auto" onchange="pvApplySort()">
-                        <option value="asc">A → Z</option>
-                        <option value="desc">Z → A</option>
+
+                <div class="pv-pill-select-wrap">
+                    <span class="pv-pill-label">Sort:</span>
+                    <select id="pvSortSelect" class="form-select form-select-sm pv-pill-select" onchange="pvApplySort()">
+                        <option value="asc">A — Z</option>
+                        <option value="desc">Z — A</option>
                     </select>
                 </div>
-                <!-- Search -->
-                <div class="d-flex align-items-center gap-1 border-end pe-3">
-                    <span class="hud-label">Search:</span>
-                    <input type="text" id="pvSearch" class="form-control form-control-sm border-0 bg-transparent" placeholder="Find…" style="width:140px">
+
+                <div class="pv-search-pill">
+                    <i class="bi bi-search" style="color:#999; font-size:0.8rem;"></i>
+                    <input type="text" id="pvSearch" placeholder="Find…">
                 </div>
-                <!-- Navigation buttons -->
-                <button class="btn btn-sm btn-success rounded-pill px-3 fw-bold" onclick="pvResetView()" title="Center"><i class="bi bi-arrows-fullscreen me-1"></i>Center</button>
-                <button class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold" onclick="pvFitView()" title="Fit All"><i class="bi bi-aspect-ratio me-1"></i>Fit All</button>
-                <div class="vr mx-1" style="height:20px;"></div>
-                <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-secondary" onclick="pvZoom(-0.2)" title="Zoom Out"><i class="bi bi-dash-lg"></i></button>
-                    <button class="btn btn-outline-secondary px-3 fw-bold" onclick="pvScale=1;pvUpdateTransform()" title="Reset Zoom"><span id="pvZoomLevel">100%</span></button>
-                    <button class="btn btn-outline-secondary" onclick="pvZoom(0.2)" title="Zoom In"><i class="bi bi-plus-lg"></i></button>
-                </div>
-                <div class="ms-auto">
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+
+                <div class="ms-auto d-flex align-items-center gap-2">
+                    <button class="btn btn-outline-success pv-pill-btn d-flex align-items-center gap-2" onclick="pvFitView()">
+                        <i class="bi bi-arrows-angle-contract"></i> <span>Fit All</span>
+                    </button>
+                    <button class="btn btn-success pv-pill-btn d-flex align-items-center gap-2" onclick="pvResetView()">
+                        <i class="bi bi-arrows-fullscreen"></i> <span>Center</span>
+                    </button>
+                    
+                    <div class="pv-zoom-pill">
+                        <button class="btn pv-zoom-btn" onclick="pvZoom(-0.1)"><i class="bi bi-dash"></i></button>
+                        <span class="pv-zoom-val" id="pvZoomLevel">100%</span>
+                        <button class="btn pv-zoom-btn" onclick="pvZoom(0.1)"><i class="bi bi-plus"></i></button>
+                    </div>
+
+                    <button type="button" class="pv-close-x ms-2" data-bs-dismiss="modal">
+                        <i class="bi bi-x"></i>
+                    </button>
                 </div>
             </div>
             <!-- Canvas viewport -->

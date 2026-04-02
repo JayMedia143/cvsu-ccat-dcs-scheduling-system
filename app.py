@@ -817,6 +817,7 @@ def handle_send_message(data):
         'id': msg.id,
         'sender': username,
         'role': session.get('role'),
+        'profile_pic': session.get('profile_pic', 'default.png'),
         'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
         'content': content,
         'message_type': 'chat',
@@ -952,7 +953,8 @@ def api_hub_conversations():
         all_potential = User.query.filter(User.role.in_(['admin', 'superadmin'])).all()
     
     potential_map = {u.username: u for u in all_potential}
-    
+    online_usernames = {v['username'] for v in hub_sid_map.values()}
+
     # 1. Fetch private messages for this user
     private_msgs = HubMessage.query.filter(
         or_(
@@ -975,7 +977,9 @@ def api_hub_conversations():
                 'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
                 'unread_count': unread,
                 'is_global': False,
-                'role': potential_map[partner].role if partner in potential_map else 'user'
+                'role': potential_map[partner].role if partner in potential_map else 'user',
+                'profile_pic': (potential_map[partner].profile_pic if partner in potential_map else None) or 'default.png',
+                'is_online': partner in online_usernames
             }
             
     # 3. Add global 'Everyone'
@@ -989,7 +993,9 @@ def api_hub_conversations():
         'timestamp': last_global.timestamp.strftime('%Y-%m-%d %H:%M:%S') if last_global else '',
         'unread_count': 0,
         'is_global': True,
-        'role': 'system'
+        'role': 'system',
+        'profile_pic': None,
+        'is_online': False
     }
     
     results = [global_card]
@@ -1006,7 +1012,9 @@ def api_hub_conversations():
                 'timestamp': '',
                 'unread_count': 0,
                 'is_global': False,
-                'role': u.role
+                'role': u.role,
+                'profile_pic': u.profile_pic or 'default.png',
+                'is_online': uname in online_usernames
             })
 
     return jsonify(results)
@@ -1036,12 +1044,35 @@ def api_hub_messages():
         'id': m.id,
         'sender': m.sender.username if m.sender else 'System',
         'role': m.sender.role if m.sender else 'system',
+        'profile_pic': m.sender.profile_pic if m.sender else None,
         'content': m.content,
         'timestamp': m.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
         'message_type': m.message_type,
         'recipient_name': m.recipient_name,
+        'is_read': m.is_read,
         'attached_draft': {'id': m.draft.id, 'name': m.draft.name, 'status': m.draft.status} if m.draft else None
     } for m in msgs])
+
+@app.route('/api/hub/pending_drafts')
+@login_required
+def api_hub_pending_drafts():
+    """Returns draft versions that have been sent in messages and are not yet approved/rejected."""
+    sent_draft_ids = db.session.query(HubMessage.draft_id)\
+        .filter(HubMessage.draft_id != None).distinct().all()
+    sent_ids = [r[0] for r in sent_draft_ids]
+    if not sent_ids:
+        return jsonify([])
+    drafts = DraftVersion.query.filter(
+        DraftVersion.id.in_(sent_ids),
+        ~DraftVersion.status.in_(['approved', 'rejected'])
+    ).order_by(DraftVersion.updated_at.desc()).all()
+    return jsonify([{
+        'id': dv.id,
+        'name': dv.name,
+        'department': dv.department or 'ALL',
+        'status': dv.status,
+        'updated': dv.updated_at.strftime('%m/%d')
+    } for dv in drafts])
 
 @app.route('/api/hub/mark_read', methods=['POST'])
 @login_required
@@ -1049,12 +1080,18 @@ def api_hub_mark_read():
     partner = request.args.get('partner')
     username = session.get('username')
     if not partner: return jsonify(ok=False), 400
-    
+
     partner_user = User.query.filter_by(username=partner).first()
     if not partner_user: return jsonify(ok=False), 400
-    
+
     HubMessage.query.filter_by(sender_id=partner_user.id, recipient_name=username, is_read=False).update({HubMessage.is_read: True})
     db.session.commit()
+
+    # Notify the sender that their messages have been seen
+    sender_sid = next((sid for sid, u in hub_sid_map.items() if u['username'] == partner), None)
+    if sender_sid:
+        socketio.emit('hub_messages_seen', {'reader': username, 'partner': username}, to=sender_sid)
+
     return jsonify(ok=True)
 
 
@@ -6611,6 +6648,49 @@ def api_draft_edit(draft_id):
     db.session.commit()
     return jsonify(ok=True, draft=dict(id=dv.id, name=dv.name, semester=dv.semester,
                                        department=dv.department, notes=dv.notes))
+
+
+@app.route('/api/draft/<int:draft_id>/entities')
+@login_required
+def api_draft_entities(draft_id):
+    """Returns only the sections, faculty, and rooms that have entries in this draft."""
+    entries  = ScheduledClass.query.filter_by(draft_version_id=draft_id).all()
+    sec_ids  = sorted({e.section_id for e in entries if e.section_id})
+    fac_ids  = sorted({e.faculty_id for e in entries if e.faculty_id})
+    room_ids = sorted({e.room_id    for e in entries if e.room_id})
+    sections  = Section.query.filter(Section.id.in_(sec_ids)).order_by(Section.section_name).all()  if sec_ids  else []
+    faculties = Faculty.query.filter(Faculty.id.in_(fac_ids)).order_by(Faculty.full_name).all()     if fac_ids  else []
+    rooms     = Room.query.filter(Room.id.in_(room_ids)).order_by(Room.room_name).all()              if room_ids else []
+    return jsonify({
+        'sections':  [{'id': s.id, 'label': s.section_name} for s in sections],
+        'faculties': [{'id': f.id, 'label': f.full_name}    for f in faculties],
+        'rooms':     [{'id': r.id, 'label': r.room_name}    for r in rooms]
+    })
+
+
+@app.route('/api/hub/message/<int:msg_id>/edit', methods=['POST'])
+@login_required
+def api_hub_message_edit(msg_id):
+    msg = HubMessage.query.get_or_404(msg_id)
+    if msg.sender_id != session.get('user_id'):
+        return jsonify(ok=False), 403
+    new_content = (request.get_json() or {}).get('content', '').strip()
+    if not new_content:
+        return jsonify(ok=False), 400
+    msg.content = new_content
+    db.session.commit()
+    return jsonify(ok=True)
+
+
+@app.route('/api/hub/message/<int:msg_id>/delete', methods=['POST'])
+@login_required
+def api_hub_message_delete(msg_id):
+    msg = HubMessage.query.get_or_404(msg_id)
+    if msg.sender_id != session.get('user_id'):
+        return jsonify(ok=False), 403
+    db.session.delete(msg)
+    db.session.commit()
+    return jsonify(ok=True)
 
 
 @app.route('/api/archive/stats')
