@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}Bantay-System | User Monitoring{% endblock %}
+
+{% block content %}
+<div class="monitoring-container p-4">
+    <div class="row g-4">
+        <!-- Live Users Column -->
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-success">
+                        <i class="bi bi-people-fill me-2"></i>Live Users
+                    </h5>
+                    <span class="badge bg-success rounded-pill" id="liveCountLabel">0 Online</span>
+                </div>
+                <div class="card-body p-0 overflow-auto" style="max-height: 75vh;">
+                    <ul class="list-group list-group-flush" id="userListContainer">
+                        <!-- User items injected here -->
+                        <div class="text-center py-5 text-muted small" id="noUsersFallback">
+                            <i class="bi bi-person-x display-4 d-block mb-3 opacity-25"></i>
+                            No users tracked yet.
+                        </div>
+                    </ul>
+                </div>
+                <div class="card-footer bg-white border-0 py-3 text-center">
+                    <small class="text-muted">Users are grouped by ID. Multiple tabs show as "Sessions".</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Feed Column -->
+        <div class="col-md-8">
+            <div class="card mb-4 shadow-sm border-0">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0 fw-bold text-primary">
+                        <i class="bi bi-activity me-2"></i>Action Tracker
+                    </h5>
+                </div>
+                <div class="card-body p-0 overflow-auto" style="max-height: 50vh;">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="activityLogTable">
+                            <thead class="bg-light sticky-top">
+                                <tr>
+                                    <th class="ps-3">User</th>
+                                    <th>Action</th>
+                                    <th>Details</th>
+                                    <th class="text-end pe-3">Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activityLogBody">
+                                {% for log in activity_logs %}
+                                <tr>
+                                    <td class="ps-3 fw-medium">{{ log.username }}</td>
+                                    <td><span class="badge bg-soft-primary text-primary">{{ log.action }}</span></td>
+                                    <td class="small text-muted">{{ log.details or '-' }}</td>
+                                    <td class="text-end text-muted small pe-3">
+                                        <div class="fw-bold">{{ log.timestamp.strftime('%H:%M:%S') }}</div>
+                                        <div style="font-size: 0.65rem;">{{ log.timestamp.strftime('%Y-%m-%d') }}</div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Pagination for Action Tracker -->
+                <div class="card-footer bg-white border-0 py-3">
+                    <nav aria-label="Action navigation">
+                        <ul class="pagination pagination-sm justify-content-center mb-2">
+                            <li class="page-item {% if not act_pagination.has_prev %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('monitoring', act_page=act_pagination.prev_num, sec_page=sec_pagination.page) }}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% for page_num in act_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                                {% if page_num %}
+                                    <li class="page-item {% if page_num == act_pagination.page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('monitoring', act_page=page_num, sec_page=sec_pagination.page) }}">{{ page_num }}</a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link px-2">…</span></li>
+                                {% endif %}
+                            {% endfor %}
+                            <li class="page-item {% if not act_pagination.has_next %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('monitoring', act_page=act_pagination.next_num, sec_page=sec_pagination.page) }}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    {% if act_pagination.pages > 1 %}
+                    <div class="d-flex align-items-center justify-content-center gap-2 text-muted" style="font-size:0.75rem;">
+                        <span>Jump:</span>
+                        <input type="number" id="actJumpInput" class="form-control form-control-sm text-center" style="width:60px;"
+                            min="1" max="{{ act_pagination.pages }}" placeholder="1–{{ act_pagination.pages }}">
+                        <button class="btn btn-sm btn-outline-secondary px-2 py-0" onclick="jumpToActPage()">Go</button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Security Audit Column -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0 fw-bold text-danger">
+                        <i class="bi bi-shield-check me-2"></i>Security Audit
+                    </h5>
+                </div>
+                <div class="card-body p-0 overflow-auto" style="max-height: 50vh;">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="securityLogTable">
+                            <thead class="bg-light sticky-top">
+                                <tr>
+                                    <th class="ps-3">Event</th>
+                                    <th>Target/User</th>
+                                    <th>IP Address</th>
+                                    <th class="text-end pe-3">Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="securityLogBody">
+                                {% for log in security_logs %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <span class="badge {% if 'Success' in log.event_type %}bg-success{% elif 'Fail' in log.event_type %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            {{ log.event_type }}
+                                        </span>
+                                    </td>
+                                    <td class="small">{{ log.username_attempted or 'Unknown' }}</td>
+                                    <td class="small mono">{{ log.ip_address }}</td>
+                                    <td class="text-end text-muted small pe-3">
+                                        <div class="fw-bold">{{ log.timestamp.strftime('%H:%M:%S') }}</div>
+                                        <div style="font-size: 0.65rem;">{{ log.timestamp.strftime('%Y-%m-%d') }}</div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Pagination for Security Audit -->
+                <div class="card-footer bg-white border-0 py-3">
+                    <nav aria-label="Security navigation">
+                        <ul class="pagination pagination-sm justify-content-center mb-2">
+                            <li class="page-item {% if not sec_pagination.has_prev %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('monitoring', sec_page=sec_pagination.prev_num, act_page=act_pagination.page) }}">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% for page_num in sec_pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                                {% if page_num %}
+                                    <li class="page-item {% if page_num == sec_pagination.page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('monitoring', sec_page=page_num, act_page=act_pagination.page) }}">{{ page_num }}</a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link px-2">…</span></li>
+                                {% endif %}
+                            {% endfor %}
+                            <li class="page-item {% if not sec_pagination.has_next %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('monitoring', sec_page=sec_pagination.next_num, act_page=act_pagination.page) }}">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    {% if sec_pagination.pages > 1 %}
+                    <div class="d-flex align-items-center justify-content-center gap-2 text-muted" style="font-size:0.75rem;">
+                        <span>Jump:</span>
+                        <input type="number" id="secJumpInput" class="form-control form-control-sm text-center" style="width:60px;"
+                            min="1" max="{{ sec_pagination.pages }}" placeholder="1–{{ sec_pagination.pages }}">
+                        <button class="btn btn-sm btn-outline-secondary px-2 py-0" onclick="jumpToSecPage()">Go</button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .monitoring-container {
+        background-color: #f0f2f5;
+        min-height: 90vh;
+    }
+    .bg-soft-primary { background-color: #e7f1ff; }
+    .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+    
+    .status-pulse {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+    }
+    .status-pulse.viewing { background-color: #1a73e8; box-shadow: 0 0 0 rgba(26, 115, 232, 0.4); animation: pulse-blue 2s infinite; }
+    .status-pulse.editing { background-color: #fbbc04; box-shadow: 0 0 0 rgba(251, 188, 4, 0.4); animation: pulse-yellow 2s infinite; }
+    
+    @keyframes pulse-blue { 0% { box-shadow: 0 0 0 0px rgba(26, 115, 232, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(26, 115, 232, 0); } 100% { box-shadow: 0 0 0 0px rgba(26, 115, 232, 0); } }
+    @keyframes pulse-yellow { 0% { box-shadow: 0 0 0 0px rgba(251, 188, 4, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(251, 188, 4, 0); } 100% { box-shadow: 0 0 0 0px rgba(251, 188, 4, 0); } }
+
+    .user-item {
+        transition: all 0.2s ease;
+        border-left: 4px solid transparent;
+    }
+    .user-item:hover {
+        background-color: #f8f9fa;
+        transform: translateX(5px);
+    }
+    .user-item.editing { border-left-color: #fbbc04; }
+    .user-item.viewing { border-left-color: #1a73e8; }
+
+    .new-row {
+        animation: highlight-new 3s ease-out;
+    }
+    @keyframes highlight-new {
+        0% { background-color: #fff9c4; }
+        100% { background-color: transparent; }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const socket = io();
+    const userContainer = document.getElementById('userListContainer');
+    const liveCountLabel = document.getElementById('liveCountLabel');
+    const noUsersFallback = document.getElementById('noUsersFallback');
+    
+    const activityBody = document.getElementById('activityLogBody');
+    const securityBody = document.getElementById('securityLogBody');
+
+    // Join monitoring room
+    socket.emit('join_monitoring');
+
+    // 1. Handle User List Updates
+    socket.on('user_list_update', function(data) {
+        if (!data.users || data.users.length === 0) {
+            userContainer.innerHTML = '';
+            userContainer.appendChild(noUsersFallback);
+            liveCountLabel.innerText = '0 Online';
+            return;
+        }
+
+        noUsersFallback.style.display = 'none';
+        liveCountLabel.innerText = `${data.users.length} Online`;
+        
+        userContainer.innerHTML = '';
+        data.users.forEach(user => {
+            const li = document.createElement('li');
+            li.className = `list-group-item user-item py-3 ${user.status.toLowerCase()}`;
+            
+            // Add session count badge if more than 1
+            const sessionBadge = user.session_count > 1 
+                ? `<span class="badge bg-light text-dark border ms-2" style="font-size:0.65rem;">${user.session_count} Sessions</span>` 
+                : '';
+
+            li.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold text-dark d-flex align-items-center">
+                            ${user.username}
+                            ${sessionBadge}
+                        </div>
+                        <div class="text-muted small">${user.role.toUpperCase()}</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="small fw-medium">
+                            <span class="status-pulse ${user.status.toLowerCase()}"></span>${user.status}
+                        </div>
+                        <div class="text-muted" style="font-size: 0.7rem;">${user.last_activity}</div>
+                    </div>
+                </div>
+            `;
+            userContainer.appendChild(li);
+        });
+    });
+
+    // 2. Handle Live Activity Logs
+    socket.on('new_activity_log', function(data) {
+        const tr = document.createElement('tr');
+        tr.className = 'new-row';
+        tr.innerHTML = `
+            <td class="ps-3 fw-medium">${data.username}</td>
+            <td><span class="badge bg-soft-primary text-primary">${data.action}</span></td>
+            <td class="small text-muted">${data.details || '-'}</td>
+            <td class="text-end text-muted small pe-3">${data.timestamp}</td>
+        `;
+        activityBody.insertBefore(tr, activityBody.firstChild);
+        // Limit rows
+        if (activityBody.children.length > 50) activityBody.lastChild.remove();
+    });
+
+    // 3. Handle Live Security Logs
+    socket.on('new_security_log', function(data) {
+        const tr = document.createElement('tr');
+        tr.className = 'new-row';
+        tr.innerHTML = `
+            <td class="ps-3">
+                <span class="badge ${data.event.includes('Success') ? 'bg-success' : (data.event.includes('Failed') ? 'bg-danger' : 'bg-secondary')}">
+                    ${data.event}
+                </span>
+            </td>
+            <td class="small">${data.username || 'Unknown'}</td>
+            <td class="small mono">${data.ip}</td>
+            <td class="text-end text-muted small pe-3">
+                <div class="fw-bold">${data.timestamp}</div>
+            </td>
+        `;
+        securityBody.insertBefore(tr, securityBody.firstChild);
+        // Limit to 10 for live view if on page 1
+        if (window.location.search.indexOf('sec_page') === -1 || window.location.search.indexOf('sec_page=1') !== -1) {
+            if (securityBody.children.length > 10) securityBody.lastChild.remove();
+        }
+    });
+
+    // 4. Jump to Page Logic
+    window.jumpToActPage = function() {
+        const val = document.getElementById('actJumpInput').value;
+        if (val) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('act_page', val);
+            window.location.href = url.href;
+        }
+    }
+    window.jumpToSecPage = function() {
+        const val = document.getElementById('secJumpInput').value;
+        if (val) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('sec_page', val);
+            window.location.href = url.href;
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -28,9 +28,9 @@
         right: 0;
         bottom: 0;
         background-color: var(--canvas-bg);
-        background-image: 
-            radial-gradient(rgba(0,0,0,0.05) 1px, transparent 1px);
-        background-size: 30px 30px;
+        background-image:
+            radial-gradient(rgba(0,0,0,0.18) 1px, transparent 1px);
+        background-size: 22px 22px;
         overflow: hidden;
         cursor: grab;
         user-select: none;
@@ -138,7 +138,7 @@
     #presentation-overlay {
         position: fixed;
         inset: 0;
-        background: #000;
+        background: rgba(0,0,0,0.7);
         z-index: 2000;
         display: none;
         flex-direction: column;
@@ -177,6 +177,14 @@
         transform-origin: center center;
         transition: transform 0.05s linear;
         pointer-events: auto; /* Catch clicks to prevent backdrop exit bleed-through */
+    }
+
+    .canvas-card {
+        transition: opacity 0.3s ease, transform 0.05s linear;
+    }
+    .canvas-card.canvas-dimmed {
+        opacity: 0.15;
+        pointer-events: none;
     }
 
     .pres-iframe-wrap iframe {
@@ -282,7 +290,7 @@
     .hud-pill-select { border: none !important; background: transparent; font-weight: 700; font-size: 0.85rem; color: #333; cursor: pointer; padding: 0 5px !important; width: auto; }
     .hud-search-pill { background: #f8f9fa; border-radius: 30px; padding: 4px 15px; border: 1px solid #eee; display: flex; align-items: center; gap: 8px; width: 180px; }
     .hud-search-pill input { border: none !important; background: transparent !important; font-size: 0.85rem; outline: none; width: 100%; color: #333; }
-    .hud-pill-btn { border-radius: 30px !important; padding: 6px 16px !important; font-size: 0.8rem !important; font-weight: 700 !important; }
+    .hud-pill-btn { border-radius: 30px !important; padding: 6px 20px !important; font-size: 0.8rem !important; font-weight: 700 !important; white-space: nowrap !important; }
     
     .hud-zoom-pill { display: flex; align-items: center; background: #f8f9fa; border-radius: 30px; padding: 4px 8px; border: 1px solid #eee; gap: 10px; }
     .hud-zoom-btn { width: 26px; height: 26px; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; background: #fff !important; border: 1px solid #ddd !important; padding: 0 !important; color: #666; transition: all 0.2s; cursor: pointer; }
@@ -374,14 +382,14 @@
 
     <div class="hud-search-pill">
         <i class="bi bi-search" style="color:#999; font-size:0.8rem;"></i>
-        <input type="text" id="canvasSearch" placeholder="Find schedule..." onkeyup="searchCanvas(this.value)">
+        <input type="text" id="canvasSearch" placeholder="Find schedule..." onkeyup="applySearch()">
     </div>
 
     <div class="d-flex align-items-center gap-2">
-        <button class="btn btn-outline-success hud-pill-btn d-flex align-items-center gap-2" onclick="fitView()">
+        <button class="btn btn-outline-success hud-pill-btn d-flex align-items-center gap-2" onclick="fitAll()">
             <i class="bi bi-arrows-angle-contract"></i> <span>Fit All</span>
         </button>
-        <button class="btn btn-success hud-pill-btn d-flex align-items-center gap-2" onclick="resetView()">
+        <button class="btn btn-success hud-pill-btn d-flex align-items-center gap-2" onclick="centerView()">
             <i class="bi bi-arrows-fullscreen"></i> <span>Center</span>
         </button>
         
@@ -444,18 +452,15 @@
                 : b.label.localeCompare(a.label));
             listMap[type] = [...nonTba, ...tba];
         });
-        loadCanvas();
+        
+        if (typeof loadCanvas === 'function') loadCanvas();
     };
 
     let currentType = '{{ current_type }}';
     let currentSemester = '{{ current_semester }}';
-
-    // ── Canvas Transformation State ───────────────────────────────
     let scale = 1.0;
     let translateX = 0;
     let translateY = 0;
-    
-    // ── Panning Logic ──────────────────────────────────────────
     let isDragging = false;
     let startX, startY;
     
@@ -465,23 +470,20 @@
     const hudZoom = document.getElementById('hud-zoom-level');
 
     function updateTransform() {
-        // Limit scale
         scale = Math.max(0.05, Math.min(3.0, scale));
         canvas.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-        
         const zoomText = `${Math.round(scale * 100)}%`;
         zoomBadge.textContent = `Zoom: ${zoomText}`;
         if (hudZoom) hudZoom.textContent = zoomText;
         updateMinimapViewport();
+        renderVisibleCards();
     }
 
     viewport.addEventListener('mousedown', (e) => {
-        if (e.button === 0 || e.button === 1 || e.button === 2) { // Allow all buttons to pan for now
-            isDragging = true;
-            startX = e.clientX - translateX;
-            startY = e.clientY - translateY;
-            viewport.style.cursor = 'grabbing';
-        }
+        isDragging = true;
+        startX = e.clientX - translateX;
+        startY = e.clientY - translateY;
+        viewport.style.cursor = 'grabbing';
     });
 
     window.addEventListener('mousemove', (e) => {
@@ -496,246 +498,164 @@
         viewport.style.cursor = 'grab';
     });
 
-    // Disable right-click menu on viewport to allow right-click panning
-    viewport.addEventListener('contextmenu', e => e.preventDefault());
-
-    // ── Advanced Scroll Interaction ──────────────────────────
     viewport.addEventListener('wheel', (e) => {
         e.preventDefault();
-        
         if (e.ctrlKey) {
-            // Zoom (Centered on Cursor)
             const zoomSpeed = 0.001; 
             const delta = -e.deltaY * zoomSpeed;
             const oldScale = scale;
-            const newScale = Math.max(0.1, Math.min(2.0, scale + delta));
-
+            scale = Math.max(0.1, Math.min(2.0, scale + delta));
             const rect = viewport.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-
-            translateX -= (mouseX - translateX) * (newScale / oldScale - 1);
-            translateY -= (mouseY - translateY) * (newScale / oldScale - 1);
-
-            scale = newScale;
-        } else if (e.shiftKey) {
-            // Horizontal Pan
-            translateX -= e.deltaY;
+            translateX -= (e.clientX - rect.left - translateX) * (scale / oldScale - 1);
+            translateY -= (e.clientY - rect.top - translateY) * (scale / oldScale - 1);
         } else {
-            // Vertical Pan
+            translateX -= e.deltaX;
             translateY -= e.deltaY;
         }
-        
         updateTransform();
     }, { passive: false });
 
-
-    // ── Render Cards ────────────────────────────────────────────
     window.resetAndLoad = function() {
-        const type = document.getElementById('typeSelect').value;
-        currentType = type;
+        currentType = document.getElementById('typeSelect').value;
         loadCanvas();
-        resetView();
+        centerView();
+    };
+
+    window.allCardData = [];
+    const urlMap = {
+        section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`,
+        faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`,
+        room:    id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`
     };
 
     window.loadCanvas = function() {
         const list = listMap[currentType] || [];
         canvas.innerHTML = '';
-        
-        document.getElementById('canvasSearch').value = '';
+        const columns = 5;
+        window.allCardData = list.map((item, index) => ({
+            id: item.id, label: item.label, lowerLabel: item.label.toLowerCase(),
+            url: urlMap[currentType](item.id),
+            x: (index % columns) * 950 + 500, y: Math.floor(index / columns) * 1300 + 500,
+            width: 850, height: 1200, index: index, isMounted: false, element: null
+        }));
+        renderVisibleCards();
+        initMinimap();
+    };
 
-        const columns = 5;       // Number of cards per row
-        const urlMap = {
-            section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`,
-            faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`,
-            room:    id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`
-        };
+    function renderVisibleCards() {
+        const buffer = 1000;
+        const rect = viewport.getBoundingClientRect();
+        const vLeft = (-translateX - buffer) / scale, vTop = (-translateY - buffer) / scale;
+        const vRight = (rect.width + buffer * 2) / scale + vLeft, vBottom = (rect.height + buffer * 2) / scale + vTop;
 
-        list.forEach((item, index) => {
-            const card = document.createElement('div');
-            card.className = 'sticker-card';
-            card.id = `card-${item.id}`;
-            card.dataset.label = item.label.toLowerCase();
-            card.innerHTML = `
-                <div class="card-header-bar">
-                    <span>${item.label}</span>
-                    <button class="card-maximize-btn" onclick="openPresentation(${index})" title="Maximize">
-                        <i class="bi bi-fullscreen"></i>
-                    </button>
-                </div>
-                <div class="card-iframe-wrap">
-                    <iframe src="" data-src="${urlMap[currentType](item.id)}"></iframe>
-                </div>
-            `;
-            
-            // Smart Grid Layout
-            const row = Math.floor(index / columns);
-            const col = index % columns;
-            card.style.position = 'absolute';
-            card.style.left = (col * 950 + 500) + 'px'; 
-            card.style.top = (row * 1300 + 500) + 'px';
-
-            // Double click to enter Cinema Mode
-            card.addEventListener('dblclick', (e) => {
-                e.stopPropagation();
-                openPresentation(index);
-            });
-
-            canvas.appendChild(card);
+        window.allCardData.forEach(data => {
+            const isVisible = (data.x < vRight && data.x + data.width > vLeft && data.y < vBottom && data.y + data.height > vTop);
+            if (isVisible && !data.isMounted) mountCard(data);
+            else if (!isVisible && data.isMounted) unmountCard(data);
         });
+    }
 
-        setTimeout(initMinimap, 100);
+    function mountCard(data) {
+        const card = document.createElement('div');
+        card.className = 'canvas-card sticker-card';
+        card.style.cssText = `position:absolute;left:${data.x}px;top:${data.y}px;width:${data.width}px;height:${data.height}px;`;
+        if (window.lastSearchQuery && !data.lowerLabel.includes(window.lastSearchQuery)) card.classList.add('canvas-dimmed');
+        card.innerHTML = `<div class="card-header-bar"><span>${data.label}</span><button class="card-maximize-btn" onclick="openPresentation(${data.index})"><i class="bi bi-fullscreen"></i></button></div><div class="card-iframe-wrap"><iframe src="${data.url}" loading="lazy"></iframe></div>`;
+        card.addEventListener('dblclick', () => openPresentation(data.index));
+        canvas.appendChild(card);
+        data.element = card;
+        data.isMounted = true;
+    }
+
+    function unmountCard(data) {
+        if (data.element) data.element.remove();
+        data.element = null;
+        data.isMounted = false;
+    }
+
+    window.applySearch = function() {
+        const q = document.getElementById('canvasSearch').value.toLowerCase();
+        window.lastSearchQuery = q;
+        window.allCardData.forEach(card => {
+            if (card.isMounted && card.element) {
+                if (!q || card.lowerLabel.includes(q)) card.element.classList.remove('canvas-dimmed');
+                else card.element.classList.add('canvas-dimmed');
+            }
+        });
+        const found = window.allCardData.find(c => q && c.lowerLabel.includes(q));
+        if (found) focusCard(found);
     };
 
-    // ── Smart Positioning & Zooming ──────────────────────────
-    window.zoomCanvas = function(delta) {
-        scale += delta;
+    function focusCard(data) {
+        const rect = viewport.getBoundingClientRect();
+        translateX = (rect.width / 2) - (data.x + data.width / 2) * scale;
+        translateY = (rect.height / 2) - (data.y + data.height / 2) * scale;
         updateTransform();
-    };
-
-    window.resetZoom = function() {
-        scale = 1.0;
-        updateTransform();
-    };
+    }
 
     function getContentBounds() {
-        const cards = document.querySelectorAll('.sticker-card');
-        if (cards.length === 0) return null;
-        
-        let minX = Infinity, minY = Infinity;
-        let maxX = -Infinity, maxY = -Infinity;
-        
-        cards.forEach(card => {
-            const x = card.offsetLeft;
-            const y = card.offsetTop;
-            const w = card.offsetWidth;
-            const h = card.offsetHeight;
-            minX = Math.min(minX, x);
-            minY = Math.min(minY, y);
-            maxX = Math.max(maxX, x + w);
-            maxY = Math.max(maxY, y + h);
+        if (!window.allCardData.length) return null;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        window.allCardData.forEach(c => {
+            minX = Math.min(minX, c.x); minY = Math.min(minY, c.y);
+            maxX = Math.max(maxX, c.x + c.width); maxY = Math.max(maxY, c.y + c.height);
         });
-        
         return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
     }
 
-    // Smart Centering: Target the first card or content center
-    window.resetView = function() {
-        const bounds = getContentBounds();
-        if (!bounds) return;
-
-        const viewRect = viewport.getBoundingClientRect();
-        
-        // Target scale 0.8 for focus
-        scale = 0.8;
-        
-        // Center of the first card (approx)
-        const targetX = bounds.minX + 400; // Half of A4 width
-        const targetY = bounds.minY + 560; // Half of A4 height
-        
-        translateX = (viewRect.width / 2) - (targetX * scale);
-        translateY = (viewRect.height / 2) - (targetY * scale);
-        
-        canvas.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    window.fitAll = function() {
+        const b = getContentBounds();
+        if (!b) return;
+        const vr = viewport.getBoundingClientRect();
+        scale = Math.min((vr.width - 100) / b.width, (vr.height - 100) / b.height, 0.8);
+        translateX = (vr.width / 2) - (b.minX + b.width / 2) * scale;
+        translateY = (vr.height / 2) - (b.minY + b.height / 2) * scale;
         updateTransform();
-        setTimeout(() => canvas.style.transition = 'transform 0.05s linear', 600);
     };
 
-    // Smart Fit All: Tight layout centering
-    window.fitView = function() {
-        const bounds = getContentBounds();
-        if (!bounds) return;
-
-        const viewRect = viewport.getBoundingClientRect();
-        const padding = 100;
-
-        // Calculate scale to fit all content tightly
-        const scaleX = (viewRect.width - padding) / bounds.width;
-        const scaleY = (viewRect.height - padding) / bounds.height;
-        scale = Math.min(scaleX, scaleY);
+    window.centerView = function() {
+        const b = getContentBounds();
+        if (!b) return;
+        const vr = viewport.getBoundingClientRect();
+        const cvs = document.getElementById('infinite-canvas');
         
-        // Max limit for fit-all to avoid pixelated mess if only one card
-        scale = Math.min(scale, 0.5);
-
-        translateX = (viewRect.width / 2) - ((bounds.minX + bounds.width / 2) * scale);
-        translateY = (viewRect.height / 2) - ((bounds.minY + bounds.height / 2) * scale);
+        // Target points: center of content bounds
+        const targetX = b.minX + b.width / 2;
+        const targetY = b.minY + b.height / 2;
         
-        canvas.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        translateX = (vr.width / 2) - (targetX * scale);
+        translateY = (vr.height / 2) - (targetY * scale);
+        
+        if (cvs) cvs.style.transition = 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
         updateTransform();
-        setTimeout(() => canvas.style.transition = 'transform 0.05s linear', 600);
+        setTimeout(() => { if (cvs) cvs.style.transition = 'transform 0.05s linear'; }, 650);
     };
 
-    // ── Search & Focus ──────────────────────────────────────────
-    window.searchCanvas = function(query) {
-        query = query.toLowerCase();
-        const cards = document.querySelectorAll('.sticker-card');
-        let found = null;
-
-        cards.forEach(card => {
-
-            if (query && card.dataset.label.includes(query)) {
-                if (!found) found = card;
-                card.style.opacity = '1';
-            } else if (query) {
-                card.style.opacity = '0.3';
-            } else {
-                card.style.opacity = '1';
-            }
-        });
-
-        if (found && query.length > 2) {
-            focusCard(found);
-        }
-    };
-
-    function focusCard(card) {
-
-        
-        const rect = card.getBoundingClientRect();
-        const viewRect = viewport.getBoundingClientRect();
-        
-        // Calculate transition to center the card
-        const cardX = card.offsetLeft + (card.offsetWidth / 2);
-        const cardY = card.offsetTop + (card.offsetHeight / 2);
-        
-        scale = 0.8; // Zoom in to see clearly
-        translateX = (viewRect.width / 2) - (cardX * scale);
-        translateY = (viewRect.height / 2) - (cardY * scale);
-        
-        canvas.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
-        updateTransform();
-        setTimeout(() => canvas.style.transition = 'transform 0.05s linear', 500);
-    }
-
-    // ── Minimap Logic (Interactive & Accurate) ──────────────────────────
     function initMinimap() {
-        const miniContent = document.getElementById('minimap-content');
-        miniContent.innerHTML = '';
-        
-        const bounds = getContentBounds();
-        if (!bounds) return;
+        const mini = document.getElementById('minimap-content');
+        if (!mini) return;
+        mini.innerHTML = '';
+        const b = getContentBounds();
+        if (!b) return;
 
-        // Use content bounds with extra margin for better visibility
         const margin = 1000;
-        const totalW = bounds.width + margin * 2;
-        const totalH = bounds.height + margin * 2;
-        const startX = bounds.minX - margin;
-        const startY = bounds.minY - margin;
+        const totalW = b.width + margin * 2;
+        const totalH = b.height + margin * 2;
+        const startX = b.minX - margin;
+        const startY = b.minY - margin;
 
-        const cards = document.querySelectorAll('.sticker-card');
-        cards.forEach(card => {
+        window.allCardData.forEach(c => {
             const dot = document.createElement('div');
             dot.className = 'minimap-dot';
-            dot.style.left = ((card.offsetLeft - startX) / totalW) * 100 + '%'; 
-            dot.style.top = ((card.offsetTop - startY) / totalH) * 100 + '%';
-            miniContent.appendChild(dot);
+            dot.style.left = ((c.x - startX) / totalW) * 100 + '%';
+            dot.style.top = ((c.y - startY) / totalH) * 100 + '%';
+            mini.appendChild(dot);
         });
 
-        // Store these bounds for viewport tracking
         window.miniBounds = { totalW, totalH, startX, startY };
     }
 
-    document.getElementById('minimap-container').addEventListener('click', (e) => {
+    document.getElementById('minimap-container')?.addEventListener('click', (e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         const x = (e.clientX - rect.left) / rect.width;
         const y = (e.clientY - rect.top) / rect.height;
@@ -743,16 +663,9 @@
         if (!window.miniBounds) return;
         const { totalW, totalH, startX, startY } = window.miniBounds;
 
-        // Map minimap click to canvas translation
         const targetX = startX + x * totalW;
         const targetY = startY + y * totalH;
 
-        const viewRect = viewport.getBoundingClientRect();
-        translateX = (viewRect.width / 2) - (targetX * scale);
-        translateY = (viewRect.height / 2) - (targetY * scale);
-        
-        canvas.style.transition = 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
-        updateTransform();
         setTimeout(() => canvas.style.transition = 'transform 0.05s linear', 600);
     });
 

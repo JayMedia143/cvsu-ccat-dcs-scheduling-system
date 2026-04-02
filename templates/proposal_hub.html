@@ -110,55 +110,77 @@
 <!-- INFINITE CANVAS MODAL -->
 <div class="modal fade" id="hubPreviewModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen">
-        <div class="modal-content" style="background:#f0f2f5;">
-            <div class="modal-header py-1 px-3 bg-white border-bottom shadow-sm">
-                <div class="d-flex align-items-center gap-2">
-                    <h6 id="pvModalTitle" class="mb-0 fw-bold">Draft Preview</h6>
-                    <select id="pvTypeSelect" class="form-select form-select-sm border-0 fw-bold bg-light" style="width:auto">
+        <div class="modal-content d-flex flex-column" style="background:#f1f5f9;">
+            <!-- Premium Pill Topbar -->
+            <div class="pv-topbar">
+                <div class="pv-title-pill">
+                    <i class="bi bi-calendar3-fill me-2"></i><span id="pvDraftName">Draft Preview</span>
+                </div>
+                <div class="pv-pill-select-wrap">
+                    <span class="pv-pill-label">View:</span>
+                    <select id="pvTypeSelect" class="form-select form-select-sm pv-pill-select">
                         <option value="section">Sections</option>
                         <option value="faculty">Faculty</option>
                         <option value="room">Rooms</option>
                     </select>
                 </div>
-                <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
-                    <div class="input-group input-group-sm" style="width:150px;">
-                        <input type="text" id="pvSearch" class="form-control form-control-sm border-0 bg-light rounded-pill" placeholder="Find..." oninput="pvSearchCanvas(this.value)">
-                    </div>
-                    <select id="pvSortSelect" class="form-select form-select-sm border-0 bg-light fw-bold" style="width:auto" onchange="pvApplySort()">
-                        <option value="asc">A &#8594; Z</option>
-                        <option value="desc">Z &#8594; A</option>
+                <div class="pv-pill-select-wrap">
+                    <span class="pv-pill-label">Sort:</span>
+                    <select id="pvSortSelect" class="form-select form-select-sm pv-pill-select" onchange="pvApplySort()">
+                        <option value="asc">A &mdash; Z</option>
+                        <option value="desc">Z &mdash; A</option>
                     </select>
-                    <button class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold" onclick="pvFitView()">
-                        <i class="bi bi-aspect-ratio"></i> Fit All
+                </div>
+                <div class="pv-search-pill">
+                    <i class="bi bi-search" style="color:#999;font-size:0.8rem;"></i>
+                    <input type="text" id="pvSearch" placeholder="Find&hellip;" oninput="pvSearchCanvas(this.value)">
+                </div>
+                <div class="ms-auto d-flex align-items-center gap-2">
+                    <button class="btn btn-outline-success pv-pill-btn d-flex align-items-center gap-2" onclick="pvFitView()">
+                        <i class="bi bi-arrows-angle-contract"></i> <span>Fit All</span>
                     </button>
-                    <button class="btn btn-sm btn-success rounded-pill px-3 fw-bold" onclick="pvResetView()">
-                        <i class="bi bi-arrows-fullscreen"></i> Center
+                    <button class="btn btn-success pv-pill-btn d-flex align-items-center gap-2" onclick="pvResetView()">
+                        <i class="bi bi-arrows-fullscreen"></i> <span>Center</span>
                     </button>
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-secondary" onclick="pvZoomCanvas(-0.1)"><i class="bi bi-dash-lg"></i></button>
-                        <button class="btn btn-outline-secondary px-2 fw-bold" style="min-width:52px" id="pvZoomLevel">12%</button>
-                        <button class="btn btn-outline-secondary" onclick="pvZoomCanvas(0.1)"><i class="bi bi-plus-lg"></i></button>
+                    <div class="pv-zoom-pill">
+                        <button class="btn pv-zoom-btn" onclick="pvZoom(-0.1)"><i class="bi bi-dash"></i></button>
+                        <span class="pv-zoom-val" id="pvZoomLevel">12%</span>
+                        <button class="btn pv-zoom-btn" onclick="pvZoom(0.1)"><i class="bi bi-plus"></i></button>
                     </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="pv-close-x ms-2" data-bs-dismiss="modal">
+                        <i class="bi bi-x"></i>
+                    </button>
                 </div>
             </div>
-            <div class="modal-body p-0 overflow-hidden position-relative" style="background: radial-gradient(circle, #d0d0d0 1px, transparent 1px); background-size: 20px 20px;">
-                <div id="pvViewport" class="w-100 h-100" style="cursor:grab;">
-                    <div id="pvCanvas" style="position:absolute; transform-origin: 0 0;"></div>
+            <!-- Canvas viewport -->
+            <div class="modal-body p-0 position-relative overflow-hidden" style="flex:1;">
+                <div id="pvViewport" style="position:absolute;inset:0;overflow:hidden;cursor:grab;">
+                    <div id="pvCanvas" style="position:absolute;transform-origin:0 0;will-change:transform;"></div>
                 </div>
-                <div id="pvMinimap">
-                    <div id="pvMinimapContent"></div>
-                    <div id="pvMinimapBox"></div>
+                <!-- Zoom Badge -->
+                <div id="pvZoomBadge">Zoom: 12%</div>
+                <!-- Minimap -->
+                <div id="pvMinimap" style="position:absolute;bottom:20px;right:20px;width:180px;height:135px;
+                     background:rgba(255,255,255,0.85);backdrop-filter:blur(8px);border-radius:10px;
+                     border:1px solid rgba(0,0,0,0.1);box-shadow:0 4px 16px rgba(0,0,0,0.1);overflow:hidden;z-index:20;cursor:pointer;">
+                    <div id="pvMinimapContent" style="position:absolute;inset:0;"></div>
+                    <div id="pvMinimapBox" style="position:absolute;border:2px solid #198754;background:rgba(25,135,84,0.1);pointer-events:none;"></div>
                 </div>
-                <!-- Presentation Overlay -->
-                <div id="pvPresOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.92);backdrop-filter:blur(10px);z-index:2000;display:none;align-items:center;justify-content:center;cursor:grab;">
-                    <button onclick="pvClosePresentation()" style="position:fixed;top:18px;right:28px;font-size:2.4rem;color:rgba(255,255,255,0.7);background:none;border:none;line-height:1;cursor:pointer;">&times;</button>
-                    <button class="pv-pres-nav" onclick="pvShowPrev()" style="position:fixed;left:24px;top:50%;transform:translateY(-50%);width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:1.8rem;display:flex;align-items:center;justify-content:center;cursor:pointer;">&#8249;</button>
-                    <button class="pv-pres-nav" onclick="pvShowNext()" style="position:fixed;right:24px;top:50%;transform:translateY(-50%);width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;font-size:1.8rem;display:flex;align-items:center;justify-content:center;cursor:pointer;">&#8250;</button>
-                    <div id="pvPresWrap" style="width:800px;height:1130px;background:#fff;box-shadow:0 0 100px rgba(0,0,0,0.8);transform-origin:center center;transition:transform 0.05s linear;">
-                        <iframe id="pvPresIframe" style="width:100%;height:100%;border:none;pointer-events:none;"></iframe>
+                <!-- Cinema / Presentation Overlay -->
+                <div id="pvCinemaOverlay">
+                    <button class="pv-pres-close" onclick="pvClosePresentation()"><i class="bi bi-x-lg"></i></button>
+                    <button class="pv-pres-nav-btn pv-pres-prev" onclick="pvShowPrev()"><i class="bi bi-chevron-left"></i></button>
+                    <button class="pv-pres-nav-btn pv-pres-next" onclick="pvShowNext()"><i class="bi bi-chevron-right"></i></button>
+                    <div class="pv-pres-container" id="pvPresBackdrop">
+                        <div class="pv-pres-iframe-wrap" id="pvPresWrap">
+                            <iframe id="pvPresIframe"></iframe>
+                        </div>
                     </div>
-                    <div id="pvPresLabel" style="position:fixed;bottom:18px;color:rgba(255,255,255,0.7);font-weight:700;font-size:0.95rem;"></div>
+                    <div class="pv-pres-footer">
+                        <span id="pvPresLabel">&hellip;</span> &nbsp;|&nbsp;
+                        Press <kbd style="color:#aaa;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:3px;padding:1px 5px;">ESC</kbd> to exit &nbsp;|&nbsp;
+                        Drag to Pan &nbsp;|&nbsp; Scroll to Zoom
+                    </div>
                 </div>
             </div>
         </div>
@@ -342,24 +364,28 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
 /* Draft Card */
 .msg-draft-card {
     display: flex; align-items: center; gap: 12px;
-    background: rgba(255,255,255,0.14) !important; color: inherit;
-    border: none; border-radius: 14px;
-    padding: 12px 14px; margin-top: 10px; text-decoration: none !important;
-    width: 100%; transition: background 0.2s; box-sizing: border-box;
+    background: rgba(255,255,255,0.1) !important; color: inherit;
+    border: none; border-left: 3px solid rgba(255,255,255,0.5); border-radius: 12px;
+    padding: 8px; margin-top: 0; text-decoration: none !important;
+    width: 100%; transition: background 0.2s, transform 0.15s, box-shadow 0.15s; box-sizing: border-box;
 }
-.bubble-wrap.them .msg-draft-card { background: #fff !important; border: 1px solid #e4e6eb; color: #050505; }
-.bubble-wrap.me .msg-draft-card:hover { background: rgba(255,255,255,0.22) !important; }
-.bubble-wrap.them .msg-draft-card:hover { background: #f5f6f7 !important; }
+.bubble-wrap.them .msg-draft-card {
+    background: #fff !important; border-left: 3px solid #198754; color: #050505;
+    box-shadow: 0 2px 8px rgba(25,135,84,0.08);
+}
+.bubble-wrap.me .msg-draft-card:hover { background: rgba(255,255,255,0.18) !important; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.bubble-wrap.them .msg-draft-card:hover { background: #f0fdf4 !important; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(25,135,84,0.12); }
 .msg-draft-icon {
-    width: 42px; height: 42px; border-radius: 10px; flex-shrink: 0;
-    background: rgba(255,255,255,0.22); display: flex; align-items: center;
-    justify-content: center; font-size: 1.25rem;
+    width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+    background: #198754; color: #fff; display: flex; align-items: center;
+    justify-content: center; font-size: 1.15rem;
 }
-.bubble-wrap.them .msg-draft-icon { background: #e4e6eb; color: #050505; }
+.bubble-wrap.me .msg-draft-icon { background: rgba(255,255,255,0.25); }
 .msg-draft-info { flex: 1; min-width: 0; }
-.msg-draft-name { font-weight: 700; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.msg-draft-sub { font-size: 0.72rem; opacity: 0.65; margin-top: 2px; letter-spacing: 0.2px; }
-.msg-draft-chevron { font-size: 0.8rem; opacity: 0.4; flex-shrink: 0; }
+.msg-draft-name { font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg-draft-sub { font-size: 0.7rem; opacity: 0.6; margin-top: 2px; letter-spacing: 0.2px; }
+.msg-draft-chevron { font-size: 0.72rem; color: #198754; font-weight: 700; flex-shrink: 0; white-space: nowrap; opacity: 0.85; }
+.bubble-wrap.me .msg-draft-chevron { color: rgba(255,255,255,0.8); }
 
 /* 3. INPUT */
 .chat-input-main { padding: 12px 16px 36px; border-top: 1px solid var(--ms-border); background: #fff; }
@@ -407,14 +433,77 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
 }
 .picker-item:hover { background: #f9f9f9; }
 
-/* 7. PREVIEW MODAL */
-#pvMinimap { position: absolute; bottom: 20px; right: 20px; width: 220px; height: 150px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); border-radius: 12px; border: 1px solid #ddd; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-#pvMinimapBox { border: 2px solid var(--ms-blue); background: rgba(0,132,255,0.1); border-radius: 4px; pointer-events: none; }
-.pv-card { background: #fff; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-#pvCinemaOverlay { position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 500; display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
-.pv-pres-wrap { width: 800px; height: 1100px; background: white; box-shadow: 0 0 100px rgba(0,0,0,0.5); }
-.btn-close-cinema { position: absolute; top: 20px; right: 30px; font-size: 3rem; color: white; background: none; border: none; opacity: 0.5; transition: opacity 0.3s; }
-.btn-close-cinema:hover { opacity: 1; }
+/* 7. PREVIEW MODAL — full parity with schedule_editor draft preview */
+#pvViewport {
+    background-color: #f8fafc;
+    background-image: radial-gradient(rgba(0,0,0,0.18) 1.2px, transparent 1.2px);
+    background-size: 22px 22px;
+    user-select: none;
+}
+#pvCanvas .pv-card {
+    transition: opacity 0.3s ease, transform 0.05s linear;
+}
+.pv-card.pv-dimmed {
+    opacity: 0.15;
+    pointer-events: none;
+}
+.pv-card {
+    background: transparent; border-radius: 0; box-shadow: none; border: none;
+    overflow: visible; transition: all 0.4s cubic-bezier(0.4,0,0.2,1); position: relative; padding: 0;
+}
+.pv-card:hover { transform: translateY(-5px) scale(1.02); z-index: 20; }
+.pv-card::before {
+    content: ""; position: absolute; inset: 0;
+    background-image: url('https://www.transparenttextures.com/patterns/paper.png');
+    opacity: 0.1; pointer-events: none; z-index: 1;
+}
+.pv-card .card-iframe-wrap { width: 800px; height: 1130px; background: white; border: 1px solid #ddd; position: relative; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+.pv-card .card-iframe-wrap iframe { width: 800px; height: 1130px; border: none; pointer-events: none; transform: scale(1.0); transform-origin: top left; transition: opacity 0.3s ease; overflow: hidden; }
+.pv-card .card-header-bar {
+    position: absolute; top: 0; left: 0; right: 0; height: 34px; background: #198754;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px; color: white; font-weight: bold; font-size: 0.85rem; z-index: 10;
+}
+.pv-card .card-maximize-btn {
+    background: rgba(255,255,255,0.2); color: white; border: none;
+    width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center;
+    justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 0.75rem;
+}
+.pv-card .card-maximize-btn:hover { background: rgba(255,255,255,0.4); transform: scale(1.1); }
+/* Topbar */
+.pv-topbar { background: #fff; padding: 10px 20px; display: flex; align-items: center; gap: 12px; z-index: 100; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; }
+.pv-topbar.focus-mode { display: none !important; }
+.pv-title-pill { font-size: 0.95rem; font-weight: 800; color: #157347; display: flex; align-items: center; gap: 6px; padding-right: 15px; border-right: 1px solid #eee; }
+.pv-pill-select-wrap { display: flex; align-items: center; gap: 8px; background: #f8f9fa; border-radius: 30px; padding: 4px 12px; border: 1px solid #eee; }
+.pv-pill-label { font-size: 0.8rem; color: #666; font-weight: 600; }
+.pv-pill-select { border: none !important; background: transparent; font-weight: 700; font-size: 0.85rem; color: #333; cursor: pointer; padding: 0 5px !important; width: auto; }
+.pv-search-pill { background: #f8f9fa; border-radius: 30px; padding: 4px 15px; border: 1px solid #eee; display: flex; align-items: center; gap: 8px; min-width: 150px; }
+.pv-search-pill input { border: none !important; background: transparent !important; font-size: 0.85rem; outline: none; width: 100%; }
+.pv-pill-btn { border-radius: 30px !important; padding: 6px 20px !important; font-size: 0.8rem !important; font-weight: 700 !important; white-space: nowrap !important; }
+.pv-zoom-pill { display: flex; align-items: center; background: #f8f9fa; border-radius: 30px; padding: 4px 8px; border: 1px solid #eee; gap: 10px; }
+.pv-zoom-btn { width: 26px; height: 26px; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; background: #fff !important; border: 1px solid #ddd !important; padding: 0 !important; color: #666; transition: all 0.2s; cursor: pointer; }
+.pv-zoom-btn:hover { background: #eee !important; color: #000; }
+.pv-zoom-val { font-size: 0.85rem; font-weight: 700; color: #157347; min-width: 45px; text-align: center; }
+.pv-close-x { font-size: 1.5rem; color: #999; cursor: pointer; transition: color 0.2s; background: none; border: none; padding: 0; display: flex; align-items: center; }
+.pv-close-x:hover { color: #333; }
+#pvZoomBadge { position: absolute; bottom: 20px; left: 20px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); padding: 5px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; color: #198754; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 20; pointer-events: none; }
+#pvMinimap { position: absolute; bottom: 20px; right: 20px; width: 180px; height: 135px; background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 4px 16px rgba(0,0,0,0.1); overflow: hidden; z-index: 20; cursor: pointer; }
+#pvMinimapContent { position: absolute; inset: 0; }
+#pvMinimapBox { position: absolute; border: 2px solid #198754; background: rgba(25,135,84,0.1); pointer-events: none; }
+/* Cinema overlay */
+#pvCinemaOverlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 500; display: none; flex-direction: column; align-items: center; justify-content: center; cursor: grab; user-select: none; }
+#pvCinemaOverlay.active { display: flex; }
+#pvCinemaOverlay:active { cursor: grabbing; }
+.pv-pres-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.pv-pres-iframe-wrap { width: 800px; height: 1130px; background: white; box-shadow: 0 0 100px rgba(0,0,0,0.8); transform-origin: center center; transition: transform 0.05s linear; pointer-events: auto; flex-shrink: 0; }
+.pv-pres-iframe-wrap iframe { width: 100%; height: 100%; border: none; pointer-events: none; }
+.pv-pres-nav-btn { position: absolute; top: 50%; transform: translateY(-50%); width: 70px; height: 70px; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; cursor: pointer; z-index: 10; transition: all 0.3s; }
+.pv-pres-nav-btn:hover { background: #198754; border-color: #198754; transform: translateY(-50%) scale(1.1); }
+.pv-pres-prev { left: 30px; }
+.pv-pres-next { right: 30px; }
+.pv-pres-close { position: absolute; top: 20px; right: 20px; color: rgba(255,255,255,0.4); font-size: 2.5rem; cursor: pointer; z-index: 10; transition: color 0.3s; line-height: 1; background: none; border: none; }
+.pv-pres-close:hover { color: white; }
+.pv-pres-footer { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.5); font-size: 0.9rem; letter-spacing: 1px; white-space: nowrap; }
 
 /* Sent / Seen Status */
 .bubble-status { font-size: 0.6rem; color: #8a8d91; margin-top: 1px; text-align: right; padding-right: 2px; }
@@ -638,12 +727,12 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
             const d = data.attached_draft;
             draftHtml = `
                 <a href="#" class="msg-draft-card" onclick="viewDraft(${d.id},'${d.name}','${currentSemester}');return false;">
-                    <div class="msg-draft-icon"><i class="bi bi-file-earmark-text-fill"></i></div>
+                    <div class="msg-draft-icon"><i class="bi bi-calendar3-fill"></i></div>
                     <div class="msg-draft-info">
                         <div class="msg-draft-name">${d.name}</div>
                         <div class="msg-draft-sub">Schedule Draft &bull; ${d.status}</div>
                     </div>
-                    <i class="bi bi-chevron-right msg-draft-chevron"></i>
+                    <span class="msg-draft-chevron">View &rarr;</span>
                 </a>`;
         }
 
@@ -845,7 +934,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         if (res.ok) location.reload();
     };
 
-    // ──────────────── INFINITE CANVAS PREVIEW (full parity with view_timetable.html) ────────────────
+    // ──────────────── INFINITE CANVAS PREVIEW (full parity with schedule_editor draft preview) ────────────────
     let pvActiveDraft = null;
     let pvCurrentType = 'section';
     let pvTranslateX = 0, pvTranslateY = 0, pvScale = 0.12;
@@ -869,7 +958,8 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         pvActiveDraft = id;
         pvCurrentType = 'section';
         pvEntityMap = null;
-        document.getElementById('pvModalTitle').textContent = `Preview: ${name}`;
+        const nameEl = document.getElementById('pvDraftName');
+        if (nameEl) nameEl.textContent = name;
         document.getElementById('pvTypeSelect').value = 'section';
         const pvSearchEl = document.getElementById('pvSearch');
         if (pvSearchEl) pvSearchEl.value = '';
@@ -902,211 +992,391 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
             : b.label.localeCompare(a.label));
     }
 
-    document.getElementById('pvTypeSelect').onchange = () => {
-        pvCurrentType = document.getElementById('pvTypeSelect').value;
-        pvLoadCanvas();
-    };
-
+    window.pvAllCardData = [];
     function pvLoadCanvas() {
         const canvas = document.getElementById('pvCanvas');
+        if (!canvas) return;
         canvas.innerHTML = '';
         const list = pvGetCurrentList();
+        const cols = 5;
 
-        list.forEach((item, idx) => {
-            const col = idx % 5;
-            const row = Math.floor(idx / 5);
-            const card = document.createElement('div');
-            card.className = 'pv-card';
-            card.style.cssText = `position:absolute;left:${col*950+500}px;top:${row*1300+500}px;width:800px;height:1130px;background:#fff;border:1px solid #ddd;box-shadow:0 4px 15px rgba(0,0,0,0.08);cursor:pointer;`;
-
-            // Maximize button
-            const maxBtn = document.createElement('button');
-            maxBtn.style.cssText = 'position:absolute;top:6px;right:6px;z-index:10;background:rgba(0,0,0,0.5);color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:0.75rem;cursor:pointer;';
-            maxBtn.innerHTML = '<i class="bi bi-arrows-angle-expand"></i>';
-            maxBtn.onclick = e => { e.stopPropagation(); pvOpenPresentation(idx); };
-            card.appendChild(maxBtn);
-
-            const label = document.createElement('div');
-            label.style.cssText = 'padding:8px 12px;background:#198754;color:#fff;font-weight:700;font-size:0.85rem;';
-            label.textContent = item.label;
-
-            const iframe = document.createElement('iframe');
-            iframe.src = pvUrlMap[pvCurrentType](item.id);
-            iframe.loading = 'lazy';
-            iframe.style.cssText = 'width:100%;height:1080px;border:none;pointer-events:none;display:block;';
-
-            card.appendChild(label);
-            card.appendChild(iframe);
-            card.addEventListener('dblclick', e => { e.stopPropagation(); pvOpenPresentation(idx); });
-            canvas.appendChild(card);
+        // 1. Memory Layout (Virtualization)
+        window.pvAllCardData = list.map((item, idx) => {
+            const col = idx % cols;
+            const row = Math.floor(idx / cols);
+            return {
+                id: item.id,
+                label: item.label,
+                lowerLabel: item.label.toLowerCase(),
+                url: pvUrlMap[pvCurrentType](item.id),
+                x: col * 950 + 500,
+                y: row * 1300 + 500,
+                width: 850,
+                height: 1200,
+                index: idx,
+                isMounted: false,
+                element: null
+            };
         });
 
-        setTimeout(pvResetView, 100);
+        // 2. Initial Draw
+        pvRenderVisibleCards();
+        pvResetView();
+        setTimeout(pvInitMinimap, 200);
+    }
+
+    function pvRenderVisibleCards() {
+        if (!window.pvAllCardData.length) return;
+        const vp = document.getElementById('pvViewport');
+        if (!vp) return;
+        const rect = vp.getBoundingClientRect();
+        const buffer = 1000;
+        
+        const vLeft   = (-pvTranslateX - buffer) / pvScale;
+        const vTop    = (-pvTranslateY - buffer) / pvScale;
+        const vWidth  = (rect.width  + buffer * 2) / pvScale;
+        const vHeight = (rect.height + buffer * 2) / pvScale;
+
+        window.pvAllCardData.forEach(card => {
+            const isVisible = (
+                card.x < vLeft + vWidth &&
+                card.x + card.width > vLeft &&
+                card.y < vTop + vHeight &&
+                card.y + card.height > vTop
+            );
+
+            if (isVisible && !card.isMounted) {
+                pvMountCard(card);
+            } else if (!isVisible && card.isMounted) {
+                pvUnmountCard(card);
+            }
+        });
+    }
+
+    function pvMountCard(data) {
+        const card = document.createElement('div');
+        card.className = 'pv-card';
+        card.id = `pv-card-${data.id}`;
+        card.dataset.label = data.lowerLabel;
+        card.style.cssText = `position:absolute;left:${data.x}px;top:${data.y}px;`;
+
+        // Apply Search Opacity if active
+        const q = document.getElementById('pvSearch')?.value.toLowerCase();
+        if (q && !data.lowerLabel.includes(q)) card.classList.add('pv-dimmed');
+
+        card.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            pvOpenPresentation(data.index);
+        });
+
+        card.innerHTML = `
+            <div class="card-header-bar">
+                <span>${data.label}</span>
+                <button class="card-maximize-btn" onclick="pvOpenPresentation(${data.index})" title="Maximize">
+                    <i class="bi bi-fullscreen"></i>
+                </button>
+            </div>
+            <div class="card-iframe-wrap">
+                <iframe src="${data.url}"></iframe>
+            </div>
+        `;
+        document.getElementById('pvCanvas').appendChild(card);
+        data.element = card;
+        data.isMounted = true;
+    }
+
+    function pvUnmountCard(data) {
+        if (data.element && data.element.parentNode) {
+            data.element.parentNode.removeChild(data.element);
+        }
+        data.element = null;
+        data.isMounted = false;
     }
 
     function pvGetContentBounds() {
-        const cards = document.getElementById('pvCanvas').querySelectorAll('.pv-card');
-        if (!cards.length) return null;
+        if (!window.pvAllCardData || !window.pvAllCardData.length) return null;
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        cards.forEach(c => {
-            const x = c.offsetLeft, y = c.offsetTop;
-            minX = Math.min(minX, x); minY = Math.min(minY, y);
-            maxX = Math.max(maxX, x + c.offsetWidth); maxY = Math.max(maxY, y + c.offsetHeight);
+        window.pvAllCardData.forEach(card => {
+            minX = Math.min(minX, card.x); minY = Math.min(minY, card.y);
+            maxX = Math.max(maxX, card.x + card.width); maxY = Math.max(maxY, card.y + card.height);
         });
-        return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
+        return { minX, minY, width: maxX - minX, height: maxY - minY };
     }
 
     window.pvResetView = function() {
-        const vp = document.getElementById('pvViewport');
-        const bounds = pvGetContentBounds();
-        if (!bounds) { pvScale = 0.12; pvTranslateX = 100; pvTranslateY = 100; pvUpdateTransform(); return; }
-        const vr = vp.getBoundingClientRect();
-        pvScale = 0.12;
-        const targetX = bounds.minX + 400;
-        const targetY = bounds.minY + 560;
-        pvTranslateX = vr.width / 2 - targetX * pvScale;
-        pvTranslateY = vr.height / 2 - targetY * pvScale;
-        const canvas = document.getElementById('pvCanvas');
-        canvas.style.transition = 'transform 0.6s cubic-bezier(0.34,1.56,0.64,1)';
-        pvUpdateTransform();
-        setTimeout(() => canvas.style.transition = 'transform 0.05s linear', 650);
-    };
-
-    function pvUpdateTransform() {
-        document.getElementById('pvCanvas').style.transform = `translate(${pvTranslateX}px,${pvTranslateY}px) scale(${pvScale})`;
-        document.getElementById('pvZoomLevel').textContent = Math.round(pvScale * 100) + '%';
-    }
-
-    function pvZoomCanvas(delta) {
-        pvScale = Math.max(0.04, Math.min(2.0, pvScale + delta));
-        pvUpdateTransform();
-    }
-
-    function pvFitView() {
         const bounds = pvGetContentBounds();
         if (!bounds) return;
         const vp = document.getElementById('pvViewport');
         const vr = vp.getBoundingClientRect();
-        const scaleX = (vr.width - 100) / bounds.width;
-        const scaleY = (vr.height - 100) / bounds.height;
-        pvScale = Math.min(Math.min(scaleX, scaleY), 0.5);
+        
+        // Preserve current scale
         pvTranslateX = vr.width / 2 - (bounds.minX + bounds.width / 2) * pvScale;
         pvTranslateY = vr.height / 2 - (bounds.minY + bounds.height / 2) * pvScale;
+        
         const canvas = document.getElementById('pvCanvas');
-        canvas.style.transition = 'transform 0.6s cubic-bezier(0.34,1.56,0.64,1)';
+        if (canvas) canvas.style.transition = 'transform 0.6s cubic-bezier(0.34,1.56,0.64,1)';
         pvUpdateTransform();
-        setTimeout(() => canvas.style.transition = 'transform 0.05s linear', 650);
+        setTimeout(() => { const c = document.getElementById('pvCanvas'); if (c) c.style.transition = 'transform 0.05s linear'; }, 650);
+    };
+
+    function pvUpdateTransform() {
+        const canvas = document.getElementById('pvCanvas');
+        if (canvas) canvas.style.transform = `translate(${pvTranslateX}px,${pvTranslateY}px) scale(${pvScale})`;
+        const pct = Math.round(pvScale * 100) + '%';
+        const zl = document.getElementById('pvZoomLevel');
+        if (zl) zl.textContent = pct;
+        const zb = document.getElementById('pvZoomBadge');
+        if (zb) zb.textContent = 'Zoom: ' + pct;
+        pvUpdateMinimap();
+        pvRenderVisibleCards();
+    }
+
+    window.pvZoomCanvas = function(delta) {
+        pvScale = Math.max(0.04, Math.min(2.0, pvScale + delta));
+        pvUpdateTransform();
+    };
+    window.pvZoom = function(delta) { pvZoomCanvas(delta); };
+
+    window.pvFitView = function() {
+        const bounds = pvGetContentBounds();
+        if (!bounds) return;
+        const vp = document.getElementById('pvViewport');
+        const vr = vp.getBoundingClientRect();
+        const padding = 150;
+        
+        pvScale = Math.min(
+            (vr.width - padding) / bounds.width,
+            (vr.height - padding) / bounds.height,
+            0.5
+        );
+        pvScale = Math.max(pvScale, 0.04);
+
+        pvTranslateX = vr.width / 2 - (bounds.minX + bounds.width / 2) * pvScale;
+        pvTranslateY = vr.height / 2 - (bounds.minY + bounds.height / 2) * pvScale;
+        
+        const canvas = document.getElementById('pvCanvas');
+        if (canvas) canvas.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        pvUpdateTransform();
+        setTimeout(() => { const c = document.getElementById('pvCanvas'); if (c) c.style.transition = 'transform 0.05s linear'; }, 650);
+    };
+
+    window.pvSearchCanvas = function(q) {
+        q = q ? q.toLowerCase() : '';
+        if (!q) {
+            window.pvAllCardData.forEach(card => {
+                if (card.isMounted && card.element) card.element.classList.remove('pv-dimmed');
+            });
+            return;
+        }
+        let found = null;
+        window.pvAllCardData.forEach(card => {
+            const match = card.lowerLabel.includes(q);
+            if (card.isMounted && card.element) {
+                if (match) card.element.classList.remove('pv-dimmed');
+                else card.element.classList.add('pv-dimmed');
+            }
+            if (match && !found) found = card;
+        });
+        if (found && q.length > 2) pvFocusData(found);
     }
 
     function pvApplySort() { pvLoadCanvas(); }
 
-    function pvFocusCard(card) {
+    function pvFocusData(data) {
         const vp = document.getElementById('pvViewport');
+        if (!vp || !data) return;
         const vr = vp.getBoundingClientRect();
-        const cx = card.offsetLeft + card.offsetWidth / 2;
-        const cy = card.offsetTop  + card.offsetHeight / 2;
-        pvScale = 0.3;
+        const cx = data.x + data.width / 2;
+        const cy = data.y + data.height / 2;
         pvTranslateX = vr.width / 2 - cx * pvScale;
         pvTranslateY = vr.height / 2 - cy * pvScale;
         const canvas = document.getElementById('pvCanvas');
-        canvas.style.transition = 'transform 0.5s cubic-bezier(0.4,0,0.2,1)';
+        if (canvas) canvas.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
         pvUpdateTransform();
-        setTimeout(() => canvas.style.transition = 'transform 0.05s linear', 500);
+        setTimeout(() => { const c = document.getElementById('pvCanvas'); if (c) c.style.transition = 'transform 0.05s linear'; }, 500);
     }
 
-    function pvSearchCanvas(q) {
-        let found = null;
-        document.getElementById('pvCanvas').querySelectorAll('.pv-card').forEach(card => {
-            const lbl = card.querySelector('div') ? card.querySelector('div').textContent.toLowerCase() : '';
-            if (q && lbl.includes(q.toLowerCase())) {
-                if (!found) found = card;
-                card.style.opacity = '1';
-            } else if (q) {
-                card.style.opacity = '0.3';
-            } else {
-                card.style.opacity = '1';
-            }
+    // Minimap
+    function pvInitMinimap() {
+        const mm = document.getElementById('pvMinimap');
+        const mmContent = document.getElementById('pvMinimapContent');
+        if (!mm || !mmContent) return;
+        const bounds = pvGetContentBounds();
+        if (!bounds) return;
+        mmContent.innerHTML = '';
+        const margin = 1000;
+        const totalW = bounds.width + margin * 2;
+        const totalH = bounds.height + margin * 2;
+        const startX = bounds.minX - margin;
+        const startY = bounds.minY - margin;
+        window.pvMiniBounds = { totalW, totalH, startX, startY };
+        const mmW = mm.offsetWidth, mmH = mm.offsetHeight;
+        window.pvAllCardData.forEach(card => {
+            const dot = document.createElement('div');
+            dot.style.cssText = `position:absolute;width:8px;height:10px;border-radius:2px;background:#198754;opacity:.7;
+                left:${((card.x - startX) / totalW * mmW).toFixed(1)}px;
+                top:${((card.y - startY) / totalH * mmH).toFixed(1)}px;`;
+            mmContent.appendChild(dot);
         });
-        if (found && q.length > 1) pvFocusCard(found);
+        pvUpdateMinimap();
     }
 
-    // Drag
-    const pvVp = document.getElementById('pvViewport');
-    pvVp.addEventListener('mousedown', e => {
-        if (e.button === 0 || e.button === 1 || e.button === 2) {
-            pvIsDragging = true;
-            pvStartX = e.clientX - pvTranslateX;
-            pvStartY = e.clientY - pvTranslateY;
-            pvVp.style.cursor = 'grabbing';
-        }
-    });
-    pvVp.addEventListener('contextmenu', e => e.preventDefault());
+    function pvUpdateMinimap() {
+        const mm = document.getElementById('pvMinimap');
+        const vp = document.getElementById('pvViewport');
+        const box = document.getElementById('pvMinimapBox');
+        if (!mm || !vp || !box || !window.pvMiniBounds) return;
+        const { totalW, totalH, startX, startY } = window.pvMiniBounds;
+        const rect = vp.getBoundingClientRect();
+        const mmW = mm.offsetWidth, mmH = mm.offsetHeight;
+        const vW = rect.width / pvScale, vH = rect.height / pvScale;
+        const vX = -pvTranslateX / pvScale, vY = -pvTranslateY / pvScale;
+        box.style.width  = Math.min((vW / totalW) * mmW, mmW) + 'px';
+        box.style.height = Math.min((vH / totalH) * mmH, mmH) + 'px';
+        box.style.left   = ((vX - startX) / totalW) * mmW + 'px';
+        box.style.top    = ((vY - startY) / totalH) * mmH + 'px';
+    }
 
-    window.addEventListener('mousemove', e => {
-        if (!pvIsDragging) return;
-        pvTranslateX = e.clientX - pvStartX;
-        pvTranslateY = e.clientY - pvStartY;
-        pvUpdateTransform();
-    });
-    window.addEventListener('mouseup', () => {
-        pvIsDragging = false;
-        pvVp.style.cursor = 'grab';
-    });
-
-    // Scroll: Ctrl=zoom, Shift=H-pan, plain=V-pan
-    pvVp.addEventListener('wheel', e => {
-        e.preventDefault();
-        if (e.ctrlKey) {
-            const zoomSpeed = 0.001;
-            const delta = -e.deltaY * zoomSpeed;
-            const oldScale = pvScale;
-            const newScale = Math.max(0.04, Math.min(2.0, pvScale + delta));
-            const rect = pvVp.getBoundingClientRect();
-            const mx = e.clientX - rect.left;
-            const my = e.clientY - rect.top;
-            pvTranslateX -= (mx - pvTranslateX) * (newScale / oldScale - 1);
-            pvTranslateY -= (my - pvTranslateY) * (newScale / oldScale - 1);
-            pvScale = newScale;
-        } else if (e.shiftKey) {
-            pvTranslateX -= e.deltaY;
-        } else {
-            pvTranslateY -= e.deltaY;
+    // Viewport drag + pan + zoom
+    document.addEventListener('DOMContentLoaded', () => {
+        const pvVp = document.getElementById('pvViewport');
+        if (pvVp) {
+            pvVp.addEventListener('mousedown', e => {
+                pvIsDragging = true;
+                pvStartX = e.clientX - pvTranslateX;
+                pvStartY = e.clientY - pvTranslateY;
+                pvVp.style.cursor = 'grabbing';
+            });
+            pvVp.addEventListener('mousemove', e => {
+                if (!pvIsDragging) return;
+                pvTranslateX = e.clientX - pvStartX;
+                pvTranslateY = e.clientY - pvStartY;
+                pvUpdateTransform();
+            });
+            ['mouseup','mouseleave'].forEach(ev => pvVp.addEventListener(ev, () => {
+                pvIsDragging = false; pvVp.style.cursor = 'grab';
+            }));
+            pvVp.addEventListener('contextmenu', e => e.preventDefault());
+            pvVp.addEventListener('wheel', e => {
+                e.preventDefault();
+                if (e.ctrlKey) {
+                    const rect = pvVp.getBoundingClientRect();
+                    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+                    const oldScale = pvScale;
+                    pvScale = Math.max(0.04, Math.min(2.0, pvScale - e.deltaY * 0.001));
+                    pvTranslateX -= (mx - pvTranslateX) * (pvScale / oldScale - 1);
+                    pvTranslateY -= (my - pvTranslateY) * (pvScale / oldScale - 1);
+                } else if (e.shiftKey) {
+                    pvTranslateX -= e.deltaY;
+                } else {
+                    pvTranslateY -= e.deltaY;
+                }
+                pvUpdateTransform();
+            }, { passive: false });
         }
-        pvUpdateTransform();
-    }, { passive: false });
+
+        // Minimap click-to-navigate
+        const pvMm = document.getElementById('pvMinimap');
+        if (pvMm) {
+            pvMm.addEventListener('click', e => {
+                if (!window.pvMiniBounds) return;
+                const rect = pvMm.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width;
+                const y = (e.clientY - rect.top) / rect.height;
+                const { totalW, totalH, startX, startY } = window.pvMiniBounds;
+                const targetX = startX + x * totalW;
+                const targetY = startY + y * totalH;
+                const vp2 = document.getElementById('pvViewport');
+                if (!vp2) return;
+                const viewRect = vp2.getBoundingClientRect();
+                pvTranslateX = viewRect.width / 2 - targetX * pvScale;
+                pvTranslateY = viewRect.height / 2 - targetY * pvScale;
+                const cvs = document.getElementById('pvCanvas');
+                if (cvs) cvs.style.transition = 'transform 0.6s cubic-bezier(0.4,0,0.2,1)';
+                pvUpdateTransform();
+                setTimeout(() => { const c = document.getElementById('pvCanvas'); if (c) c.style.transition = 'transform 0.05s linear'; }, 600);
+            });
+        }
+
+        // Cinema events
+        const cinemaOverlay = document.getElementById('pvCinemaOverlay');
+        if (cinemaOverlay) {
+            cinemaOverlay.addEventListener('mousedown', e => {
+                if (e.target.closest('.pv-pres-nav-btn') || e.target.closest('.pv-pres-close')) return;
+                pvPresIsDragging = true;
+                pvPresStartX = e.clientX - pvPresX;
+                pvPresStartY = e.clientY - pvPresY;
+            });
+            cinemaOverlay.addEventListener('mousemove', e => {
+                if (!pvPresIsDragging) return;
+                pvPresX = e.clientX - pvPresStartX;
+                pvPresY = e.clientY - pvPresStartY;
+                pvUpdatePresTransform();
+            });
+            ['mouseup','mouseleave'].forEach(ev => cinemaOverlay.addEventListener(ev, () => { pvPresIsDragging = false; }));
+            cinemaOverlay.addEventListener('wheel', e => {
+                if (!cinemaOverlay.classList.contains('active')) return;
+                e.preventDefault();
+                pvPresScale = Math.max(0.4, Math.min(4.0, pvPresScale - e.deltaY * 0.0015));
+                pvUpdatePresTransform();
+            }, { passive: false });
+            cinemaOverlay.addEventListener('click', e => {
+                if (e.target.id === 'pvPresBackdrop' || e.target.id === 'pvCinemaOverlay') pvClosePresentation();
+            });
+            const pvPresWrapEl = document.getElementById('pvPresWrap');
+            if (pvPresWrapEl) pvPresWrapEl.addEventListener('click', e => e.stopPropagation());
+        }
+
+        // Keyboard: arrows + ESC
+        document.addEventListener('keydown', e => {
+            const overlay = document.getElementById('pvCinemaOverlay');
+            if (!overlay?.classList.contains('active')) return;
+            if (e.key === 'ArrowRight') pvShowNext();
+            else if (e.key === 'ArrowLeft') pvShowPrev();
+            else if (e.key === 'Escape') pvClosePresentation();
+        });
+
+        // Type select
+        document.getElementById('pvTypeSelect')?.addEventListener('change', function() {
+            pvCurrentType = this.value; pvApplySort();
+        });
+    });
 
     // ── Presentation Mode ───────────────────────────────────────
     let pvPresIndex = -1;
     let pvPresScale = 1.0, pvPresX = 0, pvPresY = 0;
     let pvPresIsDragging = false, pvPresStartX = 0, pvPresStartY = 0;
 
-    const pvPresOverlay = document.getElementById('pvPresOverlay');
-    const pvPresWrap = document.getElementById('pvPresWrap');
-    const pvPresIframe = document.getElementById('pvPresIframe');
-    const pvPresLabel = document.getElementById('pvPresLabel');
-
-    function pvPresUpdateTransform() {
-        pvPresWrap.style.transform = `translate(${pvPresX}px,${pvPresY}px) scale(${pvPresScale})`;
+    function pvUpdatePresTransform() {
+        const wrap = document.getElementById('pvPresWrap');
+        if (wrap) wrap.style.transform = `translate(${pvPresX}px,${pvPresY}px) scale(${pvPresScale})`;
     }
 
     window.pvOpenPresentation = function(index) {
         pvPresIndex = index;
         const list = pvGetCurrentList();
         if (index < 0 || index >= list.length) return;
-        const baseScale = Math.min(1.0, (window.innerHeight * 0.9) / 1130);
-        pvPresScale = baseScale; pvPresX = 0; pvPresY = 0;
-        pvPresUpdateTransform();
+        pvPresScale = Math.min(1.0, (window.innerHeight * 0.9) / 1130);
+        pvPresX = 0; pvPresY = 0;
+        pvUpdatePresTransform();
         const item = list[index];
-        pvPresIframe.src = pvUrlMap[pvCurrentType](item.id);
-        pvPresLabel.textContent = item.label;
-        pvPresOverlay.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
+        const iframe = document.getElementById('pvPresIframe');
+        if (iframe) iframe.src = pvUrlMap[pvCurrentType](item.id);
+        const lbl = document.getElementById('pvPresLabel');
+        if (lbl) lbl.textContent = item.label;
+        const overlay = document.getElementById('pvCinemaOverlay');
+        if (overlay) overlay.classList.add('active');
+        const topbar = document.querySelector('.pv-topbar');
+        if (topbar) topbar.classList.add('focus-mode');
     };
 
     window.pvClosePresentation = function() {
-        pvPresOverlay.style.display = 'none';
-        pvPresIframe.src = '';
-        document.body.style.overflow = '';
+        const overlay = document.getElementById('pvCinemaOverlay');
+        if (overlay) overlay.classList.remove('active');
+        const iframe = document.getElementById('pvPresIframe');
+        if (iframe) iframe.src = '';
+        const topbar = document.querySelector('.pv-topbar');
+        if (topbar) topbar.classList.remove('focus-mode');
     };
 
     window.pvShowNext = function() {
@@ -1118,36 +1388,5 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         const list = pvGetCurrentList();
         pvOpenPresentation(pvPresIndex > 0 ? pvPresIndex - 1 : list.length - 1);
     };
-
-    // Presentation drag
-    pvPresOverlay.addEventListener('mousedown', e => {
-        if (e.target.closest('.pv-pres-nav')) return;
-        pvPresIsDragging = true;
-        pvPresStartX = e.clientX - pvPresX;
-        pvPresStartY = e.clientY - pvPresY;
-    });
-    window.addEventListener('mousemove', e => {
-        if (!pvPresIsDragging || pvPresOverlay.style.display === 'none') return;
-        pvPresX = e.clientX - pvPresStartX;
-        pvPresY = e.clientY - pvPresStartY;
-        pvPresUpdateTransform();
-    });
-    window.addEventListener('mouseup', () => { pvPresIsDragging = false; });
-
-    // Presentation zoom
-    pvPresOverlay.addEventListener('wheel', e => {
-        if (pvPresOverlay.style.display === 'none') return;
-        e.preventDefault();
-        pvPresScale = Math.max(0.4, Math.min(4.0, pvPresScale + (-e.deltaY * 0.0015)));
-        pvPresUpdateTransform();
-    }, { passive: false });
-
-    // Keyboard: arrows + ESC
-    window.addEventListener('keydown', e => {
-        if (pvPresOverlay.style.display === 'none') return;
-        if (e.key === 'ArrowRight') pvShowNext();
-        else if (e.key === 'ArrowLeft') pvShowPrev();
-        else if (e.key === 'Escape') pvClosePresentation();
-    });
 </script>
 {% endblock %}

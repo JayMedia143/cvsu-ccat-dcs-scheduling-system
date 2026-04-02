@@ -54,6 +54,24 @@ def role_required(*roles):
         return decorated_function
     return decorator
 
+def verify_department_access(entity):
+    """
+    Security Barrier: Ensures that 'User' roles can only access data 
+    belonging to their own department. Superadmins and Admins are 
+    exempt (they have system-wide access).
+    """
+    if session.get('role') in ['superadmin', 'admin']:
+        return True
+    
+    user_dept = session.get('department')
+    entity_dept = getattr(entity, 'department', None)
+    
+    # If the entity has no department, default to denying access for strict safety
+    if not entity_dept:
+        return False
+        
+    return str(user_dept).strip().lower() == str(entity_dept).strip().lower()
+
 # Whitelisted endpoints for historical mode (moved up for use in firewall)
 _HIST_SAFE_ENDPOINTS = {
     'login', 'logout', 'api_archive_exit', 'api_archive_enter',
@@ -80,23 +98,48 @@ def hist_lockdown(f):
 from types import SimpleNamespace
 
 def get_archive_entities(archive_id, entity_type):
-    """Parses ArchivedEntity JSON rows for a given archive and type into a list of
-    SimpleNamespace objects. This lets Jinja2 templates access fields via dot-notation
-    (e.g. course.course_code) exactly as they would with real SQLAlchemy model objects.
     """
-    rows = ArchivedEntity.query.filter_by(
-        term_archive_id=archive_id,
-        entity_type=entity_type
-    ).all()
-    results = []
-    for row in rows:
-        try:
-            data = json.loads(row.data_json)
-            obj = SimpleNamespace(**data)
-            results.append(obj)
-        except Exception:
-            pass
-    return results
+    [SCALABLE] Fetches archived data from specialized tables.
+    Returns a list of items for template compatibility.
+    """
+    # Mapping to new tables
+    type_map = {
+        'Course': ArchivedCourse,
+        'Section': ArchivedSection,
+        'Faculty': ArchivedFaculty,
+        'Room': ArchivedRoom,
+        'Student': ArchivedStudent,
+        'IrregularStudent': ArchivedStudent # Shared for now
+    }
+    
+    cls = type_map.get(entity_type)
+    if not cls:
+        # Fallback to legacy for unmigrated or irregular types
+        rows = ArchivedEntity.query.filter_by(term_archive_id=archive_id, entity_type=entity_type).all()
+        results = []
+        for r in rows:
+            try:
+                data = json.loads(r.data_json)
+                results.append(SimpleNamespace(**data))
+            except: pass
+        return results
+
+    # Get all from specialized table
+    return cls.query.filter_by(term_archive_id=archive_id).all()
+
+def get_archive_query(archive_id, entity_type):
+    """Returns a query object for server-side pagination of archives."""
+    type_map = {
+        'Course': ArchivedCourse,
+        'Section': ArchivedSection,
+        'Faculty': ArchivedFaculty,
+        'Room': ArchivedRoom,
+        'Student': ArchivedStudent
+    }
+    cls = type_map.get(entity_type)
+    if not cls:
+        return None
+    return cls.query.filter_by(term_archive_id=archive_id)
 
 
 def _mock_archived_schedule(as_obj):
@@ -417,6 +460,9 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False, default='user') # 'superadmin', 'admin', 'user'
     profile_pic = db.Column(db.String(255), nullable=True, default='default.png')
     department = db.Column(db.String(100), nullable=True)  # Module 3: user's department for draft scoping
+    last_activity = db.Column(db.DateTime, default=datetime.utcnow)
+    failed_login_attempts = db.Column(db.Integer, default=0)
+    lockout_until = db.Column(db.DateTime, nullable=True)
 
 class Room(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -599,17 +645,64 @@ class ArchivedSchedule(db.Model):
 
 class ArchivedEntity(db.Model):
     """
-    Stores a snapshot of an entity (Section, Course, Faculty) exactly as it was during the archive.
-    This allows 1:1 reconstruction of Data Management pages without relying on the live tables.
+    [LEGACY] Stores a snapshot of an entity as JSON. 
+    New archives use specialized Archived_ tables below.
     """
     id = db.Column(db.Integer, primary_key=True)
     term_archive_id = db.Column(db.Integer, db.ForeignKey('term_archive.id'), nullable=False, index=True)
-    entity_type = db.Column(db.String(50)) # 'Course', 'Section', 'Faculty', 'Room', 'Student', 'IrregularStudent'
-    
-    # Common fields stored as JSON to handle different entity schemas
+    entity_type = db.Column(db.String(50)) # 'Course', 'Section', 'Faculty', 'Room', 'Student'
     data_json = db.Column(db.Text, nullable=False)
-    
-    term_archive = db.relationship('TermArchive', backref=db.backref('entities', lazy=True, cascade="all, delete-orphan"))
+    term_archive = db.relationship('TermArchive', backref=db.backref('legacy_entities', lazy=True, cascade="all, delete-orphan"))
+
+# --- NEW SCALABLE ARCHIVE TABLES (Column-Based) ---
+
+class ArchivedCourse(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    term_archive_id = db.Column(db.Integer, db.ForeignKey('term_archive.id'), nullable=False, index=True)
+    course_code = db.Column(db.String(255), index=True)
+    course_name = db.Column(db.String(255))
+    year_level = db.Column(db.Integer)
+    program = db.Column(db.String(100))
+    department = db.Column(db.String(255), index=True)
+    lec_units = db.Column(db.Integer)
+    lab_units = db.Column(db.Integer)
+    semester_offered = db.Column(db.String(100))
+    term_archive = db.relationship('TermArchive', backref=db.backref('courses', lazy=True, cascade="all, delete-orphan"))
+
+class ArchivedSection(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    term_archive_id = db.Column(db.Integer, db.ForeignKey('term_archive.id'), nullable=False, index=True)
+    section_name = db.Column(db.String(255), index=True)
+    year_level = db.Column(db.Integer)
+    number_of_students = db.Column(db.Integer)
+    term_archive = db.relationship('TermArchive', backref=db.backref('sections', lazy=True, cascade="all, delete-orphan"))
+
+class ArchivedFaculty(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    term_archive_id = db.Column(db.Integer, db.ForeignKey('term_archive.id'), nullable=False, index=True)
+    employee_id = db.Column(db.String(255), index=True)
+    full_name = db.Column(db.String(255), index=True)
+    department = db.Column(db.String(255), index=True)
+    employment_status = db.Column(db.String(100))
+    term_archive = db.relationship('TermArchive', backref=db.backref('faculty', lazy=True, cascade="all, delete-orphan"))
+
+class ArchivedRoom(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    term_archive_id = db.Column(db.Integer, db.ForeignKey('term_archive.id'), nullable=False, index=True)
+    room_name = db.Column(db.String(255), index=True)
+    building = db.Column(db.String(255))
+    capacity = db.Column(db.Integer)
+    status = db.Column(db.String(100))
+    term_archive = db.relationship('TermArchive', backref=db.backref('rooms', lazy=True, cascade="all, delete-orphan"))
+
+class ArchivedStudent(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    term_archive_id = db.Column(db.Integer, db.ForeignKey('term_archive.id'), nullable=False, index=True)
+    student_id = db.Column(db.String(255), index=True)
+    full_name = db.Column(db.String(255), index=True)
+    year_level = db.Column(db.Integer)
+    is_irregular = db.Column(db.Boolean, default=False)
+    term_archive = db.relationship('TermArchive', backref=db.backref('students', lazy=True, cascade="all, delete-orphan"))
 
 
 
@@ -691,6 +784,27 @@ class HubMessage(db.Model):
     sender = db.relationship('User', foreign_keys=[sender_id])
     draft  = db.relationship('DraftVersion', backref=db.backref('messages', lazy=True, cascade="all, delete-orphan"))
 
+# --- Module 7: USER MONITORING & ACTION TRACKER (BANTAY-SYSTEM) ---
+class ActivityLog(db.Model):
+    __tablename__ = 'activity_log'
+    id        = db.Column(db.Integer, primary_key=True)
+    user_id   = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    username  = db.Column(db.String(50), nullable=True)
+    action    = db.Column(db.String(100), nullable=False)
+    details   = db.Column(db.Text, nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    user = db.relationship('User', backref=db.backref('activities', lazy=True))
+
+class SecurityLog(db.Model):
+    __tablename__ = 'security_log'
+    id                 = db.Column(db.Integer, primary_key=True)
+    ip_address         = db.Column(db.String(45), nullable=True)
+    username_attempted = db.Column(db.String(50), nullable=True)
+    event_type         = db.Column(db.String(50), nullable=False) # 'Login Success', 'Login Failed', 'Logout'
+    details            = db.Column(db.Text, nullable=True)
+    timestamp          = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
 # --- HELPER FUNCTION: CONFLICT CHECKER ---
 # --- UPDATED HELPER: CONFLICT CHECKER (Ignores Field/TBA) ---
 def check_conflict(new_entry):
@@ -737,11 +851,54 @@ hub_online_users = {}
 # In-memory: { sid: {username, role, user_id} } — for private message routing
 hub_sid_map = {}
 
+# Module 7: Global monitoring of all online users
+# Format: { user_id: { username, role, sessions: {sid: status}, last_activity } }
+monitoring_online_users = {}
+
 @socketio.on('connect')
 def handle_connect():
     if 'user_id' not in session:
         return False
-    print(f"Client connected: {session.get('username')} ({request.sid})")
+    
+    sid = request.sid
+    uname = session.get('username')
+    role = session.get('role')
+    uid = session.get('user_id')
+    
+    # Module 7: Group by User ID to avoid duplicates
+    if uid not in monitoring_online_users:
+        monitoring_online_users[uid] = {
+            'username': uname,
+            'role': role,
+            'user_id': uid,
+            'sessions': {sid: 'Viewing'},
+            'last_activity': datetime.utcnow().strftime('%H:%M:%S')
+        }
+    else:
+        # Add new session to existing user
+        monitoring_online_users[uid]['sessions'][sid] = 'Viewing'
+        monitoring_online_users[uid]['last_activity'] = datetime.utcnow().strftime('%H:%M:%S')
+    
+    # Broadcast update (send processed list)
+    broadcast_monitoring_update()
+    
+    print(f"Client connected: {uname} ({sid})")
+
+def broadcast_monitoring_update():
+    """Helper to send the unique user list with consolidated status/session counts."""
+    user_list = []
+    for uid, data in monitoring_online_users.items():
+        # Determine overall status: if any session is 'Editing', user is 'Editing'
+        is_editing = any(s == 'Editing' for s in data['sessions'].values())
+        user_list.append({
+            'username': data['username'],
+            'role': data['role'],
+            'status': 'Editing' if is_editing else 'Viewing',
+            'session_count': len(data['sessions']),
+            'last_activity': data['last_activity']
+        })
+    
+    socketio.emit('user_list_update', {'users': user_list}, room='monitoring_room')
 
 @socketio.on('join_hub')
 def on_join_hub(data):
@@ -762,15 +919,53 @@ def on_join_hub(data):
     print(f"User {uname} joined hub room: {room}")
 
 @socketio.on('disconnect')
-def on_hub_disconnect():
-    """Remove user from all hub rooms on disconnect and broadcast update."""
+def on_handle_disconnect():
+    """Remove user from all tracking maps on disconnect."""
     sid = request.sid
+    uid = session.get('user_id')
+    
+    # Module 6: Hub cleanup
     hub_sid_map.pop(sid, None)
     for room, users in hub_online_users.items():
         if sid in users:
             del users[sid]
             socketio.emit('hub_users_update', {'users': list(users.values())}, to=room)
             break
+            
+    # Module 7: Monitoring cleanup
+    if uid in monitoring_online_users:
+        # Remove only this specific SID
+        monitoring_online_users[uid]['sessions'].pop(sid, None)
+        # If no more sessions, remove user from map
+        if not monitoring_online_users[uid]['sessions']:
+            monitoring_online_users.pop(uid)
+        
+        broadcast_monitoring_update()
+        print(f"SID {sid} disconnected for user {uid}")
+
+# Module 7: MONITORING SOCKET HANDLERS
+@socketio.on('join_monitoring')
+def on_join_monitoring():
+    """Allows Superadmins to join the monitoring room for live updates."""
+    if session.get('role') == 'superadmin':
+        join_room('monitoring_room')
+        # Send initial list immediately
+        broadcast_monitoring_update()
+
+@socketio.on('status_update')
+def handle_status_update(data):
+    """Updates the live status (Viewing vs Editing) of a user."""
+    sid = request.sid
+    uid = session.get('user_id')
+    if uid in monitoring_online_users:
+        status = data.get('status', 'Viewing')
+        # Update status for this specific session
+        if sid in monitoring_online_users[uid]['sessions']:
+            monitoring_online_users[uid]['sessions'][sid] = status
+            monitoring_online_users[uid]['last_activity'] = datetime.utcnow().strftime('%H:%M:%S')
+            
+            # Broadcast update
+            broadcast_monitoring_update()
 
 @socketio.on('send_hub_message')
 def handle_send_message(data):
@@ -1163,6 +1358,62 @@ def check_and_post_hub_conflicts(semester, draft_id=None):
                 'type': 'system_alert'
             }, room=room_name)
 
+# ── Module 7: MONITORING HELPERS ───────────────────────────────────────────────
+def log_activity(action, details=None):
+    """Saves an administrative action to the ActivityLog and broadcasts it."""
+    if 'user_id' in session:
+        try:
+            log = ActivityLog(
+                user_id=session['user_id'],
+                username=session.get('username'),
+                action=action,
+                details=details
+            )
+            db.session.add(log)
+            db.session.commit()
+            # Broadcast to monitoring subscribers
+            socketio.emit('new_activity_log', {
+                'username': log.username,
+                'action': log.action,
+                'details': log.details,
+                'timestamp': log.timestamp.strftime('%H:%M:%S')
+            }, room='monitoring_room')
+        except Exception as e:
+            db.session.rollback()
+            print(f"Activity logging error: {e}")
+
+def log_security(event_type, username_attempted=None, details=None):
+    """Saves a security event (login/logout/fail) and broadcasts it."""
+    try:
+        log = SecurityLog(
+            ip_address=request.remote_addr,
+            username_attempted=username_attempted or session.get('username'),
+            event_type=event_type,
+            details=details
+        )
+        db.session.add(log)
+        db.session.commit()
+        # Broadcast to monitoring subscribers
+        socketio.emit('new_security_log', {
+            'ip': log.ip_address,
+            'username': log.username_attempted,
+            'event': log.event_type,
+            'details': log.details,
+            'timestamp': log.timestamp.strftime('%H:%M:%S')
+        }, room='monitoring_room')
+    except Exception as e:
+        db.session.rollback()
+        print(f"Security logging error: {e}")
+
+@app.before_request
+def update_user_activity():
+    """Updates the last_activity timestamp for the current user on every request."""
+    if 'user_id' in session:
+        # We use a direct update to avoid loading the whole user object if possible, 
+        # but SQLAlchemy query is fine here.
+        User.query.filter_by(id=session['user_id']).update({'last_activity': datetime.utcnow()})
+        db.session.commit()
+
 # ── END MODULE 6 HANDLERS ──────────────────────────────────────────────────────
 
 
@@ -1171,52 +1422,71 @@ def check_and_post_hub_conflicts(semester, draft_id=None):
 def login():
     if request.method == 'POST':
         ip = request.remote_addr
-        now = datetime.utcnow()
-
-        # Check if IP is currently locked out
-        attempt_data = _login_attempts.get(ip)
-        if attempt_data:
-            elapsed = (now - attempt_data['first_attempt']).total_seconds() / 60
-            if elapsed >= _LOGIN_LOCKOUT_MINUTES:
-                # Lockout expired — reset
-                _login_attempts.pop(ip, None)
-                attempt_data = None
-            elif attempt_data['count'] >= _LOGIN_MAX_ATTEMPTS:
-                remaining = int(_LOGIN_LOCKOUT_MINUTES - elapsed) + 1
-                flash(f'Too many failed login attempts. Please try again in {remaining} minute(s).', 'danger')
-                return render_template('login.html')
-
         username = request.form.get('username')
         password = request.form.get('password')
+        now = datetime.utcnow()
 
         user = User.query.filter_by(username=username).first()
-        if user and check_password_hash(user.password_hash, password):
-            # Successful login — clear any failed attempts for this IP
-            _login_attempts.pop(ip, None)
-            # Session fixation protection: clear session before setting new identity
-            session.clear()
-            session.permanent = True
-            session['user_id'] = user.id
-            session['username'] = user.username
-            session['role'] = user.role
-            session['department'] = user.department
-            session['profile_pic'] = getattr(user, 'profile_pic', 'default.png') or 'default.png'
-            # Redirect normal users directly to view_timetable
-            if user.role == 'user':
-                return redirect(url_for('view_timetable'))
-            return redirect(url_for('dashboard'))
-        else:
-            # Failed login — record attempt
-            if attempt_data is None:
-                _login_attempts[ip] = {'count': 1, 'first_attempt': now}
+
+        if user:
+            # 1. Check Lockout
+            if user.lockout_until and now < user.lockout_until:
+                remaining = int((user.lockout_until - now).total_seconds() / 60) + 1
+                flash(f'Account locked due to too many failed attempts. Try again in {remaining} minute(s).', 'danger')
+                return render_template('login.html')
+
+            # 2. Check Password
+            if check_password_hash(user.password_hash, password):
+                # SUCCESS: Reset attempts
+                user.failed_login_attempts = 0
+                user.lockout_until = None
+                db.session.commit()
+
+                session.clear()
+                session.permanent = True
+                session['user_id'] = user.id
+                session['username'] = user.username
+                session['role'] = user.role
+                session['department'] = user.department
+                session['profile_pic'] = getattr(user, 'profile_pic', 'default.png') or 'default.png'
+                
+                log_security('Login Success', details=f"User {user.username} logged in from {ip}")
+                
+                if user.role == 'user':
+                    return redirect(url_for('view_timetable'))
+                return redirect(url_for('dashboard'))
             else:
-                _login_attempts[ip]['count'] += 1
+                # FAILURE: Increment attempts
+                user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+                if user.failed_login_attempts >= _LOGIN_MAX_ATTEMPTS:
+                    user.lockout_until = now + timedelta(minutes=_LOGIN_LOCKOUT_MINUTES)
+                db.session.commit()
+                
+                log_security('Login Failed', username_attempted=username, details=f"Failed attempt from {ip}")
+                flash('Invalid username or password', 'danger')
+        else:
+            # User not found (Generic error to prevent enumeration)
+            log_security('Login Failed', username_attempted=username, details=f"Unknown user from {ip}")
             flash('Invalid username or password', 'danger')
 
     return render_template('login.html')
 
+@app.after_request
+def add_security_headers(response):
+    """Sets security headers on every response to harden the system."""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    # Content Security Policy (Basic)
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdn.socket.io; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data:; connect-src 'self' ws: wss: https://cdn.socket.io;"
+    return response
+
 @app.route('/logout')
 def logout():
+    # Module 7: Log logout before clearing session
+    if 'user_id' in session:
+        log_security('Logout', details=f"User {session.get('username')} logged out")
+        
     session.clear()
     return redirect(url_for('login'))
 
@@ -1282,8 +1552,30 @@ def change_password():
     user.password_hash = generate_password_hash(new_password)
     db.session.commit()
     
+    # Module 7: Log action
+    log_activity('Change Password', "User updated their password")
+    
     flash('Password changed successfully!', 'success')
     return redirect(request.referrer or url_for('dashboard'))
+
+@app.route('/monitoring')
+@login_required
+@role_required('superadmin')
+def monitoring():
+    """Renders the Bantay-System Monitoring Dashboard."""
+    # Get separate pages for the two logs
+    act_page = request.args.get('act_page', 1, type=int)
+    sec_page = request.args.get('sec_page', 1, type=int)
+    
+    # Paginate both tables (10 rows per page standard)
+    activity_pagination = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).paginate(page=act_page, per_page=10)
+    security_pagination = SecurityLog.query.order_by(SecurityLog.timestamp.desc()).paginate(page=sec_page, per_page=10)
+    
+    return render_template('monitoring.html', 
+                          activity_logs=activity_pagination.items, 
+                          act_pagination=activity_pagination,
+                          security_logs=security_pagination.items,
+                          sec_pagination=security_pagination)
 
 @app.route('/change_username', methods=['POST'])
 @login_required
@@ -1315,6 +1607,9 @@ def change_username():
     user.username = new_username.strip()
     session['username'] = user.username
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Change Username', f"Changed username to {user.username}")
     
     flash(f'Username successfully changed to {user.username}!', 'success')
     return redirect(request.referrer or url_for('dashboard'))
@@ -1659,64 +1954,57 @@ def manage_courses():
     # ── Time Machine: Historical Mode ───────────────────────────────────────
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
-        all_objs = get_archive_entities(archive_id, 'Course')
+        query = get_archive_query(archive_id, 'Course')
         
-        # 1. Apply Filtering
+        if not query:
+            # Fallback if query returns None (e.g. invalid type)
+            return render_template('manage_courses.html', courses=[], pagination=None)
+
+        # 1. Apply Filtering at Database Level
         if selected_semester != 'All':
-            all_objs = [o for o in all_objs if getattr(o, 'semester_offered', None) == selected_semester]
+            query = query.filter(ArchivedCourse.semester_offered == selected_semester)
         
         if search_query:
-            s = search_query.lower()
-            all_objs = [o for o in all_objs if 
-                        s in (getattr(o, 'course_code', '') or '').lower() or 
-                        s in (getattr(o, 'course_name', '') or '').lower() or 
-                        s in (getattr(o, 'department', '') or '').lower()]
+            s = f"%{search_query.lower()}%"
+            query = query.filter(
+                (ArchivedCourse.course_code.ilike(s)) | 
+                (ArchivedCourse.course_name.ilike(s)) | 
+                (ArchivedCourse.department.ilike(s))
+            )
         
         if filter_by == 'dept' and filter_val:
-            all_objs = [o for o in all_objs if getattr(o, 'department', None) == filter_val]
+            query = query.filter(ArchivedCourse.department == filter_val)
         elif filter_by == 'code' and filter_val:
-            all_objs = [o for o in all_objs if (getattr(o, 'course_code', '') or '').lower().startswith(filter_val.lower())]
+            query = query.filter(ArchivedCourse.course_code.ilike(f"{filter_val}%"))
 
-        # 2. Apply Sorting
+        # 2. Apply Sorting at Database Level
         if sort_by == 'a-z':
-            all_objs.sort(key=lambda x: (getattr(x, 'course_code', '') or '').lower())
+            query = query.order_by(ArchivedCourse.course_code.asc())
         elif sort_by == 'z-a':
-            all_objs.sort(key=lambda x: (getattr(x, 'course_code', '') or '').lower(), reverse=True)
+            query = query.order_by(ArchivedCourse.course_code.desc())
         elif sort_by == 'dept-asc':
-            all_objs.sort(key=lambda x: ((getattr(x, 'department', '') or '').lower(), (getattr(x, 'course_code', '') or '').lower()))
+            query = query.order_by(ArchivedCourse.department.asc(), ArchivedCourse.course_code.asc())
         elif sort_by == 'dept-desc':
-            all_objs.sort(key=lambda x: ((getattr(x, 'department', '') or '').lower(), (getattr(x, 'course_code', '') or '').lower()), reverse=True)
+            query = query.order_by(ArchivedCourse.department.desc(), ArchivedCourse.course_code.desc())
         else:
-            all_objs.sort(key=lambda x: getattr(x, 'id', 0), reverse=True)
+            query = query.order_by(ArchivedCourse.id.desc())
 
         # 3. Paginate
-        per_page = 10
-        total = len(all_objs)
-        start = (page - 1) * per_page
-        end = start + per_page
-        items = all_objs[start:end]
-        pagination = MockPagination(items, page, per_page, total)
+        pagination = query.paginate(page=page, per_page=10, error_out=False)
+        items = pagination.items
         
-        # Re-derive dropdown data from ARCHIVED set
-        unique_depts = sorted(list(set(getattr(o, 'department', '') for o in all_objs if getattr(o, 'department', None))))
-        unique_prefixes = set()
-        for o in all_objs:
-            code = getattr(o, 'course_code', '')
-            if code:
-                parts = code.split(' ')
-                if parts: unique_prefixes.add(parts[0])
-        sorted_prefixes = sorted(list(unique_prefixes))
-
+        # Meta-data for dropdowns (still need a broad set, but we can cache or limit this)
+        # Optimized: Only pull the distinct depts/prefixes for the current archive
+        unique_depts = sorted([r[0] for r in db.session.query(ArchivedCourse.department).filter_by(term_archive_id=archive_id).distinct().all() if r[0]])
+        
         return render_template(
             'manage_courses.html',
             courses=items,
             pagination=pagination,
             current_sort=sort_by,
             search_query=search_query,
-            all_courses=all_objs,
             selected_semester=selected_semester,
             unique_depts=unique_depts,
-            unique_prefixes=sorted_prefixes,
             current_filter_by=filter_by,
             current_filter_val=filter_val
         )
@@ -1725,9 +2013,13 @@ def manage_courses():
     # Base Query
     query = Course.query.filter_by(is_archived=False)
 
-    # DATA ISOLATION: Standard users only see what they created
+    # DATA ISOLATION: Department Heads see all items in their department
     if session.get('role') == 'user':
-        query = query.filter_by(created_by_id=session.get('user_id'))
+        user_dept = session.get('department')
+        if user_dept:
+            query = query.filter_by(department=user_dept)
+        else:
+            query = query.filter(False) # Safety lockout
 
     # 1. Apply Semester Filter
     if selected_semester != 'All':
@@ -1815,7 +2107,7 @@ def add_course():
         flash(f"Course code '{course_code}' already exists!", "danger")
         return redirect(url_for('manage_courses'))
 
-    db.session.add(Course(
+    new_course = Course(
         course_code=request.form.get('course_code'), 
         course_name=request.form.get('course_name'), 
         program=request.form.get('program', 'Both'), 
@@ -1828,16 +2120,25 @@ def add_course():
         asynchronous_lec_hours=int(request.form.get('asynchronous_lec_hours', 0)), 
         asynchronous_lab_hours=int(request.form.get('asynchronous_lab_hours', 0)),
         created_by_id=session.get('user_id') # Track creator
-    ))
+    )
+    db.session.add(new_course)
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Add Course', f"Created course {course_code}: {request.form.get('course_name')}")
+    
     return redirect(url_for('manage_courses'))
 
 @app.route('/manage/course/update/<int:course_id>', methods=['POST'])
 @login_required
+@hist_lockdown
 def update_course(course_id):
-    # Role-based access check
-    if session.get('role') == 'user' and course.created_by_id != session.get('user_id'):
-        flash("You are not authorized to update this course.", "danger")
+    course = Course.query.get_or_404(course_id)
+    
+    # Security Firewall: Role-based department check
+    if not verify_department_access(course):
+        flash("You are not authorized to update this course as it belongs to another department.", "danger")
+        log_security('Unauthorized Access Attempt', details=f"User {session.get('username')} tried to update course id {course_id} in {course.department}")
         return redirect(url_for('manage_courses'))
 
     new_code = request.form.get('course_code')
@@ -1845,6 +2146,7 @@ def update_course(course_id):
     if existing:
         flash(f"Course code '{new_code}' is already taken.", "danger")
         return redirect(url_for('manage_courses'))
+    
     course.course_code = new_code
     course.course_name = request.form.get('course_name')
     if request.form.get('program'):
@@ -1868,6 +2170,10 @@ def update_course(course_id):
         course.asynchronous_lab_hours = int(request.form.get('asynchronous_lab_hours', 0))
         
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Update Course', f"Updated course {new_code}")
+    
     return redirect(url_for('manage_courses'))
 
 @app.route('/manage/courses/archive')
@@ -1918,6 +2224,10 @@ def archive_course(course_id):
     course.is_archived = True
     course.deleted_at = datetime.utcnow()
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Archive Course', f"Archived course {course.course_code}")
+    
     flash('Course moved to Recycle Bin.', 'success')
     return redirect(url_for('manage_courses'))
 
@@ -1928,6 +2238,10 @@ def restore_course(course_id):
     course.is_archived = False
     course.deleted_at = None
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Restore Course', f"Restored course {course.course_code}")
+    
     flash('Course restored successfully.', 'success')
     return redirect(url_for('courses_archive'))
 
@@ -2219,6 +2533,9 @@ def delete_course(course_id):
     ScheduledClass.query.filter_by(course_id=course_id).delete(synchronize_session=False)
     db.session.delete(course)
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Delete Course', f"Permanently deleted course {course.course_code}")
     # Dapat bumalik sa archive page pagkatapos mag-delete
     return redirect(url_for('courses_archive'))
 
@@ -2284,58 +2601,28 @@ def manage_rooms():
     # ── Time Machine: Historical Mode ───────────────────────────────────────
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
-        all_objs = get_archive_entities(archive_id, 'Room')
+        query = get_archive_query(archive_id, 'Room')
         
-        # 1. Apply Filtering
+        if not query:
+            return render_template('manage_rooms.html', rooms=[], pagination=None)
+
         if search_query:
-            s = search_query.lower()
-            all_objs = [o for o in all_objs if 
-                        s in (getattr(o, 'room_name', '') or '').lower() or 
-                        s in (getattr(o, 'building', '') or '').lower() or 
-                        s in (getattr(o, 'capabilities', '') or '').lower()]
-        
-        if filter_by == 'building' and filter_val:
-            all_objs = [o for o in all_objs if getattr(o, 'building', None) == filter_val]
-        elif filter_by == 'status' and filter_val:
-            all_objs = [o for o in all_objs if getattr(o, 'status', None) == filter_val]
-
-        # 2. Apply Sorting
-        if sort_by == 'name-desc':
-            all_objs.sort(key=lambda x: (getattr(x, 'room_name', '') or '').lower(), reverse=True)
-        elif sort_by == 'capacity-desc':
-            all_objs.sort(key=lambda x: getattr(x, 'capacity', 0) or 0, reverse=True)
-        elif sort_by == 'capacity-asc':
-            all_objs.sort(key=lambda x: getattr(x, 'capacity', 0) or 0)
-        else: # Default: name-asc
-            all_objs.sort(key=lambda x: (getattr(x, 'room_name', '') or '').lower())
-
-        # 3. Paginate
-        per_page = 10
-        total = len(all_objs)
-        start = (page - 1) * per_page
-        items = all_objs[start:start+per_page]
-        pagination = MockPagination(items, page, per_page, total)
-        
-        # Unique Buildings for Filter
-        unique_buildings = sorted(list(set(getattr(o, 'building', '') for o in all_objs if getattr(o, 'building', None))))
-
-        return render_template('manage_rooms.html',
-            rooms=items,
-            pagination=pagination,
-            unique_buildings=unique_buildings,
-            current_sort=sort_by,
-            search_query=search_query,
-            current_filter_by=filter_by,
-            current_filter_val=filter_val
-        )
+            query = query.filter(ArchivedRoom.room_name.ilike(f"%{search_query}%"))
+            
+        pagination = query.paginate(page=page, per_page=10, error_out=False)
+        return render_template('manage_rooms.html', rooms=pagination.items, pagination=pagination, search_query=search_query)
 
     # ── Live Mode ───────────────────────────────────────────────────────────
     # 2. Base Query
     query = Room.query.filter_by(is_archived=False)
     
-    # DATA ISOLATION: Standard users only see what they created
+    # DATA ISOLATION: Department Heads see all items in their department
     if session.get('role') == 'user':
-        query = query.filter_by(created_by_id=session.get('user_id'))
+        user_dept = session.get('department')
+        if user_dept:
+            query = query.filter_by(department=user_dept)
+        else:
+            query = query.filter(False) # Safety lockout
     
     # 3. Apply Search
     if search_query:
@@ -2417,6 +2704,10 @@ def add_room():
         created_by_id=session.get('user_id') # Track creator
     ))
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Add Room', f"Created room {room_name}")
+    
     flash('Room added successfully.', 'success')
     return redirect(url_for('manage_rooms'))
 
@@ -2442,12 +2733,14 @@ def quick_add_tba_room():
 
 @app.route('/manage/room/update/<int:room_id>', methods=['POST'])
 @login_required
+@hist_lockdown
 def update_room(room_id):
     room = Room.query.get_or_404(room_id)
     
-    # Role-based access check
-    if session.get('role') == 'user' and room.created_by_id != session.get('user_id'):
-        flash("You are not authorized to update this room.", "danger")
+    # Security Firewall: Role-based department check
+    if not verify_department_access(room):
+        flash("You are not authorized to update this room as it belongs to another department.", "danger")
+        log_security('Unauthorized Access Attempt', details=f"User {session.get('username')} tried to update room id {room_id}")
         return redirect(url_for('manage_rooms'))
     if room.room_name == 'T.B.A.':
         flash('T.B.A. room cannot be edited.', 'warning')
@@ -2472,6 +2765,10 @@ def update_room(room_id):
         
     room.room_departments = ",".join(request.form.getlist('room_departments'))
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Update Room', f"Updated room {new_name}")
+    
     return redirect(url_for('manage_rooms'))
 
 # =====================================================================
@@ -2668,6 +2965,10 @@ def archive_room(room_id):
     room.is_archived = True
     room.deleted_at = datetime.utcnow()
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Archive Room', f"Archived room {room.room_name}")
+    
     flash('Room moved to Recycle Bin.', 'success')
     return redirect(url_for('manage_rooms'))
 
@@ -2678,6 +2979,10 @@ def restore_room(room_id):
     room.is_archived = False
     room.deleted_at = None
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Restore Room', f"Restored room {room.room_name}")
+    
     flash('Room restored successfully.', 'success')
     return redirect(url_for('rooms_archive'))
 
@@ -2692,6 +2997,10 @@ def delete_room(room_id):
     ScheduledClass.query.filter_by(room_id=room_id).update({'room_id': None}, synchronize_session=False)
     db.session.delete(room)
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Delete Room', f"Permanently deleted room {room.room_name}")
+    
     return redirect(url_for('rooms_archive'))
 
 # app.py
@@ -2713,61 +3022,16 @@ def manage_sections():
     # ── Time Machine: Historical Mode ───────────────────────────────────────
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
-        # Exclude T.B.A. system section if present in archive
-        all_objs = [o for o in get_archive_entities(archive_id, 'Section') if getattr(o, 'section_name', '') != 'T.B.A.']
+        query = get_archive_query(archive_id, 'Section')
         
-        # 1. Apply Filtering
+        if not query:
+            return render_template('manage_sections.html', sections=[], pagination=None)
+
         if search_query:
-            s = search_query.lower()
-            all_objs = [o for o in all_objs if 
-                        s in (getattr(o, 'section_name', '') or '').lower() or 
-                        s in str(getattr(o, 'year_level', ''))]
-        
-        if filter_by == 'year' and filter_val:
-            try:
-                val = int(filter_val)
-                all_objs = [o for o in all_objs if getattr(o, 'year_level', None) == val]
-            except: pass
-
-        # 2. Apply Sorting
-        if sort_by == 'name-desc':
-            all_objs.sort(key=lambda x: (getattr(x, 'section_name', '') or '').lower(), reverse=True)
-        elif sort_by == 'year-asc':
-            all_objs.sort(key=lambda x: (getattr(x, 'year_level', 0), (getattr(x, 'section_name', '') or '').lower()))
-        elif sort_by == 'year-desc':
-            all_objs.sort(key=lambda x: (getattr(x, 'year_level', 0) or 0, (getattr(x, 'section_name', '') or '').lower()), reverse=True)
-        else: # Default: name-asc
-            all_objs.sort(key=lambda x: (getattr(x, 'section_name', '') or '').lower())
-
-        # 3. Paginate
-        per_page = 10
-        total = len(all_objs)
-        start = (page - 1) * per_page
-        items = all_objs[start:start+per_page]
-        pagination = MockPagination(items, page, per_page, total)
-        
-        # Prepare courses data from archive
-        all_courses = get_archive_entities(archive_id, 'Course')
-        courses_by_sem = {'1st Semester': [], '2nd Semester': [], 'Midyear': []}
-        for c in all_courses:
-            if getattr(c, 'semester_offered', None) in courses_by_sem:
-                courses_by_sem[c.semester_offered].append(c)
-
-        # Unique Years for filter
-        unique_years = sorted(list(set(getattr(o, 'year_level', 0) for o in all_objs if getattr(o, 'year_level', None) is not None)))
-
-        return render_template(
-            'manage_sections.html', 
-            sections=items, 
-            pagination=pagination, 
-            courses_by_sem=courses_by_sem, 
-            current_sort=sort_by, 
-            search_query=search_query,
-            selected_semester=selected_semester,
-            unique_years=unique_years,
-            current_filter_by=filter_by,
-            current_filter_val=filter_val
-        )
+            query = query.filter(ArchivedSection.section_name.ilike(f"%{search_query}%"))
+            
+        pagination = query.paginate(page=page, per_page=10, error_out=False)
+        return render_template('manage_sections.html', sections=pagination.items, pagination=pagination, search_query=search_query)
 
     # 2. Base Query (exclude T.B.A. system section)
     query = Section.query.filter_by(is_archived=False).filter(Section.section_name != 'T.B.A.')
@@ -2847,11 +3111,16 @@ def add_section():
         created_by_id=session.get('user_id') # Track creator
     ))
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Add Section', f"Created section {section_name}")
+    
     flash('Section added successfully.', 'success')
     return redirect(url_for('manage_sections'))
 
 @app.route('/manage/section/update/<int:section_id>', methods=['POST'])
 @login_required
+@hist_lockdown
 def update_section(section_id):
     section = Section.query.get_or_404(section_id)
     # Role-based authorization removed for Sections (standard users share the section pool)
@@ -2869,6 +3138,10 @@ def update_section(section_id):
         section.number_of_students = int(request.form.get('number_of_students', 40))
         
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Update Section', f"Updated section {new_name}")
+    
     flash('Section updated successfully.', 'success')
     return redirect(url_for('manage_sections'))
 
@@ -3023,6 +3296,10 @@ def archive_section(section_id):
     section.is_archived = True
     section.deleted_at = datetime.utcnow()
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Archive Section', f"Archived section {section.section_name}")
+    
     flash('Section moved to Recycle Bin.', 'success')
     return redirect(url_for('manage_sections'))
 
@@ -3033,6 +3310,10 @@ def restore_section(section_id):
     section.is_archived = False
     section.deleted_at = None
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Restore Section', f"Restored section {section.section_name}")
+    
     flash('Section restored successfully.', 'success')
     return redirect(url_for('sections_archive'))
 
@@ -3047,6 +3328,10 @@ def delete_section(section_id):
         {ScheduledClass.section_id: tba_section.id}, synchronize_session=False)
     db.session.delete(section)
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Delete Section', f"Permanently deleted section {section.section_name}")
+    
     flash('Section deleted. Their scheduled classes are now in Pending Sections.', 'success')
     return redirect(url_for('sections_archive'))
 
@@ -3147,9 +3432,13 @@ def manage_faculty():
     # 2. Base Query
     query = Faculty.query.filter_by(is_archived=False)
     
-    # DATA ISOLATION: Standard users only see what they created
+    # DATA ISOLATION: Department Heads see all items in their department
     if session.get('role') == 'user':
-        query = query.filter_by(created_by_id=session.get('user_id'))
+        user_dept = session.get('department')
+        if user_dept:
+            query = query.filter_by(department=user_dept)
+        else:
+            query = query.filter(False) # Safety lockout
 
     # 3. Apply Search
     if search_query:
@@ -3445,6 +3734,10 @@ def add_faculty():
         created_by_id=session.get('user_id') # Track creator
     ))
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Add Faculty', f"Created faculty {request.form.get('full_name')}")
+    
     flash('Faculty added successfully.', 'success')
     return redirect(url_for('manage_faculty'))
 
@@ -3472,12 +3765,14 @@ def quick_add_tba_faculty():
 
 @app.route('/manage/faculty/update/<int:faculty_id>', methods=['POST'])
 @login_required
+@hist_lockdown
 def update_faculty(faculty_id):
     faculty = Faculty.query.get_or_404(faculty_id)
     
-    # Role-based access check
-    if session.get('role') == 'user' and faculty.created_by_id != session.get('user_id'):
-        flash("You are not authorized to update this faculty.", "danger")
+    # Security Firewall: Role-based department check
+    if not verify_department_access(faculty):
+        flash("You are not authorized to update this faculty member as they belong to another department.", "danger")
+        log_security('Unauthorized Access Attempt', details=f"User {session.get('username')} tried to update faculty id {faculty_id}")
         return redirect(url_for('manage_faculty'))
     new_id = request.form.get('employee_id')
     existing = Faculty.query.filter(Faculty.employee_id == new_id, Faculty.id != faculty_id, Faculty.is_archived == False).first()
@@ -3501,6 +3796,10 @@ def update_faculty(faculty_id):
     faculty.sex = request.form.get('sex', '') or None
     
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Update Faculty', f"Updated faculty {faculty.full_name}")
+    
     flash('Faculty updated successfully.', 'success')
     return redirect(url_for('manage_faculty'))
 
@@ -3592,6 +3891,10 @@ def archive_faculty(faculty_id):
     faculty.is_archived = True
     faculty.deleted_at = datetime.utcnow()
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Archive Faculty', f"Archived faculty {faculty.full_name}")
+    
     flash('Faculty moved to Recycle Bin.', 'success')
     return redirect(url_for('manage_faculty'))
 
@@ -3602,6 +3905,10 @@ def restore_faculty(faculty_id):
     faculty.is_archived = False
     faculty.deleted_at = None
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Restore Faculty', f"Restored faculty {faculty.full_name}")
+    
     flash('Faculty restored successfully.', 'success')
     return redirect(url_for('faculty_archive'))
 
@@ -3615,6 +3922,10 @@ def delete_faculty(faculty_id):
         {ScheduledClass.faculty_id: None}, synchronize_session=False)
     db.session.delete(faculty)
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Delete Faculty', f"Permanently deleted faculty {faculty.full_name}")
+    
     flash('Faculty deleted. Their scheduled classes are now in Pending Faculty.', 'success')
     return redirect(url_for('faculty_archive'))
 
@@ -3698,6 +4009,10 @@ def save_faculty_assignments(faculty_id):
                 ScheduledClass.faculty_id.in_(tba_ids)
             ).update({'faculty_id': faculty_id}, synchronize_session=False)
     db.session.commit()
+    
+    # Module 7: Log action
+    log_activity('Save Workload', f"Updated workload for {faculty.full_name}")
+    
     flash('Workload saved successfully.', 'success')
     return redirect(url_for('manage_faculty'))
 
@@ -5178,6 +5493,9 @@ def start_generation():
 
     print(f"🚀 Starting Generation for: {target_semester} (Fresh Start: {fresh_start})")
     print(f"📦 Scheduled Departments: {selected_depts}")
+
+    # Module 7: Log action
+    log_activity('Generate Schedule', f"Started generation for {target_semester} (Fresh: {fresh_start})")
 
     # ── FRESH START: Clear existing schedule if requested ──────────────
     if fresh_start:

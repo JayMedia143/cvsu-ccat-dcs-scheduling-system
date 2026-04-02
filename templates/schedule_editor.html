@@ -750,12 +750,19 @@
     /* ── DRAFT PREVIEW CANVAS (scoped) ──────────────────────── */
     #pvViewport {
         background-color: #f8fafc;
-        background-image: 
-            radial-gradient(rgba(0,0,0,0.05) 1.2px, transparent 1.2px);
-        background-size: 30px 30px;
+        background-image:
+            radial-gradient(rgba(0,0,0,0.18) 1.2px, transparent 1.2px);
+        background-size: 22px 22px;
         user-select: none;
     }
     #pvCanvas { transition: transform 0.05s linear; }
+    .pv-card {
+        transition: opacity 0.3s ease, transform 0.05s linear;
+    }
+    .pv-card.pv-dimmed {
+        opacity: 0.15;
+        pointer-events: none;
+    }
     .pv-card {
         background: transparent;
         border-radius: 0;
@@ -841,7 +848,7 @@
     #pvCinemaOverlay {
         position: absolute;
         inset: 0;
-        background: #000;
+        background: rgba(0,0,0,0.7);
         z-index: 500;
         display: none;
         flex-direction: column;
@@ -3580,12 +3587,124 @@
     function pvUpdateTransform() {
         const canvas = document.getElementById('pvCanvas');
         if (canvas) canvas.style.transform = `translate(${pvTranslateX}px,${pvTranslateY}px) scale(${pvScale})`;
-        pvUpdateMinimap();
+        
         const pct = Math.round(pvScale * 100) + '%';
         const zl = document.getElementById('pvZoomLevel');
         if (zl) zl.textContent = pct;
         const zb = document.getElementById('pvZoomBadge');
         if (zb) zb.textContent = 'Zoom: ' + pct;
+        pvUpdateMinimap();
+
+        // --- VIRTUALIZATION TRIGGER ---
+        pvRenderVisibleCards();
+    }
+
+    window.pvAllCardData = [];
+    function pvLoadCanvas() {
+        const canvas = document.getElementById('pvCanvas');
+        if (!canvas) return;
+        canvas.innerHTML = '';
+        const list = pvListMap[pvCurrentType] || [];
+        const cols = 5;
+        const sem = encodeURIComponent(currentSemester);
+        const draftId = currentDraftId;
+        const urlMap = {
+            section: id => `/section-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
+            faculty: id => `/faculty-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
+            room:    id => `/room-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
+        };
+
+        // 1. Memory Layout (Virtualization)
+        window.pvAllCardData = list.map((item, index) => {
+            const col = index % cols;
+            const row = Math.floor(index / cols);
+            return {
+                id: item.id,
+                label: item.label,
+                lowerLabel: item.label.toLowerCase(),
+                url: urlMap[pvCurrentType](item.id),
+                x: col * 950 + 500,
+                y: row * 1300 + 500,
+                width: 850,
+                height: 1200,
+                index: index,
+                isMounted: false,
+                element: null
+            };
+        });
+
+        // 2. Initial Draw
+        pvRenderVisibleCards();
+        pvResetView();
+        setTimeout(pvInitMinimap, 200);
+    }
+
+    function pvRenderVisibleCards() {
+        if (!window.pvAllCardData.length) return;
+        const vp = document.getElementById('pvViewport');
+        if (!vp) return;
+        const rect = vp.getBoundingClientRect();
+        const buffer = 1000;
+        
+        const vLeft   = (-pvTranslateX - buffer) / pvScale;
+        const vTop    = (-pvTranslateY - buffer) / pvScale;
+        const vWidth  = (rect.width  + buffer * 2) / pvScale;
+        const vHeight = (rect.height + buffer * 2) / pvScale;
+
+        window.pvAllCardData.forEach(card => {
+            const isVisible = (
+                card.x < vLeft + vWidth &&
+                card.x + card.width > vLeft &&
+                card.y < vTop + vHeight &&
+                card.y + card.height > vTop
+            );
+
+            if (isVisible && !card.isMounted) {
+                pvMountCard(card);
+            } else if (!isVisible && card.isMounted) {
+                pvUnmountCard(card);
+            }
+        });
+    }
+
+    function pvMountCard(data) {
+        const card = document.createElement('div');
+        card.className = 'pv-card';
+        card.id = `pv-card-${data.id}`;
+        card.dataset.label = data.lowerLabel;
+        card.style.cssText = `position:absolute;left:${data.x}px;top:${data.y}px;`;
+
+        // Apply Search Opacity if active
+        const q = document.getElementById('pvSearch')?.value.toLowerCase();
+        if (q && !data.lowerLabel.includes(q)) card.classList.add('pv-dimmed');
+
+        card.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            pvOpenPresentation(data.index);
+        });
+
+        card.innerHTML = `
+            <div class="card-header-bar">
+                <span>${data.label}</span>
+                <button class="card-maximize-btn" onclick="pvOpenPresentation(${data.index})" title="Maximize">
+                    <i class="bi bi-fullscreen"></i>
+                </button>
+            </div>
+            <div class="card-iframe-wrap">
+                <iframe src="${data.url}"></iframe>
+            </div>
+        `;
+        document.getElementById('pvCanvas').appendChild(card);
+        data.element = card;
+        data.isMounted = true;
+    }
+
+    function pvUnmountCard(data) {
+        if (data.element && data.element.parentNode) {
+            data.element.parentNode.removeChild(data.element);
+        }
+        data.element = null;
+        data.isMounted = false;
     }
 
     function pvApplySort() {
@@ -3600,125 +3719,99 @@
         pvLoadCanvas();
     }
 
-    function pvFocusCard(card) {
-        const vp = document.getElementById('pvViewport');
-        if (!vp || !card) return;
-        const rect = vp.getBoundingClientRect();
-        const cardX = card.offsetLeft + (card.offsetWidth / 2);
-        const cardY = card.offsetTop + (card.offsetHeight / 2);
-        pvScale = 0.8;
-        pvTranslateX = rect.width / 2 - cardX * pvScale;
-        pvTranslateY = rect.height / 2 - cardY * pvScale;
-        const cvs = document.getElementById('pvCanvas');
-        if (cvs) cvs.style.transition = 'transform 0.5s cubic-bezier(0.4,0,0.2,1)';
-        pvUpdateTransform();
-        setTimeout(() => { const c = document.getElementById('pvCanvas'); if (c) c.style.transition = 'transform 0.05s linear'; }, 500);
-    }
-
-    function pvSearchCanvas(q) {
-        const canvas = document.getElementById('pvCanvas');
-        if (!canvas) return;
-        let found = null;
-        canvas.querySelectorAll('.pv-card').forEach(card => {
-            const match = !q || card.dataset.label.includes(q.toLowerCase());
-            card.style.opacity = match ? '1' : '0.15';
-            if (match && q && !found) found = card;
-        });
-        if (found && q.length > 2) pvFocusCard(found);
-    }
-
-    function pvLoadCanvas() {
-        const canvas = document.getElementById('pvCanvas');
-        if (!canvas) return;
-        canvas.innerHTML = '';
-        const list = pvListMap[pvCurrentType] || [];
-        const cols = 5;
-        const sem = encodeURIComponent(currentSemester);
-        const draftId = currentDraftId;
-        const urlMap = {
-            section: id => `/section-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
-            faculty: id => `/faculty-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
-            room:    id => `/room-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
-        };
-        list.forEach((item, index) => {
-            const col = index % cols;
-            const row = Math.floor(index / cols);
-            const card = document.createElement('div');
-            card.className = 'pv-card';
-            card.dataset.label = item.label.toLowerCase();
-            card.dataset.index = index;
-            card.style.cssText = `position:absolute;left:${col * 950 + 500}px;top:${row * 1300 + 500}px;`;
-
-            card.addEventListener('dblclick', (e) => {
-                e.stopPropagation();
-                pvOpenPresentation(index);
-            });
-
-            card.innerHTML = `
-                <div class="card-header-bar">
-                    <span>${item.label}</span>
-                    <button class="card-maximize-btn" onclick="pvOpenPresentation(${index})" title="Maximize">
-                        <i class="bi bi-fullscreen"></i>
-                    </button>
-                </div>
-                <div class="card-iframe-wrap">
-                    <iframe src="${urlMap[pvCurrentType](item.id)}"></iframe>
-                </div>
-            `;
-            canvas.appendChild(card);
-        });
-        pvResetView();
-        setTimeout(pvInitMinimap, 200);
-    }
-
     function pvGetBounds() {
-        const canvas = document.getElementById('pvCanvas');
-        if (!canvas || !canvas.children.length) return null;
+        if (!window.pvAllCardData || !window.pvAllCardData.length) return null;
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        canvas.querySelectorAll('.pv-card').forEach(el => {
-            const l = el.offsetLeft, t = el.offsetTop;
-            const w = el.offsetWidth || 800, h = el.offsetHeight || 1130;
-            minX = Math.min(minX, l); minY = Math.min(minY, t);
-            maxX = Math.max(maxX, l + w); maxY = Math.max(maxY, t + h);
+        window.pvAllCardData.forEach(card => {
+            minX = Math.min(minX, card.x); minY = Math.min(minY, card.y);
+            maxX = Math.max(maxX, card.x + card.width); maxY = Math.max(maxY, card.y + card.height);
         });
         return { minX, minY, width: maxX - minX, height: maxY - minY };
     }
 
-    function pvResetView() {
-        const vp = document.getElementById('pvViewport');
-        if (!vp) return;
+    window.pvFitView = function() {
         const bounds = pvGetBounds();
         if (!bounds) return;
-        const rect = vp.getBoundingClientRect();
-        pvScale = 0.8;
-        pvTranslateX = rect.width / 2 - (bounds.minX + 400) * pvScale;
-        pvTranslateY = rect.height / 2 - (bounds.minY + 560) * pvScale;
-        const cvs = document.getElementById('pvCanvas');
-        if (cvs) cvs.style.transition = 'transform 0.6s cubic-bezier(0.34,1.56,0.64,1)';
-        pvUpdateTransform();
-        setTimeout(() => { const c = document.getElementById('pvCanvas'); if (c) c.style.transition = 'transform 0.05s linear'; }, 600);
-    }
-
-    function pvFitView() {
         const vp = document.getElementById('pvViewport');
-        if (!vp) return;
+        const vr = vp.getBoundingClientRect();
+        const padding = 150;
+        
+        pvScale = Math.min(
+            (vr.width - padding) / bounds.width,
+            (vr.height - padding) / bounds.height,
+            0.8
+        );
+        pvScale = Math.max(pvScale, 0.05);
+
+        pvTranslateX = (vr.width / 2) - (bounds.minX + bounds.width / 2) * pvScale;
+        pvTranslateY = (vr.height / 2) - (bounds.minY + bounds.height / 2) * pvScale;
+        
+        const cvs = document.getElementById('pvCanvas');
+        if (cvs) cvs.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        pvUpdateTransform();
+        setTimeout(() => { if (cvs) cvs.style.transition = 'transform 0.05s linear'; }, 650);
+    };
+
+    window.pvResetView = function() {
         const bounds = pvGetBounds();
         if (!bounds) return;
-        const rect = vp.getBoundingClientRect();
-        const pad = 80;
-        pvScale = Math.min((rect.width - pad) / bounds.width, (rect.height - pad) / bounds.height, 0.5);
-        pvTranslateX = rect.width / 2 - (bounds.minX + bounds.width / 2) * pvScale;
-        pvTranslateY = rect.height / 2 - (bounds.minY + bounds.height / 2) * pvScale;
+        const vp = document.getElementById('pvViewport');
+        const vr = vp.getBoundingClientRect();
+        
+        // Preserve current scale, just center
+        pvTranslateX = (vr.width / 2) - (bounds.minX + bounds.width / 2) * pvScale;
+        pvTranslateY = (vr.height / 2) - (bounds.minY + bounds.height / 2) * pvScale;
+        
         const cvs = document.getElementById('pvCanvas');
-        if (cvs) cvs.style.transition = 'transform 0.6s cubic-bezier(0.34,1.56,0.64,1)';
+        if (cvs) cvs.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
         pvUpdateTransform();
-        setTimeout(() => { const c = document.getElementById('pvCanvas'); if (c) c.style.transition = 'transform 0.05s linear'; }, 600);
+        setTimeout(() => { if (cvs) cvs.style.transition = 'transform 0.05s linear'; }, 650);
+    };
+
+    window.pvSearchCanvas = function(q) {
+        q = q ? q.toLowerCase() : '';
+        if (!q) {
+            window.pvAllCardData.forEach(card => {
+                if (card.isMounted && card.element) card.element.classList.remove('pv-dimmed');
+            });
+            return;
+        }
+        let found = null;
+        window.pvAllCardData.forEach(card => {
+            const match = card.lowerLabel.includes(q);
+            if (card.isMounted && card.element) {
+                if (match) card.element.classList.remove('pv-dimmed');
+                else card.element.classList.add('pv-dimmed');
+            }
+            if (match && !found) found = card;
+        });
+        if (found && q.length > 2) pvFocusData(found);
+    };
+
+    window.pvZoom = function(delta) {
+        pvScale = Math.max(0.04, Math.min(2.0, pvScale + delta));
+        pvUpdateTransform();
+    };
+
+    function pvFocusData(data) {
+        const vp = document.getElementById('pvViewport');
+        if (!vp || !data) return;
+        const rect = vp.getBoundingClientRect();
+        
+        const cardX = data.x + (data.width / 2);
+        const cardY = data.y + (data.height / 2);
+        
+        pvTranslateX = (rect.width / 2) - (cardX * pvScale);
+        pvTranslateY = (rect.height / 2) - (cardY * pvScale);
+        
+        const cvs = document.getElementById('pvCanvas');
+        if (cvs) cvs.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+        pvUpdateTransform();
+        setTimeout(() => { if (cvs) cvs.style.transition = 'transform 0.05s linear'; }, 500);
     }
 
-    function pvZoom(delta) {
-        pvScale = Math.max(0.05, Math.min(3.0, pvScale + delta));
-        pvUpdateTransform();
-    }
+
+
 
     // Minimap
     function pvInitMinimap() {
@@ -3735,12 +3828,13 @@
         const startY = bounds.minY - margin;
         window.pvMiniBounds = { totalW, totalH, startX, startY };
         const mmW = mm.offsetWidth, mmH = mm.offsetHeight;
-        document.getElementById('pvCanvas').querySelectorAll('.pv-card').forEach(card => {
+
+        window.pvAllCardData.forEach(card => {
             const dot = document.createElement('div');
             dot.className = 'minimap-dot';
             dot.style.cssText = `position:absolute;width:8px;height:10px;border-radius:2px;background:#198754;opacity:.7;
-                left:${((card.offsetLeft - startX) / totalW * mmW).toFixed(1)}px;
-                top:${((card.offsetTop - startY) / totalH * mmH).toFixed(1)}px;`;
+                left:${((card.x - startX) / totalW * mmW).toFixed(1)}px;
+                top:${((card.y - startY) / totalH * mmH).toFixed(1)}px;`;
             mmContent.appendChild(dot);
         });
         pvUpdateMinimap();
@@ -3903,7 +3997,7 @@
 
                 <div class="pv-search-pill">
                     <i class="bi bi-search" style="color:#999; font-size:0.8rem;"></i>
-                    <input type="text" id="pvSearch" placeholder="Find…">
+                    <input type="text" id="pvSearch" placeholder="Find…" oninput="pvSearchCanvas(this.value)">
                 </div>
 
                 <div class="ms-auto d-flex align-items-center gap-2">

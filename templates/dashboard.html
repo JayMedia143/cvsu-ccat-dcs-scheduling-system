@@ -5,10 +5,66 @@
 {% block content %}
 
 <!-- Page Title -->
-<div class="mb-4">
-    <h1 class="h3 text-gray-800 fw-light">Dashboard Overview</h1>
-    <p class="text-muted small">Welcome back, Admin. Here's the summary of your department data.</p>
+<div class="mb-4 d-flex align-items-center">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-0">Dashboard Overview
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#dashboardInfoModal" title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+            </button>
+        </h1>
+        <p class="text-muted small mb-0">Welcome back, Admin. Here's a quick look at your data.</p>
+    </div>
 </div>
+
+<!-- Info Modal -->
+<div class="modal fade" id="dashboardInfoModal" tabindex="-1" aria-labelledby="dashboardInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="dashboardInfoModalLabel">
+                    Dashboard Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1">1. DATA SHORTCUTS</h6>
+                    <p class="small text-muted mb-0">These cards show your total counts. You can <strong>click any card</strong> to jump straight to its management page (Courses, Sections, etc.).</p>
+                </div>
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1">2. PROGRESS TRACKER</h6>
+                    <p class="small text-muted mb-0">The bar shows how much of your work is done. <strong>100%</strong> means every required class has already been given a schedule slot.</p>
+                </div>
+                {% if stats.completion_rate < 100 %}
+                <div class="mb-0">
+                    <h6 class="fw-bold text-info small mb-1">3. FINISH AUTOMATICALLY</h6>
+                    <p class="small text-muted mb-0">If your progress is below 100%, use the <strong>'Run Auto-Schedule'</strong> button. The system will finish the rest of the schedule for you.</p>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-muted-v2 { color: #adb5bd; }
+    .info-icon-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .info-icon-hover:hover {
+        color: #198754 !important;
+        transform: scale(1.2);
+    }
+    .modal-dialog-centered {
+        display: flex;
+        align-items: center;
+        min-height: calc(100% - 1rem);
+    }
+</style>
 
 <!-- Stat Cards Row -->
 <div class="row g-4 mb-5">
