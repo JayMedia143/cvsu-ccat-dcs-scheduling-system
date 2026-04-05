@@ -10,12 +10,14 @@
             <h4 class="fw-bold mb-3">Chats</h4>
             <div class="messenger-search">
                 <i class="bi bi-search"></i>
-                <input type="text" placeholder="Search Messenger" oninput="filterConvos(this.value)">
+                <input type="text" placeholder="Search Messenger" oninput="filterConvos(this.value)" maxlength="100">
             </div>
         </div>
         <div class="messenger-convo-list custom-scrollbar" id="convoList">
             <!-- Loading state -->
-            <div class="p-4 text-center"><div class="spinner-border text-primary spinner-border-sm"></div></div>
+            <div class="p-4 text-center">
+                <div class="spinner-border text-primary spinner-border-sm"></div>
+            </div>
         </div>
     </div>
 
@@ -47,16 +49,19 @@
                 <div class="draft-preview-card">
                     <i class="bi bi-file-earmark-text-fill text-success"></i>
                     <span id="previewDraftName" class="text-truncate">Experimental Draft 1</span>
-                    <button class="btn-close-preview" onclick="clearDraftAttachment()"><i class="bi bi-x-circle-fill"></i></button>
+                    <button class="btn-close-preview" onclick="clearDraftAttachment()"><i
+                            class="bi bi-x-circle-fill"></i></button>
                 </div>
             </div>
 
             <form id="chatForm" class="chat-form-main">
                 <div class="input-tools">
-                    <button type="button" class="btn-messenger-icon text-primary" onclick="toggleDraftPicker(true)"><i class="bi bi-plus-circle-fill"></i></button>
+                    <button type="button" class="btn-messenger-icon text-primary" onclick="toggleDraftPicker(true)"><i
+                            class="bi bi-plus-circle-fill"></i></button>
                 </div>
                 <div class="flex-grow-1 position-relative">
-                    <textarea id="chatInput" rows="1" placeholder="Aa" class="form-control messenger-textarea"></textarea>
+                    <textarea id="chatInput" rows="1" placeholder="Aa" class="form-control messenger-textarea"
+                        maxlength="1000"></textarea>
                 </div>
                 <div class="input-send">
                     <button type="submit" class="btn-send-messenger" id="sendMsgBtn">
@@ -73,11 +78,13 @@
         <div class="p-3">
             <h6 class="text-uppercase text-muted fw-bold x-small mb-3">Pending Review</h6>
             <div id="proposalList">
-                <div class="text-center py-3"><div class="spinner-border spinner-border-sm text-secondary"></div></div>
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-secondary"></div>
+                </div>
             </div>
 
             <hr class="my-4 op-10">
-            
+
             <h6 class="text-uppercase text-muted fw-bold x-small mb-3">System Updates</h6>
             <div class="small">
                 <div class="d-flex justify-content-between mb-2">
@@ -100,7 +107,8 @@
         <button class="btn-close" onclick="toggleDraftPicker(false)"></button>
     </div>
     <div class="picker-search-box p-2">
-         <input type="text" class="form-control form-control-sm rounded-pill" placeholder="Search drafts..." oninput="filterDraftsInPicker(this.value)">
+        <input type="text" class="form-control form-control-sm rounded-pill" placeholder="Search drafts..."
+            oninput="filterDraftsInPicker(this.value)" maxlength="100">
     </div>
     <div class="picker-list-box custom-scrollbar" id="draftPickerList">
         <!-- Drafts populated by JS -->
@@ -126,27 +134,34 @@
                 </div>
                 <div class="pv-pill-select-wrap">
                     <span class="pv-pill-label">Sort:</span>
-                    <select id="pvSortSelect" class="form-select form-select-sm pv-pill-select" onchange="pvApplySort()">
+                    <select id="pvSortSelect" class="form-select form-select-sm pv-pill-select"
+                        onchange="pvApplySort()">
                         <option value="asc">A &mdash; Z</option>
                         <option value="desc">Z &mdash; A</option>
                     </select>
                 </div>
                 <div class="pv-search-pill">
                     <i class="bi bi-search" style="color:#999;font-size:0.8rem;"></i>
-                    <input type="text" id="pvSearch" placeholder="Find&hellip;" oninput="pvSearchCanvas(this.value)">
+                    <input type="text" id="pvSearch" placeholder="Find&hellip;" oninput="pvSearchCanvas(this.value)"
+                        maxlength="100">
                 </div>
                 <div class="ms-auto d-flex align-items-center gap-2">
-                    <button class="btn btn-outline-success pv-pill-btn d-flex align-items-center gap-2" onclick="pvFitView()">
+                    <button class="btn btn-outline-success pv-pill-btn d-flex align-items-center gap-2"
+                        onclick="pvFitView()">
                         <i class="bi bi-arrows-angle-contract"></i> <span>Fit All</span>
                     </button>
-                    
+
                     <div class="pv-nav-pill">
-                        <button class="pv-nav-btn nav-main" onclick="pvGoToFirst()" title="Go to First Schedule">1st</button>
-                        <button class="pv-nav-btn" onclick="pvGoToPrev()" title="Previous"><i class="bi bi-chevron-left"></i></button>
-                        <button class="pv-nav-btn" onclick="pvGoToNext()" title="Next"><i class="bi bi-chevron-right"></i></button>
-                        <button class="pv-nav-btn" onclick="pvGoToLast()" title="Go to Last Schedule (non-TBA)">Last</button>
+                        <button class="pv-nav-btn nav-main" onclick="pvGoToFirst()"
+                            title="Go to First Schedule">1st</button>
+                        <button class="pv-nav-btn" onclick="pvGoToPrev()" title="Previous"><i
+                                class="bi bi-chevron-left"></i></button>
+                        <button class="pv-nav-btn" onclick="pvGoToNext()" title="Next"><i
+                                class="bi bi-chevron-right"></i></button>
+                        <button class="pv-nav-btn" onclick="pvGoToLast()"
+                            title="Go to Last Schedule (non-TBA)">Last</button>
                     </div>
-                    
+
                     <div class="pv-zoom-pill">
                         <button class="btn pv-zoom-btn" onclick="pvZoom(-0.1)"><i class="bi bi-dash"></i></button>
                         <span class="pv-zoom-val" id="pvZoomLevel">12%</span>
@@ -165,17 +180,22 @@
                 <!-- Zoom Badge -->
                 <div id="pvZoomBadge">Zoom: 12%</div>
                 <!-- Minimap -->
-                <div id="pvMinimap" style="position:absolute;bottom:20px;right:20px;width:180px;height:135px;
+                <div id="pvMinimap"
+                    style="position:absolute;bottom:20px;right:20px;width:180px;height:135px;
                      background:rgba(255,255,255,0.85);backdrop-filter:blur(8px);border-radius:10px;
                      border:1px solid rgba(0,0,0,0.1);box-shadow:0 4px 16px rgba(0,0,0,0.1);overflow:hidden;z-index:20;cursor:pointer;">
                     <div id="pvMinimapContent" style="position:absolute;inset:0;"></div>
-                    <div id="pvMinimapBox" style="position:absolute;border:2px solid #198754;background:rgba(25,135,84,0.1);pointer-events:none;"></div>
+                    <div id="pvMinimapBox"
+                        style="position:absolute;border:2px solid #198754;background:rgba(25,135,84,0.1);pointer-events:none;">
+                    </div>
                 </div>
                 <!-- Cinema / Presentation Overlay -->
                 <div id="pvCinemaOverlay">
                     <button class="pv-pres-close" onclick="pvClosePresentation()"><i class="bi bi-x-lg"></i></button>
-                    <button class="pv-pres-nav-btn pv-pres-prev" onclick="pvShowPrev()"><i class="bi bi-chevron-left"></i></button>
-                    <button class="pv-pres-nav-btn pv-pres-next" onclick="pvShowNext()"><i class="bi bi-chevron-right"></i></button>
+                    <button class="pv-pres-nav-btn pv-pres-prev" onclick="pvShowPrev()"><i
+                            class="bi bi-chevron-left"></i></button>
+                    <button class="pv-pres-nav-btn pv-pres-next" onclick="pvShowNext()"><i
+                            class="bi bi-chevron-right"></i></button>
                     <div class="pv-pres-container" id="pvPresBackdrop">
                         <div class="pv-pres-iframe-wrap" id="pvPresWrap">
                             <iframe id="pvPresIframe"></iframe>
@@ -183,7 +203,9 @@
                     </div>
                     <div class="pv-pres-footer">
                         <span id="pvPresLabel">&hellip;</span> &nbsp;|&nbsp;
-                        Press <kbd style="color:#aaa;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:3px;padding:1px 5px;">ESC</kbd> to exit &nbsp;|&nbsp;
+                        Press <kbd
+                            style="color:#aaa;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:3px;padding:1px 5px;">ESC</kbd>
+                        to exit &nbsp;|&nbsp;
                         Drag to Pan &nbsp;|&nbsp; Scroll to Zoom
                     </div>
                 </div>
@@ -201,387 +223,1149 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <textarea id="adminNote" class="form-control" rows="3" placeholder="Why is this decision being made? (Optional)"></textarea>
+                <textarea id="adminNote" class="form-control" rows="3"
+                    placeholder="Why is this decision being made? (Optional)" maxlength="500"></textarea>
             </div>
             <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-primary w-100 rounded-pill" id="confirmDecisionBtn">Confirm</button>
+                <button type="button" class="btn btn-primary w-100 rounded-pill"
+                    id="confirmDecisionBtn">Confirm</button>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-/* ──────── MESSENGER UI ENGINE ──────── */
-:root {
-    --ms-blue: #0084ff;
-    --ms-bg: #fff;
-    --ms-sidebar-bg: #fff;
-    --ms-bubble-me: #0084ff;
-    --ms-bubble-them: #e4e6eb;
-    --ms-text-me: #fff;
-    --ms-text-them: #050505;
-    --ms-border: #f0f0f0;
-}
+    /* ──────── MESSENGER UI ENGINE ──────── */
+    :root {
+        --ms-blue: #0084ff;
+        --ms-bg: #fff;
+        --ms-sidebar-bg: #fff;
+        --ms-bubble-me: #0084ff;
+        --ms-bubble-them: #e4e6eb;
+        --ms-text-me: #fff;
+        --ms-text-them: #050505;
+        --ms-border: #f0f0f0;
+    }
 
-body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    body {
+        background: #fff !important;
+        overflow: hidden;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
 
-.messenger-hub-wrapper {
-    display: flex;
-    height: calc(100vh - 65px);
-    width: 100%;
-    overflow: hidden;
-    margin: -1.5rem; /* Cancel typical template padding */
-}
+    .messenger-hub-wrapper {
+        display: flex;
+        height: calc(100vh - 65px);
+        width: 100%;
+        overflow: hidden;
+        margin: -1.5rem;
+        /* Cancel typical template padding */
+    }
 
-/* 1. SIDEBAR */
-.messenger-sidebar {
-    width: 300px;
-    border-right: 1px solid var(--ms-border);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-}
-.sidebar-header-main h4 { font-size: 1.5rem; color: #050505; margin: 0; }
-.messenger-search {
-    background: #f0f2f5;
-    border-radius: 20px;
-    padding: 8px 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.messenger-search i { color: #65676b; }
-.messenger-search input { 
-    background: transparent; 
-    border: none; 
-    width: 100%; 
-    outline: none; 
-    font-size: 0.95rem; 
-}
+    /* 1. SIDEBAR */
+    .messenger-sidebar {
+        width: 300px;
+        border-right: 1px solid var(--ms-border);
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+    }
 
-.messenger-convo-list { flex-grow: 1; overflow-y: auto; padding-top: 8px; }
-.convo-item {
-    display: flex;
-    padding: 8px 12px;
-    margin: 0 8px;
-    border-radius: 10px;
-    cursor: pointer;
-    align-items: center;
-    gap: 12px;
-    transition: background 0.15s;
-}
-.convo-item:hover { background: #f5f5f5; }
-.convo-item.active { background: #e7f3ff; }
-.convo-avatar {
-    width: 50px; height: 50px; border-radius: 50%; background: #ccc;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.2rem; font-weight: bold; color: white; flex-shrink: 0;
-    position: relative;
-}
-.online-dot-mini {
-    position: absolute; bottom: 2px; right: 2px; width: 14px; height: 14px;
-    background: #31a24c; border: 3px solid #fff; border-radius: 50%;
-}
-.convo-body { flex-grow: 1; min-width: 0; }
-.convo-header { display: flex; justify-content: space-between; align-items: baseline; }
-.convo-name { font-weight: 600; color: #050505; font-size: 0.95rem; }
-.convo-time { font-size: 0.75rem; color: #65676b; }
-.convo-preview {
-    font-size: 0.8rem; color: #65676b; white-space: nowrap; 
-    overflow: hidden; text-overflow: ellipsis; max-width: 180px; 
-}
-.convo-item.unread .convo-preview { font-weight: bold; color: #050505; }
-.unread-dot {
-    width: 10px; height: 10px; background: var(--ms-blue); 
-    border-radius: 50%; margin-left: 10px;
-}
+    .sidebar-header-main h4 {
+        font-size: 1.5rem;
+        color: #050505;
+        margin: 0;
+    }
 
-/* 2. CHAT PANE */
-.messenger-chat-pane {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    background: #fff;
-}
-.chat-header-main {
-    height: 60px; padding: 0 16px; border-bottom: 1px solid var(--ms-border);
-    display: flex; align-items: center; background: #fff; z-index: 10;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-}
-.avatar-header {
-    width: 40px; height: 40px; border-radius: 50%; background: var(--ms-blue);
-    display: flex; align-items: center; justify-content: center; color: white;
-    font-weight: bold; font-size: 1.1rem;
-}
+    .messenger-search {
+        background: #f0f2f5;
+        border-radius: 20px;
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 
-.chat-log-main {
-    flex-grow: 1; padding: 20px 20px 28px; overflow-y: auto;
-    display: flex; flex-direction: column; gap: 4px;
-}
+    .messenger-search i {
+        color: #65676b;
+    }
 
-/* BUBBLES WITH TAILS */
-.bubble-wrap { display: flex; width: 100%; margin-bottom: 2px; align-items: flex-end; }
-.bubble-wrap.me { justify-content: flex-end; }
-.bubble-wrap.them { justify-content: flex-start; }
+    .messenger-search input {
+        background: transparent;
+        border: none;
+        width: 100%;
+        outline: none;
+        font-size: 0.95rem;
+    }
 
-.bubble {
-    max-width: 85%;
-    padding: 8px 14px;
-    font-size: 0.95rem;
-    line-height: 1.4;
-    position: relative;
-    word-break: break-word;
-}
-.bubble-wrap.me .bubble {
-    background: var(--ms-bubble-me);
-    color: var(--ms-text-me);
-    border-radius: 18px 18px 4px 18px;
-}
-.bubble-wrap.them .bubble {
-    background: var(--ms-bubble-them);
-    color: var(--ms-text-them);
-    border-radius: 18px 18px 18px 4px;
-}
+    .messenger-convo-list {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding-top: 8px;
+    }
 
-/* TAIL ARROWS (Tail Corner) */
-.bubble-wrap.me .bubble::after {
-    content: ''; position: absolute; bottom: 0; right: -5px; width: 15px; height: 15px;
-    background: var(--ms-bubble-me); clip-path: polygon(0 0, 0% 100%, 100% 100%);
-    z-index: -1;
-}
-.bubble-wrap.them .bubble::after {
-    content: ''; position: absolute; bottom: 0; left: -5px; width: 15px; height: 15px;
-    background: var(--ms-bubble-them); clip-path: polygon(100% 0, 0 100%, 100% 100%);
-    z-index: -1;
-}
+    .convo-item {
+        display: flex;
+        padding: 8px 12px;
+        margin: 0 8px;
+        border-radius: 10px;
+        cursor: pointer;
+        align-items: center;
+        gap: 12px;
+        transition: background 0.15s;
+    }
 
-.bubble-time { font-size: 0.65rem; color: #8a8d91; margin: 2px 8px; }
-.bubble-wrap.me .bubble-time { text-align: right; }
+    .convo-item:hover {
+        background: #f5f5f5;
+    }
 
-/* Special Bubbles */
-.bubble.system_alert {
-    background: #fff0f0 !important; border: 1px solid #ffcccc; color: #d00;
-    width: 100%; max-width: 100%; text-align: center; border-radius: 8px !important;
-}
-.bubble.system_alert::after { display:none }
+    .convo-item.active {
+        background: #e7f3ff;
+    }
 
-/* Draft Card */
-.msg-draft-card {
-    display: flex; align-items: center; gap: 12px;
-    background: rgba(255,255,255,0.1) !important; color: inherit;
-    border: none; border-left: 3px solid rgba(255,255,255,0.5); border-radius: 12px;
-    padding: 8px; margin-top: 0; text-decoration: none !important;
-    width: 100%; transition: background 0.2s, transform 0.15s, box-shadow 0.15s; box-sizing: border-box;
-}
-.bubble-wrap.them .msg-draft-card {
-    background: #fff !important; border-left: 3px solid #198754; color: #050505;
-    box-shadow: 0 2px 8px rgba(25,135,84,0.08);
-}
-.bubble-wrap.me .msg-draft-card:hover { background: rgba(255,255,255,0.18) !important; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-.bubble-wrap.them .msg-draft-card:hover { background: #f0fdf4 !important; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(25,135,84,0.12); }
-.msg-draft-icon {
-    width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
-    background: #198754; color: #fff; display: flex; align-items: center;
-    justify-content: center; font-size: 1.15rem;
-}
-.bubble-wrap.me .msg-draft-icon { background: rgba(255,255,255,0.25); }
-.msg-draft-info { flex: 1; min-width: 0; }
-.msg-draft-name { font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.msg-draft-sub { font-size: 0.7rem; opacity: 0.6; margin-top: 2px; letter-spacing: 0.2px; }
-.msg-draft-chevron { font-size: 0.72rem; color: #198754; font-weight: 700; flex-shrink: 0; white-space: nowrap; opacity: 0.85; }
-.bubble-wrap.me .msg-draft-chevron { color: rgba(255,255,255,0.8); }
+    .convo-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: #ccc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: white;
+        flex-shrink: 0;
+        position: relative;
+    }
 
-/* 3. INPUT */
-.chat-input-main { padding: 12px 16px 36px; border-top: 1px solid var(--ms-border); background: #fff; }
-.chat-form-main { display: flex; align-items: flex-end; gap: 8px; }
-.input-tools { display: flex; gap: 8px; margin-bottom: 2px; }
-.btn-messenger-icon { width: 34px; height: 34px; border-radius: 50%; border: none; background: transparent; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: background 0.2s; }
-.btn-messenger-icon:hover { background: #f0f2f5; }
-.messenger-textarea {
-    background: #f0f2f5; border: none; border-radius: 20px; padding: 9px 15px;
-    resize: none; max-height: 120px; font-size: 0.95rem; line-height: 1.4;
-}
-.messenger-textarea:focus { background: #f0f2f5; box-shadow: none; border: none; }
-.btn-send-messenger {
-    width: 34px; height: 34px; border-radius: 50%; border: none; background: transparent;
-    color: var(--ms-blue); display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
-}
+    .online-dot-mini {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        width: 14px;
+        height: 14px;
+        background: #31a24c;
+        border: 3px solid #fff;
+        border-radius: 50%;
+    }
 
-/* 4. ATTACHMENT PREVIEW */
-.attachment-preview-container { padding: 10px 0; }
-.draft-preview-card {
-    background: #f0fdf4; border: 1px solid #c3e6cb; border-radius: 12px;
-    padding: 8px 12px; display: inline-flex; align-items: center; gap: 10px;
-    box-shadow: 0 4px 12px rgba(49,162,76,0.1);
-}
-.btn-close-preview { background: none; border: none; color: #65676b; font-size: 1.1rem; padding: 0; line-height: 0; cursor: pointer; }
-.btn-close-preview:hover { color: #d00; }
+    .convo-body {
+        flex-grow: 1;
+        min-width: 0;
+    }
 
-/* 5. SIDEBAR META */
-.messenger-details-pane { width: 260px; border-left: 1px solid var(--ms-border); background: #fff; flex-shrink: 0; }
-@media (max-width: 1100px) { .messenger-details-pane { display: none; } }
-.x-small { font-size: 0.7rem; }
-.op-10 { opacity: 0.1; }
-.proposal-mini-card { background: #fff; border: 1px solid var(--ms-border); border-radius: 10px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-.btn-messenger-sm { font-size: 0.75rem; font-weight: 600; padding: 4px 8px; border-radius: 8px; }
+    .convo-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+    }
 
-/* 6. OVERLAYS */
-.messenger-overlay {
-    position: fixed; bottom: 80px; left: 380px; width: 320px; 
-    background: #fff; border-radius: 12px; z-index: 1000;
-    display: flex; flex-direction: column; overflow: hidden;
-}
-.picker-list-box { max-height: 300px; overflow-y: auto; }
-.picker-item {
-    padding: 10px 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.2s;
-}
-.picker-item:hover { background: #f9f9f9; }
+    .convo-name {
+        font-weight: 600;
+        color: #050505;
+        font-size: 0.95rem;
+    }
 
-/* 7. PREVIEW MODAL — full parity with schedule_editor draft preview */
-#pvViewport {
-    background-color: #f8fafc;
-    background-image: radial-gradient(rgba(0,0,0,0.18) 1.2px, transparent 1.2px);
-    background-size: 22px 22px;
-    user-select: none;
-}
-#pvCanvas .pv-card {
-    transition: opacity 0.3s ease, transform 0.05s linear;
-}
-.pv-card.pv-dimmed {
-    opacity: 0.15;
-    pointer-events: none;
-}
-.pv-card {
-    background: transparent; border-radius: 0; box-shadow: none; border: none;
-    overflow: visible; transition: all 0.4s cubic-bezier(0.4,0,0.2,1); position: relative; padding: 0;
-}
-.pv-card:hover { transform: translateY(-5px) scale(1.02); z-index: 20; }
-.pv-card::before {
-    content: ""; position: absolute; inset: 0;
-    background-image: url('https://www.transparenttextures.com/patterns/paper.png');
-    opacity: 0.1; pointer-events: none; z-index: 1;
-}
-.pv-card .card-iframe-wrap { width: 800px; height: 1130px; background: white; border: 1px solid #ddd; position: relative; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
-.pv-card .card-iframe-wrap iframe { width: 800px; height: 1130px; border: none; pointer-events: none; transform: scale(1.0); transform-origin: top left; transition: opacity 0.3s ease; overflow: hidden; }
-.pv-card .card-header-bar {
-    position: absolute; top: 0; left: 0; right: 0; height: 34px; background: #198754;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 12px; color: white; font-weight: bold; font-size: 0.85rem; z-index: 10;
-}
-.pv-card .card-maximize-btn {
-    background: rgba(255,255,255,0.2); color: white; border: none;
-    width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center;
-    justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 0.75rem;
-}
-.pv-card .card-maximize-btn:hover { background: rgba(255,255,255,0.4); transform: scale(1.1); }
-/* Topbar */
-.pv-topbar { background: #fff; padding: 10px 20px; display: flex; align-items: center; gap: 12px; z-index: 100; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; }
-.pv-topbar.focus-mode { display: none !important; }
-.pv-title-pill { font-size: 0.95rem; font-weight: 800; color: #157347; display: flex; align-items: center; gap: 6px; padding-right: 15px; border-right: 1px solid #eee; }
-.pv-pill-select-wrap { display: flex; align-items: center; gap: 8px; background: #f8f9fa; border-radius: 30px; padding: 4px 12px; border: 1px solid #eee; }
-.pv-pill-label { font-size: 0.8rem; color: #666; font-weight: 600; }
-.pv-pill-select { border: none !important; background: transparent; font-weight: 700; font-size: 0.85rem; color: #333; cursor: pointer; padding: 0 5px !important; width: auto; }
-.pv-search-pill { background: #f8f9fa; border-radius: 30px; padding: 4px 15px; border: 1px solid #eee; display: flex; align-items: center; gap: 8px; min-width: 150px; }
-.pv-search-pill input { border: none !important; background: transparent !important; font-size: 0.85rem; outline: none; width: 100%; }
-.pv-pill-btn { border-radius: 30px !important; padding: 6px 20px !important; font-size: 0.8rem !important; font-weight: 700 !important; white-space: nowrap !important; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; position: relative; overflow: hidden; }
-.pv-pill-btn i { transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.pv-pill-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(25, 135, 84, 0.2); }
-.pv-pill-btn:hover i.bi-arrows-angle-contract { transform: rotate(45deg) scale(1.2); }
-.pv-pill-btn:active { transform: translateY(0) scale(0.95); }
-.pv-zoom-pill { display: flex; align-items: center; background: #f8f9fa; border-radius: 30px; padding: 4px 8px; border: 1px solid #eee; gap: 10px; }
-.pv-zoom-btn { width: 26px; height: 26px; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; background: #fff !important; border: 1px solid #ddd !important; padding: 0 !important; color: #666; transition: all 0.2s; cursor: pointer; }
-.pv-zoom-btn:hover { background: #eee !important; color: #000; }
-.pv-zoom-val { font-size: 0.85rem; font-weight: 700; color: #157347; min-width: 45px; text-align: center; }
+    .convo-time {
+        font-size: 0.75rem;
+        color: #65676b;
+    }
 
-/* Nav Group Styling */
-.pv-nav-pill { display: flex; align-items: center; background: #f8f9fa; border-radius: 30px; padding: 4px; border: 1px solid #eee; gap: 4px; }
-.pv-nav-btn { border: none; background: #fff; border-radius: 20px; padding: 4px 12px; font-size: 0.75rem; font-weight: 700; color: #157347; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid #eee; display: flex; align-items: center; gap: 4px; }
-.pv-nav-btn i { transition: transform 0.3s; }
-.pv-nav-btn:hover { background: #157347; color: #fff; border-color: #157347; transform: scale(1.05); box-shadow: 0 4px 10px rgba(21, 115, 71, 0.2); }
-.pv-nav-btn:hover i.bi-chevron-left { transform: translateX(-2px); }
-.pv-nav-btn:hover i.bi-chevron-right { transform: translateX(2px); }
-.pv-nav-btn:active { transform: scale(0.95); }
-.pv-nav-btn.nav-main { background: #157347; color: #fff; border-color: #157347; }
-.pv-nav-btn.nav-main:hover { opacity: 0.9; transform: scale(1.05); }
+    .convo-preview {
+        font-size: 0.8rem;
+        color: #65676b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
+    }
 
-/* Card Focus Pulse */
-@keyframes pv-focus-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.4); transform: scale(1); }
-    50% { box-shadow: 0 0 20px 10px rgba(25, 135, 84, 0.2); transform: scale(1.02); }
-    100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); transform: scale(1); }
-}
-.pv-focus-pulse { animation: pv-focus-pulse 1s cubic-bezier(0.4, 0, 0.2, 1) forwards; z-index: 1000 !important; }
+    .convo-item.unread .convo-preview {
+        font-weight: bold;
+        color: #050505;
+    }
 
-/* Viewport Flash Effect */
-@keyframes pv-viewport-flash {
-    0% { background: rgba(25, 135, 84, 0.15); }
-    100% { background: transparent; }
-}
-.pv-viewport-flash::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 5;
-    pointer-events: none;
-    animation: pv-viewport-flash 0.4s ease-out forwards;
-}
+    .unread-dot {
+        width: 10px;
+        height: 10px;
+        background: var(--ms-blue);
+        border-radius: 50%;
+        margin-left: 10px;
+    }
 
-.pv-close-x { font-size: 1.5rem; color: #999; cursor: pointer; transition: color 0.2s; background: none; border: none; padding: 0; display: flex; align-items: center; }
-.pv-close-x:hover { color: #333; }
-#pvZoomBadge { position: absolute; bottom: 20px; left: 20px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); padding: 5px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; color: #198754; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 20; pointer-events: none; }
-#pvMinimap { position: absolute; bottom: 20px; right: 20px; width: 180px; height: 135px; background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); border-radius: 10px; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 4px 16px rgba(0,0,0,0.1); overflow: hidden; z-index: 20; cursor: pointer; }
-#pvMinimapContent { position: absolute; inset: 0; }
-#pvMinimapBox { position: absolute; border: 2px solid #198754; background: rgba(25,135,84,0.1); pointer-events: none; }
-/* Cinema overlay */
-#pvCinemaOverlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 500; display: none; flex-direction: column; align-items: center; justify-content: center; cursor: grab; user-select: none; }
-#pvCinemaOverlay.active { display: flex; }
-#pvCinemaOverlay:active { cursor: grabbing; }
-.pv-pres-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-.pv-pres-iframe-wrap { width: 800px; height: 1130px; background: white; box-shadow: 0 0 100px rgba(0,0,0,0.8); transform-origin: center center; transition: transform 0.05s linear; pointer-events: auto; flex-shrink: 0; }
-.pv-pres-iframe-wrap iframe { width: 100%; height: 100%; border: none; pointer-events: none; }
-.pv-pres-nav-btn { position: absolute; top: 50%; transform: translateY(-50%); width: 70px; height: 70px; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; cursor: pointer; z-index: 10; transition: all 0.3s; }
-.pv-pres-nav-btn:hover { background: #198754; border-color: #198754; transform: translateY(-50%) scale(1.1); }
-.pv-pres-prev { left: 30px; }
-.pv-pres-next { right: 30px; }
-.pv-pres-close { position: absolute; top: 20px; right: 20px; color: rgba(255,255,255,0.4); font-size: 2.5rem; cursor: pointer; z-index: 10; transition: color 0.3s; line-height: 1; background: none; border: none; }
-.pv-pres-close:hover { color: white; }
-.pv-pres-footer { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.5); font-size: 0.9rem; letter-spacing: 1px; white-space: nowrap; }
+    /* 2. CHAT PANE */
+    .messenger-chat-pane {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        background: #fff;
+    }
 
-/* Sent / Seen Status */
-.bubble-status { font-size: 0.6rem; color: #8a8d91; margin-top: 1px; text-align: right; padding-right: 2px; }
-.bubble-status .tick-seen { color: #0084ff; }
+    .chat-header-main {
+        height: 60px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--ms-border);
+        display: flex;
+        align-items: center;
+        background: #fff;
+        z-index: 10;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    }
 
-/* Edit / Delete hover actions */
-.bubble-wrap.me .bubble-actions { display: none; }
-.bubble-wrap.me:hover .bubble-actions { display: flex; }
-.bubble-actions { align-items: center; gap: 4px; margin-bottom: 4px; justify-content: flex-end; }
-.bubble-action-btn {
-    width: 26px; height: 26px; border-radius: 50%; border: none;
-    background: #f0f2f5; color: #65676b; font-size: 0.7rem;
-    display: flex; align-items: center; justify-content: center; cursor: pointer;
-    transition: background 0.15s;
-}
-.bubble-action-btn:hover { background: #dde1e7; }
+    .avatar-header {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--ms-blue);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
 
-/* Scrollbars */
-.custom-scrollbar::-webkit-scrollbar { width: 6px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #bcc0c4; border-radius: 10px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .chat-log-main {
+        flex-grow: 1;
+        padding: 20px 20px 28px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    /* BUBBLES WITH TAILS */
+    .bubble-wrap {
+        display: flex;
+        width: 100%;
+        margin-bottom: 2px;
+        align-items: flex-end;
+    }
+
+    .bubble-wrap.me {
+        justify-content: flex-end;
+    }
+
+    .bubble-wrap.them {
+        justify-content: flex-start;
+    }
+
+    .bubble {
+        max-width: 85%;
+        padding: 8px 14px;
+        font-size: 0.95rem;
+        line-height: 1.4;
+        position: relative;
+        word-break: break-word;
+    }
+
+    .bubble-wrap.me .bubble {
+        background: var(--ms-bubble-me);
+        color: var(--ms-text-me);
+        border-radius: 18px 18px 4px 18px;
+    }
+
+    .bubble-wrap.them .bubble {
+        background: var(--ms-bubble-them);
+        color: var(--ms-text-them);
+        border-radius: 18px 18px 18px 4px;
+    }
+
+    /* TAIL ARROWS (Tail Corner) */
+    .bubble-wrap.me .bubble::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        right: -5px;
+        width: 15px;
+        height: 15px;
+        background: var(--ms-bubble-me);
+        clip-path: polygon(0 0, 0% 100%, 100% 100%);
+        z-index: -1;
+    }
+
+    .bubble-wrap.them .bubble::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: -5px;
+        width: 15px;
+        height: 15px;
+        background: var(--ms-bubble-them);
+        clip-path: polygon(100% 0, 0 100%, 100% 100%);
+        z-index: -1;
+    }
+
+    .bubble-time {
+        font-size: 0.65rem;
+        color: #8a8d91;
+        margin: 2px 8px;
+    }
+
+    .bubble-wrap.me .bubble-time {
+        text-align: right;
+    }
+
+    /* Special Bubbles */
+    .bubble.system_alert {
+        background: #fff0f0 !important;
+        border: 1px solid #ffcccc;
+        color: #d00;
+        width: 100%;
+        max-width: 100%;
+        text-align: center;
+        border-radius: 8px !important;
+    }
+
+    .bubble.system_alert::after {
+        display: none
+    }
+
+    /* Draft Card */
+    .msg-draft-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(255, 255, 255, 0.1) !important;
+        color: inherit;
+        border: none;
+        border-left: 3px solid rgba(255, 255, 255, 0.5);
+        border-radius: 12px;
+        padding: 8px;
+        margin-top: 0;
+        text-decoration: none !important;
+        width: 100%;
+        transition: background 0.2s, transform 0.15s, box-shadow 0.15s;
+        box-sizing: border-box;
+    }
+
+    .bubble-wrap.them .msg-draft-card {
+        background: #fff !important;
+        border-left: 3px solid #198754;
+        color: #050505;
+        box-shadow: 0 2px 8px rgba(25, 135, 84, 0.08);
+    }
+
+    .bubble-wrap.me .msg-draft-card:hover {
+        background: rgba(255, 255, 255, 0.18) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .bubble-wrap.them .msg-draft-card:hover {
+        background: #f0fdf4 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(25, 135, 84, 0.12);
+    }
+
+    .msg-draft-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        flex-shrink: 0;
+        background: #198754;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.15rem;
+    }
+
+    .bubble-wrap.me .msg-draft-icon {
+        background: rgba(255, 255, 255, 0.25);
+    }
+
+    .msg-draft-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .msg-draft-name {
+        font-weight: 700;
+        font-size: 0.88rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .msg-draft-sub {
+        font-size: 0.7rem;
+        opacity: 0.6;
+        margin-top: 2px;
+        letter-spacing: 0.2px;
+    }
+
+    .msg-draft-chevron {
+        font-size: 0.72rem;
+        color: #198754;
+        font-weight: 700;
+        flex-shrink: 0;
+        white-space: nowrap;
+        opacity: 0.85;
+    }
+
+    .bubble-wrap.me .msg-draft-chevron {
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* 3. INPUT */
+    .chat-input-main {
+        padding: 12px 16px 36px;
+        border-top: 1px solid var(--ms-border);
+        background: #fff;
+    }
+
+    .chat-form-main {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .input-tools {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 2px;
+    }
+
+    .btn-messenger-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: none;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        transition: background 0.2s;
+    }
+
+    .btn-messenger-icon:hover {
+        background: #f0f2f5;
+    }
+
+    .messenger-textarea {
+        background: #f0f2f5;
+        border: none;
+        border-radius: 20px;
+        padding: 9px 15px;
+        resize: none;
+        max-height: 120px;
+        font-size: 0.95rem;
+        line-height: 1.4;
+    }
+
+    .messenger-textarea:focus {
+        background: #f0f2f5;
+        box-shadow: none;
+        border: none;
+    }
+
+    .btn-send-messenger {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: none;
+        background: transparent;
+        color: var(--ms-blue);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    /* 4. ATTACHMENT PREVIEW */
+    .attachment-preview-container {
+        padding: 10px 0;
+    }
+
+    .draft-preview-card {
+        background: #f0fdf4;
+        border: 1px solid #c3e6cb;
+        border-radius: 12px;
+        padding: 8px 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 4px 12px rgba(49, 162, 76, 0.1);
+    }
+
+    .btn-close-preview {
+        background: none;
+        border: none;
+        color: #65676b;
+        font-size: 1.1rem;
+        padding: 0;
+        line-height: 0;
+        cursor: pointer;
+    }
+
+    .btn-close-preview:hover {
+        color: #d00;
+    }
+
+    /* 5. SIDEBAR META */
+    .messenger-details-pane {
+        width: 260px;
+        border-left: 1px solid var(--ms-border);
+        background: #fff;
+        flex-shrink: 0;
+    }
+
+    @media (max-width: 1100px) {
+        .messenger-details-pane {
+            display: none;
+        }
+    }
+
+    .x-small {
+        font-size: 0.7rem;
+    }
+
+    .op-10 {
+        opacity: 0.1;
+    }
+
+    .proposal-mini-card {
+        background: #fff;
+        border: 1px solid var(--ms-border);
+        border-radius: 10px;
+        padding: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .btn-messenger-sm {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 4px 8px;
+        border-radius: 8px;
+    }
+
+    /* 6. OVERLAYS */
+    .messenger-overlay {
+        position: fixed;
+        bottom: 80px;
+        left: 380px;
+        width: 320px;
+        background: #fff;
+        border-radius: 12px;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .picker-list-box {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .picker-item {
+        padding: 10px 16px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .picker-item:hover {
+        background: #f9f9f9;
+    }
+
+    /* 7. PREVIEW MODAL — full parity with schedule_editor draft preview */
+    #pvViewport {
+        background-color: #f8fafc;
+        background-image: radial-gradient(rgba(0, 0, 0, 0.18) 1.2px, transparent 1.2px);
+        background-size: 22px 22px;
+        user-select: none;
+    }
+
+    #pvCanvas .pv-card {
+        transition: opacity 0.3s ease, transform 0.05s linear;
+    }
+
+    .pv-card.pv-dimmed {
+        opacity: 0.15;
+        pointer-events: none;
+    }
+
+    .pv-card {
+        background: transparent;
+        border-radius: 0;
+        box-shadow: none;
+        border: none;
+        overflow: visible;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        padding: 0;
+    }
+
+    .pv-card:hover {
+        transform: translateY(-5px) scale(1.02);
+        z-index: 20;
+    }
+
+    .pv-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: url('https://www.transparenttextures.com/patterns/paper.png');
+        opacity: 0.1;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    .pv-card .card-iframe-wrap {
+        width: 800px;
+        height: 1130px;
+        background: white;
+        border: 1px solid #ddd;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .pv-card .card-iframe-wrap iframe {
+        width: 800px;
+        height: 1130px;
+        border: none;
+        pointer-events: none;
+        transform: scale(1.0);
+        transform-origin: top left;
+        transition: opacity 0.3s ease;
+        overflow: hidden;
+    }
+
+    .pv-card .card-header-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 34px;
+        background: #198754;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+        color: white;
+        font-weight: bold;
+        font-size: 0.85rem;
+        z-index: 10;
+    }
+
+    .pv-card .card-maximize-btn {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: none;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 0.75rem;
+    }
+
+    .pv-card .card-maximize-btn:hover {
+        background: rgba(255, 255, 255, 0.4);
+        transform: scale(1.1);
+    }
+
+    /* Topbar */
+    .pv-topbar {
+        background: #fff;
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        z-index: 100;
+        border-bottom: 1px solid #e0e0e0;
+        flex-shrink: 0;
+    }
+
+    .pv-topbar.focus-mode {
+        display: none !important;
+    }
+
+    .pv-title-pill {
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: #157347;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding-right: 15px;
+        border-right: 1px solid #eee;
+    }
+
+    .pv-pill-select-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #f8f9fa;
+        border-radius: 30px;
+        padding: 4px 12px;
+        border: 1px solid #eee;
+    }
+
+    .pv-pill-label {
+        font-size: 0.8rem;
+        color: #666;
+        font-weight: 600;
+    }
+
+    .pv-pill-select {
+        border: none !important;
+        background: transparent;
+        font-weight: 700;
+        font-size: 0.85rem;
+        color: #333;
+        cursor: pointer;
+        padding: 0 5px !important;
+        width: auto;
+    }
+
+    .pv-search-pill {
+        background: #f8f9fa;
+        border-radius: 30px;
+        padding: 4px 15px;
+        border: 1px solid #eee;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 150px;
+    }
+
+    .pv-search-pill input {
+        border: none !important;
+        background: transparent !important;
+        font-size: 0.85rem;
+        outline: none;
+        width: 100%;
+    }
+
+    .pv-pill-btn {
+        border-radius: 30px !important;
+        padding: 6px 20px !important;
+        font-size: 0.8rem !important;
+        font-weight: 700 !important;
+        white-space: nowrap !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .pv-pill-btn i {
+        transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .pv-pill-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(25, 135, 84, 0.2);
+    }
+
+    .pv-pill-btn:hover i.bi-arrows-angle-contract {
+        transform: rotate(45deg) scale(1.2);
+    }
+
+    .pv-pill-btn:active {
+        transform: translateY(0) scale(0.95);
+    }
+
+    .pv-zoom-pill {
+        display: flex;
+        align-items: center;
+        background: #f8f9fa;
+        border-radius: 30px;
+        padding: 4px 8px;
+        border: 1px solid #eee;
+        gap: 10px;
+    }
+
+    .pv-zoom-btn {
+        width: 26px;
+        height: 26px;
+        border-radius: 50% !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff !important;
+        border: 1px solid #ddd !important;
+        padding: 0 !important;
+        color: #666;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    .pv-zoom-btn:hover {
+        background: #eee !important;
+        color: #000;
+    }
+
+    .pv-zoom-val {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #157347;
+        min-width: 45px;
+        text-align: center;
+    }
+
+    /* Nav Group Styling */
+    .pv-nav-pill {
+        display: flex;
+        align-items: center;
+        background: #f8f9fa;
+        border-radius: 30px;
+        padding: 4px;
+        border: 1px solid #eee;
+        gap: 4px;
+    }
+
+    .pv-nav-btn {
+        border: none;
+        background: #fff;
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #157347;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid #eee;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .pv-nav-btn i {
+        transition: transform 0.3s;
+    }
+
+    .pv-nav-btn:hover {
+        background: #157347;
+        color: #fff;
+        border-color: #157347;
+        transform: scale(1.05);
+        box-shadow: 0 4px 10px rgba(21, 115, 71, 0.2);
+    }
+
+    .pv-nav-btn:hover i.bi-chevron-left {
+        transform: translateX(-2px);
+    }
+
+    .pv-nav-btn:hover i.bi-chevron-right {
+        transform: translateX(2px);
+    }
+
+    .pv-nav-btn:active {
+        transform: scale(0.95);
+    }
+
+    .pv-nav-btn.nav-main {
+        background: #157347;
+        color: #fff;
+        border-color: #157347;
+    }
+
+    .pv-nav-btn.nav-main:hover {
+        opacity: 0.9;
+        transform: scale(1.05);
+    }
+
+    /* Card Focus Pulse */
+    @keyframes pv-focus-pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.4);
+            transform: scale(1);
+        }
+
+        50% {
+            box-shadow: 0 0 20px 10px rgba(25, 135, 84, 0.2);
+            transform: scale(1.02);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(25, 135, 84, 0);
+            transform: scale(1);
+        }
+    }
+
+    .pv-focus-pulse {
+        animation: pv-focus-pulse 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        z-index: 1000 !important;
+    }
+
+    /* Viewport Flash Effect */
+    @keyframes pv-viewport-flash {
+        0% {
+            background: rgba(25, 135, 84, 0.15);
+        }
+
+        100% {
+            background: transparent;
+        }
+    }
+
+    .pv-viewport-flash::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        pointer-events: none;
+        animation: pv-viewport-flash 0.4s ease-out forwards;
+    }
+
+    .pv-close-x {
+        font-size: 1.5rem;
+        color: #999;
+        cursor: pointer;
+        transition: color 0.2s;
+        background: none;
+        border: none;
+        padding: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .pv-close-x:hover {
+        color: #333;
+    }
+
+    #pvZoomBadge {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(8px);
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: bold;
+        color: #198754;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        z-index: 20;
+        pointer-events: none;
+    }
+
+    #pvMinimap {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        width: 180px;
+        height: 135px;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(8px);
+        border-radius: 10px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        z-index: 20;
+        cursor: pointer;
+    }
+
+    #pvMinimapContent {
+        position: absolute;
+        inset: 0;
+    }
+
+    #pvMinimapBox {
+        position: absolute;
+        border: 2px solid #198754;
+        background: rgba(25, 135, 84, 0.1);
+        pointer-events: none;
+    }
+
+    /* Cinema overlay */
+    #pvCinemaOverlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 500;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: grab;
+        user-select: none;
+    }
+
+    #pvCinemaOverlay.active {
+        display: flex;
+    }
+
+    #pvCinemaOverlay:active {
+        cursor: grabbing;
+    }
+
+    .pv-pres-container {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .pv-pres-iframe-wrap {
+        width: 800px;
+        height: 1130px;
+        background: white;
+        box-shadow: 0 0 100px rgba(0, 0, 0, 0.8);
+        transform-origin: center center;
+        transition: transform 0.05s linear;
+        pointer-events: auto;
+        flex-shrink: 0;
+    }
+
+    .pv-pres-iframe-wrap iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        pointer-events: none;
+    }
+
+    .pv-pres-nav-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 70px;
+        height: 70px;
+        background: rgba(255, 255, 255, 0.05);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        cursor: pointer;
+        z-index: 10;
+        transition: all 0.3s;
+    }
+
+    .pv-pres-nav-btn:hover {
+        background: #198754;
+        border-color: #198754;
+        transform: translateY(-50%) scale(1.1);
+    }
+
+    .pv-pres-prev {
+        left: 30px;
+    }
+
+    .pv-pres-next {
+        right: 30px;
+    }
+
+    .pv-pres-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 2.5rem;
+        cursor: pointer;
+        z-index: 10;
+        transition: color 0.3s;
+        line-height: 1;
+        background: none;
+        border: none;
+    }
+
+    .pv-pres-close:hover {
+        color: white;
+    }
+
+    .pv-pres-footer {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.9rem;
+        letter-spacing: 1px;
+        white-space: nowrap;
+    }
+
+    /* Sent / Seen Status */
+    .bubble-status {
+        font-size: 0.6rem;
+        color: #8a8d91;
+        margin-top: 1px;
+        text-align: right;
+        padding-right: 2px;
+    }
+
+    .bubble-status .tick-seen {
+        color: #0084ff;
+    }
+
+    /* Edit / Delete hover actions */
+    .bubble-wrap.me .bubble-actions {
+        display: none;
+    }
+
+    .bubble-wrap.me:hover .bubble-actions {
+        display: flex;
+    }
+
+    .bubble-actions {
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 4px;
+        justify-content: flex-end;
+    }
+
+    .bubble-action-btn {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: none;
+        background: #f0f2f5;
+        color: #65676b;
+        font-size: 0.7rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+    .bubble-action-btn:hover {
+        background: #dde1e7;
+    }
+
+    /* Scrollbars */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #bcc0c4;
+        border-radius: 10px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
 </style>
 
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
     // System Config
-    const SECTIONS  = {{ sections  | map(attribute='id')           | list | tojson }};
-    const SEC_NAMES = {{ sections  | map(attribute='section_name') | list | tojson }};
-    const FAC_IDS   = {{ faculties | map(attribute='id')           | list | tojson }};
-    const FAC_NAMES = {{ faculties | map(attribute='full_name')    | list | tojson }};
-    const ROOM_IDS  = {{ rooms     | map(attribute='id')           | list | tojson }};
-    const ROOM_NAMES= {{ rooms     | map(attribute='room_name')    | list | tojson }};
+    const SECTIONS = {{ sections  | map(attribute = 'id') | list | tojson }};
+    const SEC_NAMES = {{ sections  | map(attribute = 'section_name') | list | tojson }};
+    const FAC_IDS = {{ faculties | map(attribute = 'id') | list | tojson }};
+    const FAC_NAMES = {{ faculties | map(attribute = 'full_name') | list | tojson }};
+    const ROOM_IDS = {{ rooms     | map(attribute = 'id') | list | tojson }};
+    const ROOM_NAMES = {{ rooms     | map(attribute = 'room_name') | list | tojson }};
 
     // Chat State
-    const socket = io();
+    if (typeof socket === 'undefined') {
+        window.socket = io();
+    }
     const currentUsername = "{{ session.get('username') }}";
     const currentSemester = "{{ selected_semester }}";
     let activePartner = 'Everyone';
@@ -610,7 +1394,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         socket.on('new_hub_message', (data) => {
             // Contextual routing: only append if it belongs to current active view
             const msgChannel = data.recipient_name ? (data.sender === currentUsername ? data.recipient_name : data.sender) : 'Everyone';
-            
+
             if (activePartner === msgChannel) {
                 appendMessage(data);
                 if (data.sender !== currentUsername) markRead(msgChannel);
@@ -638,7 +1422,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
     });
 
     // ──────────────── PENDING REVIEW PANEL ────────────────
-    const _isAdmin = {{ 'true' if session.get('role') in ['admin','superadmin'] else 'false' }};
+    const _isAdmin = {{ 'true' if session.get('role') in ['admin', 'superadmin'] else 'false' }};
 
     async function loadPendingDrafts() {
         const r = await fetch('/api/hub/pending_drafts');
@@ -666,7 +1450,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
 
     // ──────────────── AVATAR HELPERS ────────────────
     function getColorFromName(name) {
-        const palette = ['#0084ff','#e91e8c','#f59e0b','#10b981','#8b5cf6','#ef4444','#06b6d4','#f97316'];
+        const palette = ['#0084ff', '#e91e8c', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316'];
         let h = 0;
         for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
         return palette[Math.abs(h) % palette.length];
@@ -677,11 +1461,11 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
             ? `<i class="bi bi-megaphone-fill" style="font-size:calc(${size} * 0.38);"></i>`
             : name.charAt(0).toUpperCase();
         const bg = name === 'Everyone' ? '#31a24c' : getColorFromName(name);
-        const base = `width:${size};height:${size};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;flex-shrink:0;position:relative;${extraStyle||''}`;
+        const base = `width:${size};height:${size};border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;flex-shrink:0;position:relative;${extraStyle || ''}`;
         if (profilePic && profilePic !== 'default.png') {
-            return `<div style="${base}"><div style="position:absolute;inset:0;border-radius:50%;overflow:hidden;"><img src="/static/profile_pics/${profilePic}" style="width:100%;height:100%;object-fit:cover;"></div>${dotHtml||''}</div>`;
+            return `<div style="${base}"><div style="position:absolute;inset:0;border-radius:50%;overflow:hidden;"><img src="/static/profile_pics/${profilePic}" style="width:100%;height:100%;object-fit:cover;"></div>${dotHtml || ''}</div>`;
         }
-        return `<div style="${base}background:${bg};font-size:calc(${size} * 0.4);">${initial}${dotHtml||''}</div>`;
+        return `<div style="${base}background:${bg};font-size:calc(${size} * 0.4);">${initial}${dotHtml || ''}</div>`;
     }
 
     // ──────────────── DATA FETCHING ────────────────
@@ -720,7 +1504,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
 
     async function switchConversation(partner) {
         activePartner = partner;
-        
+
         // Header Update
         document.getElementById('activePartnerName').textContent = partner === 'Everyone' ? 'Announcements' : partner;
         const headAvatar = document.getElementById('activeAvatarHeader');
@@ -740,13 +1524,13 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         }
         document.getElementById('activePartnerStatus').textContent =
             partner === 'Everyone' ? 'Announcements channel'
-            : (activeConvo?.is_online ? 'Online' : 'Offline');
+                : (activeConvo?.is_online ? 'Online' : 'Offline');
 
         // Message Loading
         chatLog.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
         const r = await fetch(`/api/hub/messages?partner=${encodeURIComponent(partner)}`);
         const msgs = await r.json();
-        
+
         chatLog.innerHTML = '';
         if (msgs.length === 0) {
             chatLog.innerHTML = `<div class="text-muted text-center mt-5 small">No messages yet. Say hi!</div>`;
@@ -763,7 +1547,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         const isMe = data.sender === currentUsername;
         const wrap = document.createElement('div');
         wrap.className = `bubble-wrap ${isMe ? 'me' : 'them'}`;
-        
+
         // Draft Card markup
         let draftHtml = '';
         if (data.attached_draft) {
@@ -786,8 +1570,8 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         const statusHtml = isMe
             ? `<div class="bubble-status" data-msg-id="${data.id || ''}">
                    ${data.is_read
-                       ? '<i class="bi bi-check2-all tick-seen"></i> Seen'
-                       : '<i class="bi bi-check2"></i>'}
+                ? '<i class="bi bi-check2-all tick-seen"></i> Seen'
+                : '<i class="bi bi-check2"></i>'}
                </div>`
             : '';
 
@@ -804,14 +1588,17 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
                 ${!isMe && activePartner === 'Everyone' ? `<span class="small text-muted ms-2 mb-1" style="font-size:0.65rem">${data.sender}</span>` : ''}
                 ${actionsHtml}
                 <div class="bubble ${data.message_type || 'chat'}">
-                    ${data.content || ''}
+                    <div class="bubble-content-text"></div>
                     ${draftHtml}
                 </div>
                 <div class="bubble-time">${formatTimestamp(data.timestamp)}</div>
                 ${statusHtml}
             </div>
         `;
-        
+
+        // SAFE: Set text content to prevent XSS
+        wrap.querySelector('.bubble-content-text').textContent = data.content || '';
+
         chatLog.appendChild(wrap);
         chatLog.scrollTop = chatLog.scrollHeight;
     }
@@ -825,8 +1612,8 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         if (!newText || newText === oldText) return;
         const r = await fetch(`/api/hub/message/${msgId}/edit`, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}'},
-            body: JSON.stringify({content: newText})
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+            body: JSON.stringify({ content: newText })
         });
         if ((await r.json()).ok) {
             bubbleEl.childNodes[0].textContent = newText;
@@ -837,7 +1624,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         if (!confirm('Delete this message?')) return;
         const r = await fetch(`/api/hub/message/${msgId}/delete`, {
             method: 'POST',
-            headers: {'X-CSRFToken': '{{ csrf_token() }}'}
+            headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
         });
         if ((await r.json()).ok) {
             btn.closest('.bubble-wrap').remove();
@@ -863,12 +1650,12 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
             recipient: activePartner === 'Everyone' ? '' : activePartner,
             attached_draft_id: attachedDraftId
         };
-        
+
         console.log("Emitting message with draft:", attachedDraftId);
-        
+
         // Use Socket with success callback
         socket.emit('send_hub_message', payload, (ack) => {
-             console.log("Message receipt acknowledged by server");
+            console.log("Message receipt acknowledged by server");
         });
 
         // Optimistic UI cleanup
@@ -987,12 +1774,12 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
     const pvListMap = {
         section: SECTIONS.map((id, i) => ({ id, label: SEC_NAMES[i] })),
         faculty: FAC_IDS.map((id, i) => ({ id, label: FAC_NAMES[i] })),
-        room:    ROOM_IDS.map((id, i) => ({ id, label: ROOM_NAMES[i] }))
+        room: ROOM_IDS.map((id, i) => ({ id, label: ROOM_NAMES[i] }))
     };
     const pvUrlMap = {
         section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&draft_id=${pvActiveDraft}`,
         faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&draft_id=${pvActiveDraft}`,
-        room:    id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&draft_id=${pvActiveDraft}`
+        room: id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&draft_id=${pvActiveDraft}`
     };
 
     let pvEntityMap = null;
@@ -1009,7 +1796,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         try {
             const r = await fetch(`/api/draft/${id}/entities`);
             pvEntityMap = await r.json();
-        } catch(e) { pvEntityMap = null; }
+        } catch (e) { pvEntityMap = null; }
         const modal = new bootstrap.Modal(document.getElementById('hubPreviewModal'));
         modal.show();
         document.getElementById('hubPreviewModal').addEventListener('shown.bs.modal', () => {
@@ -1075,10 +1862,10 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         if (!vp) return;
         const rect = vp.getBoundingClientRect();
         const buffer = 1000;
-        
-        const vLeft   = (-pvTranslateX - buffer) / pvScale;
-        const vTop    = (-pvTranslateY - buffer) / pvScale;
-        const vWidth  = (rect.width  + buffer * 2) / pvScale;
+
+        const vLeft = (-pvTranslateX - buffer) / pvScale;
+        const vTop = (-pvTranslateY - buffer) / pvScale;
+        const vWidth = (rect.width + buffer * 2) / pvScale;
         const vHeight = (rect.height + buffer * 2) / pvScale;
 
         window.pvAllCardData.forEach(card => {
@@ -1147,16 +1934,16 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         return { minX, minY, width: maxX - minX, height: maxY - minY };
     }
 
-    window.pvResetView = function() {
+    window.pvResetView = function () {
         const bounds = pvGetContentBounds();
         if (!bounds) return;
         const vp = document.getElementById('pvViewport');
         const vr = vp.getBoundingClientRect();
-        
+
         // Preserve current scale
         pvTranslateX = vr.width / 2 - (bounds.minX + bounds.width / 2) * pvScale;
         pvTranslateY = vr.height / 2 - (bounds.minY + bounds.height / 2) * pvScale;
-        
+
         const canvas = document.getElementById('pvCanvas');
         if (canvas) canvas.style.transition = 'transform 0.6s cubic-bezier(0.34,1.56,0.64,1)';
         pvUpdateTransform();
@@ -1164,15 +1951,15 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
     };
 
     let pvFocusedIndex = 0;
-    window.pvGoToPage = function(index) {
+    window.pvGoToPage = function (index) {
         if (!window.pvAllCardData || !window.pvAllCardData.length) return;
         if (index < 0) index = 0;
         if (index >= window.pvAllCardData.length) index = window.pvAllCardData.length - 1;
         pvFocusedIndex = index;
         pvFocusData(window.pvAllCardData[index]);
     };
-    window.pvGoToFirst = function() { pvGoToPage(0); };
-    window.pvGoToLast = function() {
+    window.pvGoToFirst = function () { pvGoToPage(0); };
+    window.pvGoToLast = function () {
         if (!window.pvAllCardData) return;
         let lastIdx = 0;
         for (let i = window.pvAllCardData.length - 1; i >= 0; i--) {
@@ -1183,8 +1970,8 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         }
         pvGoToPage(lastIdx);
     };
-    window.pvGoToNext = function() { pvGoToPage(pvFocusedIndex + 1); };
-    window.pvGoToPrev = function() { pvGoToPage(pvFocusedIndex - 1); };
+    window.pvGoToNext = function () { pvGoToPage(pvFocusedIndex + 1); };
+    window.pvGoToPrev = function () { pvGoToPage(pvFocusedIndex - 1); };
 
     function pvUpdateTransform() {
         const canvas = document.getElementById('pvCanvas');
@@ -1229,7 +2016,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
     function pvInitViewState() {
         const sessionKey = 'pv_hub_session_active_' + pvCurrentType;
         const isNewSession = !sessionStorage.getItem(sessionKey);
-        
+
         if (isNewSession) {
             sessionStorage.setItem(sessionKey, 'true');
             setTimeout(() => { pvGoToFirst(); }, 300);
@@ -1239,7 +2026,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
                 // Restore the specific module (Section, Faculty, or Room)
                 pvCurrentType = savedType;
                 document.getElementById('pvTypeSelect').value = savedType;
-                pvLoadCanvas(); 
+                pvLoadCanvas();
             } else {
                 if (!pvLoadViewState()) {
                     setTimeout(() => { pvGoToFirst(); }, 300);
@@ -1248,18 +2035,18 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         }
     }
 
-    window.pvZoomCanvas = function(delta) {
+    window.pvZoomCanvas = function (delta) {
         pvScale = Math.max(0.04, Math.min(2.0, pvScale + delta));
         pvUpdateTransform();
     };
-    window.pvZoom = function(delta) { pvZoomCanvas(delta); };
+    window.pvZoom = function (delta) { pvZoomCanvas(delta); };
 
-    window.pvFitView = function() {
+    window.pvFitView = function () {
         const bounds = pvGetContentBounds();
         if (!bounds) return;
         const vp = document.getElementById('pvViewport');
         const vr = vp.getBoundingClientRect();
-        
+
         // Trigger viewport flash feedback
         if (vp) {
             vp.classList.add('pv-viewport-flash');
@@ -1267,7 +2054,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         }
 
         const padding = 150;
-        
+
         pvScale = Math.min(
             (vr.width - padding) / bounds.width,
             (vr.height - padding) / bounds.height,
@@ -1277,14 +2064,14 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
 
         pvTranslateX = vr.width / 2 - (bounds.minX + bounds.width / 2) * pvScale;
         pvTranslateY = vr.height / 2 - (bounds.minY + bounds.height / 2) * pvScale;
-        
+
         const canvas = document.getElementById('pvCanvas');
         if (canvas) canvas.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
         pvUpdateTransform();
         setTimeout(() => { const c = document.getElementById('pvCanvas'); if (c) c.style.transition = 'transform 0.05s linear'; }, 650);
     };
 
-    window.pvSearchCanvas = function(q) {
+    window.pvSearchCanvas = function (q) {
         q = q ? q.toLowerCase() : '';
         if (!q) {
             window.pvAllCardData.forEach(card => {
@@ -1318,11 +2105,11 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         const cy = data.y + data.height / 2;
         pvTranslateX = vr.width / 2 - cx * pvScale;
         pvTranslateY = vr.height / 2 - cy * pvScale;
-        
+
         const canvas = document.getElementById('pvCanvas');
         if (canvas) canvas.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
         pvUpdateTransform();
-        
+
         // Apply focus pulse animation
         if (data.element) {
             data.element.classList.remove('pv-focus-pulse');
@@ -1369,10 +2156,10 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         const mmW = mm.offsetWidth, mmH = mm.offsetHeight;
         const vW = rect.width / pvScale, vH = rect.height / pvScale;
         const vX = -pvTranslateX / pvScale, vY = -pvTranslateY / pvScale;
-        box.style.width  = Math.min((vW / totalW) * mmW, mmW) + 'px';
+        box.style.width = Math.min((vW / totalW) * mmW, mmW) + 'px';
         box.style.height = Math.min((vH / totalH) * mmH, mmH) + 'px';
-        box.style.left   = ((vX - startX) / totalW) * mmW + 'px';
-        box.style.top    = ((vY - startY) / totalH) * mmH + 'px';
+        box.style.left = ((vX - startX) / totalW) * mmW + 'px';
+        box.style.top = ((vY - startY) / totalH) * mmH + 'px';
     }
 
     // Viewport drag + pan + zoom
@@ -1391,7 +2178,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
                 pvTranslateY = e.clientY - pvStartY;
                 pvUpdateTransform();
             });
-            ['mouseup','mouseleave'].forEach(ev => pvVp.addEventListener(ev, () => {
+            ['mouseup', 'mouseleave'].forEach(ev => pvVp.addEventListener(ev, () => {
                 pvIsDragging = false; pvVp.style.cursor = 'grab';
             }));
             pvVp.addEventListener('contextmenu', e => e.preventDefault());
@@ -1451,7 +2238,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
                 pvPresY = e.clientY - pvPresStartY;
                 pvUpdatePresTransform();
             });
-            ['mouseup','mouseleave'].forEach(ev => cinemaOverlay.addEventListener(ev, () => { pvPresIsDragging = false; }));
+            ['mouseup', 'mouseleave'].forEach(ev => cinemaOverlay.addEventListener(ev, () => { pvPresIsDragging = false; }));
             cinemaOverlay.addEventListener('wheel', e => {
                 if (!cinemaOverlay.classList.contains('active')) return;
                 e.preventDefault();
@@ -1475,7 +2262,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         });
 
         // Type select
-        document.getElementById('pvTypeSelect')?.addEventListener('change', function() {
+        document.getElementById('pvTypeSelect')?.addEventListener('change', function () {
             pvCurrentType = this.value; pvApplySort();
         });
     });
@@ -1490,7 +2277,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         if (wrap) wrap.style.transform = `translate(${pvPresX}px,${pvPresY}px) scale(${pvPresScale})`;
     }
 
-    window.pvOpenPresentation = function(index) {
+    window.pvOpenPresentation = function (index) {
         pvPresIndex = index;
         const list = pvGetCurrentList();
         if (index < 0 || index >= list.length) return;
@@ -1508,7 +2295,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         if (topbar) topbar.classList.add('focus-mode');
     };
 
-    window.pvClosePresentation = function() {
+    window.pvClosePresentation = function () {
         const overlay = document.getElementById('pvCinemaOverlay');
         if (overlay) overlay.classList.remove('active');
         const iframe = document.getElementById('pvPresIframe');
@@ -1517,12 +2304,12 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         if (topbar) topbar.classList.remove('focus-mode');
     };
 
-    window.pvShowNext = function() {
+    window.pvShowNext = function () {
         const list = pvGetCurrentList();
         pvOpenPresentation(pvPresIndex < list.length - 1 ? pvPresIndex + 1 : 0);
     };
 
-    window.pvShowPrev = function() {
+    window.pvShowPrev = function () {
         const list = pvGetCurrentList();
         pvOpenPresentation(pvPresIndex > 0 ? pvPresIndex - 1 : list.length - 1);
     };

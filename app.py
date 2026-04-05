@@ -196,9 +196,33 @@ class MockPagination:
                 yield num
                 last = num
 
+
+def sanitize_input(text):
+    """
+    XSS Protection: Strips all HTML tags from user input to ensure 
+    data is stored and rendered as plain text only.
+    """
+    if not text:
+        return ""
+    # Strip all HTML tags
+    clean = re.sub(r'<[^>]*>', '', str(text))
+    return clean
+
+
+def validate_lengths(data, constraints):
+    """
+    Resource Protection: Rejects fields that exceed the specified 
+    maxlength to prevent database bloat and memory exhaustion.
+    """
+    for field, max_len in constraints.items():
+        val = data.get(field)
+        if val and len(str(val)) > max_len:
+            return False, f"Input for '{field}' is too long (max {max_len} characters)."
+    return True, None
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY') or 'cvsu-ccat-dev-secret-key-change-in-prod'
-app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 # Reduced from 500MB to 100MB for security
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'site.db')
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -255,8 +279,11 @@ def block_mutations_in_hist_mode():
     flash('⏳ Action blocked: System is in Archive Mode (read-only). Exit Archive to make changes.', 'warning')
     return redirect(request.referrer or url_for('dashboard'))
 
+# Concurrency Locks
+generation_lock = threading.Lock()
+rate_limit_lock = threading.Lock()
+
 # Rate limiting: track failed login attempts per IP
-# Structure: { ip: {'count': int, 'first_attempt': datetime} }
 _login_attempts = {}
 _LOGIN_MAX_ATTEMPTS = 5
 _LOGIN_LOCKOUT_MINUTES = 15
@@ -973,6 +1000,11 @@ def handle_send_message(data):
     user_id           = session.get('user_id')
     username          = session.get('username')
     content           = data.get('message', '').strip()
+    # 1. Length Validation (Plain Text only)
+    if len(content) > 1000:
+        content = content[:1000]
+    # 2. XSS Sanitization (Strip all HTML)
+    content = sanitize_input(content)
     semester          = data.get('semester', session.get('selected_semester', '1st Semester'))
     recipient         = data.get('recipient', '').strip()
     attached_raw      = data.get('attached_draft_id')
@@ -1422,8 +1454,21 @@ def update_user_activity():
 def login():
     if request.method == 'POST':
         ip = request.remote_addr
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+
+        # 1. Length Validation
+        constraints = {
+            'username': 50,
+            'password': 100
+        }
+        ok, err = validate_lengths(request.form, constraints)
+        if not ok:
+            flash(err, 'danger')
+            return render_template('login.html')
+
+        # 2. XSS Sanitization
+        username = sanitize_input(username)
         now = datetime.utcnow()
 
         user = User.query.filter_by(username=username).first()
@@ -1456,11 +1501,12 @@ def login():
                     return redirect(url_for('view_timetable'))
                 return redirect(url_for('dashboard'))
             else:
-                # FAILURE: Increment attempts
-                user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
-                if user.failed_login_attempts >= _LOGIN_MAX_ATTEMPTS:
-                    user.lockout_until = now + timedelta(minutes=_LOGIN_LOCKOUT_MINUTES)
-                db.session.commit()
+                # FAILURE: Increment attempts (Atomic with DB commit)
+                with rate_limit_lock:
+                    user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+                    if user.failed_login_attempts >= _LOGIN_MAX_ATTEMPTS:
+                        user.lockout_until = now + timedelta(minutes=_LOGIN_LOCKOUT_MINUTES)
+                    db.session.commit()
                 
                 log_security('Login Failed', username_attempted=username, details=f"Failed attempt from {ip}")
                 flash('Invalid username or password', 'danger')
@@ -1477,8 +1523,17 @@ def add_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-XSS-Protection'] = '1; mode=block'
-    # Content Security Policy (Basic)
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdn.socket.io; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data:; connect-src 'self' ws: wss: https://cdn.socket.io;"
+    # Content Security Policy (Hardened)
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdn.socket.io; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+        "img-src 'self' data: blob:; "
+        "connect-src 'self' ws: wss: https://cdn.socket.io; "
+        "object-src 'none'; "
+        "base-uri 'self';"
+    )
     return response
 
 @app.route('/logout')
@@ -1493,9 +1548,23 @@ def logout():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
+        username         = request.form.get('username', '').strip()
+        password         = request.form.get('password', '').strip()
+        confirm_password = request.form.get('confirm_password', '').strip()
+
+        # 1. Length Validation
+        constraints = {
+            'username': 50,
+            'password': 100,
+            'confirm_password': 100
+        }
+        ok, err = validate_lengths(request.form, constraints)
+        if not ok:
+            flash(err, 'danger')
+            return redirect(url_for('signup'))
+
+        # 2. XSS Sanitization
+        username = sanitize_input(username)
 
         if not username or not password or not confirm_password:
             flash('Please fill out all fields.', 'danger')
@@ -1523,9 +1592,20 @@ def signup():
 @app.route('/change_password', methods=['POST'])
 @login_required
 def change_password():
-    current_password = request.form.get('current_password')
-    new_password = request.form.get('new_password')
-    confirm_password = request.form.get('confirm_password')
+    current_password = request.form.get('current_password', '').strip()
+    new_password     = request.form.get('new_password', '').strip()
+    confirm_password = request.form.get('confirm_password', '').strip()
+
+    # 1. Length Validation
+    constraints = {
+        'current_password': 100,
+        'new_password': 100,
+        'confirm_password': 100
+    }
+    ok, err = validate_lengths(request.form, constraints)
+    if not ok:
+        flash(err, 'danger')
+        return redirect(request.referrer or url_for('dashboard'))
 
     user = User.query.get(session['user_id'])
     
@@ -1631,7 +1711,9 @@ def upload_profile_pic():
         return redirect(request.referrer or url_for('dashboard'))
         
     if file and allowed_file(file.filename):
-        filename = secure_filename(f"user_{session['user_id']}_{file.filename}")
+        # Add timestamp to prevent name collisions and browser caching issues
+        timestamp = int(time.time())
+        filename = secure_filename(f"user_{session['user_id']}_{timestamp}_{file.filename}")
         upload_folder = os.path.join(app.root_path, 'static', 'profile_pics')
         file.save(os.path.join(upload_folder, filename))
         
@@ -2101,32 +2183,57 @@ def manage_courses():
 @app.route('/manage/course/add', methods=['POST'])
 @login_required
 def add_course():
-    course_code = request.form.get('course_code')
+    course_code = request.form.get('course_code', '').strip()
+    course_name = request.form.get('course_name', '').strip()
+    dept        = request.form.get('department', '').strip()
+
+    # 1. Length Validation
+    constraints = {
+        'course_code': 20,
+        'course_name': 100,
+        'department': 100
+    }
+    ok, err = validate_lengths(request.form, constraints)
+    if not ok:
+        flash(err, "danger")
+        return redirect(url_for('manage_courses'))
+
+    # 2. XSS Sanitization
+    course_code = sanitize_input(course_code)
+    course_name = sanitize_input(course_name)
+    dept        = sanitize_input(dept)
+
     existing = Course.query.filter_by(course_code=course_code, is_archived=False).first()
     if existing:
         flash(f"Course code '{course_code}' already exists!", "danger")
         return redirect(url_for('manage_courses'))
 
-    new_course = Course(
-        course_code=request.form.get('course_code'), 
-        course_name=request.form.get('course_name'), 
-        program=request.form.get('program', 'Both'), 
-        department=request.form.get('department'),
-        lec_units=int(request.form.get('lec_units', 0)), 
-        lab_units=int(request.form.get('lab_units', 0)), 
-        synchronous_lec_hours=int(request.form.get('synchronous_lec_hours', 0)), 
-        synchronous_lab_hours=int(request.form.get('synchronous_lab_hours', 0)), 
-        semester_offered=request.form.get('semester_offered', '1st Semester'), 
-        asynchronous_lec_hours=int(request.form.get('asynchronous_lec_hours', 0)), 
-        asynchronous_lab_hours=int(request.form.get('asynchronous_lab_hours', 0)),
-        created_by_id=session.get('user_id') # Track creator
-    )
-    db.session.add(new_course)
-    db.session.commit()
+    try:
+        new_course = Course(
+            course_code=course_code, 
+            course_name=course_name, 
+            program=request.form.get('program', 'Both'), 
+            department=dept,
+            lec_units=int(request.form.get('lec_units', 0)), 
+            lab_units=int(request.form.get('lab_units', 0)), 
+            synchronous_lec_hours=int(request.form.get('synchronous_lec_hours', 0)), 
+            synchronous_lab_hours=int(request.form.get('synchronous_lab_hours', 0)), 
+            semester_offered=request.form.get('semester_offered', '1st Semester'), 
+            asynchronous_lec_hours=int(request.form.get('asynchronous_lec_hours', 0)), 
+            asynchronous_lab_hours=int(request.form.get('asynchronous_lab_hours', 0)),
+            created_by_id=session.get('user_id') # Track creator
+        )
+        db.session.add(new_course)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        flash(f"Error: Could not add Course. Code '{course_code}' might already exist.", "danger")
+        return redirect(url_for('manage_courses'))
     
     # Module 7: Log action
-    log_activity('Add Course', f"Created course {course_code}: {request.form.get('course_name')}")
+    log_activity('Add Course', f"Created course {course_code}: {course_name}")
     
+    flash('Course added successfully.', 'success')
     return redirect(url_for('manage_courses'))
 
 @app.route('/manage/course/update/<int:course_id>', methods=['POST'])
@@ -2141,17 +2248,31 @@ def update_course(course_id):
         log_security('Unauthorized Access Attempt', details=f"User {session.get('username')} tried to update course id {course_id} in {course.department}")
         return redirect(url_for('manage_courses'))
 
-    new_code = request.form.get('course_code')
+    # 1. Length Validation
+    constraints = {
+        'course_code': 20,
+        'course_name': 100,
+        'department': 100
+    }
+    ok, err = validate_lengths(request.form, constraints)
+    if not ok:
+        flash(err, "danger")
+        return redirect(url_for('manage_courses'))
+
+    new_code = sanitize_input(request.form.get('course_code', '').strip())
+    new_name = sanitize_input(request.form.get('course_name', '').strip())
+    new_dept = sanitize_input(request.form.get('department', '').strip())
+    
     existing = Course.query.filter(Course.course_code == new_code, Course.id != course_id, Course.is_archived == False).first()
     if existing:
         flash(f"Course code '{new_code}' is already taken.", "danger")
         return redirect(url_for('manage_courses'))
     
     course.course_code = new_code
-    course.course_name = request.form.get('course_name')
+    course.course_name = new_name
     if request.form.get('program'):
         course.program = request.form.get('program')
-    course.department = request.form.get('department')
+    course.department = new_dept
     
     # Only update restricted data if present in form (preventing overwrite if hidden)
     if 'lec_units' in request.form:
@@ -2681,7 +2802,23 @@ def add_room():
         flash('Action not allowed in Archive Mode.', 'danger')
         return redirect(url_for('manage_rooms'))
 
-    room_name = request.form.get('room_name')
+    room_name = request.form.get('room_name', '').strip()
+    building  = request.form.get('building', '').strip()
+
+    # 1. Length Validation
+    constraints = {
+        'room_name': 50,
+        'building': 100
+    }
+    ok, err = validate_lengths(request.form, constraints)
+    if not ok:
+        flash(err, "danger")
+        return redirect(url_for('manage_rooms'))
+
+    # 2. XSS Sanitization
+    room_name = sanitize_input(room_name)
+    building  = sanitize_input(building)
+
     existing = Room.query.filter_by(room_name=room_name, is_archived=False).first()
     if existing:
         flash(f"Error: Room '{room_name}' already exists!", "danger")
@@ -2693,17 +2830,22 @@ def add_room():
         cap_list = ['Lecture']
     caps = ",".join(cap_list)
     
-    db.session.add(Room(
-        room_name=request.form.get('room_name'),
-        building=request.form.get('building'),
-        capabilities=caps,
-        status=request.form.get('status', 'Available'),
-        capacity=int(request.form.get('capacity', 40)),
-        functional_computers=int(request.form.get('functional_computers', 40)),
-        room_departments=",".join(request.form.getlist('room_departments')),
-        created_by_id=session.get('user_id') # Track creator
-    ))
-    db.session.commit()
+    try:
+        db.session.add(Room(
+            room_name=room_name,
+            building=building,
+            capabilities=caps,
+            status=request.form.get('status', 'Available'),
+            capacity=int(request.form.get('capacity', 40)),
+            functional_computers=int(request.form.get('functional_computers', 40)),
+            room_departments=",".join(request.form.getlist('room_departments')),
+            created_by_id=session.get('user_id') # Track creator
+        ))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        flash(f"Error: Could not add Room. Name '{room_name}' might already exist.", "danger")
+        return redirect(url_for('manage_rooms'))
     
     # Module 7: Log action
     log_activity('Add Room', f"Created room {room_name}")
@@ -2745,13 +2887,26 @@ def update_room(room_id):
     if room.room_name == 'T.B.A.':
         flash('T.B.A. room cannot be edited.', 'warning')
         return redirect(url_for('manage_rooms'))
-    new_name = request.form.get('room_name')
+    # 1. Length Validation
+    constraints = {
+        'room_name': 50,
+        'building': 100
+    }
+    ok, err = validate_lengths(request.form, constraints)
+    if not ok:
+        flash(err, "danger")
+        return redirect(url_for('manage_rooms'))
+
+    new_name = sanitize_input(request.form.get('room_name', '').strip())
+    new_building = sanitize_input(request.form.get('building', '').strip())
+    
     existing = Room.query.filter(Room.room_name == new_name, Room.id != room_id, Room.is_archived == False).first()
     if existing:
         flash(f"Error: Room name '{new_name}' is already taken.", 'danger')
         return redirect(url_for('manage_rooms'))
+    
     room.room_name = new_name
-    room.building = request.form.get('building')
+    room.building = new_building
     
     # Conditional updates for restricted fields
     if 'capabilities' in request.form:
@@ -3098,14 +3253,27 @@ def manage_sections():
 @app.route('/manage/section/add', methods=['POST'])
 @login_required
 def add_section():
-    section_name = request.form.get('section_name')
+    section_name = request.form.get('section_name', '').strip()
+
+    # 1. Length Validation
+    constraints = {
+        'section_name': 50
+    }
+    ok, err = validate_lengths(request.form, constraints)
+    if not ok:
+        flash(err, "danger")
+        return redirect(url_for('manage_sections'))
+
+    # 2. XSS Sanitization
+    section_name = sanitize_input(section_name)
+
     existing = Section.query.filter_by(section_name=section_name, is_archived=False).first()
     if existing:
         flash(f"Section name '{section_name}' already exists!", "danger")
         return redirect(url_for('manage_sections'))
 
     db.session.add(Section(
-        section_name=request.form.get('section_name'), 
+        section_name=section_name, 
         year_level=int(request.form.get('year_level')), 
         number_of_students=int(request.form.get('number_of_students', 40)),
         created_by_id=session.get('user_id') # Track creator
@@ -3124,12 +3292,22 @@ def add_section():
 def update_section(section_id):
     section = Section.query.get_or_404(section_id)
     # Role-based authorization removed for Sections (standard users share the section pool)
-    new_name = request.form.get('section_name')
+    # 1. Length Validation
+    constraints = {
+        'section_name': 50
+    }
+    ok, err = validate_lengths(request.form, constraints)
+    if not ok:
+        flash(err, "danger")
+        return redirect(url_for('manage_sections'))
+
+    new_name = sanitize_input(request.form.get('section_name', '').strip())
+    
     existing = Section.query.filter(Section.section_name == new_name, Section.id != section_id, Section.is_archived == False).first()
     if existing:
         flash(f"Error: Section name '{new_name}' is already taken.", 'danger')
         return redirect(url_for('manage_sections'))
-        
+    
     section.section_name = new_name
     section.year_level = int(request.form.get('year_level'))
     
@@ -3700,7 +3878,32 @@ def add_faculty():
         flash('Action not allowed in Archive Mode.', 'danger')
         return redirect(url_for('manage_faculty'))
 
-    employee_id = request.form.get('employee_id')
+    employee_id = request.form.get('employee_id', '').strip()
+    full_name   = request.form.get('full_name', '').strip()
+    dept        = request.form.get('department', '').strip()
+    attain      = request.form.get('highest_educational_attainment', '').strip()
+    rank        = request.form.get('academic_rank', '').strip()
+
+    # 1. Length Validation
+    constraints = {
+        'employee_id': 20,
+        'full_name': 100,
+        'department': 100,
+        'highest_educational_attainment': 200,
+        'academic_rank': 100
+    }
+    ok, err = validate_lengths(request.form, constraints)
+    if not ok:
+        flash(err, 'danger')
+        return redirect(url_for('manage_faculty'))
+
+    # 2. XSS Sanitization
+    employee_id = sanitize_input(employee_id)
+    full_name   = sanitize_input(full_name)
+    dept        = sanitize_input(dept)
+    attain      = sanitize_input(attain)
+    rank        = sanitize_input(rank)
+
     existing = Faculty.query.filter_by(employee_id=employee_id, is_archived=False).first()
     if existing:
         flash(f"Error: Faculty Employee ID '{employee_id}' already exists!", "danger")
@@ -3721,22 +3924,27 @@ def add_faculty():
             flash('Error: Max weekly hours must be between 1 and 60.', 'danger')
             return redirect(url_for('manage_faculty'))
 
-    db.session.add(Faculty(
-        employee_id=employee_id,
-        full_name=request.form.get('full_name'),
-        department=request.form.get('department'),
-        employment_status=status,
-        highest_educational_attainment=request.form.get('highest_educational_attainment', ''),
-        academic_rank=request.form.get('academic_rank', ''),
-        sex=request.form.get('sex', '') or None,
-        max_weekly_hours=hours,
-        available_days=avail_days,
-        created_by_id=session.get('user_id') # Track creator
-    ))
-    db.session.commit()
+    try:
+        db.session.add(Faculty(
+            employee_id=employee_id,
+            full_name=full_name,
+            department=dept,
+            employment_status=status,
+            highest_educational_attainment=attain,
+            academic_rank=rank,
+            sex=request.form.get('sex', '') or None,
+            max_weekly_hours=hours,
+            available_days=avail_days,
+            created_by_id=session.get('user_id') # Track creator
+        ))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        flash(f"Error: Could not add Faculty. Employee ID '{employee_id}' may already exist.", "danger")
+        return redirect(url_for('manage_faculty'))
     
     # Module 7: Log action
-    log_activity('Add Faculty', f"Created faculty {request.form.get('full_name')}")
+    log_activity('Add Faculty', f"Created faculty {full_name}")
     
     flash('Faculty added successfully.', 'success')
     return redirect(url_for('manage_faculty'))
@@ -3774,14 +3982,33 @@ def update_faculty(faculty_id):
         flash("You are not authorized to update this faculty member as they belong to another department.", "danger")
         log_security('Unauthorized Access Attempt', details=f"User {session.get('username')} tried to update faculty id {faculty_id}")
         return redirect(url_for('manage_faculty'))
-    new_id = request.form.get('employee_id')
+    # 1. Length Validation
+    constraints = {
+        'employee_id': 20,
+        'full_name': 100,
+        'department': 100,
+        'highest_educational_attainment': 200,
+        'academic_rank': 100
+    }
+    ok, err = validate_lengths(request.form, constraints)
+    if not ok:
+        flash(err, 'danger')
+        return redirect(url_for('manage_faculty'))
+
+    new_id = sanitize_input(request.form.get('employee_id', '').strip())
+    new_name = sanitize_input(request.form.get('full_name', '').strip())
+    new_dept = sanitize_input(request.form.get('department', '').strip())
+    new_attain = sanitize_input(request.form.get('highest_educational_attainment', '').strip())
+    new_rank = sanitize_input(request.form.get('academic_rank', '').strip())
+
     existing = Faculty.query.filter(Faculty.employee_id == new_id, Faculty.id != faculty_id, Faculty.is_archived == False).first()
     if existing:
         flash(f"Faculty Employee ID '{new_id}' is already taken.", "danger")
         return redirect(url_for('manage_faculty'))
+
     faculty.employee_id = new_id
-    faculty.full_name = request.form.get('full_name')
-    faculty.department = request.form.get('department')
+    faculty.full_name = new_name
+    faculty.department = new_dept
     
     # Conditional updates for restricted fields
     if 'employment_status' in request.form:
@@ -3791,8 +4018,8 @@ def update_faculty(faculty_id):
     if 'available_days' in request.form:
         faculty.available_days = ",".join(request.form.getlist('available_days')) or 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'
         
-    faculty.highest_educational_attainment = request.form.get('highest_educational_attainment', '')
-    faculty.academic_rank = request.form.get('academic_rank', '')
+    faculty.highest_educational_attainment = new_attain
+    faculty.academic_rank = new_rank
     faculty.sex = request.form.get('sex', '') or None
     
     db.session.commit()
@@ -5478,6 +5705,30 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
 def start_generation():
     global generation_status
     
+    # Check if already running (Atomic check with Lock)
+    with generation_lock:
+        if generation_status.get('running'):
+            return jsonify({
+                'status': 'error', 
+                'message': 'A generation is already in progress. Please wait for it to finish.'
+            }), 409
+        
+        # Reset status if not running
+        generation_status = {
+            'running': True,
+            'generation': 0,
+            'hard_conflicts': 0,
+            'sc1_violations': 0,
+            'sc2_violations': 0,
+            'soft_score': 0,
+            'done': False,
+            'stop_requested': False,
+            'pop_size': None,
+            'phase': 'init',
+            'hardware': None,
+            'gen_per_sec': 0
+        }
+    
     # Get Data from Frontend (Semester + Departments)
     req_data = request.get_json()
     target_semester = req_data.get('semester', '1st Semester')
@@ -5506,22 +5757,6 @@ def start_generation():
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ Failed to clear schedule for fresh start: {e}")
-
-    # Reset status
-    generation_status = {
-        'running': True,
-        'generation': 0,
-        'hard_conflicts': 0,
-        'sc1_violations': 0,
-        'sc2_violations': 0,
-        'soft_score': 0,
-        'done': False,
-        'stop_requested': False,  # <--- IMPORTANTE: WAG KALIMUTAN ITO
-        'pop_size': None,
-        'phase': 'init',
-        'hardware': None,
-        'gen_per_sec': 0
-    }
     
     settings_db = get_settings()
     _adays_str  = settings_db.allowed_days or 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'
@@ -8371,6 +8606,8 @@ def import_faculty_loading():
                 detected_dept = "NSTP Department"
             elif "COMPUTER STUDIES" in header_text:
                 detected_dept = "Department of Computer Studies"
+            
+            detected_dept = sanitize_input(detected_dept)
                 
             current_faculty = None
             assignments_added = 0
@@ -8395,11 +8632,12 @@ def import_faculty_loading():
                         raw_name = val_upper
                         
                         # Try natin kunin ang M.I. sa susunod na row (row + 1)
-                        mi_val = sheet.cell(row=row+1, column=COL_NAME).value
                         if mi_val and isinstance(mi_val, str) and len(mi_val.strip()) <= 3:
                             full_name = f"{raw_name} {str(mi_val).strip()}"
                         else:
                             full_name = raw_name
+                        
+                        full_name = sanitize_input(full_name)
                             
                         # HANAPIN O GAWIN ANG FACULTY SA DATABASE
                     faculty = Faculty.query.filter(Faculty.full_name.ilike(f"%{raw_name}%")).first()
@@ -12002,8 +12240,22 @@ def add_student():
 
     if not sid or not name or not year:
         return _err('Student ID, full name, and year level are required.')
-    if len(sid) > 20:
-        return _err('Student ID must be 20 characters or fewer.')
+
+    # 1. Length Validation
+    constraints = {
+        'student_id': 20,
+        'full_name': 100,
+        'email': 100
+    }
+    ok, err = validate_lengths(request.form, constraints)
+    if not ok:
+        return _err(err)
+
+    # 2. XSS Sanitization
+    sid = sanitize_input(sid)
+    name = sanitize_input(name)
+    email = sanitize_input(email) if email else None
+
     if year not in (1, 2, 3, 4):
         return _err('Year level must be 1, 2, 3, or 4.')
     if email and not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
@@ -12011,15 +12263,19 @@ def add_student():
     if Student.query.filter_by(student_id=sid).first():
         return _err(f'Student ID "{sid}" already exists.')
 
-    db.session.add(Student(
-        student_id=sid,
-        full_name=name,
-        year_level=year,
-        section_id=int(sec_id) if sec_id else None,
-        email=email,
-        is_irregular=is_irregular,
-    ))
-    db.session.commit()
+    try:
+        db.session.add(Student(
+            student_id=sid,
+            full_name=name,
+            year_level=year,
+            section_id=int(sec_id) if sec_id else None,
+            email=email,
+            is_irregular=is_irregular,
+        ))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return _err(f'Could not add student. Student ID "{sid}" may have been added by another user simultaneously.')
 
     if is_irregular:
         return jsonify({'ok': True})
@@ -12038,9 +12294,26 @@ def update_student(student_pk):
     sec_id   = request.form.get('section_id') or None
     email    = request.form.get('email', '').strip() or None
 
-    if len(sid) > 20:
-        flash('Student ID must be 20 characters or fewer.', 'danger')
+    if not sid or not name or not year:
+        flash('Student ID, full name, and year level are required.', 'danger')
         return redirect(url_for('manage_students'))
+
+    # 1. Length Validation
+    constraints = {
+        'student_id': 20,
+        'full_name': 100,
+        'email': 100
+    }
+    ok, err = validate_lengths(request.form, constraints)
+    if not ok:
+        flash(err, 'danger')
+        return redirect(url_for('manage_students'))
+
+    # 2. XSS Sanitization
+    sid = sanitize_input(sid)
+    name = sanitize_input(name)
+    email = sanitize_input(email) if email else None
+
     if year not in (1, 2, 3, 4):
         flash('Year level must be 1, 2, 3, or 4.', 'danger')
         return redirect(url_for('manage_students'))
@@ -12422,11 +12695,11 @@ def import_students_xlsx():
             # Stop at blank or note rows
             if not row or not row[0] or not row[1]:
                 continue
-            raw_sid  = str(row[0]).strip() if row[0] else ''
-            raw_name = str(row[1]).strip() if row[1] else ''
+            raw_sid  = sanitize_input(str(row[0]).strip()) if row[0] else ''
+            raw_name = sanitize_input(str(row[1]).strip()) if row[1] else ''
             raw_year = row[2]
-            raw_sec  = str(row[3]).strip() if row[3] else ''
-            raw_mail = str(row[4]).strip() if row[4] else ''
+            raw_sec  = sanitize_input(str(row[3]).strip()) if row[3] else ''
+            raw_mail = sanitize_input(str(row[4]).strip()) if row[4] else ''
 
             if not raw_sid or not raw_name:
                 continue
@@ -12484,24 +12757,25 @@ def student_portal():
     if request.method == 'POST':
         ip  = request.remote_addr
         now = datetime.utcnow()
-        pa  = _portal_attempts.get(ip, {'count': 0, 'lockout_until': None})
-        # Reset lockout if expired
-        if pa['lockout_until'] and now >= pa['lockout_until']:
-            pa = {'count': 0, 'lockout_until': None}
-        # Block if currently locked out
-        if pa['lockout_until'] and now < pa['lockout_until']:
-            flash('Too many attempts. Please wait a few minutes and try again.', 'warning')
+        with rate_limit_lock:
+            pa  = _portal_attempts.get(ip, {'count': 0, 'lockout_until': None})
+            # Reset lockout if expired
+            if pa['lockout_until'] and now >= pa['lockout_until']:
+                pa = {'count': 0, 'lockout_until': None}
+            # Block if currently locked out
+            if pa['lockout_until'] and now < pa['lockout_until']:
+                flash('Too many attempts. Please wait a few minutes and try again.', 'warning')
+                _portal_attempts[ip] = pa
+                return render_template('student_portal.html')
+            # Count this attempt
+            pa['count'] += 1
+            if pa['count'] > _PORTAL_MAX_ATTEMPTS:
+                pa['lockout_until'] = now + timedelta(minutes=_PORTAL_LOCKOUT_MINUTES)
+                pa['count'] = 0
+                _portal_attempts[ip] = pa
+                flash('Too many attempts. Please wait a few minutes and try again.', 'warning')
+                return render_template('student_portal.html')
             _portal_attempts[ip] = pa
-            return render_template('student_portal.html')
-        # Count this attempt
-        pa['count'] += 1
-        if pa['count'] > _PORTAL_MAX_ATTEMPTS:
-            pa['lockout_until'] = now + timedelta(minutes=_PORTAL_LOCKOUT_MINUTES)
-            pa['count'] = 0
-            _portal_attempts[ip] = pa
-            flash('Too many attempts. Please wait a few minutes and try again.', 'warning')
-            return render_template('student_portal.html')
-        _portal_attempts[ip] = pa
 
         sid = request.form.get('student_id', '').strip()
         

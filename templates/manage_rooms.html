@@ -24,7 +24,7 @@
         <form method="POST" action="{{ url_for('quick_add_tba_room') }}" style="display:inline;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-sm btn-outline-secondary"
-                    title="Add T.B.A. room (fallback room for unassigned classes)">
+                title="Add T.B.A. room (fallback room for unassigned classes)">
                 <i class="bi bi-door-closed-fill"></i> + T.B.A.
             </button>
         </form>
@@ -64,7 +64,7 @@
                 <i class="bi bi-search text-secondary me-3"></i>
                 <input type="text" name="search" class="google-search-input"
                     placeholder="Search room name or building..." id="liveSearchInput" value="{{ search_query }}"
-                    autocomplete="off" onchange="this.form.submit()">
+                    autocomplete="off" onchange="this.form.submit()" maxlength="100">
             </div>
         </form>
     </div>
@@ -234,8 +234,11 @@
                                     {% endfor %}
                                     {% if room.special_course_ids %}
                                     {% set sc_count = room.special_course_ids.split(',')|length %}
-                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary fw-normal" title="Special course assignments">
-                                        <i class="bi bi-pin-fill me-1" style="font-size:0.7rem;"></i>{{ sc_count }} course{{ 's' if sc_count != 1 else '' }}
+                                    <span
+                                        class="badge bg-primary bg-opacity-10 text-primary border border-primary fw-normal"
+                                        title="Special course assignments">
+                                        <i class="bi bi-pin-fill me-1" style="font-size:0.7rem;"></i>{{ sc_count }}
+                                        course{{ 's' if sc_count != 1 else '' }}
                                     </span>
                                     {% endif %}
                                 </div>
@@ -266,9 +269,9 @@
                                         class="bi bi-pencil"></i></button>
                                 {% endif %}
                                 {% if session.get('role') != 'user' %}
-                                <button type="button" class="btn-icon" style="color: var(--color-primary);" data-bs-toggle="modal"
-                                    data-bs-target="#specialCoursesModal{{ room.id }}" title="Special Course Assignment"><i
-                                        class="bi bi-pin-angle"></i></button>
+                                <button type="button" class="btn-icon" style="color: var(--color-primary);"
+                                    data-bs-toggle="modal" data-bs-target="#specialCoursesModal{{ room.id }}"
+                                    title="Special Course Assignment"><i class="bi bi-pin-angle"></i></button>
                                 {% endif %}
                                 {% if room.room_name != 'T.B.A.' %}
                                 <button type="button" class="btn-icon delete" title="Move to Recycle Bin"
@@ -280,7 +283,8 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="{% if is_hist %}8{% else %}9{% endif %}" class="text-center py-5 text-muted">No rooms found.</td>
+                            <td colspan="{% if is_hist %}8{% else %}9{% endif %}" class="text-center py-5 text-muted">No
+                                rooms found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -372,12 +376,13 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">ROOM NAME</label>
-                        <input type="text" class="form-control" name="room_name" placeholder="e.g. CL 1" required>
+                        <input type="text" class="form-control" name="room_name" placeholder="e.g. CL 1" required
+                            maxlength="50">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">BUILDING</label>
-                        <input type="text" class="form-control" name="building" placeholder="e.g. ICT Building"
-                            required>
+                        <input type="text" class="form-control" name="building" placeholder="e.g. ICT Building" required
+                            maxlength="100">
                     </div>
                     {% if session.get('role') != 'user' %}
                     <div class="row">
@@ -416,8 +421,8 @@
                         <p class="text-muted small mb-2">Leave all unchecked = available to all departments.</p>
                         {% for dept in known_departments %}
                         <div class="form-check">
-                            <input class="form-check-input plain-check" type="checkbox" value="{{ dept }}" name="room_departments"
-                                id="addDept_{{ loop.index }}">
+                            <input class="form-check-input plain-check" type="checkbox" value="{{ dept }}"
+                                name="room_departments" id="addDept_{{ loop.index }}">
                             <label class="form-check-label" for="addDept_{{ loop.index }}">{{ dept }}</label>
                         </div>
                         {% endfor %}
@@ -448,11 +453,13 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">ROOM NAME</label>
-                        <input type="text" class="form-control" name="room_name" value="{{ room.room_name }}" required>
+                        <input type="text" class="form-control" name="room_name" value="{{ room.room_name }}" required
+                            maxlength="50">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">BUILDING</label>
-                        <input type="text" class="form-control" name="building" value="{{ room.building }}" required>
+                        <input type="text" class="form-control" name="building" value="{{ room.building }}" required
+                            maxlength="100">
                     </div>
                     {% if session.get('role') != 'user' %}
                     <div class="row">
@@ -472,13 +479,13 @@
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" value="Lecture" name="capabilities"
                                 id="editCheckLecture{{ room.id }}" {% if 'Lecture' in room.capabilities %}checked{%
-                                 endif %}>
+                                endif %}>
                             <label class="form-check-label" for="editCheckLecture{{ room.id }}">Lecture</label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" value="Computer Lab" name="capabilities"
                                 id="editCheckLab{{ room.id }}" {% if 'Computer Lab' in room.capabilities %}checked{%
-                                 endif %}>
+                                endif %}>
                             <label class="form-check-label" for="editCheckLab{{ room.id }}">Computer Laboratory</label>
                         </div>
                     </div>
@@ -497,10 +504,11 @@
                         <p class="text-muted small mb-2">Leave all unchecked = available to all departments.</p>
                         {% for dept in known_departments %}
                         <div class="form-check">
-                            <input class="form-check-input plain-check" type="checkbox" value="{{ dept }}" name="room_departments"
-                                id="editDept_{{ room.id }}_{{ loop.index }}"
-                                {% if dept in room_dept_list %}checked{% endif %}>
-                            <label class="form-check-label" for="editDept_{{ room.id }}_{{ loop.index }}">{{ dept }}</label>
+                            <input class="form-check-input plain-check" type="checkbox" value="{{ dept }}"
+                                name="room_departments" id="editDept_{{ room.id }}_{{ loop.index }}" {% if dept in
+                                room_dept_list %}checked{% endif %}>
+                            <label class="form-check-label" for="editDept_{{ room.id }}_{{ loop.index }}">{{ dept
+                                }}</label>
                         </div>
                         {% endfor %}
                     </div>
@@ -543,31 +551,33 @@
     <div class="modal-dialog modal-dialog-below-nav modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-pin-angle me-2"></i>Special Course Assignment — {{ room.room_name }}</h5>
+                <h5 class="modal-title"><i class="bi bi-pin-angle me-2"></i>Special Course Assignment — {{
+                    room.room_name }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('save_room_special_courses', room_id=room.id) }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
-                    <p class="text-muted small mb-3">Courses assigned here will be <strong>exclusively scheduled in this room</strong> by the GA. Leave empty to allow normal room assignment.</p>
+                    <p class="text-muted small mb-3">Courses assigned here will be <strong>exclusively scheduled in this
+                            room</strong> by the GA. Leave empty to allow normal room assignment.</p>
 
                     <!-- Search Filter -->
                     <div class="mb-3">
                         <input type="text" class="form-control form-control-sm"
                             placeholder="Search course code or name..."
-                            oninput="filterSpecialCourses(this, 'specialCourseList{{ room.id }}')">
+                            oninput="filterSpecialCourses(this, 'specialCourseList{{ room.id }}')" maxlength="100">
                     </div>
 
                     <!-- Course Checklist -->
                     <div id="specialCourseList{{ room.id }}" style="max-height: 320px; overflow-y: auto;">
                         {% for course in all_courses %}
-                        <div class="form-check special-course-item py-1 border-bottom" data-search="{{ course.course_code|lower }} {{ course.course_name|lower }}">
-                            <input class="form-check-input" type="checkbox"
-                                name="special_course_ids"
-                                value="{{ course.id }}"
-                                id="sc_{{ room.id }}_{{ course.id }}"
-                                {% if course.id|string in sc_ids_int %}checked{% endif %}>
-                            <label class="form-check-label d-flex justify-content-between" for="sc_{{ room.id }}_{{ course.id }}">
+                        <div class="form-check special-course-item py-1 border-bottom"
+                            data-search="{{ course.course_code|lower }} {{ course.course_name|lower }}">
+                            <input class="form-check-input" type="checkbox" name="special_course_ids"
+                                value="{{ course.id }}" id="sc_{{ room.id }}_{{ course.id }}" {% if course.id|string in
+                                sc_ids_int %}checked{% endif %}>
+                            <label class="form-check-label d-flex justify-content-between"
+                                for="sc_{{ room.id }}_{{ course.id }}">
                                 <span><strong>{{ course.course_code }}</strong> — {{ course.course_name }}</span>
                                 <span class="text-muted small ms-2">{{ course.semester_offered }}</span>
                             </label>
@@ -663,9 +673,9 @@
                 const row = cb.closest('tr');
                 if (cb.checked) {
                     count++;
-                    {% if not is_hist %}row.classList.add('selected');{% endif %}
+                    {% if not is_hist %} row.classList.add('selected'); {% endif %}
                 } else {
-                    {% if not is_hist %}row.classList.remove('selected');{% endif %}
+                    {% if not is_hist %} row.classList.remove('selected'); {% endif %}
                 }
             });
 

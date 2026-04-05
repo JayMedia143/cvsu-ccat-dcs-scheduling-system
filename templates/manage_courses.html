@@ -13,20 +13,17 @@
     {% if not is_hist %}
     <div class="d-flex align-items-center gap-3">
         {% if session.get('role') in ['admin', 'superadmin'] %}
-        <button class="btn-google-action" data-bs-toggle="modal"
-            data-bs-target="#importPdfModal">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importPdfModal">
             <i class="bi bi-file-earmark-pdf-fill"></i>
             <span>Import Curriculum (PDF)</span>
         </button>
 
-        <button class="btn-google-action" data-bs-toggle="modal"
-            data-bs-target="#importWordModal">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importWordModal">
             <i class="bi bi-file-earmark-word-fill"></i>
             <span>Import Curriculum (Word)</span>
         </button>
 
-        <a href="{{ url_for('course_code_assignment') }}" class="btn-google-action"
-            style="text-decoration:none;">
+        <a href="{{ url_for('course_code_assignment') }}" class="btn-google-action" style="text-decoration:none;">
             <i class="bi bi-diagram-3-fill"></i>
             <span>Dept. Assignment</span>
         </a>
@@ -73,7 +70,7 @@
                 <!-- Added name="search" and value="{{ search_query }}" -->
                 <input type="text" name="search" class="google-search-input"
                     placeholder="Search courses (e.g. '1st', 'DCS', 'Math')..." id="liveSearchInput"
-                    value="{{ search_query }}" autocomplete="off" onchange="this.form.submit()">
+                    value="{{ search_query }}" autocomplete="off" onchange="this.form.submit()" maxlength="100">
                 <!-- Auto submit on enter/change -->
             </div>
         </form>
@@ -262,15 +259,19 @@
                         <td class="text-start text-muted fw-medium">{{ course.lec_units }} / {{ course.lab_units }}</td>
 
                         <!-- 6. HOURS -->
-                        <td class="text-start text-muted small">{{ course.synchronous_lec_hours }} / {{ course.synchronous_lab_hours }}</td>
-                        <td class="text-start text-muted small">{{ course.asynchronous_lec_hours }} / {{ course.asynchronous_lab_hours }}</td>
+                        <td class="text-start text-muted small">{{ course.synchronous_lec_hours }} / {{
+                            course.synchronous_lab_hours }}</td>
+                        <td class="text-start text-muted small">{{ course.asynchronous_lec_hours }} / {{
+                            course.asynchronous_lab_hours }}</td>
 
                         <!-- 7. SEMESTER -->
                         <td class="text-start">
                             {% if course.semester_offered == '1st Semester' %}
-                            <span class="badge bg-success bg-opacity-10 text-success border border-success">1st Sem</span>
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success">1st
+                                Sem</span>
                             {% elif course.semester_offered == '2nd Semester' %}
-                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">2nd Sem</span>
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">2nd
+                                Sem</span>
                             {% else %}
                             <span class="badge bg-warning bg-opacity-10 text-dark border border-warning">Midyear</span>
                             {% endif %}
@@ -383,12 +384,13 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">COURSE CODE</label>
-                        <input type="text" class="form-control" name="course_code" placeholder="e.g. COSC 101" required>
+                        <input type="text" class="form-control" name="course_code" placeholder="e.g. COSC 101" required
+                            maxlength="20">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">COURSE NAME</label>
                         <input type="text" class="form-control" name="course_name"
-                            placeholder="e.g. Introduction to Computing" required>
+                            placeholder="e.g. Introduction to Computing" required maxlength="100">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">PROGRAM</label>
@@ -418,10 +420,10 @@
                         <div class="col-4 border-end">
                             <label class="form-label small fw-bold text-center w-100 mb-1">UNITS</label>
                             <div class="d-flex gap-1">
-                                <input type="number" id="addLecUnits" class="form-control form-control-sm text-center" name="lec_units"
-                                    placeholder="Lec" value="0" min="0">
-                                <input type="number" id="addLabUnits" class="form-control form-control-sm text-center" name="lab_units"
-                                    placeholder="Lab" value="0" min="0">
+                                <input type="number" id="addLecUnits" class="form-control form-control-sm text-center"
+                                    name="lec_units" placeholder="Lec" value="0" min="0">
+                                <input type="number" id="addLabUnits" class="form-control form-control-sm text-center"
+                                    name="lab_units" placeholder="Lab" value="0" min="0">
                             </div>
                         </div>
                         <div class="col-4 border-end ps-2">
@@ -482,12 +484,12 @@
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">COURSE CODE</label>
                         <input type="text" class="form-control" name="course_code" value="{{ course.course_code }}"
-                            required>
+                            required maxlength="20">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">COURSE NAME</label>
                         <input type="text" class="form-control" name="course_name" value="{{ course.course_name }}"
-                            required>
+                            required maxlength="100">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">PROGRAM</label>
@@ -760,9 +762,9 @@
                 const row = cb.closest('tr');
                 if (cb.checked) {
                     count++;
-                    {% if not is_hist %}row.classList.add('selected');{% endif %}
+                    {% if not is_hist %} row.classList.add('selected'); {% endif %}
                 } else {
-                    {% if not is_hist %}row.classList.remove('selected');{% endif %}
+                    {% if not is_hist %} row.classList.remove('selected'); {% endif %}
                 }
             });
 
@@ -874,8 +876,8 @@
         // ==================================================
         const addLecUnits = document.getElementById('addLecUnits');
         const addLabUnits = document.getElementById('addLabUnits');
-        const addSyncLec  = document.getElementById('addSyncLec');
-        const addSyncLab  = document.getElementById('addSyncLab');
+        const addSyncLec = document.getElementById('addSyncLec');
+        const addSyncLab = document.getElementById('addSyncLab');
 
         if (addLecUnits && addSyncLec) {
             addLecUnits.addEventListener('input', function () {

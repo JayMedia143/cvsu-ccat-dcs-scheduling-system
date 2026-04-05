@@ -16,8 +16,7 @@
     <div class="d-flex align-items-center gap-3">
         {% if session.get('role') in ['admin', 'superadmin'] %}
         <!-- IMPORT BUTTON -->
-        <button class="btn-google-action" data-bs-toggle="modal"
-            data-bs-target="#importLoadingModal">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importLoadingModal">
             <i class="bi bi-file-earmark-spreadsheet-fill"></i>
             <span>Import Faculty Loading</span>
         </button>
@@ -33,7 +32,7 @@
         <form method="POST" action="{{ url_for('quick_add_tba_faculty') }}" style="display:inline;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-sm btn-outline-secondary"
-                    title="Add next T.B.A. faculty slot (TBA-01, TBA-02, ...)">
+                title="Add next T.B.A. faculty slot (TBA-01, TBA-02, ...)">
                 <i class="bi bi-person-fill-slash"></i> + T.B.A.
             </button>
         </form>
@@ -73,7 +72,7 @@
                 <i class="bi bi-search text-secondary me-3"></i>
                 <input type="text" name="search" class="google-search-input"
                     placeholder="Search faculty (ID, Name, Dept)..." id="liveSearchInput" value="{{ search_query }}"
-                    autocomplete="off" onchange="this.form.submit()">
+                    autocomplete="off" onchange="this.form.submit()" maxlength="100">
             </div>
         </form>
     </div>
@@ -210,7 +209,8 @@
 
                             <td class="text-start">
                                 <span class="badge-clean">
-                                    {{ 'All Departments' if faculty.department == 'Unassigned' else faculty.department }}
+                                    {{ 'All Departments' if faculty.department == 'Unassigned' else faculty.department
+                                    }}
                                 </span>
                             </td>
 
@@ -247,11 +247,11 @@
                             {% endif %}
 
                             <!-- Hanapin ang Actions column sa table loop -->
-                             <td class="text-center pe-0 text-nowrap" onclick="event.stopPropagation()">
+                            <td class="text-center pe-0 text-nowrap" onclick="event.stopPropagation()">
                                 {% if session.get('role') in ['admin', 'superadmin'] %}
                                 <!-- View Profile (admin only) -->
-                                <button type="button" class="btn-icon"
-                                    onclick="openFacultyProfile({{ loop.index0 }})" title="View Profile">
+                                <button type="button" class="btn-icon" onclick="openFacultyProfile({{ loop.index0 }})"
+                                    title="View Profile">
                                     <i class="bi bi-eye"></i>
                                 </button>
                                 {% endif %}
@@ -289,7 +289,8 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="{% if is_hist %}8{% else %}9{% endif %}" class="text-center py-5 text-muted">No faculty found.</td>
+                            <td colspan="{% if is_hist %}8{% else %}9{% endif %}" class="text-center py-5 text-muted">No
+                                faculty found.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -358,12 +359,14 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                Are you sure you want to move the <span id="modalSelectedCount" class="fw-bold text-danger">0</span> selected
+                Are you sure you want to move the <span id="modalSelectedCount" class="fw-bold text-danger">0</span>
+                selected
                 faculty to the recycle bin?
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-archive-confirm" onclick="submitBulkForm('archive')">Yes, Move to Recycle Bin</button>
+                <button type="button" class="btn btn-archive-confirm" onclick="submitBulkForm('archive')">Yes, Move to
+                    Recycle Bin</button>
             </div>
         </div>
     </div>
@@ -382,11 +385,11 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">EMPLOYEE ID</label>
-                        <input type="text" class="form-control" name="employee_id" required>
+                        <input type="text" class="form-control" name="employee_id" required maxlength="20">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">FULL NAME</label>
-                        <input type="text" class="form-control" name="full_name" required>
+                        <input type="text" class="form-control" name="full_name" required maxlength="100">
                     </div>
                     {% if session.get('role') != 'user' %}
                     <div class="row">
@@ -415,12 +418,12 @@
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">HIGHEST EDUCATIONAL ATTAINMENT</label>
                         <input type="text" class="form-control" name="highest_educational_attainment"
-                            placeholder="e.g. MASTER IN INFORMATION TECHNOLOGY">
+                            placeholder="e.g. MASTER IN INFORMATION TECHNOLOGY" maxlength="200">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">ACADEMIC RANK</label>
                         <input type="text" class="form-control" name="academic_rank"
-                            placeholder="e.g. Instructor I, Assistant Professor II">
+                            placeholder="e.g. Instructor I, Assistant Professor II" maxlength="100">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">SEX</label>
@@ -441,8 +444,8 @@
                         <div class="d-flex flex-wrap gap-2 mt-1">
                             {% for day in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" name="available_days"
-                                    value="{{ day }}" id="add_day_{{ day }}" checked>
+                                <input class="form-check-input" type="checkbox" name="available_days" value="{{ day }}"
+                                    id="add_day_{{ day }}" checked>
                                 <label class="form-check-label small" for="add_day_{{ day }}">{{ day[:3] }}</label>
                             </div>
                             {% endfor %}
@@ -475,12 +478,12 @@
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">EMPLOYEE ID</label>
                         <input type="text" class="form-control" name="employee_id" value="{{ faculty.employee_id }}"
-                            required>
+                            required maxlength="20">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">FULL NAME</label>
                         <input type="text" class="form-control" name="full_name" value="{{ faculty.full_name }}"
-                            required>
+                            required maxlength="100">
                     </div>
                     {% if session.get('role') != 'user' %}
                     <div class="row">
@@ -518,27 +521,25 @@
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">HIGHEST EDUCATIONAL ATTAINMENT</label>
                         <input type="text" class="form-control" name="highest_educational_attainment"
-                            value="{{ faculty.highest_educational_attainment or '' }}">
+                            value="{{ faculty.highest_educational_attainment or '' }}" maxlength="200">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">ACADEMIC RANK</label>
                         <input type="text" class="form-control" name="academic_rank"
                             value="{{ faculty.academic_rank or '' }}"
-                            placeholder="e.g. Instructor I, Assistant Professor II">
+                            placeholder="e.g. Instructor I, Assistant Professor II" maxlength="100">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">SEX</label>
                         <div class="d-flex gap-3 mt-1">
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="sex" value="M"
-                                    id="editSexMale{{ faculty.id }}"
-                                    {% if faculty.sex == 'M' %}checked{% endif %}>
+                                    id="editSexMale{{ faculty.id }}" {% if faculty.sex=='M' %}checked{% endif %}>
                                 <label class="form-check-label small" for="editSexMale{{ faculty.id }}">Male</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="sex" value="F"
-                                    id="editSexFemale{{ faculty.id }}"
-                                    {% if faculty.sex == 'F' %}checked{% endif %}>
+                                    id="editSexFemale{{ faculty.id }}" {% if faculty.sex=='F' %}checked{% endif %}>
                                 <label class="form-check-label small" for="editSexFemale{{ faculty.id }}">Female</label>
                             </div>
                         </div>
@@ -550,10 +551,10 @@
                             {% set avail = (faculty.available_days or '').split(',') %}
                             {% for day in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" name="available_days"
-                                    value="{{ day }}" id="edit_day_{{ faculty.id }}_{{ day }}"
-                                    {% if day in avail %}checked{% endif %}>
-                                <label class="form-check-label small" for="edit_day_{{ faculty.id }}_{{ day }}">{{ day[:3] }}</label>
+                                <input class="form-check-input" type="checkbox" name="available_days" value="{{ day }}"
+                                    id="edit_day_{{ faculty.id }}_{{ day }}" {% if day in avail %}checked{% endif %}>
+                                <label class="form-check-label small" for="edit_day_{{ faculty.id }}_{{ day }}">{{
+                                    day[:3] }}</label>
                             </div>
                             {% endfor %}
                         </div>
@@ -647,9 +648,11 @@
                                         style="font-size: 0.85rem; letter-spacing: 0.5px;">{{ sem }}</span>
                                 </div>
                                 <div class="course-list-container pe-1" style="max-height: 400px; overflow-y: auto;">
-                                    {% set _fdn = faculty.department | lower | replace('department of ', '') | replace(' and ', ' & ') | trim %}
+                                    {% set _fdn = faculty.department | lower | replace('department of ', '') | replace('
+                                    and ', ' & ') | trim %}
                                     {% for course in courses_by_sem[sem] %}
-                                    {% set _cdn = (course.department or '') | lower | replace('department of ', '') | replace(' and ', ' & ') | trim %}
+                                    {% set _cdn = (course.department or '') | lower | replace('department of ', '') |
+                                    replace(' and ', ' & ') | trim %}
                                     {% if not _cdn or _cdn == _fdn or faculty.full_name == 'T.B.A.' %}
                                     <div class="course-readable-card mb-2">
                                         <input
@@ -662,7 +665,8 @@
                                             data-lab-hours="{{ course.synchronous_lab_hours or course.lab_units or 0 }}"
                                             data-async-hours="{{ (course.asynchronous_lec_hours or 0) + (course.asynchronous_lab_hours or 0) }}"
                                             data-course-hours="{{ (course.synchronous_lec_hours or course.lec_units or 0) + (course.synchronous_lab_hours or course.lab_units or 0) + (course.asynchronous_lec_hours or 0) + (course.asynchronous_lab_hours or 0) }}"
-                                            onchange="updateTeachableSummary('{{ faculty.id }}')" {% if course.id in teachable_ids %}checked{% endif %}>
+                                            onchange="updateTeachableSummary('{{ faculty.id }}')" {% if course.id in
+                                            teachable_ids %}checked{% endif %}>
                                         <label
                                             class="d-flex align-items-center p-2 border bg-white transition-all cursor-pointer w-100 shadow-xs"
                                             for="teach_{{ faculty.id }}_{{ course.id }}">
@@ -712,14 +716,16 @@
                     <!-- HOUR COUNTER BAR -->
                     <div class="px-4 pt-3 pb-2 border-bottom" style="background:#f9fbf9;">
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="small text-muted fw-semibold text-uppercase" style="letter-spacing:.5px;">Weekly Load</span>
+                            <span class="small text-muted fw-semibold text-uppercase"
+                                style="letter-spacing:.5px;">Weekly Load</span>
                             <span class="fw-bold" style="font-size:.95rem;">
                                 <span id="totalHours{{ faculty.id }}" class="fw-bold text-success">0</span>
                                 <span class="text-muted"> / {{ faculty.max_weekly_hours }}h</span>
                             </span>
                         </div>
                         <div class="progress" style="height:6px; border-radius:4px;">
-                            <div id="hoursBar{{ faculty.id }}" class="progress-bar bg-success" role="progressbar" style="width:0%"></div>
+                            <div id="hoursBar{{ faculty.id }}" class="progress-bar bg-success" role="progressbar"
+                                style="width:0%"></div>
                         </div>
                     </div>
                     <div id="sectionList{{ faculty.id }}" class="p-3" style="max-height:480px; overflow-y:auto;"></div>
@@ -728,8 +734,7 @@
                     <button type="button" class="btn btn-light btn-back-step">
                         <i class="bi bi-arrow-left me-1"></i> Back
                     </button>
-                    <button type="submit" form="assignmentForm{{ faculty.id }}"
-                        class="btn btn-success px-4">
+                    <button type="submit" form="assignmentForm{{ faculty.id }}" class="btn btn-success px-4">
                         <i class="bi bi-save2-fill me-2"></i> Finalize Load
                     </button>
                 </div>
@@ -792,15 +797,12 @@
 </div>
 
 <!-- ===== PROFILE CUSTOM BACKDROP (below navbar only) ===== -->
-<div id="profileBackdrop"
-     style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;
-            background:rgba(0,0,0,0.45);z-index:1059;"
-     onclick="closeFacultyProfile()"></div>
+<div id="profileBackdrop" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+            background:rgba(0,0,0,0.45);z-index:1059;" onclick="closeFacultyProfile()"></div>
 
 <!-- ===== VIEW PROFILE OFFCANVAS ===== -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="facultyProfileOffcanvas"
-     data-bs-backdrop="false" data-bs-scroll="true"
-     style="width:380px;top:0;height:100vh;z-index:1060;" aria-labelledby="facultyProfileLabel">
+<div class="offcanvas offcanvas-end" tabindex="-1" id="facultyProfileOffcanvas" data-bs-backdrop="false"
+    data-bs-scroll="true" style="width:380px;top:0;height:100vh;z-index:1060;" aria-labelledby="facultyProfileLabel">
     <div class="offcanvas-header border-bottom py-3 px-4" style="background:#f9fbf9;">
         <div class="d-flex align-items-center gap-2">
             <i class="bi bi-eye text-muted fs-5"></i>
@@ -811,11 +813,13 @@
 
     <!-- Navigation arrows -->
     <div class="d-flex justify-content-between align-items-center px-4 py-2 border-bottom bg-white">
-        <button class="btn btn-sm btn-light border" id="profilePrevBtn" onclick="openFacultyProfile(window._profileIdx - 1)">
+        <button class="btn btn-sm btn-light border" id="profilePrevBtn"
+            onclick="openFacultyProfile(window._profileIdx - 1)">
             <i class="bi bi-chevron-left"></i> Prev
         </button>
         <span id="profileNavLabel" class="small text-muted"></span>
-        <button class="btn btn-sm btn-light border" id="profileNextBtn" onclick="openFacultyProfile(window._profileIdx + 1)">
+        <button class="btn btn-sm btn-light border" id="profileNextBtn"
+            onclick="openFacultyProfile(window._profileIdx + 1)">
             Next <i class="bi bi-chevron-right"></i>
         </button>
     </div>
@@ -829,11 +833,11 @@
 
 {% block scripts %}
 <script>
-    const allSections      = {{ all_sections_json | tojson | safe }};
-    const allSplitData     = {{ split_data_by_faculty | tojson | safe }};
+    const allSections = {{ all_sections_json | tojson | safe }};
+    const allSplitData = {{ split_data_by_faculty | tojson | safe }};
     const allFacultyProfiles = {{ faculty_profiles | tojson | safe }};
     const allTakenByOthers = {{ others_taken_by_faculty | tojson | safe }};
-    const faSplitHoursMap  = {{ fa_split_hours_map | tojson | safe }};
+    const faSplitHoursMap = {{ fa_split_hours_map | tojson | safe }};
 
     document.addEventListener('DOMContentLoaded', function () {
 
@@ -908,8 +912,8 @@
             let count = 0;
             rowCheckboxes.forEach(cb => {
                 const row = cb.closest('tr');
-                if (cb.checked) { count++; {% if not is_hist %}row.classList.add('selected');{% endif %} }
-                else { {% if not is_hist %}row.classList.remove('selected');{% endif %} }
+                if (cb.checked) { count++; {% if not is_hist %} row.classList.add('selected'); {% endif %} }
+                else { {% if not is_hist %} row.classList.remove('selected'); {% endif %} }
             });
 
             if (selectedCountSpan) selectedCountSpan.textContent = count;
@@ -993,45 +997,45 @@
             const currentAssignmentPairs = [...new Set([
                 {% for assign in faculty.assignments %}
                 "{{ assign.course_id }}-{{ assign.section_id }}",
-                {% endfor %}
-                {% for pair in sc_pairs_by_faculty.get(faculty.id|string, []) %}
-                "{{ pair }}",
-                {% endfor %}
+            {% endfor %}
+                {% for pair in sc_pairs_by_faculty.get(faculty.id | string, []) %}
+    "{{ pair }}",
+        {% endfor %}
             ])];
 
-            // Faculty available days for split dropdowns
-            const availDaysRaw = "{{ faculty.available_days or '' }}";
-            const availDays = availDaysRaw ? availDaysRaw.split(',').map(d => d.trim()).filter(d => d)
-                : ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    // Faculty available days for split dropdowns
+    const availDaysRaw = "{{ faculty.available_days or '' }}";
+    const availDays = availDaysRaw ? availDaysRaw.split(',').map(d => d.trim()).filter(d => d)
+        : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-            // Existing split data for this faculty (pre-populate)
-            const facSplitData = allSplitData[String(facultyId)] || {};
+    // Existing split data for this faculty (pre-populate)
+    const facSplitData = allSplitData[String(facultyId)] || {};
 
     // --- NEXT STEP LOGIC ---
     nextBtn.addEventListener('click', function () {
         const checkedBoxes = Array.from(step1.querySelectorAll(`.teachable-cb-${facultyId}:checked`));
         const selectedCourses = checkedBoxes.map(cb => ({
-            id:         cb.value,
-            code:       cb.getAttribute('data-code'),
-            name:       cb.getAttribute('data-course-name'),
-            lecHours:   parseFloat(cb.getAttribute('data-lec-hours')   || 0),
-            labHours:   parseFloat(cb.getAttribute('data-lab-hours')   || 0),
+            id: cb.value,
+            code: cb.getAttribute('data-code'),
+            name: cb.getAttribute('data-course-name'),
+            lecHours: parseFloat(cb.getAttribute('data-lec-hours') || 0),
+            labHours: parseFloat(cb.getAttribute('data-lab-hours') || 0),
             asyncHours: parseFloat(cb.getAttribute('data-async-hours') || 0),
-            totalHours: parseFloat(cb.getAttribute('data-course-hours')|| 0),
+            totalHours: parseFloat(cb.getAttribute('data-course-hours') || 0),
         }));
 
         sectionListDiv.innerHTML = '';
         if (selectedCourses.length === 0) {
             sectionListDiv.innerHTML = '<div class="alert alert-warning border-0 shadow-sm m-2">No subjects selected. Go back to Step 1.</div>';
         } else {
-            const allDayOpts = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+            const allDayOpts = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
             function buildSplitPanel(pair, sfx, hours, savedDay1, savedHours1, savedDay2, savedHours2) {
-                const dayOpts1 = allDayOpts.map(d => `<option value="${d}" ${d===savedDay1?'selected':''}>${d}</option>`).join('');
+                const dayOpts1 = allDayOpts.map(d => `<option value="${d}" ${d === savedDay1 ? 'selected' : ''}>${d}</option>`).join('');
                 const dayOpts2 = '<option value="">-- none --</option>' +
-                    allDayOpts.map(d => `<option value="${d}" ${d===savedDay2?'selected':''}>${d}</option>`).join('');
+                    allDayOpts.map(d => `<option value="${d}" ${d === savedDay2 ? 'selected' : ''}>${d}</option>`).join('');
                 return `
-                  <div class="split-panel ps-3 pb-2 pt-1" id="splitpanel_${facultyId}_${pair.replace('-','_')}_${sfx}">
+                  <div class="split-panel ps-3 pb-2 pt-1" id="splitpanel_${facultyId}_${pair.replace('-', '_')}_${sfx}">
                     <div class="small text-muted mb-1" style="font-size:.77rem;">
                       <i class="bi bi-scissors me-1"></i>Split ${hours}h across days <em>(optional)</em>
                     </div>
@@ -1041,7 +1045,7 @@
                               name="split_${pair}_${sfx}day_1">${dayOpts1}</select>
                       <input type="number" class="form-control form-control-sm split-hrs-1 py-0"
                              style="max-width:64px;font-size:.8rem;" min="0.5" max="${hours}" step="0.5"
-                             value="${savedHours1||''}" placeholder="hrs"
+                             value="${savedHours1 || ''}" placeholder="hrs"
                              name="split_${pair}_${sfx}hours_1"
                              onchange="validateSplit(this.closest('.split-panel'),'${hours}')">
                       <span class="small text-muted">h</span>
@@ -1052,7 +1056,7 @@
                               name="split_${pair}_${sfx}day_2">${dayOpts2}</select>
                       <input type="number" class="form-control form-control-sm split-hrs-2 py-0"
                              style="max-width:64px;font-size:.8rem;" min="0" max="${hours}" step="0.5"
-                             value="${savedHours2||''}" placeholder="hrs"
+                             value="${savedHours2 || ''}" placeholder="hrs"
                              name="split_${pair}_${sfx}hours_2"
                              onchange="validateSplit(this.closest('.split-panel'),'${hours}')">
                       <span class="small text-muted">h</span>
@@ -1081,8 +1085,8 @@
 
                 // Build header badges
                 let badges = '';
-                if (effLecHoursHdr > 0)    badges += `<span class="badge bg-primary bg-opacity-75 ms-1" style="font-size:.75rem;">Lec ${effLecHoursHdr}h</span>`;
-                if (effLabHoursHdr > 0)    badges += `<span class="badge bg-warning text-dark ms-1" style="font-size:.75rem;">Lab ${effLabHoursHdr}h</span>`;
+                if (effLecHoursHdr > 0) badges += `<span class="badge bg-primary bg-opacity-75 ms-1" style="font-size:.75rem;">Lec ${effLecHoursHdr}h</span>`;
+                if (effLabHoursHdr > 0) badges += `<span class="badge bg-warning text-dark ms-1" style="font-size:.75rem;">Lab ${effLabHoursHdr}h</span>`;
                 if (course.asyncHours > 0) badges += `<span class="badge bg-secondary ms-1" style="font-size:.75rem;">Async ${course.asyncHours}h</span>`;
 
                 content += `
@@ -1127,13 +1131,13 @@
                     if (course.lecHours > 0) {
                         const lecVisible = isChecked ? '' : 'display:none;';
                         content += `
-                        <div class="session-panels-${facultyId}-${pair.replace('-','_')}" style="${lecVisible}">
+                        <div class="session-panels-${facultyId}-${pair.replace('-', '_')}" style="${lecVisible}">
                           <div class="d-flex align-items-center px-2 py-1 rounded mb-1"
                                style="background:rgba(13,110,253,.06);border-left:3px solid rgba(13,110,253,.4);">
                             <span class="badge bg-primary bg-opacity-75 me-2" style="font-size:.72rem;min-width:46px;">Lec</span>
                             <span class="small text-muted" style="font-size:.8rem;">${effLecHours}h — split across days (optional)</span>
                           </div>
-                          ${buildSplitPanel(pair,'lec_',effLecHours,sd.lec_day_1,sd.lec_hours_1,sd.lec_day_2,sd.lec_hours_2)}
+                          ${buildSplitPanel(pair, 'lec_', effLecHours, sd.lec_day_1, sd.lec_hours_1, sd.lec_day_2, sd.lec_hours_2)}
                         </div>`;
                     }
 
@@ -1141,13 +1145,13 @@
                     if (course.labHours > 0) {
                         const labVisible = isChecked ? '' : 'display:none;';
                         content += `
-                        <div class="session-panels-${facultyId}-${pair.replace('-','_')}" style="${labVisible}">
+                        <div class="session-panels-${facultyId}-${pair.replace('-', '_')}" style="${labVisible}">
                           <div class="d-flex align-items-center px-2 py-1 rounded mb-1"
                                style="background:rgba(255,193,7,.08);border-left:3px solid rgba(255,193,7,.6);">
                             <span class="badge bg-warning text-dark me-2" style="font-size:.72rem;min-width:46px;">Lab</span>
                             <span class="small text-muted" style="font-size:.8rem;">${effLabHours}h — split across days (optional)</span>
                           </div>
-                          ${buildSplitPanel(pair,'',effLabHours,sd.day_1,sd.hours_1,sd.day_2,sd.hours_2)}
+                          ${buildSplitPanel(pair, '', effLabHours, sd.day_1, sd.hours_1, sd.day_2, sd.hours_2)}
                         </div>`;
                     }
 
@@ -1155,7 +1159,7 @@
                     if (course.asyncHours > 0) {
                         const asyncVisible = isChecked ? '' : 'display:none;';
                         content += `
-                        <div class="session-panels-${facultyId}-${pair.replace('-','_')}" style="${asyncVisible}">
+                        <div class="session-panels-${facultyId}-${pair.replace('-', '_')}" style="${asyncVisible}">
                           <div class="d-flex align-items-center px-2 py-1 rounded mb-1"
                                style="background:rgba(108,117,125,.07);border-left:3px solid rgba(108,117,125,.4);">
                             <span class="badge bg-secondary me-2" style="font-size:.72rem;min-width:46px;">Async</span>
@@ -1191,10 +1195,10 @@
         // Collect assignment checkboxes + their split data (Lec + Lab)
         step2.querySelectorAll('.assignment-checkbox:checked').forEach(cb => {
             const pair = cb.value;
-            const addH = (n, v) => { const i = document.createElement('input'); i.type='hidden'; i.name=n; i.value=v; form2.appendChild(i); };
+            const addH = (n, v) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = n; i.value = v; form2.appendChild(i); };
             addH('assignments', pair);
             // Collect all split panels for this pair (lab panel + lec panel)
-            const pairKey = pair.replace('-','_');
+            const pairKey = pair.replace('-', '_');
             ['', 'lec_'].forEach(sfx => {
                 const panelId = `splitpanel_${facultyId}_${pairKey}_${sfx}`;
                 const panel = step2.querySelector(`#${panelId}`);
@@ -1225,10 +1229,10 @@
         let current = 0;
         const activeModal = document.getElementById(`assignCoursesModal${id}`);
         activeModal.querySelectorAll('.assignment-checkbox:checked').forEach(cb => {
-            const pair    = cb.value;
+            const pair = cb.value;
             const pairKey = pair.replace('-', '_');
-            const lecHoursAttr   = parseFloat(cb.dataset.lecHours   || 0);
-            const labHoursAttr   = parseFloat(cb.dataset.labHours   || 0);
+            const lecHoursAttr = parseFloat(cb.dataset.lecHours || 0);
+            const labHoursAttr = parseFloat(cb.dataset.labHours || 0);
             const asyncHoursAttr = parseFloat(cb.dataset.asyncHours || 0);
 
             // Read actual split inputs for lec and lab panels
@@ -1244,9 +1248,9 @@
             const effLab = (labH1 > 0) ? (labH1 + labH2) : labHoursAttr;
             current += effLec + effLab + asyncHoursAttr;
         });
-        const span  = activeModal.querySelector(`#totalHours${id}`);
-        const bar   = activeModal.querySelector(`#hoursBar${id}`);
-        const max   = maxHours || 1;
+        const span = activeModal.querySelector(`#totalHours${id}`);
+        const bar = activeModal.querySelector(`#hoursBar${id}`);
+        const max = maxHours || 1;
         if (span) {
             span.textContent = current;
             span.classList.toggle('text-danger', current > max);
@@ -1304,7 +1308,7 @@
     // VIEW PROFILE OFFCANVAS
     // ==========================================
     window._profileIdx = 0;
-    window.openFacultyProfile = function(idx) {
+    window.openFacultyProfile = function (idx) {
         const profiles = allFacultyProfiles;
         if (!profiles || profiles.length === 0) return;
         idx = Math.max(0, Math.min(idx, profiles.length - 1));
@@ -1319,7 +1323,7 @@
         // Format available days as badges
         const dayList = (f.available_days || '').split(',').map(d => d.trim()).filter(d => d);
         const dayBadges = dayList.map(d =>
-            `<span class="badge bg-success bg-opacity-10 text-success border border-success fw-normal me-1 mb-1" style="font-size:.75rem;">${d.substring(0,3)}</span>`
+            `<span class="badge bg-success bg-opacity-10 text-success border border-success fw-normal me-1 mb-1" style="font-size:.75rem;">${d.substring(0, 3)}</span>`
         ).join('') || '<span class="text-muted small">Not set</span>';
 
         // Status badge
@@ -1419,19 +1423,19 @@
         bsOc.show();
     };
 
-    window.closeFacultyProfile = function() {
+    window.closeFacultyProfile = function () {
         const oc = document.getElementById('facultyProfileOffcanvas');
         bootstrap.Offcanvas.getOrCreateInstance(oc).hide();
     };
 
     // Hide custom backdrop when offcanvas fully closes
-    document.getElementById('facultyProfileOffcanvas').addEventListener('hidden.bs.offcanvas', function() {
+    document.getElementById('facultyProfileOffcanvas').addEventListener('hidden.bs.offcanvas', function () {
         document.getElementById('profileBackdrop').style.display = 'none';
     });
 
     // SESSION PANELS TOGGLE (show/hide Lec + Lab sub-rows when checkbox ticked)
     window.toggleSessionPanels = function (checkbox, facultyId, pair) {
-        const pairKey = pair.replace('-','_');
+        const pairKey = pair.replace('-', '_');
         const panels = document.querySelectorAll(`.session-panels-${facultyId}-${pairKey}`);
         panels.forEach(p => {
             if (checkbox.checked) {
@@ -1475,7 +1479,7 @@
         }
     };
 
-    window.submitBulkForm = function(action) {
+    window.submitBulkForm = function (action) {
         document.getElementById('bulkArchiveForm').submit();
     };
 </script>
