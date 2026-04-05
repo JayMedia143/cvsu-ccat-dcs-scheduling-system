@@ -139,9 +139,14 @@
                     <button class="btn btn-outline-success pv-pill-btn d-flex align-items-center gap-2" onclick="pvFitView()">
                         <i class="bi bi-arrows-angle-contract"></i> <span>Fit All</span>
                     </button>
-                    <button class="btn btn-success pv-pill-btn d-flex align-items-center gap-2" onclick="pvResetView()">
-                        <i class="bi bi-arrows-fullscreen"></i> <span>Center</span>
-                    </button>
+                    
+                    <div class="pv-nav-pill">
+                        <button class="pv-nav-btn nav-main" onclick="pvGoToFirst()" title="Go to First Schedule">1st</button>
+                        <button class="pv-nav-btn" onclick="pvGoToPrev()" title="Previous"><i class="bi bi-chevron-left"></i></button>
+                        <button class="pv-nav-btn" onclick="pvGoToNext()" title="Next"><i class="bi bi-chevron-right"></i></button>
+                        <button class="pv-nav-btn" onclick="pvGoToLast()" title="Go to Last Schedule (non-TBA)">Last</button>
+                    </div>
+                    
                     <div class="pv-zoom-pill">
                         <button class="btn pv-zoom-btn" onclick="pvZoom(-0.1)"><i class="bi bi-dash"></i></button>
                         <span class="pv-zoom-val" id="pvZoomLevel">12%</span>
@@ -479,11 +484,49 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
 .pv-pill-select { border: none !important; background: transparent; font-weight: 700; font-size: 0.85rem; color: #333; cursor: pointer; padding: 0 5px !important; width: auto; }
 .pv-search-pill { background: #f8f9fa; border-radius: 30px; padding: 4px 15px; border: 1px solid #eee; display: flex; align-items: center; gap: 8px; min-width: 150px; }
 .pv-search-pill input { border: none !important; background: transparent !important; font-size: 0.85rem; outline: none; width: 100%; }
-.pv-pill-btn { border-radius: 30px !important; padding: 6px 20px !important; font-size: 0.8rem !important; font-weight: 700 !important; white-space: nowrap !important; }
+.pv-pill-btn { border-radius: 30px !important; padding: 6px 20px !important; font-size: 0.8rem !important; font-weight: 700 !important; white-space: nowrap !important; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; position: relative; overflow: hidden; }
+.pv-pill-btn i { transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.pv-pill-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(25, 135, 84, 0.2); }
+.pv-pill-btn:hover i.bi-arrows-angle-contract { transform: rotate(45deg) scale(1.2); }
+.pv-pill-btn:active { transform: translateY(0) scale(0.95); }
 .pv-zoom-pill { display: flex; align-items: center; background: #f8f9fa; border-radius: 30px; padding: 4px 8px; border: 1px solid #eee; gap: 10px; }
 .pv-zoom-btn { width: 26px; height: 26px; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; background: #fff !important; border: 1px solid #ddd !important; padding: 0 !important; color: #666; transition: all 0.2s; cursor: pointer; }
 .pv-zoom-btn:hover { background: #eee !important; color: #000; }
 .pv-zoom-val { font-size: 0.85rem; font-weight: 700; color: #157347; min-width: 45px; text-align: center; }
+
+/* Nav Group Styling */
+.pv-nav-pill { display: flex; align-items: center; background: #f8f9fa; border-radius: 30px; padding: 4px; border: 1px solid #eee; gap: 4px; }
+.pv-nav-btn { border: none; background: #fff; border-radius: 20px; padding: 4px 12px; font-size: 0.75rem; font-weight: 700; color: #157347; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid #eee; display: flex; align-items: center; gap: 4px; }
+.pv-nav-btn i { transition: transform 0.3s; }
+.pv-nav-btn:hover { background: #157347; color: #fff; border-color: #157347; transform: scale(1.05); box-shadow: 0 4px 10px rgba(21, 115, 71, 0.2); }
+.pv-nav-btn:hover i.bi-chevron-left { transform: translateX(-2px); }
+.pv-nav-btn:hover i.bi-chevron-right { transform: translateX(2px); }
+.pv-nav-btn:active { transform: scale(0.95); }
+.pv-nav-btn.nav-main { background: #157347; color: #fff; border-color: #157347; }
+.pv-nav-btn.nav-main:hover { opacity: 0.9; transform: scale(1.05); }
+
+/* Card Focus Pulse */
+@keyframes pv-focus-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.4); transform: scale(1); }
+    50% { box-shadow: 0 0 20px 10px rgba(25, 135, 84, 0.2); transform: scale(1.02); }
+    100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); transform: scale(1); }
+}
+.pv-focus-pulse { animation: pv-focus-pulse 1s cubic-bezier(0.4, 0, 0.2, 1) forwards; z-index: 1000 !important; }
+
+/* Viewport Flash Effect */
+@keyframes pv-viewport-flash {
+    0% { background: rgba(25, 135, 84, 0.15); }
+    100% { background: transparent; }
+}
+.pv-viewport-flash::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    animation: pv-viewport-flash 0.4s ease-out forwards;
+}
+
 .pv-close-x { font-size: 1.5rem; color: #999; cursor: pointer; transition: color 0.2s; background: none; border: none; padding: 0; display: flex; align-items: center; }
 .pv-close-x:hover { color: #333; }
 #pvZoomBadge { position: absolute; bottom: 20px; left: 20px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); padding: 5px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; color: #198754; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 20; pointer-events: none; }
@@ -971,7 +1014,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         modal.show();
         document.getElementById('hubPreviewModal').addEventListener('shown.bs.modal', () => {
             pvModalOpen = true;
-            pvLoadCanvas();
+            pvLoadCanvas(); // This now calls pvInitViewState() internally
         }, { once: true });
         document.getElementById('hubPreviewModal').addEventListener('hidden.bs.modal', () => {
             pvModalOpen = false;
@@ -996,6 +1039,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
     function pvLoadCanvas() {
         const canvas = document.getElementById('pvCanvas');
         if (!canvas) return;
+        localStorage.setItem('pv_hub_last_active_type', pvCurrentType); // Sync immediately on manual switch
         canvas.innerHTML = '';
         const list = pvGetCurrentList();
         const cols = 5;
@@ -1021,7 +1065,7 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
 
         // 2. Initial Draw
         pvRenderVisibleCards();
-        pvResetView();
+        pvInitViewState(); // Smart init (Reset to 1st if new, otherwise load saved)
         setTimeout(pvInitMinimap, 200);
     }
 
@@ -1119,6 +1163,29 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         setTimeout(() => { const c = document.getElementById('pvCanvas'); if (c) c.style.transition = 'transform 0.05s linear'; }, 650);
     };
 
+    let pvFocusedIndex = 0;
+    window.pvGoToPage = function(index) {
+        if (!window.pvAllCardData || !window.pvAllCardData.length) return;
+        if (index < 0) index = 0;
+        if (index >= window.pvAllCardData.length) index = window.pvAllCardData.length - 1;
+        pvFocusedIndex = index;
+        pvFocusData(window.pvAllCardData[index]);
+    };
+    window.pvGoToFirst = function() { pvGoToPage(0); };
+    window.pvGoToLast = function() {
+        if (!window.pvAllCardData) return;
+        let lastIdx = 0;
+        for (let i = window.pvAllCardData.length - 1; i >= 0; i--) {
+            if (!window.pvAllCardData[i].label.startsWith('T.B.A.')) {
+                lastIdx = i;
+                break;
+            }
+        }
+        pvGoToPage(lastIdx);
+    };
+    window.pvGoToNext = function() { pvGoToPage(pvFocusedIndex + 1); };
+    window.pvGoToPrev = function() { pvGoToPage(pvFocusedIndex - 1); };
+
     function pvUpdateTransform() {
         const canvas = document.getElementById('pvCanvas');
         if (canvas) canvas.style.transform = `translate(${pvTranslateX}px,${pvTranslateY}px) scale(${pvScale})`;
@@ -1129,6 +1196,56 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         if (zb) zb.textContent = 'Zoom: ' + pct;
         pvUpdateMinimap();
         pvRenderVisibleCards();
+        pvSaveViewState();
+    }
+
+    // ── PREVIEW PERSISTENCE LOGIC ──────────────────────────────
+    function pvSaveViewState() {
+        if (!window.pvAllCardData || !window.pvAllCardData.length) return;
+        const state = { pvTranslateX, pvTranslateY, pvScale, pvFocusedIndex };
+        localStorage.setItem('pv_hub_state_' + pvCurrentType, JSON.stringify(state));
+        localStorage.setItem('pv_hub_last_active_type', pvCurrentType); // Save active module
+    }
+
+    function pvLoadViewState() {
+        try {
+            const saved = localStorage.getItem('pv_hub_state_' + pvCurrentType);
+            if (saved) {
+                const state = JSON.parse(saved);
+                pvTranslateX = state.pvTranslateX || 0;
+                pvTranslateY = state.pvTranslateY || 0;
+                pvScale = state.pvScale || 0.12;
+                pvFocusedIndex = state.pvFocusedIndex || 0;
+                const cvs = document.getElementById('pvCanvas');
+                if (cvs) cvs.style.transition = 'transform 0.5s ease-out';
+                pvUpdateTransform();
+                setTimeout(() => { if (cvs) cvs.style.transition = 'transform 0.05s linear'; }, 550);
+                return true;
+            }
+        } catch (e) { console.warn("Failed to load pv view state", e); }
+        return false;
+    }
+
+    function pvInitViewState() {
+        const sessionKey = 'pv_hub_session_active_' + pvCurrentType;
+        const isNewSession = !sessionStorage.getItem(sessionKey);
+        
+        if (isNewSession) {
+            sessionStorage.setItem(sessionKey, 'true');
+            setTimeout(() => { pvGoToFirst(); }, 300);
+        } else {
+            const savedType = localStorage.getItem('pv_hub_last_active_type');
+            if (savedType && savedType !== pvCurrentType) {
+                // Restore the specific module (Section, Faculty, or Room)
+                pvCurrentType = savedType;
+                document.getElementById('pvTypeSelect').value = savedType;
+                pvLoadCanvas(); 
+            } else {
+                if (!pvLoadViewState()) {
+                    setTimeout(() => { pvGoToFirst(); }, 300);
+                }
+            }
+        }
     }
 
     window.pvZoomCanvas = function(delta) {
@@ -1142,6 +1259,13 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         if (!bounds) return;
         const vp = document.getElementById('pvViewport');
         const vr = vp.getBoundingClientRect();
+        
+        // Trigger viewport flash feedback
+        if (vp) {
+            vp.classList.add('pv-viewport-flash');
+            setTimeout(() => vp.classList.remove('pv-viewport-flash'), 450);
+        }
+
         const padding = 150;
         
         pvScale = Math.min(
@@ -1186,14 +1310,28 @@ body { background: #fff !important; overflow: hidden; font-family: 'Segoe UI', R
         const vp = document.getElementById('pvViewport');
         if (!vp || !data) return;
         const vr = vp.getBoundingClientRect();
+
+        // Auto-zoom to 70% as requested by USER
+        pvScale = 0.7;
+
         const cx = data.x + data.width / 2;
         const cy = data.y + data.height / 2;
         pvTranslateX = vr.width / 2 - cx * pvScale;
         pvTranslateY = vr.height / 2 - cy * pvScale;
+        
         const canvas = document.getElementById('pvCanvas');
-        if (canvas) canvas.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+        if (canvas) canvas.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
         pvUpdateTransform();
-        setTimeout(() => { const c = document.getElementById('pvCanvas'); if (c) c.style.transition = 'transform 0.05s linear'; }, 500);
+        
+        // Apply focus pulse animation
+        if (data.element) {
+            data.element.classList.remove('pv-focus-pulse');
+            void data.element.offsetWidth; // trigger reflow
+            data.element.classList.add('pv-focus-pulse');
+            setTimeout(() => { if (data.element) data.element.classList.remove('pv-focus-pulse'); }, 1200);
+        }
+
+        setTimeout(() => { const c = document.getElementById('pvCanvas'); if (c) c.style.transition = 'transform 0.05s linear'; }, 650);
     }
 
     // Minimap

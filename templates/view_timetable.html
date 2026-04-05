@@ -23,7 +23,7 @@
 
     #canvas-viewport {
         position: fixed;
-        top: 92px; /* Below navbar */
+        top: {% if is_hist %}92px{% else %}48px{% endif %}; /* Below navbar */
         left: 0;
         right: 0;
         bottom: 0;
@@ -268,7 +268,7 @@
     /* ── FLOATING HUD (PILL DESIGN) ────────────────────────── */
     .hud-controls {
         position: fixed;
-        top: 110px;
+        top: {% if is_hist %}110px{% else %}66px{% endif %};
         left: 50%;
         transform: translateX(-50%);
         background: #fff;
@@ -290,8 +290,45 @@
     .hud-pill-select { border: none !important; background: transparent; font-weight: 700; font-size: 0.85rem; color: #333; cursor: pointer; padding: 0 5px !important; width: auto; }
     .hud-search-pill { background: #f8f9fa; border-radius: 30px; padding: 4px 15px; border: 1px solid #eee; display: flex; align-items: center; gap: 8px; width: 180px; }
     .hud-search-pill input { border: none !important; background: transparent !important; font-size: 0.85rem; outline: none; width: 100%; color: #333; }
-    .hud-pill-btn { border-radius: 30px !important; padding: 6px 20px !important; font-size: 0.8rem !important; font-weight: 700 !important; white-space: nowrap !important; }
+    .hud-pill-btn { border-radius: 30px !important; padding: 6px 16px !important; font-size: 0.8rem !important; font-weight: 700 !important; white-space: nowrap !important; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; position: relative; overflow: hidden; }
+    .hud-pill-btn i { transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .hud-pill-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(25, 135, 84, 0.2); }
+    .hud-pill-btn:hover i.bi-arrows-angle-contract { transform: rotate(45deg) scale(1.2); }
+    .hud-pill-btn:active { transform: translateY(0) scale(0.95); }
     
+    /* Nav Group Styling */
+    .hud-nav-pill { display: flex; align-items: center; background: #f8f9fa; border-radius: 30px; padding: 4px; border: 1px solid #eee; gap: 4px; }
+    .hud-nav-btn { border: none; background: #fff; border-radius: 20px; padding: 4px 12px; font-size: 0.75rem; font-weight: 700; color: #198754; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid #eee; display: flex; align-items: center; gap: 4px; }
+    .hud-nav-btn i { transition: transform 0.3s; }
+    .hud-nav-btn:hover { background: #198754; color: #fff; border-color: #198754; transform: scale(1.05); box-shadow: 0 4px 10px rgba(25, 135, 84, 0.2); }
+    .hud-nav-btn:hover i.bi-chevron-left { transform: translateX(-2px); }
+    .hud-nav-btn:hover i.bi-chevron-right { transform: translateX(2px); }
+    .hud-nav-btn:active { transform: scale(0.95); }
+    .hud-nav-btn.nav-main { background: #198754; color: #fff; border-color: #198754; }
+    .hud-nav-btn.nav-main:hover { opacity: 0.9; transform: scale(1.05); }
+
+    /* Card Focus Pulse */
+    @keyframes hud-focus-pulse {
+        0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.4); transform: scale(1); }
+        50% { box-shadow: 0 0 20px 10px rgba(25, 135, 84, 0.2); transform: scale(1.02); }
+        100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); transform: scale(1); }
+    }
+    .hud-focus-pulse { animation: hud-focus-pulse 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards; z-index: 1000 !important; }
+
+    /* Viewport Flash Effect */
+    @keyframes hud-viewport-flash {
+        0% { background: rgba(25, 135, 84, 0.15); }
+        100% { background: transparent; }
+    }
+    .hud-viewport-flash::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        pointer-events: none;
+        animation: hud-viewport-flash 0.4s ease-out forwards;
+    }
+
     .hud-zoom-pill { display: flex; align-items: center; background: #f8f9fa; border-radius: 30px; padding: 4px 8px; border: 1px solid #eee; gap: 10px; }
     .hud-zoom-btn { width: 26px; height: 26px; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; background: #fff !important; border: 1px solid #ddd !important; padding: 0 !important; color: #666; transition: all 0.2s; cursor: pointer; }
     .hud-zoom-btn:hover { background: #eee !important; color: #000; }
@@ -389,9 +426,13 @@
         <button class="btn btn-outline-success hud-pill-btn d-flex align-items-center gap-2" onclick="fitAll()">
             <i class="bi bi-arrows-angle-contract"></i> <span>Fit All</span>
         </button>
-        <button class="btn btn-success hud-pill-btn d-flex align-items-center gap-2" onclick="centerView()">
-            <i class="bi bi-arrows-fullscreen"></i> <span>Center</span>
-        </button>
+        
+        <div class="hud-nav-pill">
+            <button class="hud-nav-btn nav-main" onclick="goToFirst()" title="Go to First">1st</button>
+            <button class="hud-nav-btn" onclick="goToPrev()" title="Previous"><i class="bi bi-chevron-left"></i></button>
+            <button class="hud-nav-btn" onclick="goToNext()" title="Next"><i class="bi bi-chevron-right"></i></button>
+            <button class="hud-nav-btn" onclick="goToLast()" title="Go to Last (non-TBA)">Last</button>
+        </div>
         
         <div class="hud-zoom-pill">
             <div class="hud-zoom-btn" onclick="zoomCanvas(-0.1)"><i class="bi bi-dash"></i></div>
@@ -477,6 +518,57 @@
         if (hudZoom) hudZoom.textContent = zoomText;
         updateMinimapViewport();
         renderVisibleCards();
+        saveViewState();
+    }
+
+    // ── VIEW PERSISTENCE LOGIC ──────────────────────────────────
+    function saveViewState() {
+        if (!window.allCardData || !window.allCardData.length) return;
+        const state = { translateX, translateY, scale, focusedIndex };
+        localStorage.setItem('vt_view_state_' + currentType, JSON.stringify(state));
+        localStorage.setItem('vt_last_active_type', currentType); // Save the active module too
+    }
+
+    function loadViewState() {
+        try {
+            const saved = localStorage.getItem('vt_view_state_' + currentType);
+            if (saved) {
+                const state = JSON.parse(saved);
+                translateX = state.translateX || 0;
+                translateY = state.translateY || 0;
+                scale = state.scale || 1.0;
+                focusedIndex = state.focusedIndex || 0;
+                const cvs = document.getElementById('infinite-canvas');
+                if (cvs) cvs.style.transition = 'transform 0.5s ease-out';
+                updateTransform();
+                setTimeout(() => { if (cvs) cvs.style.transition = 'transform 0.05s linear'; }, 550);
+                return true;
+            }
+        } catch (e) { console.warn("Failed to load view state", e); }
+        return false;
+    }
+
+    function initViewState() {
+        const sessionKey = 'vt_session_active_' + currentType;
+        const isNewSession = !sessionStorage.getItem(sessionKey);
+        
+        if (isNewSession) {
+            sessionStorage.setItem(sessionKey, 'true');
+            // Fresh entry for this category: Always start with the first schedule
+            setTimeout(() => { goToFirst(); }, 300);
+        } else {
+            // Returning user: Check if they were on a different module last
+            const savedType = localStorage.getItem('vt_last_active_type');
+            if (savedType && savedType !== currentType) {
+                // Redirect to their last used module (Section, Faculty, or Room)
+                window.location.href = `{{ url_for('view_timetable') }}?type=${savedType}&semester={{ current_semester }}`;
+            } else {
+                // Same module: restore the exact panning coordinates
+                if (!loadViewState()) {
+                    setTimeout(() => { goToFirst(); }, 300);
+                }
+            }
+        }
     }
 
     viewport.addEventListener('mousedown', (e) => {
@@ -517,8 +609,9 @@
 
     window.resetAndLoad = function() {
         currentType = document.getElementById('typeSelect').value;
+        localStorage.setItem('vt_last_active_type', currentType); // Sync immediately on manual switch
         loadCanvas();
-        centerView();
+        initViewState();
     };
 
     window.allCardData = [];
@@ -536,7 +629,7 @@
             id: item.id, label: item.label, lowerLabel: item.label.toLowerCase(),
             url: urlMap[currentType](item.id),
             x: (index % columns) * 950 + 500, y: Math.floor(index / columns) * 1300 + 500,
-            width: 850, height: 1200, index: index, isMounted: false, element: null
+            width: 800, height: 1200, index: index, isMounted: false, element: null
         }));
         renderVisibleCards();
         initMinimap();
@@ -588,9 +681,25 @@
 
     function focusCard(data) {
         const rect = viewport.getBoundingClientRect();
+        
+        // Auto-zoom to 70% as requested by USER
+        scale = 0.7;
+
         translateX = (rect.width / 2) - (data.x + data.width / 2) * scale;
         translateY = (rect.height / 2) - (data.y + data.height / 2) * scale;
+        
+        const cvs = document.getElementById('infinite-canvas');
+        if (cvs) cvs.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
         updateTransform();
+        
+        if (data.element) {
+            data.element.classList.remove('hud-focus-pulse');
+            void data.element.offsetWidth; // trigger reflow
+            data.element.classList.add('hud-focus-pulse');
+            setTimeout(() => { if (data.element) data.element.classList.remove('hud-focus-pulse'); }, 1500);
+        }
+
+        setTimeout(() => { if (cvs) cvs.style.transition = 'transform 0.05s linear'; }, 650);
     }
 
     function getContentBounds() {
@@ -607,10 +716,19 @@
         const b = getContentBounds();
         if (!b) return;
         const vr = viewport.getBoundingClientRect();
+        
+        // Trigger viewport flash feedback
+        viewport.classList.add('hud-viewport-flash');
+        setTimeout(() => viewport.classList.remove('hud-viewport-flash'), 450);
+
         scale = Math.min((vr.width - 100) / b.width, (vr.height - 100) / b.height, 0.8);
         translateX = (vr.width / 2) - (b.minX + b.width / 2) * scale;
         translateY = (vr.height / 2) - (b.minY + b.height / 2) * scale;
+        
+        const cvs = document.getElementById('infinite-canvas');
+        if (cvs) cvs.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
         updateTransform();
+        setTimeout(() => { if (cvs) cvs.style.transition = 'transform 0.05s linear'; }, 650);
     };
 
     window.centerView = function() {
@@ -630,6 +748,29 @@
         updateTransform();
         setTimeout(() => { if (cvs) cvs.style.transition = 'transform 0.05s linear'; }, 650);
     };
+
+    let focusedIndex = 0;
+    window.goToPage = function(index) {
+        if (!window.allCardData || !window.allCardData.length) return;
+        if (index < 0) index = 0;
+        if (index >= window.allCardData.length) index = window.allCardData.length - 1;
+        focusedIndex = index;
+        focusCard(window.allCardData[index]);
+    };
+    window.goToFirst = function() { goToPage(0); };
+    window.goToLast = function() {
+        if (!window.allCardData) return;
+        let lastIdx = 0;
+        for (let i = window.allCardData.length - 1; i >= 0; i--) {
+            if (!window.allCardData[i].label.startsWith('T.B.A.')) {
+                lastIdx = i;
+                break;
+            }
+        }
+        goToPage(lastIdx);
+    };
+    window.goToNext = function() { goToPage(focusedIndex + 1); };
+    window.goToPrev = function() { goToPage(focusedIndex - 1); };
 
     function initMinimap() {
         const mini = document.getElementById('minimap-content');
@@ -693,7 +834,7 @@
 
     window.addEventListener('load', () => {
         applySort();
-        resetView();
+        initViewState();
     });
 
     // ── PRESENTATION LOGIC (INTERACTIVE) ─────────────────────────
