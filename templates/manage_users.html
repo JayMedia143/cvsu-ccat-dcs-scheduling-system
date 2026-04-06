@@ -28,8 +28,9 @@
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
-                        <th style="width: 50%;" class="ps-0 text-start">USERNAME</th>
+                        <th style="width: 35%;" class="ps-0 text-start">USERNAME</th>
                         <th style="width: 25%;" class="text-start">ROLE</th>
+                        <th style="width: 20%;" class="text-start">DEPARTMENT</th>
                         <th style="width: 1%; white-space: nowrap;" class="text-center pe-0">ACTIONS</th>
                     </tr>
                 </thead>
@@ -47,6 +48,9 @@
                                 <i class="bi bi-person-fill text-success me-1"></i> User
                                 {% endif %}
                             </span>
+                        </td>
+                        <td class="text-start">
+                            <span class="text-muted small">{{ user.department or 'N/A' }}</span>
                         </td>
                         <td class="text-center pe-0">
                             {% if current_user_id != user.id %}
@@ -99,6 +103,17 @@
                             <option value="user">User (View Only)</option>
                             <option value="admin">Admin (Manage Data)</option>
                             <option value="superadmin">Superadmin (Manage Everything)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
+                        <select class="form-select" name="department" required>
+                            <option value="" disabled selected>Select Department</option>
+                            <option value="DCS">Department of Computer Studies (DCS)</option>
+                            <option value="DAIC">Department of Agri-Industrial (DAIC)</option>
+                            <option value="DIT">Department of Information Tech (DIT)</option>
+                            <option value="DAS">Department of Arts and Sciences (DAS)</option>
+                            <option value="DB">Department of Business (DB)</option>
                         </select>
                     </div>
                 </div>

@@ -24,19 +24,7 @@
     #canvas-viewport {
         position: fixed;
 
-        top: {
-            % if is_hist %
-        }
-
-        92px {
-            % else %
-        }
-
-        48px {
-            % endif %
-        }
-
-        ;
+        top: {% if is_hist %}92px{% else %}48px{% endif %};
         /* Below navbar */
         left: 0;
         right: 0;
@@ -306,19 +294,7 @@
     .hud-controls {
         position: fixed;
 
-        top: {
-            % if is_hist %
-        }
-
-        110px {
-            % else %
-        }
-
-        66px {
-            % endif %
-        }
-
-        ;
+        top: {% if is_hist %}110px{% else %}66px{% endif %};
         left: 50%;
         transform: translateX(-50%);
         background: #fff;
@@ -796,7 +772,18 @@
 
     function initViewState() {
         const sessionKey = 'vt_session_active_' + currentType;
+        const resetKey = 'vt_coordinate_reset_v4'; // Update this to force a reset for everyone
         const isNewSession = !sessionStorage.getItem(sessionKey);
+        const needsReset = !localStorage.getItem(resetKey);
+
+        if (needsReset) {
+            // PHASE 3: COORDINATE HARD-RESET (ONE-TIME)
+            // Clear stale coordinate data once for each category to center the new canvas
+            localStorage.removeItem('vt_view_state_section');
+            localStorage.removeItem('vt_view_state_faculty');
+            localStorage.removeItem('vt_view_state_room');
+            localStorage.setItem(resetKey, 'true');
+        }
 
         if (isNewSession) {
             sessionStorage.setItem(sessionKey, 'true');

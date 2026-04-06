@@ -1076,7 +1076,11 @@
             targetIds.forEach(id => formData.append('section_ids', id));
             curriculumClipboard.forEach(id => formData.append('course_ids', id));
 
-            fetch("{{ url_for('bulk_assign_curriculum') }}", { method: 'POST', body: formData })
+            fetch("{{ url_for('bulk_assign_curriculum') }}", {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
+                body: formData
+            })
                 .then(res => { if (res.ok) location.reload(); });
         }
     };

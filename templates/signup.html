@@ -83,6 +83,19 @@
                         minlength="4" autocomplete="new-password" maxlength="100">
                 </div>
 
+                <div class="auth-input-group">
+                    <label class="auth-input-label">Department</label>
+                    <i class="bi bi-building input-icon"></i>
+                    <select name="department" class="form-select auth-input-select" required style="border:none; background:transparent; padding-left: 2.5rem; height: 100%; border-radius: 12px; font-size: 0.95rem; color: #444;">
+                        <option value="" disabled selected>Select your department</option>
+                        <option value="DCS">Department of Computer Studies (DCS)</option>
+                        <option value="DAIC">Department of Agri-Industrial (DAIC)</option>
+                        <option value="DIT">Department of Information Tech (DIT)</option>
+                        <option value="DAS">Department of Arts and Sciences (DAS)</option>
+                        <option value="DB">Department of Business (DB)</option>
+                    </select>
+                </div>
+
                 <button type="submit" class="btn-auth mt-1">Sign Up</button>
             </form>
 

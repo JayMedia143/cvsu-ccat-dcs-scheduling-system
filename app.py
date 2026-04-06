@@ -254,6 +254,10 @@ _HIST_SAFE_ENDPOINTS = {
     'login', 'logout', 'api_archive_exit', 'api_archive_enter',
     'static', 'upload_profile_pic', 'change_password', 'change_username',
     'manage_archives', 'delete_archive', 'bulk_delete_archives',
+    'api_archive_capture', 'api_settings_schedule_lock', # Administrative toggles
+    'api_hub_propose', 'api_hub_decide', 'api_hub_mark_read', # Hub workflow
+    'api_hub_message_edit', 'api_hub_message_delete',        # Hub chat
+    'exit_historical_view', 'approve_proposal', 'reject_proposal' # Compatibility aliases
 }
 
 @app.before_request
@@ -267,13 +271,16 @@ def block_mutations_in_hist_mode():
     if not session.get('historical_mode_active', False):
         return  # Not in historical mode — allow everything
 
+    # Bypass for Superadmins (Admin override)
+    if session.get('role') == 'superadmin':
+        return 
+
     endpoint = request.endpoint or ''
     if endpoint in _HIST_SAFE_ENDPOINTS:
         return  # Whitelisted — always allowed
 
     # Block the mutation
     if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        from flask import abort
         return jsonify(ok=False, error='System is in read-only Archive Mode. Exit Archive to make changes.'), 403
 
     flash('⏳ Action blocked: System is in Archive Mode (read-only). Exit Archive to make changes.', 'warning')
@@ -1530,7 +1537,8 @@ def add_security_headers(response):
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
         "img-src 'self' data: blob:; "
-        "connect-src 'self' ws: wss: https://cdn.socket.io; "
+        "connect-src 'self' ws: wss: https://cdn.socket.io https://cdn.jsdelivr.net; "
+        "frame-src 'self'; "
         "object-src 'none'; "
         "base-uri 'self';"
     )
@@ -1574,13 +1582,18 @@ def signup():
             flash('Passwords do not match.', 'warning')
             return redirect(url_for('signup'))
 
+        department = request.form.get('department', '').strip()
+        if not department:
+            flash('Please select a department.', 'warning')
+            return redirect(url_for('signup'))
+
         existing_user = User.query.filter_by(username=username).first()
         if existing_user:
             flash('Username already exists. Please choose another one.', 'danger')
             return redirect(url_for('signup'))
 
         hashed_pw = generate_password_hash(password)
-        new_user = User(username=username, password_hash=hashed_pw, role='user')
+        new_user = User(username=username, password_hash=hashed_pw, role='user', department=department)
         db.session.add(new_user)
         db.session.commit()
 
@@ -2095,13 +2108,15 @@ def manage_courses():
     # Base Query
     query = Course.query.filter_by(is_archived=False)
 
-    # DATA ISOLATION: Department Heads see all items in their department
+    # DATA ISOLATION: Department Heads see all items in their department OR what they created
     if session.get('role') == 'user':
         user_dept = session.get('department')
+        user_id = session.get('user_id')
         if user_dept:
-            query = query.filter_by(department=user_dept)
+            query = query.filter(or_(Course.department == user_dept, Course.created_by_id == user_id))
         else:
-            query = query.filter(False) # Safety lockout
+            # Fallback: if no department on profile, at least show what they created
+            query = query.filter_by(created_by_id=user_id)
 
     # 1. Apply Semester Filter
     if selected_semester != 'All':
@@ -2737,13 +2752,15 @@ def manage_rooms():
     # 2. Base Query
     query = Room.query.filter_by(is_archived=False)
     
-    # DATA ISOLATION: Department Heads see all items in their department
+    # DATA ISOLATION: Department Heads see all items in their department OR what they created
     if session.get('role') == 'user':
         user_dept = session.get('department')
+        user_id = session.get('user_id')
         if user_dept:
-            query = query.filter_by(department=user_dept)
+            query = query.filter(or_(Room.department.ilike(f"%{user_dept}%"), Room.created_by_id == user_id))
         else:
-            query = query.filter(False) # Safety lockout
+            # Fallback: if no department on profile, at least show what they created
+            query = query.filter_by(created_by_id=user_id)
     
     # 3. Apply Search
     if search_query:
@@ -3610,13 +3627,15 @@ def manage_faculty():
     # 2. Base Query
     query = Faculty.query.filter_by(is_archived=False)
     
-    # DATA ISOLATION: Department Heads see all items in their department
+    # DATA ISOLATION: Department Heads see all items in their department OR what they created
     if session.get('role') == 'user':
         user_dept = session.get('department')
+        user_id = session.get('user_id')
         if user_dept:
-            query = query.filter_by(department=user_dept)
+            query = query.filter(or_(Faculty.department == user_dept, Faculty.created_by_id == user_id))
         else:
-            query = query.filter(False) # Safety lockout
+            # Fallback: if no department on profile, at least show what they created
+            query = query.filter_by(created_by_id=user_id)
 
     # 3. Apply Search
     if search_query:
@@ -4335,21 +4354,30 @@ def view_timetable():
         # Default to the semester with the most recent data; fall back to 1st Semester
         default_sem = available_semesters[0] if available_semesters else '1st Semester'
         current_semester = request.args.get('semester', default_sem)
+        
+        # Semester validation: Normalize UI pills (1st/2nd) to DB strings (1st Semester)
+        sem_map = {'1st': '1st Semester', '2nd': '2nd Semester'}
+        if current_semester in sem_map:
+            current_semester = sem_map[current_semester]
+
+        if available_semesters and current_semester not in available_semesters:
+            current_semester = available_semesters[0]
 
         all_sections = Section.query.filter_by(is_archived=False)
         all_sections = all_sections.order_by(Section.year_level, Section.section_name).all()
 
         _fac_live = Faculty.query.filter_by(is_archived=False)
-        if session.get('role') == 'user':
-            _fac_live = _fac_live.filter_by(created_by_id=session.get('user_id'))
+        user_dept = session.get('department')
+        if session.get('role') == 'user' and user_dept:
+             _fac_live = _fac_live.filter(or_(Faculty.department == user_dept, Faculty.created_by_id == session.get('user_id')))
         _fac_live = _fac_live.order_by(Faculty.full_name).all()
 
         all_faculty  = [f for f in _fac_live if not f.full_name.startswith('T.B.A.')] + \
                        [f for f in _fac_live if f.full_name.startswith('T.B.A.')]
 
         _rom_live = Room.query.filter_by(is_archived=False)
-        if session.get('role') == 'user':
-            _rom_live = _rom_live.filter_by(created_by_id=session.get('user_id'))
+        if session.get('role') == 'user' and user_dept:
+             _rom_live = _rom_live.filter(or_(Room.department.ilike(f"%{user_dept}%"), Room.created_by_id == session.get('user_id')))
         _rom_live = _rom_live.order_by(Room.room_name).all()
 
         all_rooms    = [r for r in _rom_live if r.room_name != 'T.B.A.'] + \
@@ -4376,7 +4404,18 @@ def view_timetable():
                 item = Course.query.get(filter_id)
                 if item: selected_name = f"Schedule for {item.course_code}"
         else:
-            if all_sections:
+            # SMART DEFAULTING: One-time default based on current view type
+            if filter_type == 'room' and all_rooms:
+                first = all_rooms[0]
+                query = query.filter_by(room_id=first.id)
+                filter_id = first.id
+                selected_name = f"Schedule for {first.room_name}"
+            elif filter_type == 'faculty' and all_faculty:
+                first = all_faculty[0]
+                query = query.filter_by(faculty_id=first.id)
+                filter_id = first.id
+                selected_name = f"Schedule for {first.full_name}"
+            elif all_sections:
                 first = all_sections[0]
                 query = query.filter_by(section_id=first.id)
                 filter_id = first.id
@@ -13732,13 +13771,14 @@ def add_user():
     username = request.form.get('username')
     password = request.form.get('password')
     role = request.form.get('role')
+    department = request.form.get('department', '').strip()
     
     if User.query.filter_by(username=username).first():
         flash('Username already exists.', 'danger')
         return redirect(url_for('manage_users'))
         
     hashed_password = generate_password_hash(password)
-    new_user = User(username=username, password_hash=hashed_password, role=role)
+    new_user = User(username=username, password_hash=hashed_password, role=role, department=department)
     db.session.add(new_user)
     db.session.commit()
     

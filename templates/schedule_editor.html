@@ -1690,7 +1690,12 @@
     let sidebarMode = 'add'; // 'add' | 'edit'
     let editEntryId = null;
 
-    function getCsrf() { return document.getElementById('csrfToken').value; }
+    function getCsrf() { 
+        // Priority: try the global main.js helper, then the local element if it exists
+        if (typeof getCsrfToken === 'function') return getCsrfToken();
+        const el = document.getElementById('csrfToken');
+        return el ? el.value : (document.querySelector('meta[name="csrf-token"]')?.content || ''); 
+    }
 
     // ════════════════════════════════════════
     //  TIME HELPERS

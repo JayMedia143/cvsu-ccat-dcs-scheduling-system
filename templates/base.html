@@ -972,8 +972,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('input[name="csrf_token"]') ? 
-                               document.querySelector('input[name="csrf_token"]').value : ''
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
             },
             body: JSON.stringify({ ay: ay, semester: sem })
         })
@@ -1011,8 +1010,7 @@
         fetch('/api/settings/schedule-lock', {
             method: 'POST',
             headers: {'Content-Type': 'application/json',
-                      'X-CSRFToken': document.querySelector('input[name="csrf_token"]') ?
-                                     document.querySelector('input[name="csrf_token"]').value : ''},
+                      'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''},
             body: JSON.stringify({locked: locked})
         }).then(function(r) { return r.json(); }).then(function(d) {
             if (!d.ok) { cb.checked = !locked; return; }

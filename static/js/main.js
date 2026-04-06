@@ -1,13 +1,11 @@
 // main.js (Kumpletong Bersyon)
 
 document.addEventListener('DOMContentLoaded', () => {
-    /*--    // I-check kung nasa 'Generate Schedule' page tayo sa pamamagitan ng ID ng isang element
-        if (document.getElementById('generateBtn')) {
-            initializeGeneratePage();
-        }
-    });
-    
-    
+    // I-check kung nasa 'Generate Schedule' page tayo sa pamamagitan ng ID ng isang element
+    if (document.getElementById('generateBtn')) {
+        initializeGeneratePage();
+    }
+
     function initializeGeneratePage() {
         // Kunin lahat ng kailangang elements
         const setupContainer = document.getElementById('setupContainer');
@@ -39,7 +37,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
             // Start Server-Side Generation via AJAX
             fetch('/generate-schedule-action', {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                }
             })
             .then(response => response.json())
             .then(data => {
@@ -50,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     hardCountSpan.textContent = data.hard_conflicts;
                     finalScoreSpan.textContent = data.score;
                 } else {
-                    alert('Error generating schedule.');
+                    alert('Error generating schedule: ' + (data.message || 'Unknown error'));
                     resetToInitialState();
                 }
             })
@@ -59,26 +61,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Something went wrong.');
                 resetToInitialState();
             });
-            
-            // Note: The progress bar here will just be a "loading" animation 
-            // since Flask blocks during processing unless we use Celery/Async.
         }
     
         // Ikabit ang event listeners sa mga buttons
-        generateBtn.addEventListener('click', startGeneration);
-        generateAgainBtn.addEventListener('click', resetToInitialState);
+        if (generateBtn) generateBtn.addEventListener('click', startGeneration);
+        if (generateAgainBtn) generateAgainBtn.addEventListener('click', resetToInitialState);
     }
-    
-    
-    
-    // main.js (Idagdag ito sa pinakababa)
-    
-    document.addEventListener('DOMContentLoaded', () => {
-        // I-check kung nasa 'Generate Schedule' page tayo
-        if (document.getElementById('generateBtn')) {
-            initializeGeneratePage();
-        }
-    -*/
+
+    // Helper: Get CSRF Token from meta tag
+    function getCsrfToken() {
+        return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    }
+
     // I-check kung nasa 'Reports' page tayo sa pamamagitan ng ID ng isang chart
     if (document.getElementById('roomUtilizationChart')) {
         initializeReportsPage();

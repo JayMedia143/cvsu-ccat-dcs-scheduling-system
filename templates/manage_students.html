@@ -664,7 +664,7 @@
     }
 
     async function executeIrregApi(ids) {
-        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+        const csrfToken = getCsrfToken();
         for (const id of ids) {
             await fetch(`/manage/student/toggle-irregular/${id}`, {
                 method: 'POST', headers: { 'X-CSRFToken': csrfToken }

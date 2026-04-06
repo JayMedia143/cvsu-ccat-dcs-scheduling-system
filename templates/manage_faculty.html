@@ -1190,7 +1190,15 @@
     modal.querySelector(`#assignmentForm${facultyId}`).addEventListener('submit', function (e) {
         e.preventDefault();
         const form2 = this;
+        const csrfToken = form2.querySelector('input[name="csrf_token"]')?.value;
         form2.innerHTML = '';
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken;
+            form2.appendChild(csrfInput);
+        }
 
         // Collect assignment checkboxes + their split data (Lec + Lab)
         step2.querySelectorAll('.assignment-checkbox:checked').forEach(cb => {
