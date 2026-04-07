@@ -1,80 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Schedule Editor — CvSU Scheduling System
-<!-- HOW-TO GUIDE MODAL (Schedule Editor) -->
-<div class="modal fade" id="editorInfoModal" tabindex="-1" aria-labelledby="editorInfoLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header border-0">
-                <h5 class="modal-title fw-bold text-dark" id="editorInfoLabel">
-                    Schedule Editor Guide
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <div class="modal-body p-4 pt-0">
-                <!-- 1. WHAT IS THIS? -->
-                <div class="mb-4">
-                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. WHAT IS THIS?</h6>
-                    <p class="small text-muted mb-0">This is the main interface for manual schedule adjustments. You can move, edit, or add class blocks directly onto the calendar grid by dragging and dropping or clicking empty time slots.</p>
-                </div>
-
-                <!-- 2. DATA ACCURACY -->
-                <div class="mb-4">
-                    <h6 class="fw-bold text-success small mb-1 uppercase">2. DATA ACCURACY</h6>
-                    <p class="small text-muted mb-0">The editor supports both <strong>'Direct Mode'</strong> (live edits) and <strong>'Draft Mode'</strong> (staged changes). Use Draft Mode for major re-scheduling to avoid interrupting active system usage until you are ready to publish.</p>
-                </div>
-
-                <!-- 3. SYSTEM IMPACT -->
-                <div class="mb-4">
-                    <h6 class="fw-bold text-info small mb-1 uppercase">3. SYSTEM IMPACT</h6>
-                    <p class="small text-muted mb-0">Changes in Direct Mode are saved instantly to the database. In Draft Mode, changes are only applied to the live timetable once the draft is formally published by an administrator.</p>
-                </div>
-
-                <!-- 4. FINDING & SORTING -->
-                <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
-                    <ul class="small text-muted mt-2 mb-0 ps-3">
-                        <li><strong>Entity Selector:</strong> Choose a Section, Faculty, or Room at the top to load their specific schedules.</li>
-                        <li><strong>Sync Grid:</strong> Use the sync button to ensure you are viewing the most up-to-date data from the server.</li>
-                    </ul>
-                </div>
-
-                <!-- 5. SAVING CHANGES -->
-                <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. SAVING CHANGES</h6>
-                    <p class="small text-muted mb-0">In Draft Mode, changes are tracked automatically. In Direct Mode, every edit updates the database immediately. You can use the <strong>'Undo'</strong> button to revert the last manual action if a mistake is made.</p>
-                </div>
-
-                <!-- 6. PAGINATION -->
-                <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
-                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to' box</strong> to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
-                </div>
-            </div>
-
-            <div class="modal-footer bg-light border-0">
-                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-    .text-muted-v2 { color: #adb5bd; }
-    .info-icon-hover {
-        transition: all 0.2s ease;
-        cursor: pointer;
-    }
-    .info-icon-hover:hover {
-        color: #198754 !important;
-        transform: scale(1.2);
-    }
-    #editorInfoModal {
-        z-index: 1070 !important;
-    }
-</style>
-
-{% endblock %}
+{% block title %}Schedule Editor — CvSU Scheduling System{% endblock %}
 
 {% block content %}
 <input type="hidden" id="csrfToken" value="{{ csrf_token() }}">
@@ -826,24 +751,18 @@
     #pvViewport {
         background-color: #f8fafc;
         background-image:
-            radial-gradient(rgba(0, 0, 0, 0.18) 1.2px, transparent 1.2px);
+            radial-gradient(rgba(0,0,0,0.18) 1.2px, transparent 1.2px);
         background-size: 22px 22px;
         user-select: none;
     }
-
-    #pvCanvas {
-        transition: transform 0.05s linear;
-    }
-
+    #pvCanvas { transition: transform 0.05s linear; }
     .pv-card {
         transition: opacity 0.3s ease, transform 0.05s linear;
     }
-
     .pv-card.pv-dimmed {
         opacity: 0.15;
         pointer-events: none;
     }
-
     .pv-card {
         background: transparent;
         border-radius: 0;
@@ -854,12 +773,7 @@
         position: relative;
         padding: 0;
     }
-
-    .pv-card:hover {
-        transform: translateY(-5px) scale(1.02);
-        z-index: 20;
-    }
-
+    .pv-card:hover { transform: translateY(-5px) scale(1.02); z-index: 20; }
     .pv-card::before {
         content: "";
         position: absolute;
@@ -869,28 +783,8 @@
         pointer-events: none;
         z-index: 1;
     }
-
-    .pv-card .card-iframe-wrap {
-        width: 800px;
-        height: 1130px;
-        background: white;
-        border: 1px solid #ddd;
-        position: relative;
-        overflow: hidden;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-    }
-
-    .pv-card .card-iframe-wrap iframe {
-        width: 800px;
-        height: 1130px;
-        border: none;
-        pointer-events: none;
-        transform: scale(1.0);
-        transform-origin: top left;
-        transition: opacity 0.3s ease;
-        overflow: hidden;
-    }
-
+    .pv-card .card-iframe-wrap { width: 800px; height: 1130px; background: white; border: 1px solid #ddd; position: relative; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+    .pv-card .card-iframe-wrap iframe { width: 800px; height: 1130px; border: none; pointer-events: none; transform: scale(1.0); transform-origin: top left; transition: opacity 0.3s ease; overflow: hidden; }
     .pv-card .card-header-bar {
         position: absolute;
         top: 0;
@@ -907,9 +801,8 @@
         font-size: 0.85rem;
         z-index: 10;
     }
-
     .pv-card .card-maximize-btn {
-        background: rgba(255, 255, 255, 0.2);
+        background: rgba(255,255,255,0.2);
         color: white;
         border: none;
         width: 24px;
@@ -922,11 +815,7 @@
         transition: all 0.2s;
         font-size: 0.75rem;
     }
-
-    .pv-card .card-maximize-btn:hover {
-        background: rgba(255, 255, 255, 0.4);
-        transform: scale(1.1);
-    }
+    .pv-card .card-maximize-btn:hover { background: rgba(255,255,255,0.4); transform: scale(1.1); }
 
     /* New Premium Topbar */
     .pv-topbar {
@@ -938,228 +827,48 @@
         z-index: 100;
         border-bottom: 1px solid #e0e0e0;
     }
-
-    .pv-topbar.focus-mode {
-        display: none !important;
-    }
-
-    .pv-title-pill {
-        font-size: 0.95rem;
-        font-weight: 800;
-        color: #157347;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding-right: 15px;
-        border-right: 1px solid #eee;
-    }
-
-    .pv-pill-select-wrap {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: #f8f9fa;
-        border-radius: 30px;
-        padding: 4px 12px;
-        border: 1px solid #eee;
-    }
-
-    .pv-pill-label {
-        font-size: 0.8rem;
-        color: #666;
-        font-weight: 600;
-    }
-
-    .pv-pill-select {
-        border: none !important;
-        background: transparent;
-        font-weight: 700;
-        font-size: 0.85rem;
-        color: #333;
-        cursor: pointer;
-        padding: 0 5px !important;
-        width: auto;
-    }
-
-    .pv-search-pill {
-        background: #f8f9fa;
-        border-radius: 30px;
-        padding: 4px 15px;
-        border: 1px solid #eee;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        min-width: 150px;
-    }
-
-    .pv-search-pill input {
-        border: none !important;
-        background: transparent !important;
-        font-size: 0.85rem;
-        outline: none;
-        width: 100%;
-    }
-
-    .pv-pill-btn {
-        border-radius: 30px !important;
-        padding: 6px 16px !important;
-        font-size: 0.8rem !important;
-        font-weight: 700 !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .pv-pill-btn i {
-        transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-
-    .pv-pill-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(25, 135, 84, 0.2);
-    }
-
-    .pv-pill-btn:hover i.bi-arrows-angle-contract {
-        transform: rotate(45deg) scale(1.2);
-    }
-
-    .pv-pill-btn:active {
-        transform: translateY(0) scale(0.95);
-    }
-
+    .pv-topbar.focus-mode { display: none !important; }
+    .pv-title-pill { font-size: 0.95rem; font-weight: 800; color: #157347; display: flex; align-items: center; gap: 6px; padding-right: 15px; border-right: 1px solid #eee; }
+    .pv-pill-select-wrap { display: flex; align-items: center; gap: 8px; background: #f8f9fa; border-radius: 30px; padding: 4px 12px; border: 1px solid #eee; }
+    .pv-pill-label { font-size: 0.8rem; color: #666; font-weight: 600; }
+    .pv-pill-select { border: none !important; background: transparent; font-weight: 700; font-size: 0.85rem; color: #333; cursor: pointer; padding: 0 5px !important; width: auto; }
+    .pv-search-pill { background: #f8f9fa; border-radius: 30px; padding: 4px 15px; border: 1px solid #eee; display: flex; align-items: center; gap: 8px; min-width: 150px; }
+    .pv-search-pill input { border: none !important; background: transparent !important; font-size: 0.85rem; outline: none; width: 100%; }
+    .pv-pill-btn { border-radius: 30px !important; padding: 6px 16px !important; font-size: 0.8rem !important; font-weight: 700 !important; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; position: relative; overflow: hidden; }
+    .pv-pill-btn i { transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .pv-pill-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(25, 135, 84, 0.2); }
+    .pv-pill-btn:hover i.bi-arrows-angle-contract { transform: rotate(45deg) scale(1.2); }
+    .pv-pill-btn:active { transform: translateY(0) scale(0.95); }
+    
     /* Nav Group Styling */
-    .pv-nav-pill {
-        display: flex;
-        align-items: center;
-        background: #f8f9fa;
-        border-radius: 30px;
-        padding: 4px;
-        border: 1px solid #eee;
-        gap: 4px;
-    }
+    .pv-nav-pill { display: flex; align-items: center; background: #f8f9fa; border-radius: 30px; padding: 4px; border: 1px solid #eee; gap: 4px; }
+    .pv-nav-btn { border: none; background: #fff; border-radius: 20px; padding: 4px 12px; font-size: 0.75rem; font-weight: 700; color: #157347; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid #eee; display: flex; align-items: center; gap: 4px; }
+    .pv-nav-btn i { transition: transform 0.3s; }
+    .pv-nav-btn:hover { background: #157347; color: #fff; border-color: #157347; transform: scale(1.05); box-shadow: 0 4px 10px rgba(21, 115, 71, 0.2); }
+    .pv-nav-btn:hover i.bi-chevron-left { transform: translateX(-2px); }
+    .pv-nav-btn:hover i.bi-chevron-right { transform: translateX(2px); }
+    .pv-nav-btn:active { transform: scale(0.95); }
+    .pv-nav-btn.nav-main { background: #157347; color: #fff; border-color: #157347; }
+    .pv-nav-btn.nav-main:hover { opacity: 0.9; transform: scale(1.05); }
 
-    .pv-nav-btn {
-        border: none;
-        background: #fff;
-        border-radius: 20px;
-        padding: 4px 12px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        color: #157347;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 1px solid #eee;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-
-    .pv-nav-btn i {
-        transition: transform 0.3s;
-    }
-
-    .pv-nav-btn:hover {
-        background: #157347;
-        color: #fff;
-        border-color: #157347;
-        transform: scale(1.05);
-        box-shadow: 0 4px 10px rgba(21, 115, 71, 0.2);
-    }
-
-    .pv-nav-btn:hover i.bi-chevron-left {
-        transform: translateX(-2px);
-    }
-
-    .pv-nav-btn:hover i.bi-chevron-right {
-        transform: translateX(2px);
-    }
-
-    .pv-nav-btn:active {
-        transform: scale(0.95);
-    }
-
-    .pv-nav-btn.nav-main {
-        background: #157347;
-        color: #fff;
-        border-color: #157347;
-    }
-
-    .pv-nav-btn.nav-main:hover {
-        opacity: 0.9;
-        transform: scale(1.05);
-    }
-
-    .pv-zoom-pill {
-        display: flex;
-        align-items: center;
-        background: #f8f9fa;
-        border-radius: 30px;
-        padding: 4px 8px;
-        border: 1px solid #eee;
-        gap: 10px;
-    }
-
-    .pv-zoom-btn {
-        width: 26px;
-        height: 26px;
-        border-radius: 50% !important;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #fff !important;
-        border: 1px solid #ddd !important;
-        padding: 0 !important;
-        color: #666;
-        transition: all 0.2s;
-    }
-
-    .pv-zoom-btn:hover {
-        background: #eee !important;
-        color: #000;
-    }
-
-    .pv-zoom-val {
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: #157347;
-        min-width: 45px;
-        text-align: center;
-    }
+    .pv-zoom-pill { display: flex; align-items: center; background: #f8f9fa; border-radius: 30px; padding: 4px 8px; border: 1px solid #eee; gap: 10px; }
+    .pv-zoom-btn { width: 26px; height: 26px; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; background: #fff !important; border: 1px solid #ddd !important; padding: 0 !important; color: #666; transition: all 0.2s; }
+    .pv-zoom-btn:hover { background: #eee !important; color: #000; }
+    .pv-zoom-val { font-size: 0.85rem; font-weight: 700; color: #157347; min-width: 45px; text-align: center; }
 
     /* Card Focus Pulse */
     @keyframes pv-focus-pulse {
-        0% {
-            box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.4);
-            transform: scale(1);
-        }
-
-        50% {
-            box-shadow: 0 0 20px 10px rgba(25, 135, 84, 0.2);
-            transform: scale(1.02);
-        }
-
-        100% {
-            box-shadow: 0 0 0 0 rgba(25, 135, 84, 0);
-            transform: scale(1);
-        }
+        0% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.4); transform: scale(1); }
+        50% { box-shadow: 0 0 20px 10px rgba(25, 135, 84, 0.2); transform: scale(1.02); }
+        100% { box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); transform: scale(1); }
     }
-
-    .pv-focus-pulse {
-        animation: pv-focus-pulse 1s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        z-index: 1000 !important;
-    }
+    .pv-focus-pulse { animation: pv-focus-pulse 1s cubic-bezier(0.4, 0, 0.2, 1) forwards; z-index: 1000 !important; }
 
     /* Viewport Flash Effect */
     @keyframes pv-viewport-flash {
-        0% {
-            background: rgba(25, 135, 84, 0.15);
-        }
-
-        100% {
-            background: transparent;
-        }
+        0% { background: rgba(25, 135, 84, 0.15); }
+        100% { background: transparent; }
     }
-
     .pv-viewport-flash::after {
         content: '';
         position: absolute;
@@ -1168,44 +877,16 @@
         pointer-events: none;
         animation: pv-viewport-flash 0.4s ease-out forwards;
     }
+    .pv-close-x { font-size: 1.5rem; color: #999; cursor: pointer; transition: color 0.2s; background: none; border: none; padding: 0; display: flex; align-items: center; }
+    .pv-close-x:hover { color: #333; }
 
-    .pv-close-x {
-        font-size: 1.5rem;
-        color: #999;
-        cursor: pointer;
-        transition: color 0.2s;
-        background: none;
-        border: none;
-        padding: 0;
-        display: flex;
-        align-items: center;
-    }
-
-    .pv-close-x:hover {
-        color: #333;
-    }
-
-    #pvZoomBadge {
-        position: absolute;
-        bottom: 20px;
-        left: 20px;
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(8px);
-        padding: 5px 15px;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: bold;
-        color: #198754;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        z-index: 20;
-        pointer-events: none;
-    }
+    #pvZoomBadge { position: absolute; bottom: 20px; left: 20px; background: rgba(255,255,255,0.9); backdrop-filter: blur(8px); padding: 5px 15px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; color: #198754; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 20; pointer-events: none; }
 
     /* Cinema Overlay (scoped to preview modal) */
     #pvCinemaOverlay {
         position: absolute;
         inset: 0;
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0,0,0,0.7);
         z-index: 500;
         display: none;
         flex-direction: column;
@@ -1214,105 +895,18 @@
         cursor: grab;
         user-select: none;
     }
-
-    #pvCinemaOverlay.active {
-        display: flex;
-    }
-
-    #pvCinemaOverlay:active {
-        cursor: grabbing;
-    }
-
-    .pv-pres-container {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .pv-pres-iframe-wrap {
-        width: 800px;
-        height: 1130px;
-        background: white;
-        box-shadow: 0 0 100px rgba(0, 0, 0, 0.8);
-        transform-origin: center center;
-        transition: transform 0.05s linear;
-        pointer-events: auto;
-        flex-shrink: 0;
-    }
-
-    .pv-pres-iframe-wrap iframe {
-        width: 100%;
-        height: 100%;
-        border: none;
-        pointer-events: none;
-    }
-
-    .pv-pres-nav-btn {
-        position: absolute;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 70px;
-        height: 70px;
-        background: rgba(255, 255, 255, 0.05);
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 2rem;
-        cursor: pointer;
-        z-index: 10;
-        transition: all 0.3s;
-    }
-
-    .pv-pres-nav-btn:hover {
-        background: #198754;
-        border-color: #198754;
-        transform: translateY(-50%) scale(1.1);
-    }
-
-    .pv-pres-prev {
-        left: 30px;
-    }
-
-    .pv-pres-next {
-        right: 30px;
-    }
-
-    .pv-pres-close {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        color: rgba(255, 255, 255, 0.4);
-        font-size: 2.5rem;
-        cursor: pointer;
-        z-index: 10;
-        transition: color 0.3s;
-        line-height: 1;
-        background: none;
-        border: none;
-    }
-
-    .pv-pres-close:hover {
-        color: white;
-    }
-
-    .pv-pres-footer {
-        position: absolute;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: rgba(255, 255, 255, 0.5);
-        font-size: 0.9rem;
-        letter-spacing: 1px;
-        white-space: nowrap;
-    }
-
+    #pvCinemaOverlay.active { display: flex; }
+    #pvCinemaOverlay:active { cursor: grabbing; }
+    .pv-pres-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+    .pv-pres-iframe-wrap { width: 800px; height: 1130px; background: white; box-shadow: 0 0 100px rgba(0,0,0,0.8); transform-origin: center center; transition: transform 0.05s linear; pointer-events: auto; flex-shrink: 0; }
+    .pv-pres-iframe-wrap iframe { width: 100%; height: 100%; border: none; pointer-events: none; }
+    .pv-pres-nav-btn { position: absolute; top: 50%; transform: translateY(-50%); width: 70px; height: 70px; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; cursor: pointer; z-index: 10; transition: all 0.3s; }
+    .pv-pres-nav-btn:hover { background: #198754; border-color: #198754; transform: translateY(-50%) scale(1.1); }
+    .pv-pres-prev { left: 30px; }
+    .pv-pres-next { right: 30px; }
+    .pv-pres-close { position: absolute; top: 20px; right: 20px; color: rgba(255,255,255,0.4); font-size: 2.5rem; cursor: pointer; z-index: 10; transition: color 0.3s; line-height: 1; background: none; border: none; }
+    .pv-pres-close:hover { color: white; }
+    .pv-pres-footer { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.5); font-size: 0.9rem; letter-spacing: 1px; white-space: nowrap; }
     .btn-sync-grid {
         background: #fff !important;
         border: 1px solid #dadce0 !important;
@@ -1334,7 +928,7 @@
     .btn-sync-grid:hover {
         background: #f1f3f4 !important;
         color: #1a73e8 !important;
-        box-shadow: 0 1px 3px 0 rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15) !important;
+        box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15) !important;
         transform: translateY(-1px);
     }
 
@@ -1355,28 +949,13 @@
     }
 
     @keyframes spin-sync {
-        from {
-            transform: rotate(0deg);
-        }
-
-        to {
-            transform: rotate(360deg);
-        }
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
     }
-
     @keyframes pulse-highlight {
-        0% {
-            background-color: #fff;
-        }
-
-        30% {
-            background-color: #e8f0fe;
-            box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.1);
-        }
-
-        100% {
-            background-color: #fff;
-        }
+        0% { background-color: #fff; }
+        30% { background-color: #e8f0fe; box-shadow: 0 0 0 4px rgba(26, 115, 232, 0.1); }
+        100% { background-color: #fff; }
     }
 
     .field-pulse {
@@ -1389,12 +968,7 @@
 
     <!-- TOP BAR -->
     <div class="editor-topbar">
-        <span class="page-title d-flex align-items-center">
-            <i class="bi bi-pencil-square me-2 text-success"></i>Schedule Editor
-            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#editorInfoModal" title="How to use this page">
-                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
-            </button>
-        </span>
+        <span class="page-title"><i class="bi bi-pencil-square me-2 text-success"></i>Schedule Editor</span>
         {% if not is_hist %}
         {% if session.get('role') in ['admin','superadmin'] %}
         <button id="lockToggleBtn" class="btn-lock-toggle {% if lock_status %}lock-on{% else %}lock-off{% endif %}"
@@ -1437,17 +1011,14 @@
             {% if not is_hist %}
             <button class="btn btn-sm btn-success" id="publishDraftBtn" style="display:none" onclick="publishDraft()"><i
                     class="bi bi-cloud-upload me-1"></i>Publish</button>
-            <button id="previewDraftBtn" class="btn btn-sm btn-success d-none" onclick="openDraftPreview()"
-                title="Full-Screen Draft Preview">
+            <button id="previewDraftBtn" class="btn btn-sm btn-success d-none" onclick="openDraftPreview()" title="Full-Screen Draft Preview">
                 <i class="bi bi-eye-fill me-1"></i> Preview
             </button>
             {% endif %}
-            <button id="undoBtn" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="undoLast()"
-                title="Undo (Ctrl+Z)" disabled>
+            <button id="undoBtn" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="undoLast()" title="Undo (Ctrl+Z)" disabled>
                 <i class="bi bi-arrow-counterclockwise"></i>
             </button>
-            <button id="redoBtn" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="redoLast()"
-                title="Redo (Ctrl+Y)" disabled>
+            <button id="redoBtn" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="redoLast()" title="Redo (Ctrl+Y)" disabled>
                 <i class="bi bi-arrow-clockwise"></i>
             </button>
             <button class="btn-sync-grid" id="syncGridBtn" onclick="loadGrid()" title="Sync schedule grid with server">
@@ -1478,8 +1049,7 @@
             <div>
                 <div class="panel-section-title d-flex justify-content-between align-items-center">
                     <span id="addFormTitle">Add New Schedule</span>
-                    <button id="btnCancelEdit" class="btn btn-link btn-sm text-muted p-0 d-none"
-                        onclick="setSidebarMode('add')" style="font-size:0.7rem;text-decoration:none">Cancel</button>
+                    <button id="btnCancelEdit" class="btn btn-link btn-sm text-muted p-0 d-none" onclick="setSidebarMode('add')" style="font-size:0.7rem;text-decoration:none">Cancel</button>
                 </div>
                 <div class="add-form d-flex flex-column gap-2">
                     <div>
@@ -1540,8 +1110,7 @@
                     </div>
                     <div id="addLockBanner" class="add-lock-banner mt-1"><i class="bi bi-lock-fill"></i><span>Schedule
                             locked — select a draft first.</span></div>
-                    <div id="addFormError" class="alert alert-danger py-1 px-2 mb-0"
-                        style="font-size:.78rem;display:none"></div>
+                    <div id="addFormError" class="alert alert-danger py-1 px-2 mb-0" style="font-size:.78rem;display:none"></div>
                     <button id="btnAddSchedule" class="btn-add-sched mt-1" onclick="submitAddSchedule()">
                         <i class="bi bi-plus-circle me-1"></i>Add Schedule
                     </button>
@@ -1647,14 +1216,14 @@
 <div class="modal fade" id="editorModeModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header">
-                <div class="d-flex align-items-center">
-                    <button class="btn btn-sm btn-light me-2" id="mpStep2BackBtn" onclick="showModeStep1()"
+            <div class="modal-header bg-light border-0 pb-0">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-light" id="mpStep2BackBtn" onclick="showModeStep1()"
                         style="display: none;">
                         <i class="bi bi-arrow-left"></i>
                     </button>
-                    <h5 class="modal-title fw-bold text-dark" id="editorModeModalLabel">
-                        Schedule Editor Mode
+                    <h5 class="modal-title fw-bold mb-0">
+                        <i class="bi bi-diagram-3-fill me-2 text-primary"></i>Schedule Editor Mode
                     </h5>
                 </div>
             </div>
@@ -1812,41 +1381,26 @@
                                 <i class="bi bi-funnel me-1"></i>Filter: <span id="allDraftsFilterLabel">All</span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width: 200px;">
-                                <li><a class="dropdown-item text-danger" href="#"
-                                        onclick="clearAllDraftsFilters(); return false;">
-                                        <i class="bi bi-x-circle me-2"></i>Clear Filter</a></li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="clearAllDraftsFilters(); return false;">
+                                    <i class="bi bi-x-circle me-2"></i>Clear Filter</a></li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li class="dropdown-submenu">
                                     <a class="dropdown-item" href="javascript:void(0);">Semester</a>
                                     <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#"
-                                                onclick='setAllDraftsSem("", "All Semesters"); return false;'>All
-                                                Semesters</a></li>
-                                        <li>
-                                            <hr class="dropdown-divider">
-                                        </li>
+                                        <li><a class="dropdown-item" href="#" onclick='setAllDraftsSem("", "All Semesters"); return false;'>All Semesters</a></li>
+                                        <li><hr class="dropdown-divider"></li>
                                         {% for s in semesters %}
-                                        <li><a class="dropdown-item" href="#"
-                                                onclick='setAllDraftsSem({{ s|tojson }}, "{{ s }} Semester"); return false;'>{{
-                                                s }} Semester</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick='setAllDraftsSem({{ s|tojson }}, "{{ s }} Semester"); return false;'>{{ s }} Semester</a></li>
                                         {% endfor %}
                                     </ul>
                                 </li>
                                 <li class="dropdown-submenu">
                                     <a class="dropdown-item" href="javascript:void(0);">Department</a>
                                     <ul class="dropdown-menu" style="max-height: 300px; overflow-y: auto;">
-                                        <li><a class="dropdown-item" href="#"
-                                                onclick='setAllDraftsDept("", "All Departments"); return false;'>All
-                                                Departments</a></li>
-                                        <li>
-                                            <hr class="dropdown-divider">
-                                        </li>
+                                        <li><a class="dropdown-item" href="#" onclick='setAllDraftsDept("", "All Departments"); return false;'>All Departments</a></li>
+                                        <li><hr class="dropdown-divider"></li>
                                         {% for d in departments %}
-                                        <li><a class="dropdown-item" href="#"
-                                                onclick='setAllDraftsDept({{ d|tojson }}, {{ d|tojson }}); return false;'>{{
-                                                d }}</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick='setAllDraftsDept({{ d|tojson }}, {{ d|tojson }}); return false;'>{{ d }}</a></li>
                                         {% endfor %}
                                     </ul>
                                 </li>
@@ -1904,25 +1458,20 @@
         <div class="modal-content">
             <div class="modal-header border-0 pb-1">
                 <div class="d-flex align-items-center gap-2 w-100">
-                    <!-- Sync Button -->
-                    <button class="btn btn-sync d-flex align-items-center gap-2" id="syncGridBtn" onclick="syncGrid()"
-                        title="Sync and Resolve">
-                        <i class="bi bi-arrow-repeat fs-5"></i>
-                        <span class="d-none d-xl-inline fw-semibold">Sync Grid</span>
-                    </button>
+                <!-- Sync Button -->
+                <button class="btn btn-sync d-flex align-items-center gap-2" id="syncGridBtn" onclick="syncGrid()" title="Sync and Resolve">
+                    <i class="bi bi-arrow-repeat fs-5"></i>
+                    <span class="d-none d-xl-inline fw-semibold">Sync Grid</span>
+                </button>
 
-                    <button class="btn btn-primary d-flex align-items-center gap-2 px-3 d-none" id="publishDraftBtn"
-                        onclick="initiateSubmission()">
-                        <i class="bi bi-send-check-fill fs-5"></i>
-                        <span id="publishBtnLabel" class="fw-semibold">{% if session.role == 'user' %}Submit for
-                            Approval{% else %}Publish Draft{% endif %}</span>
-                    </button>
+                <button class="btn btn-primary d-flex align-items-center gap-2 px-3 d-none" id="publishDraftBtn" onclick="initiateSubmission()">
+                    <i class="bi bi-send-check-fill fs-5"></i>
+                    <span id="publishBtnLabel" class="fw-semibold">{% if session.role == 'user' %}Submit for Approval{% else %}Publish Draft{% endif %}</span>
+                </button>
 
-                    <button class="btn btn-outline-info d-flex align-items-center gap-2 px-3 d-none"
-                        id="previewDraftBtn" onclick="previewDraft()">
-                        <i class="bi bi-eye fs-5"></i>
-                    </button> <button id="mdBackBtn" class="btn btn-sm btn-light d-none" type="button"
-                        onclick="closeMdfForm()">
+                <button class="btn btn-outline-info d-flex align-items-center gap-2 px-3 d-none" id="previewDraftBtn" onclick="previewDraft()">
+                    <i class="bi bi-eye fs-5"></i>
+                </button>      <button id="mdBackBtn" class="btn btn-sm btn-light d-none" type="button" onclick="closeMdfForm()">
                         <i class="bi bi-arrow-left"></i>
                     </button>
                     <h5 class="modal-title fw-bold mb-0">
@@ -1971,41 +1520,26 @@
                                 <i class="bi bi-funnel me-1"></i>Filter: <span id="mdFilterLabel">All</span>
                             </button>
                             <ul class="dropdown-menu shadow-sm" style="min-width: 200px;">
-                                <li><a class="dropdown-item text-danger" href="#"
-                                        onclick="resetMdFilters(); return false;">
-                                        <i class="bi bi-x-circle me-2"></i>Clear Filter</a></li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
+                                <li><a class="dropdown-item text-danger" href="#" onclick="resetMdFilters(); return false;">
+                                    <i class="bi bi-x-circle me-2"></i>Clear Filter</a></li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li class="dropdown-submenu">
                                     <a class="dropdown-item" href="javascript:void(0);">Semester</a>
                                     <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#"
-                                                onclick='setMdSem("", "All Semesters"); return false;'>All Semesters</a>
-                                        </li>
-                                        <li>
-                                            <hr class="dropdown-divider">
-                                        </li>
+                                        <li><a class="dropdown-item" href="#" onclick='setMdSem("", "All Semesters"); return false;'>All Semesters</a></li>
+                                        <li><hr class="dropdown-divider"></li>
                                         {% for s in semesters %}
-                                        <li><a class="dropdown-item" href="#"
-                                                onclick='setMdSem({{ s|tojson }}, "{{ s }} Semester"); return false;'>{{
-                                                s }} Semester</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick='setMdSem({{ s|tojson }}, "{{ s }} Semester"); return false;'>{{ s }} Semester</a></li>
                                         {% endfor %}
                                     </ul>
                                 </li>
                                 <li class="dropdown-submenu">
                                     <a class="dropdown-item" href="javascript:void(0);">Department</a>
                                     <ul class="dropdown-menu" style="max-height: 300px; overflow-y: auto;">
-                                        <li><a class="dropdown-item" href="#"
-                                                onclick='setMdDept("", "All Departments"); return false;'>All
-                                                Departments</a></li>
-                                        <li>
-                                            <hr class="dropdown-divider">
-                                        </li>
+                                        <li><a class="dropdown-item" href="#" onclick='setMdDept("", "All Departments"); return false;'>All Departments</a></li>
+                                        <li><hr class="dropdown-divider"></li>
                                         {% for d in departments %}
-                                        <li><a class="dropdown-item" href="#"
-                                                onclick='setMdDept({{ d|tojson }}, {{ d|tojson }}); return false;'>{{ d
-                                                }}</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick='setMdDept({{ d|tojson }}, {{ d|tojson }}); return false;'>{{ d }}</a></li>
                                         {% endfor %}
                                     </ul>
                                 </li>
@@ -2037,13 +1571,13 @@
                             <ul class="pagination pagination-sm mb-0" id="mdPagination">
                             </ul>
                         </nav>
-                        <div id="mdPageJumpContainer"
-                            class="d-none d-flex align-items-center justify-content-center gap-2 text-muted mt-1"
-                            style="font-size:0.82rem;">
+                        <div id="mdPageJumpContainer" class="d-none d-flex align-items-center justify-content-center gap-2 text-muted mt-1"
+                             style="font-size:0.82rem;">
                             <span>Jump to:</span>
                             <input type="number" id="mdJumpInput" class="form-control form-control-sm text-center"
-                                style="width:65px;" min="1" placeholder="1-1">
-                            <button class="btn btn-sm btn-outline-secondary px-3" onclick="jumpToMdPage()">Go</button>
+                                   style="width:65px;" min="1" placeholder="1-1">
+                            <button class="btn btn-sm btn-outline-secondary px-3"
+                                    onclick="jumpToMdPage()">Go</button>
                             <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i
                                     class="bi bi-arrow-right-short"></i> arrow keys</span>
                         </div>
@@ -2055,8 +1589,7 @@
                         <input type="hidden" id="mdfEditId">
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Draft Name</label>
-                            <input type="text" class="form-control" id="mdfName" placeholder="e.g. Draft 1, NSTP Draft"
-                                required oninput="validateMdfForm()">
+                            <input type="text" class="form-control" id="mdfName" placeholder="e.g. Draft 1, NSTP Draft" required oninput="validateMdfForm()">
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Semester</label>
@@ -2082,8 +1615,7 @@
                         <div id="mdfError" class="alert alert-danger py-1 px-2 mb-0 mt-2"
                             style="display:none;font-size:.82rem"></div>
                         <div class="d-flex justify-content-end gap-2 mt-4">
-                            <button type="button" class="btn btn-light px-4" id="mdCancelFormBtn"
-                                onclick="closeMdfForm()">Cancel</button>
+                            <button type="button" class="btn btn-light px-4" id="mdCancelFormBtn" onclick="closeMdfForm()">Cancel</button>
                             <button type="submit" class="btn btn-success px-4" id="mdfSubmitBtn">
                                 <i class="bi bi-check-lg me-1"></i><span id="mdfSubmitLabel">Create Draft</span>
                             </button>
@@ -2152,17 +1684,17 @@
     let editorMode = null; // 'direct' | 'draft' — null until picker is used
     const IS_ADMIN = {{ 'true' if session.get('role') in ['admin', 'superadmin'] else 'false' }};
     const IS_HIST = {{ 'true' if is_hist else 'false' }};
-    let DRAFTS_DATA = [{% for dv in drafts %}{ id: { { dv.id } }, name: { { dv.name | tojson } }, semester: { { dv.semester | tojson } }, department: { { (dv.department or '')| tojson } }, notes: { { (dv.notes or '')| tojson } }, is_published: { { 'true' if dv.is_published else 'false' } } } {% if not loop.last %}, {% endif %} {% endfor %}];
+    let DRAFTS_DATA = [{% for dv in drafts %}{ id:{{ dv.id }}, name:{{ dv.name|tojson }}, semester:{{ dv.semester|tojson }}, department:{{ (dv.department or '')|tojson }}, notes:{{ (dv.notes or '')|tojson }}, is_published:{{ 'true' if dv.is_published else 'false' }} }{% if not loop.last %},{% endif %}{% endfor %}];
     let _editDraftId = null;
     let _newDraftCtx = 'picker'; // 'picker' | 'manage'
     let sidebarMode = 'add'; // 'add' | 'edit'
     let editEntryId = null;
 
-    function getCsrf() {
+    function getCsrf() { 
         // Priority: try the global main.js helper, then the local element if it exists
         if (typeof getCsrfToken === 'function') return getCsrfToken();
         const el = document.getElementById('csrfToken');
-        return el ? el.value : (document.querySelector('meta[name="csrf-token"]')?.content || '');
+        return el ? el.value : (document.querySelector('meta[name="csrf-token"]')?.content || ''); 
     }
 
     // ════════════════════════════════════════
@@ -2278,7 +1810,7 @@
                 // Defensive: ensure comparison works if IDs are strings or integers
                 if (vt === 'section') return Number(e.section_id) === entityId;
                 if (vt === 'faculty') return Number(e.faculty_id) === entityId;
-                if (vt === 'room') return Number(e.room_id) === entityId;
+                if (vt === 'room')    return Number(e.room_id)    === entityId;
                 return false; // Strictly isolate: don't show if view type is unknown or mismatched
             });
 
@@ -2449,7 +1981,7 @@
 
         block.onclick = (e) => {
             if (isMasterInDraftMode) {
-                showToast('Switch to Direct Edit Mode to modify master entries.', 'error');
+                showToast('Switch to Direct Edit Mode to modify master entries.','error');
             } else {
                 setSidebarMode('edit', entry);
             }
@@ -2819,7 +2351,7 @@
         document.getElementById('deleteConfirmBtn').onclick = doDeleteEntry;
         bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteConfirmModal')).show();
     }
-    async function doDeleteEntry() {
+   async function doDeleteEntry() {
         bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteConfirmModal')).hide();
         // Capture full entry data before deleting so undo can re-add it
         const savedEntry = [...masterEntries, ...draftEntries].find(x => x.id === pendingDeleteId);
@@ -2966,10 +2498,10 @@
 
     async function initiateSubmission() {
         if (!currentDraftId) return;
-
+        
         // ADMINS can still publish directly if they want, but let's encourage hub usage
         const isUser = "{{ session.role }}" === 'user';
-
+        
         if (isUser) {
             const justification = prompt("Please provide a short justification for this schedule proposal:");
             if (justification === null) return; // Cancelled
@@ -2977,16 +2509,16 @@
                 showToast("Justification is required for submission.", "error");
                 return;
             }
-
+            
             try {
                 const res = await fetch(`/api/hub/propose/${currentDraftId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
                     body: JSON.stringify({ justification: justification })
                 }).then(r => r.json());
-
+                
                 if (!res.ok) { showToast(res.error || 'Submission failed.', 'error'); return; }
-
+                
                 showToast("Proposal submitted to Decision Hub. This draft is now locked.", "success");
                 setTimeout(() => location.reload(), 1500);
             } catch (e) {
@@ -3292,9 +2824,9 @@
             return true;
         });
 
-        if (allDraftsSort === 'az') filtered.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-        else if (allDraftsSort === 'za') filtered.sort((a, b) => (b.name || "").localeCompare(a.name || ""));
-        else filtered.sort((a, b) => (b.id || 0) - (a.id || 0));
+        if (allDraftsSort === 'az') filtered.sort((a, b) => (a.name||"").localeCompare(b.name||""));
+        else if (allDraftsSort === 'za') filtered.sort((a, b) => (b.name||"").localeCompare(a.name||""));
+        else filtered.sort((a, b) => (b.id||0) - (a.id||0));
 
         const pageSize = 5;
         const totalPages = Math.ceil(filtered.length / pageSize) || 1;
@@ -3391,8 +2923,8 @@
             icon.className = 'bi bi-layers';
             label.textContent = `Draft: ${draftName}`;
             if (publishBtn) publishBtn.style.display = currentDraftId ? '' : 'none';
-            const previewBtn = document.getElementById('previewDraftBtn');
-            if (previewBtn) previewBtn.classList.toggle('d-none', !currentDraftId);
+        const previewBtn = document.getElementById('previewDraftBtn');
+        if (previewBtn) previewBtn.classList.toggle('d-none', !currentDraftId);
         }
         updateLockBanner();
     }
@@ -3428,16 +2960,16 @@
     }
     function openManageDrafts() {
         _mdPage = 1; _mdSort = ''; _mdSem = ''; _mdDept = '';
-
+        
         const searchInput = document.getElementById('mdSearch');
         if (searchInput) searchInput.value = '';
-
+        
         const sortLabel = document.getElementById('mdSortLabel');
         if (sortLabel) sortLabel.textContent = 'Newest';
-
+        
         const filterLabel = document.getElementById('mdFilterLabel');
         if (filterLabel) filterLabel.textContent = 'All';
-
+        
         renderManageDrafts();
         const modalEl = document.getElementById('manageDraftsModal');
         if (modalEl) {
@@ -3610,7 +3142,7 @@
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
                     body: JSON.stringify({ name, semester: sem, department: dept || null, notes: notes || null }),
                 }).then(r => r.json());
-
+                
                 if (!res.ok) {
                     if (els.err) { els.err.textContent = res.error || 'Failed to save.'; els.err.style.display = ''; }
                     return;
@@ -3633,7 +3165,7 @@
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
                     body: JSON.stringify({ name, semester: sem, department: dept || null, notes: notes || null }),
                 }).then(r => r.json());
-
+                
                 if (!res.ok) {
                     if (els.err) { els.err.textContent = res.error || 'Failed to create draft.'; els.err.style.display = ''; }
                     return;
@@ -3717,7 +3249,7 @@
                 const tr = document.createElement('tr');
                 tr.className = 'draft-row';
                 tr.dataset.id = d.id;
-
+                
                 // Semester badge matching All Drafts modal (rectangular, specific colors)
                 let semBadge = '';
                 const s = (d.semester || '').toLowerCase();
@@ -3747,20 +3279,20 @@
                 tbody.appendChild(tr);
             });
         }
-
+        
         // Update Pagination and Jump Container
         const pag = document.getElementById('mdPagination');
         const jumpCont = document.getElementById('mdPageJumpContainer');
         const jumpInput = document.getElementById('mdJumpInput');
         pag.innerHTML = '';
-
+        
         if (totalPages > 1) {
             if (jumpCont) jumpCont.classList.remove('d-none');
             if (jumpInput) {
                 jumpInput.max = totalPages;
                 jumpInput.placeholder = `1-${totalPages}`;
             }
-
+            
             // Prev
             const prev = document.createElement('li');
             prev.className = `page-item${_mdPage <= 1 ? ' disabled' : ''}`;
@@ -4030,7 +3562,7 @@
         if (wrap) wrap.style.transform = `translate(${pvPresX}px,${pvPresY}px) scale(${pvPresScale})`;
     }
 
-    window.pvOpenPresentation = function (index) {
+    window.pvOpenPresentation = function(index) {
         const list = pvListMap[pvCurrentType] || [];
         if (index < 0 || index >= list.length) return;
         pvPresIndex = index;
@@ -4040,7 +3572,7 @@
         const urlMap = {
             section: id => `/section-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
             faculty: id => `/faculty-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
-            room: id => `/room-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
+            room:    id => `/room-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
         };
         pvPresScale = Math.min(1.0, (window.innerHeight * 0.9) / 1130);
         pvPresX = 0; pvPresY = 0;
@@ -4059,7 +3591,7 @@
         if (mainNav) mainNav.classList.add('d-none');
     };
 
-    window.pvClosePresentation = function () {
+    window.pvClosePresentation = function() {
         const overlay = document.getElementById('pvCinemaOverlay');
         if (overlay) overlay.classList.remove('active');
         const iframe = document.getElementById('pvPresIframe');
@@ -4072,17 +3604,17 @@
         if (mainNav) mainNav.classList.remove('d-none');
     };
 
-    window.pvShowNext = function () {
+    window.pvShowNext = function() {
         const list = pvListMap[pvCurrentType] || [];
         pvOpenPresentation(pvPresIndex < list.length - 1 ? pvPresIndex + 1 : 0);
     };
 
-    window.pvShowPrev = function () {
+    window.pvShowPrev = function() {
         const list = pvListMap[pvCurrentType] || [];
         pvOpenPresentation(pvPresIndex > 0 ? pvPresIndex - 1 : list.length - 1);
     };
 
-    window.openDraftPreview = function () {
+    window.openDraftPreview = function() {
         if (!currentDraftId) { showToast('Select a draft first.', 'error'); return; }
         pvCurrentType = document.getElementById('viewTypeSel').value || 'section';
         pvListMap = { section: [..._pvSec], faculty: [..._pvFac], room: [..._pvRom] };
@@ -4098,7 +3630,7 @@
     function pvUpdateTransform() {
         const canvas = document.getElementById('pvCanvas');
         if (canvas) canvas.style.transform = `translate(${pvTranslateX}px,${pvTranslateY}px) scale(${pvScale})`;
-
+        
         const pct = Math.round(pvScale * 100) + '%';
         const zl = document.getElementById('pvZoomLevel');
         if (zl) zl.textContent = pct;
@@ -4151,7 +3683,7 @@
                 // Restore their last used module (Section, Faculty, or Room)
                 pvCurrentType = savedType;
                 document.getElementById('viewTypeSel').value = savedType;
-                pvApplySort();
+                pvApplySort(); 
             } else {
                 if (!pvLoadViewState()) {
                     setTimeout(() => { pvGoToFirst(); }, 300);
@@ -4173,7 +3705,7 @@
         const urlMap = {
             section: id => `/section-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
             faculty: id => `/faculty-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
-            room: id => `/room-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
+            room:    id => `/room-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
         };
 
         // 1. Memory Layout (Virtualization)
@@ -4207,10 +3739,10 @@
         if (!vp) return;
         const rect = vp.getBoundingClientRect();
         const buffer = 1000;
-
-        const vLeft = (-pvTranslateX - buffer) / pvScale;
-        const vTop = (-pvTranslateY - buffer) / pvScale;
-        const vWidth = (rect.width + buffer * 2) / pvScale;
+        
+        const vLeft   = (-pvTranslateX - buffer) / pvScale;
+        const vTop    = (-pvTranslateY - buffer) / pvScale;
+        const vWidth  = (rect.width  + buffer * 2) / pvScale;
         const vHeight = (rect.height + buffer * 2) / pvScale;
 
         window.pvAllCardData.forEach(card => {
@@ -4274,7 +3806,7 @@
         const dir = sel ? sel.value : 'asc';
         [['section', _pvSec], ['faculty', _pvFac], ['room', _pvRom]].forEach(([type, orig]) => {
             const nonTba = orig.filter(x => !x.label.startsWith('T.B.A.'));
-            const tba = orig.filter(x => x.label.startsWith('T.B.A.'));
+            const tba    = orig.filter(x =>  x.label.startsWith('T.B.A.'));
             nonTba.sort((a, b) => dir === 'asc' ? a.label.localeCompare(b.label) : b.label.localeCompare(a.label));
             pvListMap[type] = [...nonTba, ...tba];
         });
@@ -4291,12 +3823,12 @@
         return { minX, minY, width: maxX - minX, height: maxY - minY };
     }
 
-    window.pvFitView = function () {
+    window.pvFitView = function() {
         const bounds = pvGetBounds();
         if (!bounds) return;
         const vp = document.getElementById('pvViewport');
         const vr = vp.getBoundingClientRect();
-
+        
         // Trigger viewport flash feedback
         if (vp) {
             vp.classList.add('pv-viewport-flash');
@@ -4304,7 +3836,7 @@
         }
 
         const padding = 150;
-
+        
         pvScale = Math.min(
             (vr.width - padding) / bounds.width,
             (vr.height - padding) / bounds.height,
@@ -4314,23 +3846,23 @@
 
         pvTranslateX = (vr.width / 2) - (bounds.minX + bounds.width / 2) * pvScale;
         pvTranslateY = (vr.height / 2) - (bounds.minY + bounds.height / 2) * pvScale;
-
+        
         const cvs = document.getElementById('pvCanvas');
         if (cvs) cvs.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
         pvUpdateTransform();
         setTimeout(() => { if (cvs) cvs.style.transition = 'transform 0.05s linear'; }, 650);
     };
 
-    window.pvResetView = function () {
+    window.pvResetView = function() {
         const bounds = pvGetBounds();
         if (!bounds) return;
         const vp = document.getElementById('pvViewport');
         const vr = vp.getBoundingClientRect();
-
+        
         // Preserve current scale, just center
         pvTranslateX = (vr.width / 2) - (bounds.minX + bounds.width / 2) * pvScale;
         pvTranslateY = (vr.height / 2) - (bounds.minY + bounds.height / 2) * pvScale;
-
+        
         const cvs = document.getElementById('pvCanvas');
         if (cvs) cvs.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
         pvUpdateTransform();
@@ -4338,15 +3870,15 @@
     };
 
     let pvFocusedIndex = 0;
-    window.pvGoToPage = function (index) {
+    window.pvGoToPage = function(index) {
         if (!window.pvAllCardData || !window.pvAllCardData.length) return;
         if (index < 0) index = 0;
         if (index >= window.pvAllCardData.length) index = window.pvAllCardData.length - 1;
         pvFocusedIndex = index;
         pvFocusData(window.pvAllCardData[index]);
     };
-    window.pvGoToFirst = function () { pvGoToPage(0); };
-    window.pvGoToLast = function () {
+    window.pvGoToFirst = function() { pvGoToPage(0); };
+    window.pvGoToLast = function() {
         if (!window.pvAllCardData) return;
         let lastIdx = 0;
         for (let i = window.pvAllCardData.length - 1; i >= 0; i--) {
@@ -4357,10 +3889,10 @@
         }
         pvGoToPage(lastIdx);
     };
-    window.pvGoToNext = function () { pvGoToPage(pvFocusedIndex + 1); };
-    window.pvGoToPrev = function () { pvGoToPage(pvFocusedIndex - 1); };
+    window.pvGoToNext = function() { pvGoToPage(pvFocusedIndex + 1); };
+    window.pvGoToPrev = function() { pvGoToPage(pvFocusedIndex - 1); };
 
-    window.pvSearchCanvas = function (q) {
+    window.pvSearchCanvas = function(q) {
         q = q ? q.toLowerCase() : '';
         if (!q) {
             window.pvAllCardData.forEach(card => {
@@ -4380,7 +3912,7 @@
         if (found && q.length > 2) pvFocusData(found);
     };
 
-    window.pvZoom = function (delta) {
+    window.pvZoom = function(delta) {
         pvScale = Math.max(0.04, Math.min(2.0, pvScale + delta));
         pvUpdateTransform();
     };
@@ -4389,20 +3921,20 @@
         const vp = document.getElementById('pvViewport');
         if (!vp || !data) return;
         const rect = vp.getBoundingClientRect();
-
+        
         // Auto-zoom to 70% as requested by USER
         pvScale = 0.7;
 
         const cardX = data.x + (data.width / 2);
         const cardY = data.y + (data.height / 2);
-
+        
         pvTranslateX = (rect.width / 2) - (cardX * pvScale);
         pvTranslateY = (rect.height / 2) - (cardY * pvScale);
-
+        
         const cvs = document.getElementById('pvCanvas');
         if (cvs) cvs.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
         pvUpdateTransform();
-
+        
         // Apply focus pulse animation
         if (data.element) {
             data.element.classList.remove('pv-focus-pulse');
@@ -4454,10 +3986,10 @@
         const mmW = mm.offsetWidth, mmH = mm.offsetHeight;
         const vW = rect.width / pvScale, vH = rect.height / pvScale;
         const vX = -pvTranslateX / pvScale, vY = -pvTranslateY / pvScale;
-        box.style.width = Math.min((vW / totalW) * mmW, mmW) + 'px';
+        box.style.width  = Math.min((vW / totalW) * mmW, mmW) + 'px';
         box.style.height = Math.min((vH / totalH) * mmH, mmH) + 'px';
-        box.style.left = ((vX - startX) / totalW) * mmW + 'px';
-        box.style.top = ((vY - startY) / totalH) * mmH + 'px';
+        box.style.left   = ((vX - startX) / totalW) * mmW + 'px';
+        box.style.top    = ((vY - startY) / totalH) * mmH + 'px';
     }
 
     // Wire events after modal DOM is ready
@@ -4466,7 +3998,7 @@
         if (!pvModal) return;
 
         // Type change
-        document.getElementById('pvTypeSelect')?.addEventListener('change', function () {
+        document.getElementById('pvTypeSelect')?.addEventListener('change', function() {
             pvCurrentType = this.value; pvApplySort();
         });
 
@@ -4482,7 +4014,7 @@
                 pvTranslateX = e.clientX - pvStartX; pvTranslateY = e.clientY - pvStartY;
                 pvUpdateTransform();
             });
-            ['mouseup', 'mouseleave'].forEach(ev => vp.addEventListener(ev, () => {
+            ['mouseup','mouseleave'].forEach(ev => vp.addEventListener(ev, () => {
                 pvIsDragging = false; vp.style.cursor = 'grab';
             }));
             vp.addEventListener('wheel', e => {
@@ -4566,7 +4098,7 @@
         });
 
         // Search
-        document.getElementById('pvSearch')?.addEventListener('keyup', function () { pvSearchCanvas(this.value.toLowerCase()); });
+        document.getElementById('pvSearch')?.addEventListener('keyup', function() { pvSearchCanvas(this.value.toLowerCase()); });
     });
 </script>
 
@@ -4593,8 +4125,7 @@
 
                 <div class="pv-pill-select-wrap">
                     <span class="pv-pill-label">Sort:</span>
-                    <select id="pvSortSelect" class="form-select form-select-sm pv-pill-select"
-                        onchange="pvApplySort()">
+                    <select id="pvSortSelect" class="form-select form-select-sm pv-pill-select" onchange="pvApplySort()">
                         <option value="asc">A — Z</option>
                         <option value="desc">Z — A</option>
                     </select>
@@ -4606,22 +4137,17 @@
                 </div>
 
                 <div class="ms-auto d-flex align-items-center gap-2">
-                    <button class="btn btn-outline-success pv-pill-btn d-flex align-items-center gap-2"
-                        onclick="pvFitView()">
+                    <button class="btn btn-outline-success pv-pill-btn d-flex align-items-center gap-2" onclick="pvFitView()">
                         <i class="bi bi-arrows-angle-contract"></i> <span>Fit All</span>
                     </button>
-
+                    
                     <div class="pv-nav-pill">
-                        <button class="pv-nav-btn nav-main" onclick="pvGoToFirst()"
-                            title="Go to First Schedule">1st</button>
-                        <button class="pv-nav-btn" onclick="pvGoToPrev()" title="Previous"><i
-                                class="bi bi-chevron-left"></i></button>
-                        <button class="pv-nav-btn" onclick="pvGoToNext()" title="Next"><i
-                                class="bi bi-chevron-right"></i></button>
-                        <button class="pv-nav-btn" onclick="pvGoToLast()"
-                            title="Go to Last Schedule (non-TBA)">Last</button>
+                        <button class="pv-nav-btn nav-main" onclick="pvGoToFirst()" title="Go to First Schedule">1st</button>
+                        <button class="pv-nav-btn" onclick="pvGoToPrev()" title="Previous"><i class="bi bi-chevron-left"></i></button>
+                        <button class="pv-nav-btn" onclick="pvGoToNext()" title="Next"><i class="bi bi-chevron-right"></i></button>
+                        <button class="pv-nav-btn" onclick="pvGoToLast()" title="Go to Last Schedule (non-TBA)">Last</button>
                     </div>
-
+                    
                     <div class="pv-zoom-pill">
                         <button class="btn pv-zoom-btn" onclick="pvZoom(-0.1)"><i class="bi bi-dash"></i></button>
                         <span class="pv-zoom-val" id="pvZoomLevel">100%</span>
@@ -4641,22 +4167,17 @@
                 <!-- Zoom Badge -->
                 <div id="pvZoomBadge">Zoom: 100%</div>
                 <!-- Minimap -->
-                <div id="pvMinimap"
-                    style="position:absolute;bottom:20px;right:20px;width:180px;height:135px;
+                <div id="pvMinimap" style="position:absolute;bottom:20px;right:20px;width:180px;height:135px;
                      background:rgba(255,255,255,0.85);backdrop-filter:blur(8px);border-radius:10px;
                      border:1px solid rgba(0,0,0,0.1);box-shadow:0 4px 16px rgba(0,0,0,0.1);overflow:hidden;z-index:20;cursor:pointer;">
                     <div id="pvMinimapContent" style="position:absolute;inset:0;"></div>
-                    <div id="pvMinimapBox"
-                        style="position:absolute;border:2px solid #198754;background:rgba(25,135,84,0.1);pointer-events:none;">
-                    </div>
+                    <div id="pvMinimapBox" style="position:absolute;border:2px solid #198754;background:rgba(25,135,84,0.1);pointer-events:none;"></div>
                 </div>
                 <!-- Cinema / Presentation Overlay -->
                 <div id="pvCinemaOverlay">
                     <button class="pv-pres-close" onclick="pvClosePresentation()"><i class="bi bi-x-lg"></i></button>
-                    <button class="pv-pres-nav-btn pv-pres-prev" onclick="pvShowPrev()"><i
-                            class="bi bi-chevron-left"></i></button>
-                    <button class="pv-pres-nav-btn pv-pres-next" onclick="pvShowNext()"><i
-                            class="bi bi-chevron-right"></i></button>
+                    <button class="pv-pres-nav-btn pv-pres-prev" onclick="pvShowPrev()"><i class="bi bi-chevron-left"></i></button>
+                    <button class="pv-pres-nav-btn pv-pres-next" onclick="pvShowNext()"><i class="bi bi-chevron-right"></i></button>
                     <div class="pv-pres-container" id="pvPresBackdrop">
                         <div class="pv-pres-iframe-wrap" id="pvPresWrap">
                             <iframe id="pvPresIframe"></iframe>
@@ -4664,9 +4185,7 @@
                     </div>
                     <div class="pv-pres-footer">
                         <span id="pvPresLabel">...</span> &nbsp;|&nbsp;
-                        Press <kbd
-                            style="color:#aaa;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:3px;padding:1px 5px;">ESC</kbd>
-                        to exit &nbsp;|&nbsp;
+                        Press <kbd style="color:#aaa;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:3px;padding:1px 5px;">ESC</kbd> to exit &nbsp;|&nbsp;
                         Drag to Pan &nbsp;|&nbsp; Scroll to Zoom
                     </div>
                 </div>
