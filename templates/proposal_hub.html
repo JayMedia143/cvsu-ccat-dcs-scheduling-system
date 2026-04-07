@@ -7,7 +7,11 @@
     <!-- 1. CONVO LIST -->
     <div class="messenger-sidebar">
         <div class="sidebar-header-main p-3">
-            <h4 class="fw-bold mb-3">Chats</h4>
+            <h4 class="fw-bold mb-3">Chats
+                <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#decisionHubInfoModal" title="How to use Decision Hub">
+                    <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+                </button>
+            </h4>
             <div class="messenger-search">
                 <i class="bi bi-search"></i>
                 <input type="text" placeholder="Search Messenger" oninput="filterConvos(this.value)" maxlength="100">
@@ -33,7 +37,6 @@
                 </div>
             </div>
             <div class="ms-auto d-flex align-items-center gap-2">
-                <button class="btn btn-messenger-icon" title="View Info"><i class="bi bi-info-circle-fill"></i></button>
             </div>
         </div>
 
@@ -233,6 +236,41 @@
         </div>
     </div>
 </div>
+<!-- DECISION HUB INFO MODAL -->
+<div class="modal fade" id="decisionHubInfoModal" tabindex="-1" aria-labelledby="decisionHubInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="decisionHubInfoModalLabel">
+                    Decision Hub Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1">1. STARTING A CHAT</h6>
+                    <p class="small text-muted mb-0">Click any user on the left sidebar to start messaging. Click <strong>'Announcements'</strong> (at the very top) for department-wide broadcasts.</p>
+                </div>
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1">2. SENDING SCHEDULE DRAFTS</h6>
+                    <p class="small text-muted mb-0">To share a proposal, look for the <strong>(+) Plus Button</strong> at the bottom-left of the message box. Click it to select and attach your schedule draft to your message.</p>
+                </div>
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1">3. MANAGING PROPOSALS</h6>
+                    <p class="small text-muted mb-0">The <strong>'Pending Review'</strong> section on the right shows all schedule proposals. There is <strong>no limit</strong> to this list, but it will automatically <strong>scroll internally</strong> if it reaches the bottom of your screen, ensuring the website stays neat. Admins can click the <strong>Green Check (Approve)</strong> or <strong>Red X (Reject)</strong> icons to finalize them.</p>
+                </div>
+                <div class="mb-0">
+                    <h6 class="fw-bold text-info small mb-1">4. VISUALIZING THE PLAN</h6>
+                    <p class="small text-muted mb-0">Once you send a draft using the <strong>(+) Plus Button</strong>, a <strong>'Schedule Draft Card'</strong> (with a calendar icon) will appear in your chat. Simply <strong>click the card</strong> to open and launch the <strong>Interactive Canvas</strong>. Once the map opens, you can <strong>left-click and hold your mouse</strong> then drag in any direction to move the map. Use your <strong>mouse scroll wheel up to zoom in</strong> (magnify details) or <strong>scroll down to zoom out</strong>.</p>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <style>
     /* ──────── MESSENGER UI ENGINE ──────── */
@@ -245,6 +283,16 @@
         --ms-text-me: #fff;
         --ms-text-them: #050505;
         --ms-border: #f0f0f0;
+    }
+
+    .text-muted-v2 { color: #adb5bd; }
+    .info-icon-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .info-icon-hover:hover {
+        color: #198754 !important;
+        transform: scale(1.2);
     }
 
     body {
@@ -711,6 +759,7 @@
         border-left: 1px solid var(--ms-border);
         background: #fff;
         flex-shrink: 0;
+        overflow-y: auto;
     }
 
     @media (max-width: 1100px) {

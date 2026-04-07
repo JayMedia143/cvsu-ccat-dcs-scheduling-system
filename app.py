@@ -2489,15 +2489,28 @@ def _dept_for_code(code, auto_add=False):
 
 def _apply_prefix_rules():
     """Apply all CodePrefixRules to non-archived courses. Returns count of updated courses."""
-    exceptions  = {r.code: r.department for r in CodePrefixRule.query.filter_by(is_prefix=False).all()}
+    # Normalize exceptions (remove spaces)
+    # Mapping of normalized_code -> (original_rule_code, department)
+    exceptions_norm = {r.code.replace(' ', '').upper(): (r.code, r.department) for r in CodePrefixRule.query.filter_by(is_prefix=False).all()}
+    
     prefix_map  = {r.code: r.department for r in CodePrefixRule.query.filter_by(is_prefix=True).all()}
     updated = 0
+    import re
+    # Pattern to extract alpha prefix (e.g., "COSC" from "COSC 101" or "COSC101")
+    prefix_re = re.compile(r'^([A-Za-z]+)')
+
     for course in Course.query.filter_by(is_archived=False).all():
-        if course.course_code in exceptions:
-            course.department = exceptions[course.course_code]
+        cc_norm = course.course_code.replace(' ', '').upper()
+        
+        # 1. Check Exceptions (Space-Insensitive)
+        if cc_norm in exceptions_norm:
+            course.department = exceptions_norm[cc_norm][1]
             updated += 1
         else:
-            prefix = course.course_code.split(' ')[0]
+            # 2. Check Prefix Rules
+            match = prefix_re.match(course.course_code)
+            prefix = match.group(1) if match else course.course_code.split(' ')[0]
+            
             if prefix in prefix_map:
                 course.department = prefix_map[prefix]
                 updated += 1
@@ -2514,19 +2527,43 @@ def course_code_assignment():
 
     # All unique prefixes currently in the DB
     all_codes   = db.session.query(Course.course_code).filter_by(is_archived=False).all()
-    db_prefixes = sorted({c[0].split(' ')[0] for c in all_codes})
+    
+    import re
+    prefix_re = re.compile(r'^([A-Za-z]+)')
+    def get_prefix(c):
+        m = prefix_re.match(c)
+        return m.group(1) if m else c.split(' ')[0]
+
+    db_prefixes = sorted({get_prefix(c[0]) for c in all_codes})
     rule_prefixes = {r.code for r in prefix_rules}
     unassigned_prefixes = [p for p in db_prefixes if p not in rule_prefixes]
 
     # Count courses per prefix
     counts = {}
     for p in db_prefixes:
+        # Match both "CODE 101" and "CODE101"
         counts[p] = Course.query.filter(
             Course.is_archived == False,
-            Course.course_code.like(f'{p} %')
+            db.or_(
+                Course.course_code.like(f'{p} %'),
+                Course.course_code.like(f'{p}%') 
+            )
         ).count()
+        # Edge case: If p is "COSC", like "COSC%" matches "COSCED". 
+        # But for course assignment, we usually want as much coverage as possible.
+        
     for r in exception_rules:
-        counts[r.code] = Course.query.filter_by(course_code=r.code, is_archived=False).count()
+        code_norm = r.code.replace(' ', '').upper()
+        # Find all courses that match this exception code (with or without space)
+        counts[r.code] = Course.query.filter(
+            Course.is_archived == False,
+            db.or_(
+                Course.course_code == r.code,
+                Course.course_code == code_norm,
+                # Also handle potentially weird spacing like "MATH  10"
+                Course.course_code.like(f'{r.code.split(" ")[0]}%{r.code.split(" ")[-1]}%') if " " in r.code else False
+            )
+        ).count()
 
     return render_template('course_code_assignment.html',
                            prefix_rules=prefix_rules,
@@ -2953,14 +2990,23 @@ def api_prefix_courses():
     code = request.args.get('code', '').strip().upper()
     if not code:
         return jsonify([])
-    # Check if exact code or prefix
-    if ' ' in code:
-        courses = Course.query.filter_by(course_code=code, is_archived=False).all()
-    else:
-        courses = Course.query.filter(
-            Course.is_archived == False,
-            Course.course_code.like(f'{code} %')
-        ).order_by(Course.course_code).all()
+    # Flexible matching regardless of space (search for MATH 10 or MATH10)
+    code_norm = code.replace(' ', '').upper()
+    prefix = code.split(' ')[0]
+    suffix = code.split(' ')[-1] if ' ' in code else ''
+    
+    courses = Course.query.filter(
+        Course.is_archived == False,
+        db.or_(
+            Course.course_code == code,         # Exact "MATH 10"
+            Course.course_code == code_norm,    # Exact "MATH10"
+            # Prefix search for phrases like "MATH 10" even if saved as "MATH10"
+            Course.course_code.like(f'{code} %'),
+            Course.course_code.like(f'{code}%'),
+            Course.course_code.like(f'{prefix}%{suffix}%') if suffix else False
+        )
+    ).order_by(Course.course_code).all()
+    
     return jsonify([{'code': c.course_code, 'name': c.course_name, 'dept': c.department or '—'} for c in courses])
 
 # I-UPDATE ANG LUMANG delete_course FUNCTION

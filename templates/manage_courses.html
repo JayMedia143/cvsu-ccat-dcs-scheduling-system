@@ -7,7 +7,12 @@
 <!-- 1. HEADER (Static) -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 text-gray-800 fw-light mb-1">Courses</h1>
+        <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
+            Courses
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#courseInfoModal" title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+            </button>
+        </h1>
         <p class="text-muted small mb-0">Manage your subject offerings, units, and hours.</p>
     </div>
     {% if not is_hist %}
@@ -686,6 +691,77 @@
                     <button type="submit" class="btn btn-success px-4">Import & Auto-Assign</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-muted-v2 { color: #adb5bd; }
+    .info-icon-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .info-icon-hover:hover {
+        color: #198754 !important;
+        transform: scale(1.2);
+    }
+</style>
+
+<!-- 5. HOW-TO GUIDE MODAL (Courses) -->
+<div class="modal fade" id="courseInfoModal" tabindex="-1" aria-labelledby="courseInfoLabel" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="courseInfoLabel">
+                    Course Management Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body p-4">
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. CREATING NEW COURSES (Manual)</h6>
+                    <p class="small text-muted mb-0">Click the green <strong>'New Course'</strong> button to add a single subject. You will need to fill in the <strong>Course Code</strong> (e.g., COSC 101), <strong>Full Name</strong>, and <strong>Department</strong>. You must also specify the <strong>Lecture/Lab units</strong> and <strong>Weekly Hours</strong> (Sync/Async) so the system knows how much time is needed for scheduling.</p>
+                </div>
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1 uppercase">2. BULK IMPORTING FROM CURRICULUM</h6>
+                    <p class="small text-muted mb-0">Instead of adding subjects one by one, use the <strong>Import</strong> buttons:</p>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>PDF Import:</strong> Best for standard curriculum files; the system scans the text to extract subjects automatically.</li>
+                        <li><strong>Word Import:</strong> For most reliable results, click this button and use the <strong>'Download Template'</strong> link inside. Fill out that file and upload it back to the system.</li>
+                    </ul>
+                </div>
+                <div class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1 uppercase">3. ASSIGNING DEPARTMENTS</h6>
+                    <p class="small text-muted mb-0">Click the <strong>'Dept. Assignment'</strong> button (with the diagram icon) to manage which departments "own" specific subjects. This ensures that only the correct department handles the scheduling for those courses.</p>
+                </div>
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Search Bar:</strong> Type any part of a code or name; the list will update <strong>instantly</strong> as you type.</li>
+                        <li><strong>Funnel Icon:</strong> Click this to filter the list by a specific <strong>Department</strong> or common <strong>Subject Code</strong> (like Math or COSC).</li>
+                        <li><strong>Sort Menu:</strong> Use the dropdown on the top-right to arrange subjects by Newest, Alphabetical (A-Z), or by Department name.</li>
+                    </ul>
+                </div>
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. MANAGING & MASS ACTIONS</h6>
+                    <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many rows at once:</p>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Calendar Icon:</strong> View the real-time <strong>Schedule</strong> for that specific subject.</li>
+                        <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the subject's details (Code, Name, Units, etc.).</li>
+                        <li><strong>Trash Icon:</strong> Move the subject to the <strong>Recycle Bin</strong>.</li>
+                        <li><strong>Bulk Actions:</strong> Click any row to select it (or the Header box to <strong>Select All</strong>). Use the <strong>Green Bar</strong> to bulk-delete subjects to the Recycle Bin.</li>
+                    </ul>
+                </div>
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
+                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
         </div>
     </div>
 </div>
