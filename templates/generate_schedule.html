@@ -421,6 +421,11 @@
         align-items: center;
         backdrop-filter: blur(2px);
     }
+
+    .text-muted-v2 { color: #adb5bd; }
+    .info-icon-hover { transition: all 0.2s ease; cursor: pointer; }
+    .info-icon-hover:hover { color: #198754 !important; transform: scale(1.1); }
+    #generatorInfoModal { z-index: 2000 !important; }
 </style>
 
 <!-- BACKGROUND DASHBOARD -->
@@ -525,7 +530,12 @@
 <div class="modal-overlay" id="startScreen">
     <div class="modal-box" style="max-width: 480px; width: 90%;">
         <div class="mb-3"><i class="bi bi-grid-3x3-gap-fill text-success" style="font-size:3rem;"></i></div>
-        <h3>Initialize Generator</h3>
+        <h3 class="d-flex align-items-center justify-content-center">
+            Initialize Generator
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#generatorInfoModal" title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover" style="font-size: 1.2rem !important;"></i>
+            </button>
+        </h3>
         <p style="color:#666;">Select semester and departments to schedule.</p>
 
         <select id="semesterSelect"
@@ -583,6 +593,62 @@
             Schedule</a>
         <button onclick="location.reload()" class="btn-stop w-100 mt-2"
             style="border:1px solid #ccc; color:#333;">Generate New</button>
+    </div>
+</div>
+
+<!-- HOW-TO GUIDE MODAL (Auto Generator) -->
+<div class="modal fade" id="generatorInfoModal" tabindex="-1" aria-labelledby="generatorInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="generatorInfoLabel">
+                    Auto Generator Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <!-- 1. INITIALIZATION -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. INITIALIZATION</h6>
+                    <p class="small text-muted mb-0">Before starting, select the target Semester and Departments. Use the <strong>'Fresh Start'</strong> toggle if you want to wipe the existing schedule for that semester and start from a blank canvas.</p>
+                </div>
+
+                <!-- 2. THE VISUAL GRID -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1 uppercase">2. THE VISUAL GRID</h6>
+                    <p class="small text-muted mb-0">The canvas shows a real-time map of the timetable. <strong>Red blocks</strong> mean a Hard Conflict (e.g., overlapping rooms), <strong>Blue blocks</strong> mean Soft Violations (minor preferences), and <strong>Green blocks</strong> are perfectly placed.</p>
+                </div>
+
+                <!-- 3. CALCULATION THREAD -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1 uppercase">3. CALCULATION THREAD</h6>
+                    <p class="small text-muted mb-0">The draggable panel shows the "Calculation Thread." Monitor <strong>Throughput (Gen/Sec)</strong> to see how fast your hardware is solving the problem. "Performance Mode" uses more CPU for faster results.</p>
+                </div>
+
+                <!-- 4. OPERATIONS LOG -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. OPERATIONS LOG</h6>
+                    <p class="small text-muted mb-0">The terminal at the bottom-right tracks internal GA phases. It shows when the system is "Mutating" (trying new slots) or "Crossover" (combining good schedule parts) to resolve conflicts.</p>
+                </div>
+
+                <!-- 5. MINIMIZED VIEW -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. MINIMIZED VIEW</h6>
+                    <p class="small text-muted mb-0">Click the <strong>'Down Arrow'</strong> in the header to minimize this dashboard into a small widget. This allows you to browse other pages while the AI continues to solve the schedule in the background.</p>
+                </div>
+
+                <!-- 6. COMPLETION -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. COMPLETION</h6>
+                    <p class="small text-muted mb-0">Once the GA finds a solution or reaches its target, a <strong>'Resolved!'</strong> screen appears. From there, you can jump directly to the Timetable to review and publish the final result.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
     </div>
 </div>
 

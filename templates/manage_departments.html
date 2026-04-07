@@ -7,7 +7,12 @@
 <!-- 1. HEADER (Static) -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 text-gray-800 fw-light mb-1">Departments</h1>
+        <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
+            Departments
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#deptInfoModal" title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+            </button>
+        </h1>
         <p class="text-muted small mb-0">Manage the organizational departments of the university.</p>
     </div>
     <div class="d-flex align-items-center gap-3">
@@ -155,29 +160,48 @@
 </form>
 
 <!-- 4. PAGINATION -->
-{% if pagination.pages > 1 %}
 <div class="mt-3 pb-5">
     <nav aria-label="Page navigation">
         <ul class="pagination justify-content-center mb-2">
+            <!-- Previous -->
             <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('manage_departments', page=pagination.prev_num, sort=current_sort, search=search_query) }}"><i class="bi bi-chevron-left"></i></a>
+                <a class="page-link"
+                    href="{{ url_for('manage_departments', page=pagination.prev_num, sort=current_sort, search=search_query) }}"><i
+                        class="bi bi-chevron-left"></i></a>
             </li>
+
+            <!-- Numbers -->
             {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
             {% if page_num %}
             <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
-                <a class="page-link" href="{{ url_for('manage_departments', page=page_num, sort=current_sort, search=search_query) }}">{{ page_num }}</a>
+                <a class="page-link"
+                    href="{{ url_for('manage_departments', page=page_num, sort=current_sort, search=search_query) }}">{{
+                    page_num }}</a>
             </li>
             {% else %}
             <li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>
             {% endif %}
             {% endfor %}
+
+            <!-- Next -->
             <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('manage_departments', page=pagination.next_num, sort=current_sort, search=search_query) }}"><i class="bi bi-chevron-right"></i></a>
+                <a class="page-link"
+                    href="{{ url_for('manage_departments', page=pagination.next_num, sort=current_sort, search=search_query) }}"><i
+                        class="bi bi-chevron-right"></i></a>
             </li>
         </ul>
     </nav>
+    {% if pagination.pages > 1 %}
+    <div class="d-flex align-items-center justify-content-center gap-2 text-muted" style="font-size:0.85rem;">
+        <span>Jump to:</span>
+        <input type="number" id="pageJumpInput" class="form-control form-control-sm text-center"
+            style="width:70px;" min="1" max="{{ pagination.pages }}" placeholder="1–{{ pagination.pages }}">
+        <button class="btn btn-sm btn-outline-secondary px-3" onclick="jumpToPage()">Go</button>
+        <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i
+                class="bi bi-arrow-right-short"></i> arrow keys</span>
+    </div>
+    {% endif %}
 </div>
-{% endif %}
 
 <!-- ================= MODALS ================= -->
 
@@ -355,5 +379,110 @@
         document.querySelectorAll('.dept-row').forEach(row => row.classList.remove('selected'));
         document.getElementById('bulkActionBar').classList.remove('active');
     }
+
+    function jumpToPage() {
+        const input = document.getElementById('pageJumpInput');
+        const page = parseInt(input.value);
+        if (page >= 1 && page <= {{ pagination.pages }}) {
+            window.location.href = "{{ url_for('manage_departments', sort=current_sort, search=search_query) }}&page=" + page;
+        }
+    }
+
+    // ARROW KEY NAVIGATION
+    document.addEventListener('keydown', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        
+        {% if pagination.has_prev %}
+        if (e.key === 'ArrowLeft') {
+            window.location.href = "{{ url_for('manage_departments', page=pagination.prev_num, sort=current_sort, search=search_query) }}";
+        }
+        {% endif %}
+
+        {% if pagination.has_next %}
+        if (e.key === 'ArrowRight') {
+            window.location.href = "{{ url_for('manage_departments', page=pagination.next_num, sort=current_sort, search=search_query) }}";
+        }
+        {% endif %}
+    });
 </script>
+
+<style>
+    .text-muted-v2 { color: #adb5bd; }
+    .info-icon-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .info-icon-hover:hover {
+        color: #198754 !important;
+        transform: scale(1.2);
+    }
+    #deptInfoModal {
+        z-index: 1060 !important;
+    }
+</style>
+
+<!-- HOW-TO GUIDE MODAL (Departments) -->
+<div class="modal fade" id="deptInfoModal" tabindex="-1" aria-labelledby="deptInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="deptInfoLabel">
+                    Department Management Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body p-4">
+                <!-- 1. CREATING DEPARTMENTS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. CREATING DEPARTMENTS</h6>
+                    <p class="small text-muted mb-0">Click <strong>'New Department'</strong> to add a record. Enter the <strong>Department Name</strong> and an optional <strong>Code</strong> (e.g., 'DCS'). These codes are used system-wide for filtering faculty, rooms, and students.</p>
+                </div>
+
+                <!-- 2. ORGANIZATIONAL HIERARCHY -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1 uppercase">2. ORGANIZATIONAL HIERARCHY</h6>
+                    <p class="small text-muted mb-0">Departments act as the primary filter for other system data. Ensure names are accurate, as they directly impact the filtering options available in the <strong>Faculty</strong>, <strong>Rooms</strong>, and <strong>Students</strong> modules.</p>
+                </div>
+
+                <!-- 3. RECYCLE BIN -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1 uppercase">3. RECYCLE BIN</h6>
+                    <p class="small text-muted mb-0">Deleted departments are moved to the <strong>Recycle Bin</strong> instead of being permanently erased. Click the <strong>'Recycle Bin'</strong> button at the top-right to view, restore, or permanently delete archived records.</p>
+                </div>
+
+                <!-- 4. FINDING & SORTING -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Search Bar:</strong> Type any part of a department name or code; the list will update <strong>instantly</strong> as you type.</li>
+                        <li><strong>Sort Menu:</strong> Arrange the list by <strong>Name (A-Z)</strong>, <strong>Code (A-Z)</strong>, or <strong>Newest</strong> using the top-right dropdown.</li>
+                    </ul>
+                </div>
+
+                <!-- 5. MANAGING & MASS ACTIONS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. MANAGING & MASS ACTIONS</h6>
+                    <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many records at once:</p>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the department's name or code for accuracy.</li>
+                        <li><strong>Trash Icon:</strong> Move the department record to the <strong>Recycle Bin</strong>.</li>
+                        <li><strong>Bulk Actions:</strong> Select rows or use the Header box to <strong>Select All</strong>, then use the <strong>Green Bar</strong> to bulk-archive.</li>
+                    </ul>
+                </div>
+
+                <!-- 6. PAGINATION -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
+                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

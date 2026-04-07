@@ -7,7 +7,12 @@
 <!-- 1. HEADER -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 text-gray-800 fw-light mb-1">Student Masterlist</h1>
+        <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
+            Student Masterlist
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#studentInfoModal" title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+            </button>
+        </h1>
         <p class="text-muted small mb-0">Manage enrolled students and their block section assignments.</p>
     </div>
     {% if not is_hist %}
@@ -545,6 +550,89 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+<style>
+    .text-muted-v2 { color: #adb5bd; }
+    .info-icon-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .info-icon-hover:hover {
+        color: #198754 !important;
+        transform: scale(1.2);
+    }
+    #studentInfoModal {
+        z-index: 1060 !important;
+    }
+</style>
+
+<!-- HOW-TO GUIDE MODAL (Students) -->
+<div class="modal fade" id="studentInfoModal" tabindex="-1" aria-labelledby="studentInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="studentInfoLabel">
+                    Student Management Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body p-4">
+                <!-- 1. CREATING STUDENTS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. CREATING STUDENTS</h6>
+                    <p class="small text-muted mb-0">Click the <strong>'New Student'</strong> button to manually add a record. Enter the Student ID, Full Name, Year Level, and Section assignment. Use the <strong>Pencil icon</strong> in the table to edit these details later.</p>
+                </div>
+
+                <!-- 2. IMPORTING FROM EXCEL -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1 uppercase">2. IMPORTING FROM EXCEL</h6>
+                    <p class="small text-muted mb-0">For batch processing, click <strong>'Import Excel'</strong>. Use the <strong>'Download Template'</strong> button inside the window to get the correct format, then upload your <strong>.xlsx</strong> file to add students instantly.</p>
+                </div>
+
+                <!-- 3. IRREGULAR STUDENT TOOLS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1 uppercase">3. IRREGULAR STUDENT TOOLS</h6>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Toggle Irregular</strong> (Person-Excl icon): Click this to flag a student for separate scheduling.</li>
+                        <li><strong>Schedule Finder</strong> (Puzzle icon): For irregular students, use this special tool to find subjects that fit their unique timetable constraints.</li>
+                    </ul>
+                </div>
+
+                <!-- 4. FINDING & SORTING -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Search Bar:</strong> Type any part of a student's name or ID; the list will update <strong>instantly</strong> as you type.</li>
+                        <li><strong>Funnel Icon:</strong> Click this to filter the list by <strong>Year Level</strong> or <strong>Section</strong>.</li>
+                        <li><strong>Sort Menu:</strong> Arrange students by <strong>Name (A-Z)</strong>, <strong>Student ID</strong>, or <strong>By Section</strong> using the dropdown on the top-right.</li>
+                    </ul>
+                </div>
+
+                <!-- 5. MANAGING & MASS ACTIONS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. MANAGING & MASS ACTIONS</h6>
+                    <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many students at once:</p>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Calendar Icon:</strong> View the real-time <strong>Schedule</strong> for that specific student.</li>
+                        <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the student's personal details and section assignment.</li>
+                        <li><strong>Trash Icon:</strong> Move the student to the <strong>Recycle Bin</strong>.</li>
+                        <li><strong>Bulk Actions:</strong> Click any row to select it (or the Header box to <strong>Select All</strong>). Use the <strong>Green Bar</strong> to bulk-delete students to the Recycle Bin.</li>
+                    </ul>
+                </div>
+
+                <!-- 6. PAGINATION -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
+                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
         </div>
     </div>
 </div>

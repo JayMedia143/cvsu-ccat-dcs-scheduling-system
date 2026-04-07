@@ -29,7 +29,12 @@
 <!-- ══════════ HEADER ══════════ -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 text-gray-800 fw-light mb-1">Irregular Students</h1>
+        <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
+            Irregular Students
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#irregularInfoModal" title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+            </button>
+        </h1>
         <p class="text-muted small mb-0">Manage irregular students and assign conflict-free schedules from the master schedule.</p>
     </div>
     {% if not is_hist %}
@@ -737,5 +742,86 @@ document.addEventListener('keydown', function(e) {
     }
 });
 </script>
+<style>
+    .text-muted-v2 { color: #adb5bd; }
+    .info-icon-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .info-icon-hover:hover {
+        color: #198754 !important;
+        transform: scale(1.2);
+    }
+    #irregularInfoModal {
+        z-index: 1060 !important;
+    }
+</style>
+
+<!-- HOW-TO GUIDE MODAL (Irregular Students) -->
+<div class="modal fade" id="irregularInfoModal" tabindex="-1" aria-labelledby="irregularInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="irregularInfoLabel">
+                    Irregular Students Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body p-4">
+                <!-- 1. ADDING IRREGULAR STUDENTS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. ADDING IRREGULAR STUDENTS</h6>
+                    <p class="small text-muted mb-0">Click <strong>'Add Irregular Student'</strong> to either select an existing regular student or create a new irregular record. Once added, they will appear in this list for specialized scheduling handling.</p>
+                </div>
+
+                <!-- 2. SCHEDULE FINDER -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1 uppercase">2. SCHEDULE FINDER</h6>
+                    <p class="small text-muted mb-0">Click the <strong>Puzzle icon</strong> on a student's row to open their individual <strong>Schedule Finder</strong>. This tool scans the entire master schedule to find valid, conflict-free subject combinations based on the student's required courses.</p>
+                </div>
+
+                <!-- 3. BATCH PROCESSOR -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1 uppercase">3. BATCH PROCESSOR</h6>
+                    <p class="small text-muted mb-0">Select multiple students and click the <strong>Puzzle icon in the green bulk bar</strong> to run the <strong>Batch Schedule Finder</strong>. This allows you to search for available schedules for several students simultaneously, significantly speeding up the process.</p>
+                </div>
+
+                <!-- 4. FINDING & SORTING -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Search Bar:</strong> Type any part of a student's name or ID; the list will update <strong>instantly</strong> as you type.</li>
+                        <li><strong>Funnel Icon:</strong> Click this to filter the list by <strong>Year Level</strong> or original <strong>Home Section</strong>.</li>
+                        <li><strong>Sort Menu:</strong> Arrange the list by <strong>Name (A-Z)</strong>, <strong>Student ID</strong>, or <strong>Sections</strong> using the top-right dropdown.</li>
+                    </ul>
+                </div>
+
+                <!-- 5. MANAGING & MASS ACTIONS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. MANAGING & MASS ACTIONS</h6>
+                    <p class="small text-muted mb-0">Individual actions are available on each row. For batch handling:</p>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Calendar Icon:</strong> View the student's current real-time schedule.</li>
+                        <li><strong>Puzzle Icon:</strong> Open the <strong>Schedule Finder</strong> for this specific record.</li>
+                        <li><strong>Person-Dash Icon:</strong> Click this to <strong>Remove Irregular Flag</strong>. The student will be returned to the regular masterlist.</li>
+                        <li><strong>Bulk Actions:</strong> Select multiple rows to either run the <strong>Batch Schedule Finder</strong> or remove the irregular status from all selected students at once.</li>
+                    </ul>
+                </div>
+
+                <!-- 6. PAGINATION -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
+                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 {% endblock %}

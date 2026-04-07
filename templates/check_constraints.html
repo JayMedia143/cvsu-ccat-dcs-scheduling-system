@@ -6,7 +6,12 @@
 <!-- 1. HEADER -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 text-gray-800 fw-light mb-1">Constraint Checker</h1>
+        <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
+            Constraint Checker
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#conflictInfoModal" title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+            </button>
+        </h1>
         <p class="text-muted small mb-0">Audit the current schedule against all 40 constraints (HC, SC-I, SC-II).</p>
     </div>
     <div class="d-flex gap-2">
@@ -311,6 +316,81 @@
 </div><!-- end #mainContentArea -->
 
 <div style="height:60px;"></div>
+
+<!-- HOW-TO GUIDE MODAL (Conflicts) -->
+<div class="modal fade" id="conflictInfoModal" tabindex="-1" aria-labelledby="conflictInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="conflictInfoLabel">
+                    Constraint Checker Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <!-- 1. WHAT IS THIS AUDIT? -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. WHAT IS THIS AUDIT?</h6>
+                    <p class="small text-muted mb-0">This tool performs a real-time audit of the generated schedule. It checks every single class row against the university's 40 core rules to ensure there are no physical impossibilities or quality regressions.</p>
+                </div>
+
+                <!-- 2. COLOR-CODED STATUS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1 uppercase">2. COLOR-CODED STATUS</h6>
+                    <p class="small text-muted mb-0"><strong>Fully Compliant (Green):</strong> Pure perfection. <strong>Soft Warnings (Yellow):</strong> Valid schedule, but some preferences weren't met. <strong>Attention (Red):</strong> Contains Hard Conflicts that must be resolved.</p>
+                </div>
+
+                <!-- 3. VIOLATION LEVELS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1 uppercase">3. VIOLATION LEVELS</h6>
+                    <p class="small text-muted mb-0"><strong>HC (Hard):</strong> Non-negotiable errors like room overlaps. <strong>SC-I / SC-II (Soft):</strong> Pedagogical goals like "avoiding 7:00 AM classes" or "limiting daily teaching hours".</p>
+                </div>
+
+                <!-- 4. FINDING & SORTING -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Search Bar:</strong> Type a rule name, subject code, or section to filter the report instantly.</li>
+                        <li><strong>Funnel Icon:</strong> Filter the list by <strong>Violation Type</strong> (HC/SC) or by specific <strong>Departments</strong>.</li>
+                        <li><strong>Sort Menu:</strong> Arrange the list alphabetically by Rule Name for easier grouping.</li>
+                    </ul>
+                </div>
+
+                <!-- 5. DETAILED REPORTS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. DETAILED REPORTS</h6>
+                    <p class="small text-muted mb-0">Each row shows the exact "Class A" vs "Class B" collision. It includes the Room, Day, and Time involved so you can jump back to the Schedule Editor to fix the specific issue manually if needed.</p>
+                </div>
+
+                <!-- 6. PAGINATION -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
+                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-muted-v2 { color: #adb5bd; }
+    .info-icon-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .info-icon-hover:hover {
+        color: #198754 !important;
+        transform: scale(1.2);
+    }
+    #conflictInfoModal {
+        z-index: 1060 !important;
+    }
+</style>
 
 {% endblock %}
 

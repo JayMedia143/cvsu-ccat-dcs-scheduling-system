@@ -7,7 +7,12 @@
 <!-- 1. HEADER -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 text-gray-800 fw-light mb-1">Faculty</h1>
+        <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
+            Faculty
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#facultyInfoModal" title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+            </button>
+        </h1>
         <p class="text-muted small mb-0">Manage instructors, workloads, and department assignments.</p>
     </div>
 
@@ -1485,4 +1490,90 @@
         document.getElementById('bulkArchiveForm').submit();
     };
 </script>
+
+<style>
+    .text-muted-v2 { color: #adb5bd; }
+    .info-icon-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .info-icon-hover:hover {
+        color: #198754 !important;
+        transform: scale(1.2);
+    }
+    #facultyInfoModal {
+        z-index: 1060 !important;
+    }
+</style>
+
+<!-- HOW-TO GUIDE MODAL (Faculty) -->
+<div class="modal fade" id="facultyInfoModal" tabindex="-1" aria-labelledby="facultyInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="facultyInfoLabel">
+                    Faculty Management Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body p-4">
+                <!-- 1. CREATING NEW FACULTY -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. CREATING NEW FACULTY</h6>
+                    <p class="small text-muted mb-0">Click <strong>'New Faculty'</strong> to add a record. Enter the <strong>Employee ID</strong>, <strong>Name</strong>, <strong>Status</strong>, and <strong>Max Hours</strong>. Be sure to include <strong>Educational Attainment</strong>, <strong>Academic Rank</strong>, and <strong>Available Days</strong> for accurate scheduling. Use <strong>'+ T.B.A.'</strong> for numbered placeholders.</p>
+                </div>
+
+                <!-- 2. ASSIGNING WORKLOAD -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1 uppercase">2. ASSIGNING WORKLOAD</h6>
+                    <p class="small text-muted mb-0">Click the green <strong>Clipboard icon</strong> to open the 2-step <strong>Workload Wizard</strong>:</p>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Step 1 (Teachable):</strong> Select the subjects the faculty is qualified to handle.</li>
+                        <li><strong>Step 2 (Final Load):</strong> Tick specific sections and optionally split the contact hours across different days to balance the load.</li>
+                    </ul>
+                </div>
+
+                <!-- 3. IMPORT FROM EXCEL -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1 uppercase">3. IMPORT FROM EXCEL</h6>
+                    <p class="small text-muted mb-0">For massive updates, click <strong>'Import Faculty Loading'</strong>. Download the official <strong>Excel Template</strong> first to ensure your data (Employee ID, Course Code, and Section) is correctly formatted for the automatic loader.</p>
+                </div>
+
+                <!-- 4. FINDING & SORTING -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Search Bar:</strong> Type any part of a name, ID, or department; the list will update <strong>instantly</strong> as you type.</li>
+                        <li><strong>Funnel Icon:</strong> Click this to filter the list by <strong>Department</strong> or <strong>Employment Status</strong>.</li>
+                        <li><strong>Sort Menu:</strong> Arrange the list by <strong>Name (A-Z)</strong> using the dropdown on the top-right.</li>
+                    </ul>
+                </div>
+
+                <!-- 5. MANAGING & MASS ACTIONS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. MANAGING & MASS ACTIONS</h6>
+                    <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many records at once:</p>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Eye Icon:</strong> View the detailed <strong>Faculty Profile</strong> and specialization info.</li>
+                        <li><strong>Calendar Icon:</strong> View the instructor's real-time <strong>Schedule</strong>.</li>
+                        <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the faculty's details, rank, or availability days.</li>
+                        <li><strong>Trash Icon:</strong> Move the faculty record to the <strong>Recycle Bin</strong>.</li>
+                        <li><strong>Bulk Actions:</strong> Select rows or use the Header box to <strong>Select All</strong>, then use the <strong>Green Bar</strong> to bulk-delete to the Recycle Bin.</li>
+                    </ul>
+                </div>
+
+                <!-- 6. PAGINATION -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
+                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

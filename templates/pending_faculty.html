@@ -6,7 +6,12 @@
 <!-- 1. HEADER -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 text-gray-800 fw-light mb-1">Pending Faculty</h1>
+        <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
+            Pending Faculty
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#pendingFacultyInfoModal" title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+            </button>
+        </h1>
         <p class="text-muted small mb-0">Assign faculty members to classes that currently have no assigned instructor.</p>
     </div>
 </div>
@@ -183,6 +188,79 @@
 </button>
 {% endif %}
 
+<!-- HOW-TO GUIDE MODAL (Pending Faculty) -->
+<div class="modal fade" id="pendingFacultyInfoModal" tabindex="-1" aria-labelledby="pendingFacultyInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="pendingFacultyInfoLabel">
+                    Pending Faculty Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <!-- 1. WHAT IS THIS? -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. WHAT IS THIS?</h6>
+                    <p class="small text-muted mb-0">This page lists "unassigned" classes that currently have no assigned instructor. These typically occur when new classes are added manually or when the Auto Generator couldn't find a conflict-free match.</p>
+                </div>
+
+                <!-- 2. DATA ACCURACY -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1 uppercase">2. DATA ACCURACY</h6>
+                    <p class="small text-muted mb-0">Use the dropdowns to select a Faculty member for each course. The list is automatically filtered by department to ensure only relevant instructors are displayed for their specific subjects.</p>
+                </div>
+
+                <!-- 3. SYSTEM IMPACT -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1 uppercase">3. SYSTEM IMPACT</h6>
+                    <p class="small text-muted mb-0">Confirming these assignments updates the master schedule immediately. If the assigned faculty has a conflict in the selected slot, the system will highlight it in the 'Check Conflicts' module.</p>
+                </div>
+
+                <!-- 4. FINDING & SORTING -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Search Bar:</strong> Type any part of a Course Code, Section, or Faculty Name to filter the unassigned list instantly.</li>
+                        <li><strong>Sort Menu:</strong> Arrange the list alphabetically by Course Name to simplify mass assignment for common subjects.</li>
+                    </ul>
+                </div>
+
+                <!-- 5. SAVING CHANGES -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. SAVING CHANGES</h6>
+                    <p class="small text-muted mb-0">Your selections are only finalized when you click the <strong>Floating Green 'Save'</strong> button. Review the total count in the confirmation modal before committing the updates.</p>
+                </div>
+
+                <!-- 6. PAGINATION -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
+                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-muted-v2 { color: #adb5bd; }
+    .info-icon-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .info-icon-hover:hover {
+        color: #198754 !important;
+        transform: scale(1.2);
+    }
+    #pendingFacultyInfoModal {
+        z-index: 1060 !important;
+    }
+</style>
 
 {% endblock %}
 

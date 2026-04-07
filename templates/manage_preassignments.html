@@ -6,7 +6,13 @@
 <!-- 1. HEADER -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 text-gray-800 fw-light mb-1">Locked Schedules</h1>
+        <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
+            Locked Schedules
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#paInfoModal"
+                title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+            </button>
+        </h1>
         <p class="text-muted small mb-0">Manage fixed classes (e.g., minor subjects, pre-plotted loads).</p>
     </div>
 
@@ -44,12 +50,15 @@
 
     <!-- B. SEARCH INPUT -->
     <div class="col h-100">
-        <!-- Optional: Kung gusto mo lagyan ng form wrapper for future filtering functionality -->
-        <div class="google-search-bar d-flex align-items-center h-100 w-100">
-            <i class="bi bi-search text-secondary me-3"></i>
-            <input type="text" class="google-search-input" placeholder="Search by Course, Section, or Faculty..."
-                id="liveSearchInput">
-        </div>
+        <form action="{{ url_for('manage_preassignments') }}" method="GET" class="h-100 w-100">
+            <input type="hidden" name="sort" value="{{ current_sort }}">
+            <div class="google-search-bar d-flex align-items-center h-100 w-100">
+                <i class="bi bi-search text-secondary me-3"></i>
+                <input type="text" name="search" class="google-search-input"
+                    placeholder="Search by Course, Section, or Faculty..." id="liveSearchInput"
+                    value="{{ search_query }}" autocomplete="off" onchange="this.form.submit()" maxlength="100">
+            </div>
+        </form>
     </div>
 
     <!-- C. SORT DROPDOWN -->
@@ -67,7 +76,7 @@
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
                 <li>
                     <a class="dropdown-item google-sort-item {% if current_sort == 'default' %}active{% endif %}"
-                        href="{{ url_for('manage_preassignments', sort='default') }}">
+                        href="{{ url_for('manage_preassignments', sort='default', search=search_query) }}">
                         Default
                     </a>
                 </li>
@@ -76,13 +85,13 @@
                 </li>
                 <li>
                     <a class="dropdown-item google-sort-item {% if current_sort == 'course-asc' %}active{% endif %}"
-                        href="{{ url_for('manage_preassignments', sort='course-asc') }}">
+                        href="{{ url_for('manage_preassignments', sort='course-asc', search=search_query) }}">
                         Course (A-Z)
                     </a>
                 </li>
                 <li>
                     <a class="dropdown-item google-sort-item {% if current_sort == 'section-asc' %}active{% endif %}"
-                        href="{{ url_for('manage_preassignments', sort='section-asc') }}">
+                        href="{{ url_for('manage_preassignments', sort='section-asc', search=search_query) }}">
                         Section (A-Z)
                     </a>
                 </li>
@@ -161,16 +170,61 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="{% if is_hist %}4{% else %}5{% endif %}" class="text-center text-muted py-5">No active locked schedules found.</td>
+                        <td colspan="{% if is_hist %}4{% else %}5{% endif %}" class="text-center text-muted py-5">No
+                            active locked schedules found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
-</form>
+    <!-- 4. PAGINATION -->
+    {% if pagination %}
+    <div class="mt-4 pb-5">
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center mb-2">
+                <!-- Previous -->
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link"
+                        href="{{ url_for('manage_preassignments', page=pagination.prev_num, sort=current_sort, search=search_query) }}"><i
+                            class="bi bi-chevron-left"></i></a>
+                </li>
 
-<!-- ================= MODALS ================= -->
+                <!-- Numbers -->
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2)
+                %}
+                {% if page_num %}
+                <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                    <a class="page-link"
+                        href="{{ url_for('manage_preassignments', page=page_num, sort=current_sort, search=search_query) }}">{{
+                        page_num }}</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>
+                {% endif %}
+                {% endfor %}
+
+                <!-- Next -->
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link"
+                        href="{{ url_for('manage_preassignments', page=pagination.next_num, sort=current_sort, search=search_query) }}"><i
+                            class="bi bi-chevron-right"></i></a>
+                </li>
+            </ul>
+        </nav>
+        {% if pagination.pages > 1 %}
+        <div class="d-flex align-items-center justify-content-center gap-2 text-muted" style="font-size:0.85rem;">
+            <span>Jump to:</span>
+            <input type="number" id="pageJumpInput" class="form-control form-control-sm text-center"
+                style="width:70px;" min="1" max="{{ pagination.pages }}" placeholder="1–{{ pagination.pages }}">
+            <button class="btn btn-sm btn-outline-secondary px-3" onclick="jumpToPage()">Go</button>
+            <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i
+                    class="bi bi-arrow-right-short"></i> arrow keys</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</form>
 
 <!-- 1. BULK DELETE MODAL -->
 <div class="modal fade" id="bulkArchiveModal" tabindex="-1">
@@ -181,19 +235,20 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                Move the <span id="modalArchiveCount" class="fw-bold text-danger">0</span> selected schedules to the
-                recycle bin?
+                Move the <span id="modalArchiveCount" class="fw-bold text-danger">0</span> selected schedules to
+                the recycle bin?
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-archive-confirm"
-                    onclick="document.getElementById('bulkArchiveForm').submit()">Yes, Move to Recycle Bin</button>
+                    onclick="document.getElementById('bulkArchiveForm').submit()">Yes, Move to Recycle
+                    Bin</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Add Pre-assignment Modal (Retained Logic) -->
+<!-- Add Pre-assignment Modal -->
 <div class="modal fade modal-lg" id="addPreAssignmentModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-below-nav modal-dialog-scrollable">
         <div class="modal-content">
@@ -201,15 +256,10 @@
                 <h5 class="modal-title">Add Locked Schedule (Multi-Section)</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <!-- Inside Add Pre-assignment Modal -->
             <form action="{{ url_for('add_preassignment') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-body p-4"> <!-- Added padding 4 for breathing room -->
-
-                    <!-- 1. TOP ROW: Course, Faculty, Room -->
+                <div class="modal-body p-4">
                     <div class="row g-3">
-
-                        <!-- COURSE -->
                         <div class="col-md-4">
                             <label class="form-label small fw-bold text-muted mb-2">COURSE</label>
                             <div class="searchable-list-container border rounded bg-white overflow-hidden">
@@ -219,18 +269,14 @@
                                 </div>
                                 <div class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;">
                                     {% for item in all_courses %}
-                                    <label
-                                        class="list-group-item list-group-item-action border-0 px-3 py-2 small d-flex align-items-center cursor-pointer">
-                                        <input class="form-check-input me-3" type="radio" name="course_id"
-                                            value="{{ item.id }}" required style="transform: scale(1.2);">
+                                    <label class="list-group-item list-group-item-action border-0 px-3 py-2 small d-flex align-items-center cursor-pointer">
+                                        <input class="form-check-input me-3" type="radio" name="course_id" value="{{ item.id }}" required style="transform: scale(1.2);">
                                         <span class="fw-bold text-dark">{{ item.course_code }}</span>
                                     </label>
                                     {% endfor %}
                                 </div>
                             </div>
                         </div>
-
-                        <!-- FACULTY -->
                         <div class="col-md-4">
                             <label class="form-label small fw-bold text-muted mb-2">FACULTY</label>
                             <div class="searchable-list-container border rounded bg-white overflow-hidden">
@@ -240,21 +286,16 @@
                                 </div>
                                 <div class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;">
                                     {% for item in all_faculty %}
-                                    <label
-                                        class="list-group-item list-group-item-action border-0 px-3 py-2 small d-flex align-items-center cursor-pointer">
-                                        <input class="form-check-input me-3" type="radio" name="faculty_id"
-                                            value="{{ item.id }}" required style="transform: scale(1.2);">
+                                    <label class="list-group-item list-group-item-action border-0 px-3 py-2 small d-flex align-items-center cursor-pointer">
+                                        <input class="form-check-input me-3" type="radio" name="faculty_id" value="{{ item.id }}" required style="transform: scale(1.2);">
                                         {{ item.full_name }}
                                     </label>
                                     {% endfor %}
                                 </div>
                             </div>
                         </div>
-
-                        <!-- ROOM -->
                         <div class="col-md-4">
-                            <label class="form-label small fw-bold text-muted mb-2">ROOM <span
-                                    class="fw-normal">(Field/TBA)</span></label>
+                            <label class="form-label small fw-bold text-muted mb-2">ROOM <span class="fw-normal">(Field/TBA)</span></label>
                             <div class="searchable-list-container border rounded bg-white overflow-hidden">
                                 <div class="p-2 border-bottom bg-light">
                                     <input type="text" class="form-control form-control-sm border-0 bg-light"
@@ -262,10 +303,8 @@
                                 </div>
                                 <div class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;">
                                     {% for item in all_rooms %}
-                                    <label
-                                        class="list-group-item list-group-item-action border-0 px-3 py-2 small d-flex align-items-center cursor-pointer">
-                                        <input class="form-check-input me-3" type="radio" name="room_id"
-                                            value="{{ item.id }}" required style="transform: scale(1.2);">
+                                    <label class="list-group-item list-group-item-action border-0 px-3 py-2 small d-flex align-items-center cursor-pointer">
+                                        <input class="form-check-input me-3" type="radio" name="room_id" value="{{ item.id }}" required style="transform: scale(1.2);">
                                         {{ item.room_name }}
                                     </label>
                                     {% endfor %}
@@ -273,83 +312,51 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- 2. SECTIONS (Improved Spacing & Plain Buttons) -->
                     <div class="mt-4">
                         <div class="d-flex justify-content-between align-items-end mb-2">
                             <label class="form-label small fw-bold text-muted mb-0">SECTIONS</label>
-
-                            <!-- PLAIN ACTION BUTTONS -->
                             <div class="small">
-                                <button type="button"
-                                    class="btn btn-link text-secondary text-decoration-none fw-bold p-0 me-2"
-                                    style="font-size: 0.85rem;" onclick="checkVisibleSections(true)">
-                                    Select Visible
-                                </button>
+                                <button type="button" class="btn btn-link text-secondary text-decoration-none fw-bold p-0 me-2" style="font-size: 0.85rem;" onclick="checkVisibleSections(true)">Select Visible</button>
                                 <span class="text-muted">|</span>
-                                <button type="button" class="btn btn-link text-secondary text-decoration-none p-0 ms-2"
-                                    style="font-size: 0.85rem;" onclick="checkVisibleSections(false)">
-                                    Clear
-                                </button>
+                                <button type="button" class="btn btn-link text-secondary text-decoration-none p-0 ms-2" style="font-size: 0.85rem;" onclick="checkVisibleSections(false)">Clear</button>
                             </div>
                         </div>
-
-                        <!-- Year Level Filters -->
                         <div class="btn-group w-100 mb-3" role="group">
-                            <button type="button" class="btn btn-outline-secondary btn-sm"
-                                onclick="filterSections('all')">All Years</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm"
-                                onclick="filterSections('1')">1st Year</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm"
-                                onclick="filterSections('2')">2nd Year</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm"
-                                onclick="filterSections('3')">3rd Year</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm"
-                                onclick="filterSections('4')">4th Year</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="filterSections('all')">All Years</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="filterSections('1')">1st Year</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="filterSections('2')">2nd Year</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="filterSections('3')">3rd Year</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="filterSections('4')">4th Year</button>
                         </div>
-
-                        <!-- Checkbox List -->
                         <div class="border rounded bg-light p-3" style="max-height: 180px; overflow-y: auto;">
                             <div class="row g-3">
                                 {% for item in all_sections %}
                                 <div class="col-md-3 section-option year-{{ item.year_level }}">
                                     <div class="form-check">
-                                        <input class="form-check-input sec-cb" type="checkbox" name="section_ids"
-                                            value="{{ item.id }}" id="sec{{ item.id }}" style="cursor: pointer;">
-                                        <label class="form-check-label small text-dark" for="sec{{ item.id }}"
-                                            style="cursor: pointer;">
-                                            {{ item.section_name }}
-                                        </label>
+                                        <input class="form-check-input sec-cb" type="checkbox" name="section_ids" value="{{ item.id }}" id="sec{{ item.id }}" style="cursor: pointer;">
+                                        <label class="form-check-label small text-dark" for="sec{{ item.id }}" style="cursor: pointer;">{{ item.section_name }}</label>
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div>
                         </div>
                     </div>
-
                     <hr class="my-4">
-
-                    <!-- 3. TIME SETTINGS -->
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label small fw-bold text-muted">DAY</label>
-                            <select name="day" class="form-select">{% for d in days %}<option>{{ d }}</option>{% endfor
-                                %}</select>
+                            <select name="day" class="form-select">{% for d in days %}<option>{{ d }}</option>{% endfor %}</select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-bold text-muted">START TIME</label>
-                            <select name="start_time" class="form-select">{% for t in time_slots %}<option>{{ t }}
-                                </option>{% endfor %}</select>
+                            <select name="start_time" class="form-select">{% for t in time_slots %}<option>{{ t }}</option>{% endfor %}</select>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label small fw-bold text-muted">END TIME</label>
-                            <select name="end_time" class="form-select">{% for t in time_slots %}<option>{{ t }}
-                                </option>{% endfor %}</select>
+                            <select name="end_time" class="form-select">{% for t in time_slots %}<option>{{ t }}</option>{% endfor %}</select>
                         </div>
                     </div>
                 </div>
-
-                <!-- Footer -->
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-success px-4">Lock Schedule</button>
@@ -369,8 +376,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 text-center">
-                <p>Are you sure you want to move the schedule for <strong>{{ pa.course.course_code }}</strong> to the
-                    recycle bin?</p>
+                <p>Are you sure you want to move the schedule for <strong>{{ pa.course.course_code }}</strong> to the recycle bin?</p>
                 <div class="alert alert-light border d-inline-block text-start">
                     <small class="d-block text-muted">Time: {{ pa.day }} @ {{ pa.start_time }}</small>
                     <small class="d-block text-muted">Section: {{ pa.section.section_name }}</small>
@@ -388,13 +394,70 @@
 </div>
 {% endfor %}
 
-<!-- Dulo ng iyong HTML content sa manage_preassignments.html -->
+<style>
+    .text-muted-v2 { color: #adb5bd; }
+    .info-icon-hover { transition: all 0.2s ease; cursor: pointer; }
+    .info-icon-hover:hover { color: #198754 !important; transform: scale(1.2); }
+    #paInfoModal { z-index: 1060 !important; }
+</style>
+
+<!-- HOW-TO GUIDE MODAL (Locked Schedules) -->
+<div class="modal fade" id="paInfoModal" tabindex="-1" aria-labelledby="paInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="paInfoLabel">
+                    Locked Schedules Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. LOCKING SCHEDULES</h6>
+                    <p class="small text-muted mb-0">Click <strong>'Add Locked Schedule'</strong> to fix a class in the timetable. Select one <strong>Course</strong>, one <strong>Faculty</strong>, and one <strong>Room</strong> from the lists. Then, choose the target <strong>Sections</strong> and the desired <strong>Day/Time</strong>.</p>
+                </div>
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1 uppercase">2. MULTI-SECTION BATCHING</h6>
+                    <p class="small text-muted mb-0">You can lock a single course-room-faculty combo for multiple sections at once. Use the <strong>Year Level Filters</strong> (1st to 4th Year) and the <strong>'Select Visible'</strong> button to quickly assign large batches of sections to a common slot.</p>
+                </div>
+                <div class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1 uppercase">3. GA SCHEDULER IMPACT</h6>
+                    <p class="small text-muted mb-0">Locked schedules are <strong>mandatory</strong>. The Genetic Algorithm (GA) will place these classes first and build the rest of the timetable around them. Use this for subjects with strictly fixed venue or time requirements.</p>
+                </div>
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Search Bar:</strong> Type any part of a course code, section, or faculty; the list updates <strong>instantly</strong> as you type.</li>
+                        <li><strong>Sort Menu:</strong> Arrange the list by <strong>Course (A-Z)</strong> or <strong>Section (A-Z)</strong> using the top-right dropdown.</li>
+                    </ul>
+                </div>
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. MANAGING & MASS ACTIONS</h6>
+                    <p class="small text-muted mb-0">Individual locked schedules can be removed if they are no longer fixed:</p>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Trash Icon:</strong> Move a locked schedule to the <strong>Recycle Bin</strong>. This "unlocks" the slot, allowing the GA to move it during the next generation.</li>
+                        <li><strong>Bulk Actions:</strong> Select multiple rows or use the Header box to <strong>Select All</strong>, then use the <strong>Green Bar</strong> to bulk-archive.</li>
+                    </ul>
+                </div>
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
+                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // --- PART 1: Filter Logic ---
+    // ==================================================
+    // HELPER FUNCTIONS (FOR MODALS)
+    // ==================================================
     function filterSections(year) {
         const options = document.querySelectorAll('.section-option');
         options.forEach(opt => {
@@ -420,54 +483,52 @@
         });
     }
 
-    // --- PART 2: Bulk Actions & Search Logic ---
-    function submitSingleAction(url) {
-        const form = document.getElementById('singleActionForm');
-        form.action = url;
-        form.submit();
-    }
-
     document.addEventListener('DOMContentLoaded', function () {
+        // ==================================================
+        // 1. SHARED VARIABLES
+        // ==================================================
         const searchInput = document.getElementById('liveSearchInput');
-        const allRows = document.querySelectorAll('.pa-row');
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const bulkActionBar = document.getElementById('bulkActionBar');
+        const selectedCountSpan = document.getElementById('selectedCount');
+        const modalArchiveCount = document.getElementById('modalArchiveCount');
+        let rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        let allRows = document.querySelectorAll('.pa-row');
 
-        if (searchInput) {
-            searchInput.addEventListener('keyup', function () {
-                const filterText = this.value.toLowerCase();
-                allRows.forEach(row => {
-                    let rowText = "";
-                    row.querySelectorAll('.search-target').forEach(el => { rowText += el.textContent + " "; });
-                    row.style.display = rowText.toLowerCase().includes(filterText) ? "" : "none";
+        // ==================================================
+        // 2. SELECTION LOGIC
+        // ==================================================
+        function initializeSelectionLogic() {
+            rowCheckboxes = document.querySelectorAll('.row-checkbox');
+            allRows = document.querySelectorAll('.pa-row');
+
+            allRows.forEach(row => {
+                const newRow = row.cloneNode(true);
+                row.parentNode.replaceChild(newRow, row);
+            });
+
+            document.querySelectorAll('.pa-row').forEach(row => {
+                row.addEventListener('click', function (e) {
+                    if (e.target.closest('button') || e.target.closest('a')) return;
+                    const checkbox = this.querySelector('.row-checkbox');
+                    if (checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        updateSelectionState();
+                    }
                 });
             });
         }
 
-        // Modal Inner Search
-        document.querySelectorAll('.searchable-list-container input[type="text"]').forEach(input => {
-            input.addEventListener('keyup', function () {
-                const filter = this.value.toLowerCase();
-                this.nextElementSibling.querySelectorAll('.list-group-item').forEach(item => {
-                    item.style.display = item.textContent.toLowerCase().includes(filter) ? "" : "none";
-                });
-            });
-        });
-
-        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-        const rowCheckboxes = document.querySelectorAll('.row-checkbox');
-        const bulkActionBar = document.getElementById('bulkActionBar');
-        const selectedCountSpan = document.getElementById('selectedCount');
-        const modalArchiveCount = document.getElementById('modalArchiveCount');
-        const bulkForm = document.getElementById('bulkForm');
-
         function updateSelectionState() {
             let count = 0;
+            rowCheckboxes = document.querySelectorAll('.row-checkbox');
             rowCheckboxes.forEach(cb => {
                 const row = cb.closest('tr');
                 if (cb.checked) {
                     count++;
-                    {% if not is_hist %}row.classList.add('selected');{% endif %}
+                    row.classList.add('selected');
                 } else {
-                    {% if not is_hist %}row.classList.remove('selected');{% endif %}
+                    row.classList.remove('selected');
                 }
             });
 
@@ -478,18 +539,19 @@
             else bulkActionBar.classList.remove('active');
 
             if (selectAllCheckbox) {
-                selectAllCheckbox.checked = (count === rowCheckboxes.length && count > 0);
-                selectAllCheckbox.indeterminate = (count > 0 && count < rowCheckboxes.length);
+                const visibleCheckboxes = Array.from(rowCheckboxes).filter(cb => cb.closest('tr').style.display !== 'none');
+                const checkedVisible = visibleCheckboxes.filter(cb => cb.checked);
+                if (visibleCheckboxes.length > 0) {
+                    selectAllCheckbox.checked = (checkedVisible.length === visibleCheckboxes.length);
+                    selectAllCheckbox.indeterminate = (checkedVisible.length > 0 && checkedVisible.length < visibleCheckboxes.length);
+                } else {
+                    selectAllCheckbox.checked = false;
+                    selectAllCheckbox.indeterminate = false;
+                }
             }
         }
 
-        allRows.forEach(row => {
-            row.addEventListener('click', function (e) {
-                const checkbox = this.querySelector('.row-checkbox');
-                checkbox.checked = !checkbox.checked;
-                updateSelectionState();
-            });
-        });
+        initializeSelectionLogic();
 
         if (selectAllCheckbox) {
             selectAllCheckbox.addEventListener('change', function () {
@@ -506,15 +568,92 @@
             updateSelectionState();
         };
 
+        // ==================================================
+        // 3. AJAX LIVE SEARCH
+        // ==================================================
+        let debounceTimer;
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const query = this.value;
+                const currentSort = "{{ current_sort }}";
+
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    const newUrl = `${window.location.pathname}?search=${encodeURIComponent(query)}&sort=${currentSort}`;
+                    window.history.pushState({ path: newUrl }, '', newUrl);
+
+                    fetch(newUrl)
+                        .then(response => response.text())
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+
+                            const newBody = doc.getElementById('preAssignmentTableBody');
+                            if (newBody) document.getElementById('preAssignmentTableBody').innerHTML = newBody.innerHTML;
+
+                            const newPagination = doc.querySelector('.pagination');
+                            const paginationContainer = document.querySelector('.pagination');
+                            if (newPagination && paginationContainer) paginationContainer.innerHTML = newPagination.innerHTML;
+
+                            const newJumpInput = doc.getElementById('pageJumpInput');
+                            const currentJumpInput = document.getElementById('pageJumpInput');
+                            if (newJumpInput && currentJumpInput) {
+                                currentJumpInput.max = newJumpInput.max;
+                                currentJumpInput.placeholder = newJumpInput.placeholder;
+                            }
+
+                            initializeSelectionLogic();
+                            bulkActionBar.classList.remove('active');
+                            if (selectAllCheckbox) selectAllCheckbox.checked = false;
+                        })
+                        .catch(err => console.error('Search failed:', err));
+                }, 300);
+            });
+        }
+
+        document.querySelectorAll('.searchable-list-container input[type="text"]').forEach(input => {
+            input.addEventListener('keyup', function () {
+                const filter = this.value.toLowerCase();
+                const listItems = this.closest('.searchable-list-container').querySelectorAll('.list-group-item');
+                listItems.forEach(item => {
+                    item.style.display = item.textContent.toLowerCase().includes(filter) ? "" : "none";
+                });
+            });
+        });
+
         window.submitBulkForm = function (actionType) {
-            if (actionType === 'restore') {
-                bulkForm.action = "{{ url_for('bulk_restore_preassignments') }}";
-                bulkForm.submit();
-            } else if (actionType === 'delete') {
-                bulkForm.action = "{{ url_for('bulk_delete_preassignments') }}";
-                bulkForm.submit();
+            if (actionType === 'delete') {
+                document.getElementById('bulkArchiveForm').submit();
             }
         };
+
+        // ==================================================
+        // 4. SHARED PAGINATION
+        // ==================================================
+        window.jumpToPage = function () {
+            const input = document.getElementById('pageJumpInput');
+            const page = parseInt(input.value);
+            if (page >= 1 && page <= {{ pagination.pages if pagination else 1 }}) {
+                window.location.href = "{{ url_for('manage_preassignments', sort=current_sort, search=search_query) }}&page=" + page;
+            }
+        };
+
+        document.addEventListener('keydown', function (e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            {% if pagination %}
+            {% if pagination.has_prev %}
+            if (e.key === 'ArrowLeft') {
+                window.location.href = "{{ url_for('manage_preassignments', page=pagination.prev_num, sort=current_sort, search=search_query) }}";
+            }
+            {% endif %}
+            {% if pagination.has_next %}
+            if (e.key === 'ArrowRight') {
+                window.location.href = "{{ url_for('manage_preassignments', page=pagination.next_num, sort=current_sort, search=search_query) }}";
+            }
+            {% endif %}
+            {% endif %}
+        });
     });
 </script>
 {% endblock %}

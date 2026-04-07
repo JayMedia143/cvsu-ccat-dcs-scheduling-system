@@ -5420,21 +5420,35 @@ def manage_preassignments():
         )
 
     # ── Live Mode ───────────────────────────────────────────────────────────
+    page = request.args.get('page', 1, type=int)
+    search_query = request.args.get('search', '', type=str)
+    
     query = PreAssignment.query.filter_by(is_archived=False)
+    if search_query:
+        query = query.join(Course).join(Section).join(Faculty).filter(or_(
+            Course.course_code.ilike(f"%{search_query}%"),
+            Section.section_name.ilike(f"%{search_query}%"),
+            Faculty.full_name.ilike(f"%{search_query}%")
+        ))
+
     if sort_by == 'course-asc': query = query.join(Course).order_by(Course.course_code.asc())
     elif sort_by == 'section-asc': query = query.join(Section).order_by(Section.section_name.asc())
     else: query = query.order_by(PreAssignment.id.desc())
     
+    pagination = query.paginate(page=page, per_page=10, error_out=False)
+
     return render_template(
         'manage_preassignments.html',
-        pre_assignments=query.all(),
+        pre_assignments=pagination.items,
+        pagination=pagination,
         all_courses=Course.query.filter_by(is_archived=False).order_by(Course.course_code).all(),
         all_sections=Section.query.filter_by(is_archived=False).order_by(Section.section_name).all(),
         all_faculty=Faculty.query.filter_by(is_archived=False).order_by(Faculty.full_name).all(),
         all_rooms=Room.query.filter_by(is_archived=False).order_by(Room.room_name).all(),
         days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
         time_slots=[f"{h:02d}:{m:02d}" for h in range(7, 20) for m in (0, 30)],
-        current_sort=sort_by
+        current_sort=sort_by,
+        search_query=search_query
     )
 
 @app.route('/manage/pre-assignment/add', methods=['POST'])

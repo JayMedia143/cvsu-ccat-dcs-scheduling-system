@@ -4,10 +4,23 @@
 
 {% block content %}
 
+<style>
+    .text-muted-v2 { color: #adb5bd; }
+    .info-icon-hover { transition: all 0.2s ease; cursor: pointer; }
+    .info-icon-hover:hover { color: #198754 !important; transform: scale(1.2); }
+    #constraintInfoModal { z-index: 1080 !important; }
+</style>
+
 <!-- 1. HEADER -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 text-gray-800 fw-light mb-1">Constraints</h1>
+        <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
+            Constraints
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#constraintInfoModal"
+                title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+            </button>
+        </h1>
         <p class="text-muted small mb-0">Define the hard and soft rules for the scheduling engine.</p>
     </div>
     {% if not is_hist %}
@@ -298,6 +311,72 @@
                 <i class="bi bi-speedometer2 text-secondary"></i>
                 <span id="detailWeight" class="fw-bold fs-5 text-dark"></span>
                 <span class="text-muted small">/ 100</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- HOW-TO GUIDE MODAL (Constraints) -->
+<div class="modal fade" id="constraintInfoModal" tabindex="-1" aria-labelledby="constraintInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="constraintInfoLabel">
+                    Constraints Management Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <!-- 1. WHAT ARE CONSTRAINTS? -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. WHAT ARE CONSTRAINTS?</h6>
+                    <p class="small text-muted mb-0">Constraints are the "rules of the game" for the Genetic Algorithm (GA). They define what makes a schedule valid or high-quality (e.g., "No overlapping classes" or "Faculty preferred hours").</p>
+                </div>
+
+                <!-- 2. PRIORITY LEVELS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1 uppercase">2. PRIORITY LEVELS</h6>
+                    <p class="small text-muted mb-0">Use the dropdowns to set a rule as <strong>Hard (HC)</strong>, which must never be broken, or <strong>Soft (SC-I/II)</strong>, which are goals the system tries its best to meet. Use <strong>None (NC)</strong> to disable a rule entirely.</p>
+                </div>
+
+                <!-- 3. PENALTY WEIGHTS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1 uppercase">3. PENALTY WEIGHTS</h6>
+                    <p class="small text-muted mb-0">Each Soft Constraint has a weight (1-100). A higher weight tells the GA that breaking this rule is very "painful" for the final score, forcing the system to prioritize it over lower-weighted rules.</p>
+                </div>
+
+                <!-- 4. SYNCING RULES -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. SYNCING RULES</h6>
+                    <p class="small text-muted mb-0">If rules seem missing or outdated, click the <strong>'Sync Constraints'</strong> button at the top-right. This refreshes the master list from the system core without losing your current weight settings.</p>
+                </div>
+
+                <!-- 5. DETAILED VIEW & SAVING -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. DETAILED VIEW & SAVING</h6>
+                    <p class="small text-muted mb-0">Click any row to open the <strong>Right-Side Detail Panel</strong> for full descriptions. Note: Changes are not instant; you must click the <strong>Floating Green 'Save Changes'</strong> button to commit your updates.</p>
+                </div>
+
+                <!-- 6. FINDING & SORTING -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1 uppercase">6. FINDING & SORTING</h6>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Search Bar:</strong> Type any part of a rule name or category; the list will update <strong>instantly</strong> as you type.</li>
+                        <li><strong>Funnel Icon:</strong> Click this to filter the list by a specific <strong>Priority</strong> (e.g., Hard, Soft-I, or Soft-II).</li>
+                        <li><strong>Sort Menu:</strong> Use the dropdown on the top-right to arrange rules by Name, Category, or Priority level.</li>
+                    </ul>
+                </div>
+
+                <!-- 7. PAGINATION -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1 uppercase">7. PAGINATION</h6>
+                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
             </div>
         </div>
     </div>
