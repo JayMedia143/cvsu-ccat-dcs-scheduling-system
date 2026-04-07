@@ -28,7 +28,10 @@
             <table class="table table-hover align-middle mb-0">
                 <thead>
                     <tr>
-                        <th style="width: 35%;" class="ps-0 text-start">USERNAME</th>
+                        <th style="width: 1%;" class="ps-0 text-center">
+                            <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                        </th>
+                        <th style="width: 34%;" class="text-start">USERNAME</th>
                         <th style="width: 25%;" class="text-start">ROLE</th>
                         <th style="width: 20%;" class="text-start">DEPARTMENT</th>
                         <th style="width: 1%; white-space: nowrap;" class="text-center pe-0">ACTIONS</th>
@@ -37,6 +40,9 @@
                 <tbody class="user-table-body">
                     {% for user in users %}
                     <tr class="user-row" data-id="{{ user.id }}">
+                        <td class="text-center ps-0">
+                            <input class="form-check-input row-checkbox" type="checkbox" name="row_ids" value="{{ user.id }}">
+                        </td>
                         <td class="fw-bold text-black ps-0 text-start">{{ user.username }}</td>
                         <td class="text-start">
                             <span class="badge-clean">
@@ -67,7 +73,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="3" class="text-center py-5 text-muted">No users found.</td>
+                        <td colspan="5" class="text-center py-5 text-muted">No users found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -109,11 +115,9 @@
                         <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
                         <select class="form-select" name="department" required>
                             <option value="" disabled selected>Select Department</option>
-                            <option value="DCS">Department of Computer Studies (DCS)</option>
-                            <option value="DAIC">Department of Agri-Industrial (DAIC)</option>
-                            <option value="DIT">Department of Information Tech (DIT)</option>
-                            <option value="DAS">Department of Arts and Sciences (DAS)</option>
-                            <option value="DB">Department of Business (DB)</option>
+                            {% for dept in all_depts %}
+                            <option value="{{ dept }}">{{ dept }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>
@@ -131,21 +135,25 @@
 {% if current_user_id != user.id %}
 <div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1">
     <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Delete User?</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body py-4">
-                Are you sure you want to permanently delete user <strong>{{ user.username }}</strong>?
-                <br>
-                <small class="text-danger mt-2 d-block">This action cannot be undone.</small>
+            <div class="modal-body text-center pt-0">
+                <div class="mb-3">
+                    <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3.5rem;"></i>
+                </div>
+                <h5 class="modal-title mb-2">Delete User?</h5>
+                <p class="text-muted small px-3">
+                    Are you sure you want to permanently delete user <strong>{{ user.username }}</strong>?
+                    This action cannot be undone and will remove all their access.
+                </p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+            <div class="modal-footer border-0 justify-content-center pb-4">
+                <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
                 <form action="{{ url_for('delete_user', user_id=user.id) }}" method="POST" class="d-inline">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger">Yes, Delete Forever</button>
+                    <button type="submit" class="btn btn-danger px-4 rounded-pill shadow-sm">Yes, Delete Forever</button>
                 </form>
             </div>
         </div>
@@ -154,4 +162,62 @@
 {% endif %}
 {% endfor %}
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        const allRows = document.querySelectorAll('.user-row');
+
+        function updateSelectionState() {
+            let count = 0;
+            rowCheckboxes.forEach(cb => {
+                const row = cb.closest('tr');
+                if (cb.checked) {
+                    count++;
+                    row.classList.add('selected');
+                } else {
+                    row.classList.remove('selected');
+                }
+            });
+
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = (count === rowCheckboxes.length && count > 0);
+                selectAllCheckbox.indeterminate = (count > 0 && count < rowCheckboxes.length);
+            }
+        }
+
+        allRows.forEach(row => {
+            row.addEventListener('click', function (e) {
+                if (e.target.closest('button') || e.target.closest('.row-checkbox')) return;
+                const checkbox = this.querySelector('.row-checkbox');
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    updateSelectionState();
+                }
+            });
+        });
+
+        rowCheckboxes.forEach(cb => {
+            cb.addEventListener('change', updateSelectionState);
+        });
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function () {
+                const isChecked = this.checked;
+                rowCheckboxes.forEach(cb => {
+                    cb.checked = isChecked;
+                });
+                updateSelectionState();
+            });
+        }
+    });
+
+    window.deselectAll = function () {
+        document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
+        if (typeof updateSelectionState === 'function') updateSelectionState();
+    };
+</script>
 {% endblock %}

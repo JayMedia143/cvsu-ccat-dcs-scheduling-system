@@ -17,6 +17,7 @@ import io
 import base64
 import pandas as pd
 from openpyxl import load_workbook, Workbook
+from sqlalchemy import inspect
 import pdfplumber
 import re
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font
@@ -465,6 +466,21 @@ class SystemSettings(db.Model):
     sig2_name            = db.Column(db.String(150), default="ARIEL G. SANTOS, EdD")
     sig_registrar_name   = db.Column(db.String(150), default="MARLYN A. QUINEZ")
     sig3_name            = db.Column(db.String(150), default="LAURO B. PASCUA, EdD")
+
+class Department(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    code = db.Column(db.String(20), unique=True, nullable=True) # e.g. DCS, DAS
+    is_archived = db.Column(db.Boolean, default=False, nullable=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class ArchivedDepartment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    term_archive_id = db.Column(db.Integer, db.ForeignKey('term_archive.id'), nullable=False, index=True)
+    name = db.Column(db.String(255), index=True)
+    code = db.Column(db.String(50), index=True)
+    term_archive = db.relationship('TermArchive', backref=db.backref('departments', lazy=True, cascade="all, delete-orphan"))
 
 class Course(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1554,7 +1570,13 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/signup', methods=['GET', 'POST'])
+@login_required
 def signup():
+    # Only superadmin can create new accounts manually via signup page now
+    if session.get('role') != 'superadmin':
+        flash('Unauthorized access. Only Superadmins can register new users.', 'danger')
+        return redirect(url_for('dashboard'))
+
     if request.method == 'POST':
         username         = request.form.get('username', '').strip()
         password         = request.form.get('password', '').strip()
@@ -1597,10 +1619,10 @@ def signup():
         db.session.add(new_user)
         db.session.commit()
 
-        flash('Signup successful! You can now log in.', 'success')
-        return redirect(url_for('login'))
+        flash(f'User "{username}" registered successfully!', 'success')
+        return redirect(url_for('manage_users'))
         
-    return render_template('signup.html')
+    return render_template('signup.html', departments=_get_depts())
 
 @app.route('/change_password', methods=['POST'])
 @login_required
@@ -2189,7 +2211,7 @@ def manage_courses():
         all_courses=all_courses_for_modals,
         selected_semester=selected_semester,
         # Pass filter data
-        unique_depts=unique_depts,
+        unique_depts=_get_depts(),
         unique_prefixes=sorted_prefixes,
         current_filter_by=filter_by,
         current_filter_val=filter_val
@@ -2420,6 +2442,19 @@ KNOWN_DEPARTMENTS = [
     'NSTP Department',
 ]
 
+def _get_depts():
+    """Dynamic helper to get departments from DB. Returns a list of active department names."""
+    try:
+        from sqlalchemy import inspect
+        if not inspect(db.engine).has_table("department"):
+            return []
+            
+        depts = [d.name for d in Department.query.filter_by(is_archived=False).order_by(Department.name).all()]
+        return depts
+    except Exception as e:
+        print(f"Error fetching depts: {e}")
+        return []
+
 # Departments whose courses are included in the scheduling engine
 SCHEDULED_DEPARTMENTS = ['Department of Computer Studies', 'NSTP Department']
 
@@ -2496,6 +2531,269 @@ def course_code_assignment():
                            departments=KNOWN_DEPARTMENTS,
                            counts=counts,
                            archived_count=archived_count)
+
+@app.route('/manage/departments', methods=['GET'])
+@login_required
+@role_required('admin', 'superadmin')
+def manage_departments():
+    search_query = request.args.get('search', '').strip()
+    sort_by      = request.args.get('sort', 'name-asc')
+    page         = request.args.get('page', 1, type=int)
+    per_page     = 10
+
+    query = Department.query.filter_by(is_archived=False)
+
+    if search_query:
+        query = query.filter(
+            db.or_(
+                Department.name.ilike(f'%{search_query}%'),
+                Department.code.ilike(f'%{search_query}%')
+            )
+        )
+
+    if sort_by == 'name-asc':
+        query = query.order_by(Department.name.asc())
+    elif sort_by == 'name-desc':
+        query = query.order_by(Department.name.desc())
+    elif sort_by == 'code-asc':
+        query = query.order_by(Department.code.asc())
+    elif sort_by == 'code-desc':
+        query = query.order_by(Department.code.desc())
+    else:  # default or newest
+        query = query.order_by(Department.id.desc())
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    departments = pagination.items
+
+    return render_template(
+        'manage_departments.html',
+        departments=departments,
+        pagination=pagination,
+        search_query=search_query,
+        current_sort=sort_by
+    )
+
+@app.route('/manage/departments/add', methods=['POST'])
+@hist_lockdown
+@login_required
+@role_required('admin', 'superadmin')
+def add_department():
+    name = request.form.get('name', '').strip()
+    code = request.form.get('code', '').strip() or None
+    
+    if not name:
+        flash('Department name is required.', 'danger')
+        return redirect(url_for('manage_departments'))
+        
+    existing = Department.query.filter_by(name=name).first()
+    if existing:
+        flash(f'Department "{name}" already exists.', 'warning')
+        return redirect(url_for('manage_departments'))
+        
+    try:
+        new_dept = Department(name=name, code=code)
+        db.session.add(new_dept)
+        db.session.commit()
+        log_activity('Add Department', f"Created department: {name}")
+        flash(f'Department "{name}" added successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error adding department: {str(e)}', 'danger')
+        
+    return redirect(url_for('manage_departments'))
+
+@app.route('/manage/departments/update/<int:dept_id>', methods=['POST'])
+@hist_lockdown
+@login_required
+@role_required('admin', 'superadmin')
+def update_department(dept_id):
+    dept = Department.query.get_or_404(dept_id)
+    name = request.form.get('name', '').strip()
+    code = request.form.get('code', '').strip() or None
+    
+    if not name:
+        flash('Department name is required.', 'danger')
+        return redirect(url_for('manage_departments'))
+        
+    # Check for duplicate name (excluding itself)
+    existing = Department.query.filter(Department.name == name, Department.id != dept_id).first()
+    if existing:
+        flash(f'Department "{name}" already exists.', 'warning')
+        return redirect(url_for('manage_departments'))
+        
+    try:
+        old_name = dept.name
+        dept.name = name
+        dept.code = code
+        db.session.commit()
+        log_activity('Update Department', f"Updated department from {old_name} to {name}")
+        flash(f'Department "{name}" updated successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating department: {str(e)}', 'danger')
+        
+    return redirect(url_for('manage_departments'))
+
+@app.route('/manage/departments/archive/<int:dept_id>', methods=['POST'])
+@hist_lockdown
+@login_required
+@role_required('admin', 'superadmin')
+def archive_department(dept_id):
+    dept = Department.query.get_or_404(dept_id)
+    try:
+        dept.is_archived = True
+        dept.deleted_at = datetime.utcnow()
+        db.session.commit()
+        log_activity('Archive Department', f"Archived department: {dept.name}")
+        flash(f'Department "{dept.name}" moved to Recycle Bin.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error archiving department: {str(e)}', 'danger')
+    return redirect(url_for('manage_departments'))
+
+@app.route('/manage/departments/bulk-archive', methods=['POST'])
+@hist_lockdown
+@login_required
+@role_required('admin', 'superadmin')
+def bulk_archive_departments():
+    dept_ids = request.form.getlist('row_ids')
+    if not dept_ids:
+        flash('No departments selected.', 'warning')
+        return redirect(url_for('manage_departments'))
+        
+    try:
+        count = 0
+        now = datetime.utcnow()
+        for d_id in dept_ids:
+            dept = Department.query.get(int(d_id))
+            if dept and not dept.is_archived:
+                dept.is_archived = True
+                dept.deleted_at = now
+                count += 1
+        db.session.commit()
+        log_activity('Bulk Archive Departments', f"Archived {count} departments")
+        flash(f'Successfully moved {count} departments to Recycle Bin.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error performing bulk archive: {str(e)}', 'danger')
+        
+    return redirect(url_for('manage_departments'))
+
+@app.route('/manage/departments/archive-view', methods=['GET'])
+@login_required
+@role_required('admin', 'superadmin')
+def departments_archive():
+    search_query = request.args.get('search', '').strip()
+    page         = request.args.get('page', 1, type=int)
+    per_page     = 10
+
+    query = Department.query.filter_by(is_archived=True).order_by(Department.deleted_at.desc())
+
+    if search_query:
+        query = query.filter(
+            db.or_(
+                Department.name.ilike(f'%{search_query}%'),
+                Department.code.ilike(f'%{search_query}%')
+            )
+        )
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    archived_depts = pagination.items
+
+    return render_template(
+        'departments_archive.html',
+        departments=archived_depts,
+        pagination=pagination,
+        search_query=search_query,
+        now=datetime.utcnow()
+    )
+
+@app.route('/manage/departments/restore/<int:dept_id>', methods=['POST'])
+@hist_lockdown
+@login_required
+@role_required('admin', 'superadmin')
+def restore_department(dept_id):
+    dept = Department.query.get_or_404(dept_id)
+    try:
+        dept.is_archived = False
+        dept.deleted_at = None
+        db.session.commit()
+        log_activity('Restore Department', f"Restored department: {dept.name}")
+        flash(f'Department "{dept.name}" restored successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error restoring department: {str(e)}', 'danger')
+    return redirect(url_for('departments_archive'))
+
+@app.route('/manage/departments/delete-permanent/<int:dept_id>', methods=['POST'])
+@hist_lockdown
+@login_required
+@role_required('admin', 'superadmin')
+def delete_department_permanent(dept_id):
+    dept = Department.query.get_or_404(dept_id)
+    try:
+        name = dept.name
+        db.session.delete(dept)
+        db.session.commit()
+        log_activity('Permanent Delete Department', f"Permanently deleted department: {name}")
+        flash(f'Department "{name}" deleted permanently.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting department: {str(e)}', 'danger')
+    return redirect(url_for('departments_archive'))
+
+@app.route('/manage/departments/bulk-restore', methods=['POST'])
+@hist_lockdown
+@login_required
+@role_required('admin', 'superadmin')
+def bulk_restore_departments():
+    dept_ids = request.form.getlist('row_ids')
+    if not dept_ids:
+        flash('No departments selected.', 'warning')
+        return redirect(url_for('departments_archive'))
+        
+    try:
+        count = 0
+        for d_id in dept_ids:
+            dept = Department.query.get(int(d_id))
+            if dept and dept.is_archived:
+                dept.is_archived = False
+                dept.deleted_at = None
+                count += 1
+        db.session.commit()
+        log_activity('Bulk Restore Departments', f"Restored {count} departments")
+        flash(f'Successfully restored {count} departments.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error performing bulk restore: {str(e)}', 'danger')
+        
+    return redirect(url_for('departments_archive'))
+
+@app.route('/manage/departments/bulk-delete', methods=['POST'])
+@hist_lockdown
+@login_required
+@role_required('admin', 'superadmin')
+def bulk_delete_departments_permanent():
+    dept_ids = request.form.getlist('row_ids')
+    if not dept_ids:
+        flash('No departments selected.', 'warning')
+        return redirect(url_for('departments_archive'))
+        
+    try:
+        count = 0
+        for d_id in dept_ids:
+            dept = Department.query.get(int(d_id))
+            if dept and dept.is_archived:
+                db.session.delete(dept)
+                count += 1
+        db.session.commit()
+        log_activity('Bulk Permanent Delete Departments', f"Deleted {count} departments permanently")
+        flash(f'Successfully deleted {count} departments permanently.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error performing bulk delete: {str(e)}', 'danger')
+        
+    return redirect(url_for('departments_archive'))
 
 @app.route('/manage/courses/code-assignment/save', methods=['POST'])
 @login_required
@@ -3252,7 +3550,6 @@ def manage_sections():
     year_query = db.session.query(Section.year_level).filter_by(is_archived=False)
     unique_years = year_query.distinct().order_by(Section.year_level).all()
     unique_years = [y[0] for y in unique_years]
-
     return render_template(
         'manage_sections.html', 
         sections=sections_on_page, 
@@ -3264,7 +3561,8 @@ def manage_sections():
         # Pass Filter Data
         unique_years=unique_years,
         current_filter_by=filter_by,
-        current_filter_val=filter_val
+        current_filter_val=filter_val,
+        known_departments=_get_depts()
     )
 
 @app.route('/manage/section/add', methods=['POST'])
@@ -3875,7 +4173,7 @@ def manage_faculty():
         search_query=search_query,
         selected_semester=selected_semester,
         # Pass Filter Data
-        unique_depts=unique_depts,
+        unique_depts=_get_depts(),
         current_filter_by=filter_by,
         current_filter_val=filter_val,
         # Split data for pre-population
@@ -4273,7 +4571,7 @@ def generate_page():
         'generate_schedule.html',
         start_hour=s.start_hour,
         end_hour=s.end_hour,
-        known_departments=KNOWN_DEPARTMENTS,
+        known_departments=_get_depts(),
         saved_depts=saved_depts,
     )
 
@@ -8566,7 +8864,8 @@ def manage_layouts():
     return render_template('manage_layouts.html', settings=settings,
                            template_exists=template_exists, all_semesters=all_semesters,
                            paper_sizes=PAPER_SIZES,
-                           img_counts=img_counts, img_slots=img_slots)
+                           img_counts=img_counts, img_slots=img_slots,
+                           departments=_get_depts())
 
 
 @app.route('/manage/layouts/upload_template', methods=['POST'])
@@ -12255,6 +12554,7 @@ def manage_students():
         search_query=search_query,
         current_filter_by=filter_by,
         current_filter_val=filter_val,
+        known_departments=_get_depts()
     )
 
 
@@ -13762,7 +14062,7 @@ with app.app_context():
 @role_required('superadmin')
 def manage_users():
     users = User.query.all()
-    return render_template('manage_users.html', users=users, current_user_id=session.get('user_id'))
+    return render_template('manage_users.html', users=users, current_user_id=session.get('user_id'), all_depts=_get_depts())
 
 @app.route('/add_user', methods=['POST'])
 @login_required

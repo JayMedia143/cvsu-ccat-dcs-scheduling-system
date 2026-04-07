@@ -1445,13 +1445,19 @@ html.login-loading #page-loader { display: flex !important; }
     background-color: #f1f3f4;
 }
 
-/* SELECTED STATE - FORCE GREEN */
+/* SELECTED STATE - PREMIUM GOOGLE GREEN */
 table.table tbody tr.course-row.selected td,
 table.table tbody tr.section-row.selected td,
 table.table tbody tr.faculty-row.selected td,
-table.table tbody tr.rule-row.selected td {
-    background-color: #e6f4ea !important;
-    /* Light Green */
+table.table tbody tr.dept-row.selected td,
+table.table tbody tr.room-row.selected td,
+table.table tbody tr.user-row.selected td,
+table.table tbody tr.teacher-row.selected td,
+table.table tbody tr.rule-row.selected td,
+table.table tbody tr.student-row.selected td,
+table.table tbody tr.irreg-row.selected td {
+    background-color: #e6f4ea !important; /* Premium Light Green */
+    color: #188038 !important; /* Google Green */
     transition: background-color 0.2s ease;
 }
 
@@ -1459,19 +1465,14 @@ table.table tbody tr.rule-row.selected td {
 table.table tbody tr.course-row.selected:hover td,
 table.table tbody tr.section-row.selected:hover td,
 table.table tbody tr.faculty-row.selected:hover td,
-table.table tbody tr.rule-row.selected:hover td {
-    background-color: #dcece0 !important;
-    /* Slightly darker green on hover */
-}
-
-table.table tbody tr.student-row.selected td,
-table.table tbody tr.irreg-row.selected td {
-    background-color: #e6f4ea !important;
-    transition: background-color 0.2s ease;
-}
+table.table tbody tr.dept-row.selected:hover td,
+table.table tbody tr.room-row.selected:hover td,
+table.table tbody tr.user-row.selected:hover td,
+table.table tbody tr.teacher-row.selected:hover td,
+table.table tbody tr.rule-row.selected:hover td,
 table.table tbody tr.student-row.selected:hover td,
 table.table tbody tr.irreg-row.selected:hover td {
-    background-color: #dcece0 !important;
+    background-color: #dcece0 !important; /* Slightly darker green on hover */
 }
 
 /* 2. HIDE CHECKBOXES */
@@ -2542,4 +2543,6 @@ table.table tbody tr.irreg-row.selected:hover td {
 
 .dropdown-menu-primary .dropdown-item:hover {
     background-color: #f1f5f9;
-}
+}
+/* Table selection highlight */
+

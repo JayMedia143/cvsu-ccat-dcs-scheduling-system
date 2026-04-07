@@ -154,6 +154,8 @@
                                 class="bi bi-person-badge me-2"></i> Faculty</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('manage_rooms') }}"><i
                                 class="bi bi-door-open me-2"></i> Rooms</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_departments') }}"><i class="bi bi-building-fill me-2"></i>
+                            Departments</a></li>
                     <li>
                         <hr class="dropdown-divider">
                     </li>
@@ -240,13 +242,14 @@
             <!-- B. SUPERADMIN ONLY (Users Dropdown) -->
             {% if session.get('role') == 'superadmin' %}
             <div class="dropdown">
-                <a class="menu-item dropdown-toggle {% if 'manage_users' in request.endpoint or 'monitoring' in request.endpoint %}active{% endif %}"
+                <a class="menu-item dropdown-toggle {% if 'manage_users' in request.endpoint or 'monitoring' in request.endpoint or 'signup' in request.endpoint %}active{% endif %}"
                     href="#" role="button" data-bs-toggle="dropdown">
                     Users
                 </a>
                 <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="{{ url_for('manage_users') }}">User Management</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('monitoring') }}">User Monitoring</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('signup') }}">User Registration</a></li>
                 </ul>
             </div>
             {% endif %}
@@ -328,6 +331,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('manage_sections') }}"><i class="bi bi-people-fill me-2"></i> Sections</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('manage_faculty') }}"><i class="bi bi-person-badge me-2"></i> Faculty</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('manage_rooms') }}"><i class="bi bi-door-open me-2"></i> Rooms</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_departments') }}"><i class="bi bi-building-fill me-2"></i> Departments</a></li>
                 </ul>
             </div>
             <a class="menu-item {% if 'proposal_hub' in request.endpoint %}active{% endif %}"
@@ -469,6 +473,8 @@
                                 class="bi bi-calendar-check text-muted me-2"></i> Schedules</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('code_rules_archive') }}"><i
                                 class="bi bi-shield-check text-muted me-2"></i> Code Rules</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('departments_archive') }}"><i
+                                class="bi bi-building-fill text-muted me-2"></i> Departments</a></li>
                     <li>
                         <hr class="dropdown-divider">
                     </li>
@@ -483,6 +489,7 @@
                     <li><a class="dropdown-item" href="{{ url_for('courses_archive') }}"><i class="bi bi-book text-muted me-2"></i> Courses</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('faculty_archive') }}"><i class="bi bi-person-badge text-muted me-2"></i> Faculty</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('rooms_archive') }}"><i class="bi bi-door-open text-muted me-2"></i> Rooms</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('departments_archive') }}"><i class="bi bi-building-fill text-muted me-2"></i> Departments</a></li>
                     <li><hr class="dropdown-divider"></li>
                     {% endif %}
 

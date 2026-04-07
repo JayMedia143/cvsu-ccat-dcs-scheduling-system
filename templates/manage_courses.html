@@ -403,14 +403,9 @@
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
                         <select class="form-select" name="department">
-                            <option value="DCS">Department of Computer Studies</option>
-                            <option value="Engineering">Department of Engineering</option>
-
-                            <!-- BAGUHIN MO ITO: Tanggalin ang 'value="Teachers Education"' para gamitin niya yung full text -->
-                            <option>Department of Teachers Education</option>
-
-                            <option value="Arts & Sciences">Department of Arts and Sciences</option>
-                            <option value="NSTP">NSTP Department</option>
+                            {% for dept in unique_depts %}
+                            <option value="{{ dept }}">{{ dept }}</option>
+                            {% endfor %}
                         </select>
                     </div>
 
@@ -505,24 +500,11 @@
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
                         <select class="form-select" name="department">
-                            <option value="DCS" {% if course.department=='DCS' or
-                                course.department=='Department of Computer Studies' %}selected{% endif %}>Department of
-                                Computer Studies</option>
-                            <option value="Engineering" {% if course.department=='Engineering' or
-                                course.department=='Department of Engineering' %}selected{% endif %}>Department of
-                                Engineering</option>
-
-                            <!-- BAGUHIN MO ITO (Simplified logic para sa full name match): -->
-                            <option {% if course.department=='Department of Teachers Education' or
-                                course.department=='Education' %}selected{% endif %}>
-                                Department of Teachers Education
+                            {% for dept_opt in unique_depts %}
+                            <option value="{{ dept_opt }}" {% if course.department == dept_opt %}selected{% endif %}>
+                                {{ dept_opt }}
                             </option>
-
-                            <option value="Arts & Sciences" {% if course.department=='Arts & Sciences' or
-                                course.department=='Department of Arts and Sciences' %}selected{% endif %}>Department of
-                                Arts and Sciences</option>
-                            <option value="NSTP" {% if course.department=='NSTP' or course.department=='NSTP Department'
-                                %}selected{% endif %}>NSTP Department</option>
+                            {% endfor %}
                         </select>
                     </div>
 

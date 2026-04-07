@@ -1,0 +1,323 @@
+{% extends "base.html" %}
+
+{% block title %}Recycle Bin — Departments{% endblock %}
+
+{% block content %}
+
+<!-- 1. HEADER -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1">Recycle Bin — Departments</h1>
+        <p class="text-muted small mb-0">Manage recently deleted departments. Items are kept for 30 days before permanent removal.</p>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+        <a href="{{ url_for('manage_departments') }}" class="btn-google-action text-secondary" style="text-decoration:none;">
+            <i class="bi bi-arrow-left"></i>
+            <span>Back to Active</span>
+        </a>
+    </div>
+</div>
+
+<!-- 2. SEARCH & BULK ACTION OVERLAY -->
+<div class="row mb-4 position-relative align-items-center" style="height: 50px;">
+    
+    <!-- BULK ACTION BAR (Overlay) -->
+    <div class="bulk-action-bar" id="bulkActionBar">
+        <div class="d-flex align-items-center">
+            <button class="btn-icon" onclick="deselectAll()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <span class="bulk-count ms-2"><span id="selectedCount">0</span> selected</span>
+        </div>
+        
+        <div class="d-flex gap-2">
+            <button type="button" class="bulk-btn restore-icon" data-bs-toggle="modal" data-bs-target="#bulkRestoreModal" title="Restore Selected">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+            <button type="button" class="bulk-btn delete-icon" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal" title="Delete Permanently">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="col h-100">
+        <form action="{{ url_for('departments_archive') }}" method="GET" class="h-100 w-100">
+            <div class="google-search-bar d-flex align-items-center h-100 w-100">
+                <i class="bi bi-search text-secondary me-3"></i>
+                <input type="text" name="search" class="google-search-input"
+                    placeholder="Search in trash..." id="liveSearchInput"
+                    value="{{ search_query }}" autocomplete="off" onchange="this.form.submit()" maxlength="100">
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 3. TABLE FORM -->
+<form id="bulkForm" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="bg-white rounded border shadow-sm overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="select-cell ps-0 pe-0 text-center" style="width: 1%; white-space: nowrap;">
+                            <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                        </th>
+                        <th class="ps-0 text-start" style="width: 15%;">Code</th>
+                        <th class="text-start" style="width: 55%;">Department Name</th>
+                        <th class="text-start" style="width: 20%;">In Trash Since</th>
+                        <th class="text-center pe-3" style="width: 8%; white-space: nowrap;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dept in departments %}
+                    {% set days_in_trash = ((now - dept.deleted_at).days) if dept.deleted_at else 0 %}
+                    <tr class="dept-row">
+                        <td class="select-cell ps-0 pe-0 text-center">
+                            <input class="form-check-input row-checkbox" type="checkbox" name="row_ids" value="{{ dept.id }}">
+                        </td>
+                        <td class="fw-bold text-dark ps-0 text-start">{{ dept.code or '---' }}</td>
+                        <td class="text-start text-muted">{{ dept.name }}</td>
+                        <td class="text-start">
+                            <span class="{% if days_in_trash >= 30 %}text-danger fw-bold{% else %}text-muted{% endif %} small">
+                                {{ days_in_trash }} days ago
+                            </span>
+                        </td>
+                        <td class="text-center pe-3">
+                            <div class="d-flex justify-content-center gap-1">
+                                <button type="button" class="btn-icon restore" title="Restore" data-bs-toggle="modal" data-bs-target="#restoreModal{{ dept.id }}">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                                <button type="button" class="btn-icon delete" title="Delete Permanently" data-bs-toggle="modal" data-bs-target="#deletePermanentModal{{ dept.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted small">
+                            <i class="bi bi-recycle me-2"></i>Trash is empty.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</form>
+
+<!-- 4. PAGINATION -->
+{% if pagination.pages > 1 %}
+<div class="mt-3 pb-5">
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center mb-2">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('departments_archive', page=pagination.prev_num, search=search_query) }}"><i class="bi bi-chevron-left"></i></a>
+            </li>
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+            {% if page_num %}
+            <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('departments_archive', page=page_num, search=search_query) }}">{{ page_num }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>
+            {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('departments_archive', page=pagination.next_num, search=search_query) }}"><i class="bi bi-chevron-right"></i></a>
+            </li>
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+<!-- ================= MODALS ================= -->
+
+<!-- BULK RESTORE MODAL -->
+<div class="modal fade" id="bulkRestoreModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Restore Departments?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to restore the <span id="modalRestoreCount" class="fw-bold text-success">0</span> selected departments? They will be moved back to the active list.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success px-4" onclick="submitBulkForm('restore')">Yes, Restore All</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BULK DELETE MODAL -->
+<div class="modal fade" id="bulkDeleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Forever?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to permanently delete the <span id="modalDeleteCount" class="fw-bold text-danger">0</span> selected departments? This action is irreversible.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger px-4" onclick="submitBulkForm('delete')">Yes, Delete Forever</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% for dept in departments %}
+<!-- INDIVIDUAL RESTORE MODAL -->
+<div class="modal fade" id="restoreModal{{ dept.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Restore Department?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to restore <strong>{{ dept.name }}</strong>?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('restore_department', dept_id=dept.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-success px-4">Yes, Restore</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- INDIVIDUAL DELETE MODAL -->
+<div class="modal fade" id="deletePermanentModal{{ dept.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center pt-0">
+                <div class="mb-3">
+                    <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3.5rem;"></i>
+                </div>
+                <h5 class="modal-title mb-2">Delete Permanently?</h5>
+                <p class="text-muted small px-3">
+                    Are you sure you want to permanently delete <strong>{{ dept.name }}</strong>? 
+                    This will remove all associated data and cannot be undone.
+                </p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center pb-4">
+                <button type="button" class="btn btn-light px-4 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('delete_department_permanent', dept_id=dept.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger px-4 rounded-pill shadow-sm">Delete Forever</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 1. Live Search (Basic Client Side for simplicity, as per Course Archive)
+        const searchInput = document.getElementById('liveSearchInput');
+        const allRows = document.querySelectorAll('.dept-row');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const filterText = this.value.toLowerCase();
+                allRows.forEach(row => {
+                    const text = row.innerText.toLowerCase();
+                    row.style.display = text.includes(filterText) ? "" : "none";
+                });
+            });
+        }
+
+        // 2. Selection Logic
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+        const bulkActionBar = document.getElementById('bulkActionBar');
+        const selectedCountSpan = document.getElementById('selectedCount');
+        const modalDeleteCount = document.getElementById('modalDeleteCount');
+        const modalRestoreCount = document.getElementById('modalRestoreCount');
+        const bulkForm = document.getElementById('bulkForm');
+
+        function updateSelectionState() {
+            let count = 0;
+            rowCheckboxes.forEach(cb => {
+                const row = cb.closest('tr');
+                if (cb.checked) {
+                    count++;
+                    row.classList.add('selected');
+                } else {
+                    row.classList.remove('selected');
+                }
+            });
+
+            selectedCountSpan.textContent = count;
+            if (modalDeleteCount) modalDeleteCount.textContent = count;
+            if (modalRestoreCount) modalRestoreCount.textContent = count;
+
+            if (count > 0) {
+                bulkActionBar.classList.add('active');
+            } else {
+                bulkActionBar.classList.remove('active');
+            }
+
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = (count === rowCheckboxes.length && count > 0);
+                selectAllCheckbox.indeterminate = (count > 0 && count < rowCheckboxes.length);
+            }
+        }
+
+        allRows.forEach(row => {
+            row.addEventListener('click', function (e) {
+                if (e.target.closest('button') || e.target.closest('.row-checkbox')) return;
+                const checkbox = this.querySelector('.row-checkbox');
+                checkbox.checked = !checkbox.checked;
+                updateSelectionState();
+            });
+        });
+
+        rowCheckboxes.forEach(cb => {
+            cb.addEventListener('change', updateSelectionState);
+        });
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function () {
+                const isChecked = this.checked;
+                rowCheckboxes.forEach(cb => {
+                    if (cb.closest('tr').style.display !== 'none') {
+                        cb.checked = isChecked;
+                    }
+                });
+                updateSelectionState();
+            });
+        }
+
+        window.deselectAll = function () {
+            rowCheckboxes.forEach(cb => cb.checked = false);
+            updateSelectionState();
+        };
+
+        window.submitBulkForm = function (actionType) {
+            if (actionType === 'restore') {
+                bulkForm.action = "{{ url_for('bulk_restore_departments') }}";
+            } else if (actionType === 'delete') {
+                bulkForm.action = "{{ url_for('bulk_delete_departments_permanent') }}";
+            }
+            bulkForm.submit();
+        };
+    });
+</script>
+{% endblock %}

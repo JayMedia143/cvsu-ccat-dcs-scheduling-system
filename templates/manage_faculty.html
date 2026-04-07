@@ -409,10 +409,9 @@
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
                         <select class="form-select" name="department">
-                            <option>Department of Computer Studies</option>
-                            <option>Department of Arts and Sciences</option>
-                            <option>Department of Teachers Education</option>
-                            <option>Department of Engineering</option>
+                            {% for dept in unique_depts %}
+                            <option value="{{ dept }}">{{ dept }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="mb-3">
@@ -506,16 +505,11 @@
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
                         <select class="form-select" name="department">
-                            <option {% if faculty.department=='Department of Computer Studies' %}selected{% endif %}>
-                                Department of Computer Studies</option>
-                            <option {% if faculty.department=='Department of Arts and Sciences' %}selected{% endif %}>
-                                Department of Arts and Sciences</option>
-                            <option {% if faculty.department=='Department of Education' or
-                                faculty.department=='Department of Teachers Education' %}selected{% endif %}>
-                                Department of Teachers Education
+                            {% for dept_opt in unique_depts %}
+                            <option value="{{ dept_opt }}" {% if faculty.department == dept_opt %}selected{% endif %}>
+                                {{ dept_opt }}
                             </option>
-                            <option {% if faculty.department=='Department of Engineering' %}selected{% endif %}>
-                                Department of Engineering</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="mb-3">
