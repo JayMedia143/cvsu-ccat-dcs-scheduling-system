@@ -98,23 +98,6 @@
     </div>
     <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end gap-2">
 
-        <!-- Sort dropdown -->
-        <div class="dropdown">
-            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortToggleBtn" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-arrow-down-up me-2"></i>{% if sort_by == 'rule-desc' %}Rule (Z-A){% else %}Rule Name{% endif %}
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
-                <li>
-                    <a class="dropdown-item google-sort-item {% if sort_by == 'rule-asc' or not sort_by %}active{% endif %}"
-                       href="#" data-sort="rule-asc" onclick="setSort('rule-asc'); return false;">Rule Name (A-Z)</a>
-                </li>
-                <li>
-                    <a class="dropdown-item google-sort-item {% if sort_by == 'rule-desc' %}active{% endif %}"
-                       href="#" data-sort="rule-desc" onclick="setSort('rule-desc'); return false;">Rule Name (Z-A)</a>
-                </li>
-            </ul>
-        </div>
-
         <!-- Filter dropdown (multi-select checkboxes) -->
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="filterToggleBtn"
@@ -158,6 +141,23 @@
                 </li>
                 {% endfor %}
 
+            </ul>
+        </div>
+
+        <!-- Sort dropdown -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortToggleBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-arrow-down-up me-2"></i>Sort by: {% if sort_by == 'rule-desc' %}Rule (Z-A){% else %}Rule Name{% endif %}
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
+                <li>
+                    <a class="dropdown-item google-sort-item {% if sort_by == 'rule-asc' or not sort_by %}active{% endif %}"
+                       href="#" data-sort="rule-asc" onclick="setSort('rule-asc'); return false;">Rule Name (A-Z)</a>
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if sort_by == 'rule-desc' %}active{% endif %}"
+                       href="#" data-sort="rule-desc" onclick="setSort('rule-desc'); return false;">Rule Name (Z-A)</a>
+                </li>
             </ul>
         </div>
 
@@ -331,25 +331,25 @@
             <div class="modal-body p-4">
                 <!-- 1. WHAT IS THIS AUDIT? -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. WHAT IS THIS AUDIT?</h6>
+                    <h6 class="fw-bold text-primary small mb-1">1. WHAT IS THIS AUDIT?</h6>
                     <p class="small text-muted mb-0">This tool performs a real-time audit of the generated schedule. It checks every single class row against the university's 40 core rules to ensure there are no physical impossibilities or quality regressions.</p>
                 </div>
 
                 <!-- 2. COLOR-CODED STATUS -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-success small mb-1 uppercase">2. COLOR-CODED STATUS</h6>
+                    <h6 class="fw-bold text-success small mb-1">2. COLOR-CODED STATUS</h6>
                     <p class="small text-muted mb-0"><strong>Fully Compliant (Green):</strong> Pure perfection. <strong>Soft Warnings (Yellow):</strong> Valid schedule, but some preferences weren't met. <strong>Attention (Red):</strong> Contains Hard Conflicts that must be resolved.</p>
                 </div>
 
                 <!-- 3. VIOLATION LEVELS -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-info small mb-1 uppercase">3. VIOLATION LEVELS</h6>
+                    <h6 class="fw-bold text-info small mb-1">3. VIOLATION LEVELS</h6>
                     <p class="small text-muted mb-0"><strong>HC (Hard):</strong> Non-negotiable errors like room overlaps. <strong>SC-I / SC-II (Soft):</strong> Pedagogical goals like "avoiding 7:00 AM classes" or "limiting daily teaching hours".</p>
                 </div>
 
                 <!-- 4. FINDING & SORTING -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
+                    <h6 class="fw-bold text-warning small mb-1">4. FINDING & SORTING</h6>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Search Bar:</strong> Type a rule name, subject code, or section to filter the report instantly.</li>
                         <li><strong>Funnel Icon:</strong> Filter the list by <strong>Violation Type</strong> (HC/SC) or by specific <strong>Departments</strong>.</li>
@@ -359,13 +359,13 @@
 
                 <!-- 5. DETAILED REPORTS -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. DETAILED REPORTS</h6>
+                    <h6 class="fw-bold text-danger small mb-1">5. DETAILED REPORTS</h6>
                     <p class="small text-muted mb-0">Each row shows the exact "Class A" vs "Class B" collision. It includes the Room, Day, and Time involved so you can jump back to the Schedule Editor to fix the specific issue manually if needed.</p>
                 </div>
 
                 <!-- 6. PAGINATION -->
                 <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
+                    <h6 class="fw-bold text-secondary small mb-1">6. PAGINATION</h6>
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
                 </div>
             </div>

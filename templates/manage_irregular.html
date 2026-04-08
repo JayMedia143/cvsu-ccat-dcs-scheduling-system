@@ -144,20 +144,19 @@
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button"
                 data-bs-toggle="dropdown">
-                <i class="bi bi-sort-alpha-down me-2"></i>
-                {% if current_sort == 'name-asc' %}Name A–Z
+                Sort by: {% if current_sort == 'name-asc' %}Name A–Z
                 {% elif current_sort == 'name-desc' %}Name Z–A
-                {% elif current_sort == 'id-asc' %}ID (Asc)
-                {% elif current_sort == 'id-desc' %}ID (Desc)
+                {% elif current_sort == 'id-asc' %}Student ID (Asc)
+                {% elif current_sort == 'id-desc' %}Student ID (Desc)
                 {% elif current_sort == 'section' %}Section
-                {% else %}Sort{% endif %}
+                {% else %}Sort Order{% endif %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
-                {% for val, label in [('name-asc','Name A–Z'),('name-desc','Name Z–A'),('id-asc','ID (Asc)'),('id-desc','ID (Desc)'),('section','Section')] %}
+                {% for val, label in [('name-asc','Name A–Z'),('name-desc','Name Z–A'),('id-asc','Student ID (Asc)'),('id-desc','Student ID (Desc)'),('section','Section')] %}
                 <li>
-                    <a class="dropdown-item {% if current_sort == val %}active{% endif %}"
+                    <a class="dropdown-item google-sort-item {% if current_sort == val %}active{% endif %}"
                         href="{{ url_for('manage_irregular', sort=val, search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
-                        {{ label }}
+                        Sort by: {{ label }}
                     </a>
                 </li>
                 {% endfor %}
@@ -771,25 +770,25 @@ document.addEventListener('keydown', function(e) {
             <div class="modal-body p-4">
                 <!-- 1. ADDING IRREGULAR STUDENTS -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. ADDING IRREGULAR STUDENTS</h6>
+                    <h6 class="fw-bold text-primary small mb-1">1. Adding Irregular Students</h6>
                     <p class="small text-muted mb-0">Click <strong>'Add Irregular Student'</strong> to either select an existing regular student or create a new irregular record. Once added, they will appear in this list for specialized scheduling handling.</p>
                 </div>
 
                 <!-- 2. SCHEDULE FINDER -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-success small mb-1 uppercase">2. SCHEDULE FINDER</h6>
+                    <h6 class="fw-bold text-success small mb-1">2. Schedule Finder</h6>
                     <p class="small text-muted mb-0">Click the <strong>Puzzle icon</strong> on a student's row to open their individual <strong>Schedule Finder</strong>. This tool scans the entire master schedule to find valid, conflict-free subject combinations based on the student's required courses.</p>
                 </div>
 
                 <!-- 3. BATCH PROCESSOR -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-info small mb-1 uppercase">3. BATCH PROCESSOR</h6>
+                    <h6 class="fw-bold text-info small mb-1">3. Batch Processor</h6>
                     <p class="small text-muted mb-0">Select multiple students and click the <strong>Puzzle icon in the green bulk bar</strong> to run the <strong>Batch Schedule Finder</strong>. This allows you to search for available schedules for several students simultaneously, significantly speeding up the process.</p>
                 </div>
 
                 <!-- 4. FINDING & SORTING -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
+                    <h6 class="fw-bold text-warning small mb-1">4. Finding & Sorting</h6>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Search Bar:</strong> Type any part of a student's name or ID; the list will update <strong>instantly</strong> as you type.</li>
                         <li><strong>Funnel Icon:</strong> Click this to filter the list by <strong>Year Level</strong> or original <strong>Home Section</strong>.</li>
@@ -799,7 +798,7 @@ document.addEventListener('keydown', function(e) {
 
                 <!-- 5. MANAGING & MASS ACTIONS -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. MANAGING & MASS ACTIONS</h6>
+                    <h6 class="fw-bold text-danger small mb-1">5. Managing & Mass Actions</h6>
                     <p class="small text-muted mb-0">Individual actions are available on each row. For batch handling:</p>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Calendar Icon:</strong> View the student's current real-time schedule.</li>
@@ -811,7 +810,7 @@ document.addEventListener('keydown', function(e) {
 
                 <!-- 6. PAGINATION -->
                 <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
+                    <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
                 </div>
             </div>

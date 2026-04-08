@@ -8,8 +8,7 @@
     <div>
         <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
             Locked Schedules
-            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#paInfoModal"
-                title="How to use this page">
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#paInfoModal" title="How to use this page">
                 <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
             </button>
         </h1>
@@ -61,23 +60,18 @@
         </form>
     </div>
 
-    <!-- C. SORT DROPDOWN -->
-    <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end gap-2">
-
-        <!-- SORT DROPDOWN -->
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown"
                 data-bs-toggle="dropdown" aria-expanded="false">
-                {% if current_sort == 'course-asc' %} Course (A-Z)
+                Sort by: {% if current_sort == 'course-asc' %} Course (A-Z)
                 {% elif current_sort == 'section-asc' %} Section (A-Z)
-                {% else %} Default
-                {% endif %}
+                {% else %} Newest {% endif %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
                 <li>
-                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' %}active{% endif %}"
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' or not current_sort %}active{% endif %}"
                         href="{{ url_for('manage_preassignments', sort='default', search=search_query) }}">
-                        Default
+                        Sort by: Newest
                     </a>
                 </li>
                 <li>
@@ -86,18 +80,17 @@
                 <li>
                     <a class="dropdown-item google-sort-item {% if current_sort == 'course-asc' %}active{% endif %}"
                         href="{{ url_for('manage_preassignments', sort='course-asc', search=search_query) }}">
-                        Course (A-Z)
+                        Sort by: Course (A-Z)
                     </a>
                 </li>
                 <li>
                     <a class="dropdown-item google-sort-item {% if current_sort == 'section-asc' %}active{% endif %}"
                         href="{{ url_for('manage_preassignments', sort='section-asc', search=search_query) }}">
-                        Section (A-Z)
+                        Sort by: Section (A-Z)
                     </a>
                 </li>
             </ul>
         </div>
-    </div>
 
 </div>
 
@@ -413,26 +406,26 @@
             </div>
             <div class="modal-body p-4">
                 <div class="mb-4">
-                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. LOCKING SCHEDULES</h6>
+                    <h6 class="fw-bold text-primary small mb-1">1. Locking Schedules</h6>
                     <p class="small text-muted mb-0">Click <strong>'Add Locked Schedule'</strong> to fix a class in the timetable. Select one <strong>Course</strong>, one <strong>Faculty</strong>, and one <strong>Room</strong> from the lists. Then, choose the target <strong>Sections</strong> and the desired <strong>Day/Time</strong>.</p>
                 </div>
                 <div class="mb-4">
-                    <h6 class="fw-bold text-success small mb-1 uppercase">2. MULTI-SECTION BATCHING</h6>
+                    <h6 class="fw-bold text-success small mb-1">2. Multi-Section Batching</h6>
                     <p class="small text-muted mb-0">You can lock a single course-room-faculty combo for multiple sections at once. Use the <strong>Year Level Filters</strong> (1st to 4th Year) and the <strong>'Select Visible'</strong> button to quickly assign large batches of sections to a common slot.</p>
                 </div>
                 <div class="mb-4">
-                    <h6 class="fw-bold text-info small mb-1 uppercase">3. GA SCHEDULER IMPACT</h6>
+                    <h6 class="fw-bold text-info small mb-1">3. GA Scheduler Impact</h6>
                     <p class="small text-muted mb-0">Locked schedules are <strong>mandatory</strong>. The Genetic Algorithm (GA) will place these classes first and build the rest of the timetable around them. Use this for subjects with strictly fixed venue or time requirements.</p>
                 </div>
                 <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
+                    <h6 class="fw-bold text-warning small mb-1">4. Finding & Sorting</h6>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Search Bar:</strong> Type any part of a course code, section, or faculty; the list updates <strong>instantly</strong> as you type.</li>
                         <li><strong>Sort Menu:</strong> Arrange the list by <strong>Course (A-Z)</strong> or <strong>Section (A-Z)</strong> using the top-right dropdown.</li>
                     </ul>
                 </div>
                 <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. MANAGING & MASS ACTIONS</h6>
+                    <h6 class="fw-bold text-danger small mb-1">5. Managing & Mass Actions</h6>
                     <p class="small text-muted mb-0">Individual locked schedules can be removed if they are no longer fixed:</p>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Trash Icon:</strong> Move a locked schedule to the <strong>Recycle Bin</strong>. This "unlocks" the slot, allowing the GA to move it during the next generation.</li>
@@ -440,7 +433,7 @@
                     </ul>
                 </div>
                 <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
+                    <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
                 </div>
             </div>

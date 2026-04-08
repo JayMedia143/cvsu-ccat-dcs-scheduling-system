@@ -39,11 +39,13 @@
             <span class="bulk-count ms-2"><span id="selectedCount">0</span> selected</span>
         </div>
 
-        <!-- Trash Icon -->
-        <button type="button" class="bulk-btn delete-icon" data-bs-toggle="modal" data-bs-target="#bulkArchiveModal"
-            title="Move to Recycle Bin">
-            <i class="bi bi-trash"></i>
-        </button>
+        <div class="d-flex align-items-center gap-3">
+            <!-- Trash Icon (Gray style like Courses) -->
+            <button type="button" class="bulk-btn delete-icon" data-bs-toggle="modal" data-bs-target="#bulkArchiveModal"
+                title="Move to Recycle Bin">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
     </div>
 
     <!-- B. SEARCH INPUT (Server-Side Trigger) -->
@@ -54,7 +56,7 @@
                 <i class="bi bi-search text-secondary me-3"></i>
                 <input type="text" name="search" class="google-search-input"
                     placeholder="Search departments (e.g. 'Computer', 'DCS')..." id="liveSearchInput"
-                    value="{{ search_query }}" autocomplete="off" onchange="this.form.submit()" maxlength="100">
+                    value="{{ search_query }}" autocomplete="off" maxlength="100">
             </div>
         </form>
     </div>
@@ -64,7 +66,7 @@
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown"
                 data-bs-toggle="dropdown" aria-expanded="false">
-                {% if current_sort == 'name-asc' %} Name (A-Z)
+                Sort by: {% if current_sort == 'name-asc' %} Name (A-Z)
                 {% elif current_sort == 'name-desc' %} Name (Z-A)
                 {% elif current_sort == 'code-asc' %} Code (A-Z)
                 {% elif current_sort == 'code-desc' %} Code (Z-A)
@@ -208,18 +210,17 @@
 <!-- 1. BULK ARCHIVE MODAL -->
 <div class="modal fade" id="bulkArchiveModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content border-0 shadow-lg">
             <div class="modal-header">
-                <h5 class="modal-title">Move to Recycle Bin?</h5>
+                <h5 class="modal-title fw-bold text-dark">Move to Recycle Bin?</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                Are you sure you want to move the <span id="modalSelectedCount" class="fw-bold text-danger">0</span>
-                selected departments to the recycle bin?
+            <div class="modal-body p-4 text-start">
+                <p>Are you sure you want to move the <strong id="modalSelectedCount" class="text-danger">0</strong> selected departments to the recycle bin?</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-archive-confirm"
+                <button type="button" class="btn btn-archive-cancel px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-archive-confirm px-4"
                     onclick="document.getElementById('bulkArchiveForm').submit()">Yes, Move to Recycle Bin</button>
             </div>
         </div>
@@ -291,19 +292,19 @@
 <!-- SINGLE ARCHIVE MODAL -->
 <div class="modal fade" id="archiveModal{{ dept.id }}" tabindex="-1">
     <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
-        <div class="modal-content">
+        <div class="modal-content border-0 shadow-lg">
             <div class="modal-header">
-                <h5 class="modal-title">Move to Recycle Bin?</h5>
+                <h5 class="modal-title fw-bold text-dark">Move to Recycle Bin?</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4 text-start">
                 <p>Are you sure you want to move <strong>{{ dept.name }}</strong> to the recycle bin?</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-archive-cancel px-4" data-bs-dismiss="modal">Cancel</button>
                 <form action="{{ url_for('archive_department', dept_id=dept.id) }}" method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-archive-confirm">Yes, Move to Recycle Bin</button>
+                    <button type="submit" class="btn btn-archive-confirm px-4">Yes, Move to Recycle Bin</button>
                 </form>
             </div>
         </div>
@@ -316,16 +317,19 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const liveSearchInput = document.getElementById('liveSearchInput');
         const selectAllCheckbox = document.getElementById('selectAllCheckbox');
         const bulkActionBar = document.getElementById('bulkActionBar');
         const selectedCountSpan = document.getElementById('selectedCount');
         const modalSelectedCount = document.getElementById('modalSelectedCount');
-        let rowCheckboxes = document.querySelectorAll('.row-checkbox');
-        let allRows = document.querySelectorAll('.dept-row');
+        
+        let rowCheckboxes = [];
+        let allRows = [];
 
         function updateSelectionState() {
             let count = 0;
-            rowCheckboxes.forEach(cb => {
+            const currentCbs = document.querySelectorAll('.row-checkbox');
+            currentCbs.forEach(cb => {
                 const row = cb.closest('tr');
                 if (cb.checked) {
                     count++;
@@ -339,45 +343,122 @@
             if (modalSelectedCount) modalSelectedCount.textContent = count;
 
             if (count > 0) {
-                bulkActionBar.classList.add('active');
+                if (bulkActionBar) bulkActionBar.classList.add('active');
             } else {
-                bulkActionBar.classList.remove('active');
+                if (bulkActionBar) bulkActionBar.classList.remove('active');
             }
 
             if (selectAllCheckbox) {
-                selectAllCheckbox.checked = (count === rowCheckboxes.length && count > 0);
-                selectAllCheckbox.indeterminate = (count > 0 && count < rowCheckboxes.length);
+                selectAllCheckbox.checked = (count === currentCbs.length && count > 0);
+                selectAllCheckbox.indeterminate = (count > 0 && count < currentCbs.length);
             }
         }
 
-        allRows.forEach(row => {
-            row.addEventListener('click', function (e) {
-                if (e.target.closest('button') || e.target.closest('.form-check-input')) return;
-                const checkbox = this.querySelector('.row-checkbox');
-                checkbox.checked = !checkbox.checked;
-                updateSelectionState();
-            });
-        });
+        function initializeSelectionLogic() {
+            rowCheckboxes = document.querySelectorAll('.row-checkbox');
+            allRows = document.querySelectorAll('.dept-row');
 
-        rowCheckboxes.forEach(cb => {
-            cb.addEventListener('change', updateSelectionState);
-        });
+            allRows.forEach(row => {
+                const newRow = row.cloneNode(true);
+                row.parentNode.replaceChild(newRow, row);
+            });
+
+            // Re-bind to new elements
+            const updatedRows = document.querySelectorAll('.dept-row');
+            const updatedCbs = document.querySelectorAll('.row-checkbox');
+
+            updatedRows.forEach(row => {
+                row.addEventListener('click', function (e) {
+                    if (e.target.closest('button') || e.target.closest('.form-check-input')) return;
+                    const checkbox = this.querySelector('.row-checkbox');
+                    checkbox.checked = !checkbox.checked;
+                    updateSelectionState();
+                });
+            });
+
+            updatedCbs.forEach(cb => {
+                cb.addEventListener('change', updateSelectionState);
+            });
+        }
 
         if (selectAllCheckbox) {
             selectAllCheckbox.addEventListener('change', function () {
                 const isChecked = this.checked;
-                rowCheckboxes.forEach(cb => cb.checked = isChecked);
+                const currentCbs = document.querySelectorAll('.row-checkbox');
+                currentCbs.forEach(cb => cb.checked = isChecked);
                 updateSelectionState();
             });
         }
+
+        // ==================================================
+        // 3. AJAX LIVE SEARCH
+        // ==================================================
+        let debounceTimer;
+        if (liveSearchInput) {
+            liveSearchInput.addEventListener('input', function () {
+                const query = this.value;
+                const currentSort = "{{ current_sort }}";
+
+                clearTimeout(debounceTimer);
+
+                debounceTimer = setTimeout(() => {
+                    const newUrl = `${window.location.pathname}?search=${encodeURIComponent(query)}&sort=${currentSort}`;
+                    window.history.pushState({ path: newUrl }, '', newUrl);
+
+                    fetch(newUrl)
+                        .then(response => response.text())
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            const targetTable = doc.getElementById('departmentsTable');
+                            
+                            if (!targetTable) return;
+
+                            const newTableBody = targetTable.querySelector('tbody').innerHTML;
+                            const paginationNode = doc.querySelector('.pagination');
+                            const newPagination = paginationNode ? paginationNode.innerHTML : '';
+
+                            document.querySelector('#departmentsTable tbody').innerHTML = newTableBody;
+                            const currentPagination = document.querySelector('.pagination');
+                            if (currentPagination && newPagination) {
+                                currentPagination.innerHTML = newPagination;
+                            } else if (!currentPagination && newPagination) {
+                                const nav = document.querySelector('nav[aria-label="Page navigation"]');
+                                if (nav) {
+                                    const ul = document.createElement('ul');
+                                    ul.className = 'pagination justify-content-center mb-2';
+                                    ul.innerHTML = newPagination;
+                                    nav.appendChild(ul);
+                                }
+                            }
+
+                            initializeSelectionLogic();
+                            if (bulkActionBar) bulkActionBar.classList.remove('active');
+                            if (selectAllCheckbox) {
+                                selectAllCheckbox.checked = false;
+                                selectAllCheckbox.indeterminate = false;
+                            }
+                        })
+                        .catch(err => console.error('Dept search failed:', err));
+
+                }, 300);
+            });
+        }
+
+        // Initialize logic on load
+        initializeSelectionLogic();
     });
 
     function deselectAll() {
         document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false);
-        document.getElementById('selectAllCheckbox').checked = false;
-        document.getElementById('selectAllCheckbox').indeterminate = false;
+        const selectAll = document.getElementById('selectAllCheckbox');
+        if (selectAll) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        }
         document.querySelectorAll('.dept-row').forEach(row => row.classList.remove('selected'));
-        document.getElementById('bulkActionBar').classList.remove('active');
+        const bulkBar = document.getElementById('bulkActionBar');
+        if (bulkBar) bulkBar.classList.remove('active');
     }
 
     function jumpToPage() {
@@ -419,6 +500,12 @@
     #deptInfoModal {
         z-index: 1060 !important;
     }
+    .selected { background-color: #e6f4ea !important; }
+    .selected td { 
+        color: #198754 !important; 
+        font-weight: 500;
+        border-bottom-color: #19875433 !important;
+    }
 </style>
 
 <!-- HOW-TO GUIDE MODAL (Departments) -->
@@ -435,25 +522,25 @@
             <div class="modal-body p-4">
                 <!-- 1. CREATING DEPARTMENTS -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. CREATING DEPARTMENTS</h6>
+                    <h6 class="fw-bold text-primary small mb-1">1. Creating Departments</h6>
                     <p class="small text-muted mb-0">Click <strong>'New Department'</strong> to add a record. Enter the <strong>Department Name</strong> and an optional <strong>Code</strong> (e.g., 'DCS'). These codes are used system-wide for filtering faculty, rooms, and students.</p>
                 </div>
 
                 <!-- 2. ORGANIZATIONAL HIERARCHY -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-success small mb-1 uppercase">2. ORGANIZATIONAL HIERARCHY</h6>
+                    <h6 class="fw-bold text-success small mb-1">2. Organizational Hierarchy</h6>
                     <p class="small text-muted mb-0">Departments act as the primary filter for other system data. Ensure names are accurate, as they directly impact the filtering options available in the <strong>Faculty</strong>, <strong>Rooms</strong>, and <strong>Students</strong> modules.</p>
                 </div>
 
                 <!-- 3. RECYCLE BIN -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-info small mb-1 uppercase">3. RECYCLE BIN</h6>
+                    <h6 class="fw-bold text-info small mb-1">3. Recycle Bin</h6>
                     <p class="small text-muted mb-0">Deleted departments are moved to the <strong>Recycle Bin</strong> instead of being permanently erased. Click the <strong>'Recycle Bin'</strong> button at the top-right to view, restore, or permanently delete archived records.</p>
                 </div>
 
                 <!-- 4. FINDING & SORTING -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
+                    <h6 class="fw-bold text-warning small mb-1">4. Finding & Sorting</h6>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Search Bar:</strong> Type any part of a department name or code; the list will update <strong>instantly</strong> as you type.</li>
                         <li><strong>Sort Menu:</strong> Arrange the list by <strong>Name (A-Z)</strong>, <strong>Code (A-Z)</strong>, or <strong>Newest</strong> using the top-right dropdown.</li>
@@ -462,7 +549,7 @@
 
                 <!-- 5. MANAGING & MASS ACTIONS -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. MANAGING & MASS ACTIONS</h6>
+                    <h6 class="fw-bold text-danger small mb-1">5. Managing & Mass Actions</h6>
                     <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many records at once:</p>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the department's name or code for accuracy.</li>
@@ -473,7 +560,7 @@
 
                 <!-- 6. PAGINATION -->
                 <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
+                    <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
                 </div>
             </div>

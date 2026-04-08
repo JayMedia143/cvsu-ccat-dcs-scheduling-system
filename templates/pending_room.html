@@ -27,15 +27,17 @@
     <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end">
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                {% if current_sort == 'course-asc' %}
-                    Sort by: Course (A-Z)
-                {% elif current_sort == 'course-desc' %}
-                    Sort by: Course (Z-A)
-                {% else %}
-                    Sort by: Default
-                {% endif %}
+                {% if current_sort == 'course-asc' %}Sort by: Course (A-Z)
+                {% elif current_sort == 'course-desc' %}Sort by: Course (Z-A)
+                {% else %}Sort by: Default{% endif %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' or not current_sort %}active{% endif %}"
+                       href="{{ url_for('pending_room', sort='default') }}">
+                       Sort by: Default
+                    </a>
+                </li>
                 <li>
                     <a class="dropdown-item google-sort-item {% if current_sort == 'course-asc' %}active{% endif %}"
                        href="{{ url_for('pending_room', sort='course-asc') }}">
@@ -199,25 +201,25 @@
             <div class="modal-body p-4">
                 <!-- 1. WHAT IS THIS? -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. WHAT IS THIS?</h6>
+                    <h6 class="fw-bold text-primary small mb-1">1. What Is This?</h6>
                     <p class="small text-muted mb-0">This page displays classes marked as <strong>'T.B.A.'</strong> (To Be Assigned). These are scheduled classes that currently lack a physical room, often occurring when the Auto Generator cannot find an available venue for a specific slot.</p>
                 </div>
 
                 <!-- 2. DATA ACCURACY -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-success small mb-1 uppercase">2. DATA ACCURACY</h6>
+                    <h6 class="fw-bold text-success small mb-1">2. Data Accuracy</h6>
                     <p class="small text-muted mb-0">Use the dropdowns to select a Room for each class. The list includes all active rooms in the system. Be aware that assigning a room here does not automatically check for overlaps with other manually assigned classes.</p>
                 </div>
 
                 <!-- 3. SYSTEM IMPACT -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-info small mb-1 uppercase">3. SYSTEM IMPACT</h6>
+                    <h6 class="fw-bold text-info small mb-1">3. System Impact</h6>
                     <p class="small text-muted mb-0">Once confirmed, these assignments are written directly to the active timetable. The 'T.B.A.' label will be replaced by the room name across all schedule views and faculty reports.</p>
                 </div>
 
                 <!-- 4. FINDING & SORTING -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
+                    <h6 class="fw-bold text-warning small mb-1">4. Finding & Sorting</h6>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Search Bar:</strong> Type any part of a Course, Section, or Day (e.g., 'Monday') to filter the pending list instantly.</li>
                         <li><strong>Sort Menu:</strong> Arrange the list alphabetically by Course Name to help you assign rooms to related subjects in batches.</li>
@@ -226,13 +228,13 @@
 
                 <!-- 5. SAVING CHANGES -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. SAVING CHANGES</h6>
+                    <h6 class="fw-bold text-danger small mb-1">5. Saving Changes</h6>
                     <p class="small text-muted mb-0">Assignments are temporary until you click the <strong>Floating Green 'Save'</strong> button. Use the confirmation modal to double-check your work before the system finalizes the database update.</p>
                 </div>
 
                 <!-- 6. PAGINATION -->
                 <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
+                    <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
                 </div>
             </div>

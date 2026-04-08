@@ -27,15 +27,17 @@
     <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end">
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                {% if current_sort == 'course-asc' %}
-                    Sort by: Course (A-Z)
-                {% elif current_sort == 'course-desc' %}
-                    Sort by: Course (Z-A)
-                {% else %}
-                    Sort by: Default
-                {% endif %}
+                {% if current_sort == 'course-asc' %}Sort by: Course (A-Z)
+                {% elif current_sort == 'course-desc' %}Sort by: Course (Z-A)
+                {% else %}Sort by: Default{% endif %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' or not current_sort %}active{% endif %}"
+                       href="{{ url_for('pending_sections', sort='default') }}">
+                       Sort by: Default
+                    </a>
+                </li>
                 <li>
                     <a class="dropdown-item google-sort-item {% if current_sort == 'course-asc' %}active{% endif %}"
                        href="{{ url_for('pending_sections', sort='course-asc') }}">
@@ -199,25 +201,25 @@
             <div class="modal-body p-4">
                 <!-- 1. WHAT IS THIS? -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. WHAT IS THIS?</h6>
+                    <h6 class="fw-bold text-primary small mb-1">1. What Is This?</h6>
                     <p class="small text-muted mb-0">This page lists schedules that have become "orphaned" because their original Section was deleted from the system. These classes are still in the timetable but currently have no assigned group of students.</p>
                 </div>
 
                 <!-- 2. DATA ACCURACY -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-success small mb-1 uppercase">2. DATA ACCURACY</h6>
+                    <h6 class="fw-bold text-success small mb-1">2. Data Accuracy</h6>
                     <p class="small text-muted mb-0">Use the dropdowns to select a new, valid Section for each course. Ensure the Year Level of the section matches the course requirements to maintain enrollment integrity.</p>
                 </div>
 
                 <!-- 3. SYSTEM IMPACT -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-info small mb-1 uppercase">3. SYSTEM IMPACT</h6>
+                    <h6 class="fw-bold text-info small mb-1">3. System Impact</h6>
                     <p class="small text-muted mb-0">Assigning a section here immediately updates the active timetable. The class will reappear in the selected section's schedule view once the changes are confirmed.</p>
                 </div>
 
                 <!-- 4. FINDING & SORTING -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
+                    <h6 class="fw-bold text-warning small mb-1">4. Finding & Sorting</h6>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Search Bar:</strong> Type any part of a Course Code, Faculty Name, or Room to filter the list instantly.</li>
                         <li><strong>Sort Menu:</strong> Arrange the list alphabetically by Course Name to group similar subjects together.</li>
@@ -226,13 +228,13 @@
 
                 <!-- 5. SAVING CHANGES -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. SAVING CHANGES</h6>
+                    <h6 class="fw-bold text-danger small mb-1">5. Saving Changes</h6>
                     <p class="small text-muted mb-0">Assignments are not saved until you click the <strong>Floating Green 'Save'</strong> button. A confirmation modal will appear to review the total number of updates before they are finalized.</p>
                 </div>
 
                 <!-- 6. PAGINATION -->
                 <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
+                    <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
                 </div>
             </div>

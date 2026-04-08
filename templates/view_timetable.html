@@ -617,6 +617,9 @@
 <div class="hud-controls">
     <div class="hud-title-pill">
         <i class="bi bi-calendar3-fill"></i> Timetable
+        <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#viewInfoModal" title="How to use this workspace">
+            <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+        </button>
     </div>
 
     <div class="hud-pill-segment">
@@ -630,10 +633,24 @@
 
     <div class="hud-pill-segment">
         <span class="hud-pill-label">Sort:</span>
-        <select id="sortSelect" class="hud-pill-select" onchange="applySort()">
-            <option value="asc">A → Z</option>
-            <option value="desc">Z → A</option>
-        </select>
+        <div class="dropdown d-inline-block">
+            <button class="btn hud-pill-select dropdown-toggle p-0" type="button" id="sortDropdown"
+                data-bs-toggle="dropdown" aria-expanded="false" style="width: auto; text-align: left;">
+                Sort by: A → Z
+            </button>
+            <ul class="dropdown-menu google-sort-menu" aria-labelledby="sortDropdown">
+                <li>
+                    <a class="dropdown-item google-sort-item active" href="javascript:void(0);" onclick="applySort('asc', this)">
+                        Sort by: A → Z
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item" href="javascript:void(0);" onclick="applySort('desc', this)">
+                        Sort by: Z → A
+                    </a>
+                </li>
+            </ul>
+        </div>
     </div>
 
     <div class="hud-search-pill">
@@ -705,8 +722,24 @@
     const _rom = {{ rooms_json    | tojson | safe }};
     const listMap = { section: [..._sec], faculty: [..._fac], room: [..._rom] };
 
-    window.applySort = function () {
-        const dir = document.getElementById('sortSelect').value;
+    window.applySort = function (dir, el) {
+        if (!dir) {
+            // Default to asc if called without args (e.g. initial load)
+            dir = 'asc';
+        }
+        
+        // Update UI state
+        const toggle = document.getElementById('sortDropdown');
+        if (toggle) toggle.textContent = (dir === 'asc') ? 'Sort by: A → Z' : 'Sort by: Z → A';
+        
+        if (el) {
+            const menu = el.closest('.google-sort-menu');
+            if (menu) {
+                menu.querySelectorAll('.google-sort-item').forEach(i => i.classList.remove('active'));
+                el.classList.add('active');
+            }
+        }
+
         [['section', _sec], ['faculty', _fac], ['room', _rom]].forEach(([type, orig]) => {
             const nonTba = orig.filter(x => !x.label.startsWith('T.B.A.'));
             const tba = orig.filter(x => x.label.startsWith('T.B.A.'));
@@ -861,8 +894,8 @@
         window.allCardData = list.map((item, index) => ({
             id: item.id, label: item.label, lowerLabel: item.label.toLowerCase(),
             url: urlMap[currentType](item.id),
-            x: (index % columns) * 950 + 500, y: Math.floor(index / columns) * 1300 + 500,
-            width: 800, height: 1200, index: index, isMounted: false, element: null
+            x: (index % columns) * 950 + 500, y: Math.floor(index / columns) * 1230 + 500,
+            width: 800, height: 1130, index: index, isMounted: false, element: null
         }));
         renderVisibleCards();
         initMinimap();
@@ -886,7 +919,26 @@
         card.className = 'canvas-card sticker-card';
         card.style.cssText = `position:absolute;left:${data.x}px;top:${data.y}px;width:${data.width}px;height:${data.height}px;`;
         if (window.lastSearchQuery && !data.lowerLabel.includes(window.lastSearchQuery)) card.classList.add('canvas-dimmed');
-        card.innerHTML = `<div class="card-header-bar"><span>${data.label}</span><button class="card-maximize-btn" onclick="openPresentation(${data.index})"><i class="bi bi-fullscreen"></i></button></div><div class="card-iframe-wrap"><iframe src="${data.url}" loading="lazy"></iframe></div>`;
+        const pdfUrlMap = {
+            section: id => `/section-timetable-pdf/${id}?semester=${encodeURIComponent(currentSemester)}`,
+            faculty: id => `/faculty-timetable-pdf/${id}?semester=${encodeURIComponent(currentSemester)}`,
+            room:    id => `/room-timetable-pdf/${id}?semester=${encodeURIComponent(currentSemester)}`
+        };
+        const pdfUrl = pdfUrlMap[currentType](data.id);
+        
+        card.innerHTML = `
+            <div class="card-header-bar">
+                <span>${data.label}</span>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="${pdfUrl}" class="card-maximize-btn text-decoration-none" title="Download PDF">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                    </a>
+                    <button class="card-maximize-btn" onclick="openPresentation(${data.index})" title="Maximize">
+                        <i class="bi bi-fullscreen"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-iframe-wrap"><iframe src="${data.url}" loading="lazy"></iframe></div>`;
         card.addEventListener('dblclick', () => openPresentation(data.index));
         canvas.appendChild(card);
         data.element = card;
@@ -1205,10 +1257,82 @@
     });
 
     window.exportAllPDF = function () {
-        alert("This will compile all visible schedules into a single PDF document. (Feature in progress)");
+        const url = `/export/pdf_bulk?type=${currentType}&semester=${encodeURIComponent(currentSemester)}`;
+        window.location.href = url;
     };
 
 }) ();
 </script>
+
+<!-- HOW-TO GUIDE MODAL (View Timetable) -->
+<div class="modal fade" id="viewInfoModal" tabindex="-1" aria-labelledby="viewInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-dark" id="viewInfoLabel">
+                    Canvas Workspace Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <!-- 1. INTERACTIVE CANVAS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1">1. INTERACTIVE CANVAS</h6>
+                    <p class="small text-muted mb-0">Use your mouse to <strong>Drag to Pan</strong> across the infinite grid. You can <strong>Scroll to Zoom</strong> in for detail or out for a birds-eye view of all schedules.</p>
+                </div>
+
+                <!-- 2. NAVIGATION CONTROLS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1">2. NAVIGATION CONTROLS</h6>
+                    <p class="small text-muted mb-0">Use the <strong>Floating HUD</strong> at the top to quickly jump to the <strong>1st</strong> or <strong>Last</strong> schedule. The arrow buttons allow you to step through the list one by one.</p>
+                </div>
+
+                <!-- 3. SEARCH & SORT -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1">3. SEARCH & SORT</h6>
+                    <p class="small text-muted mb-0">Type any name or code into the <strong>Search Pill</strong> to instantly filter the canvas. You can also toggle between <strong>A-Z</strong> and <strong>Z-A</strong> sorting for easier discovery.</p>
+                </div>
+
+                <!-- 4. RADAR MINIMAP -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1">4. RADAR MINIMAP</h6>
+                    <p class="small text-muted mb-0">The <strong>Bottom-Right Minimap</strong> shows your current position. The green box represents your viewport—use it to stay oriented within the massive workspace.</p>
+                </div>
+
+                <!-- 5. PRESENTATION MODE -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1">5. PRESENTATION MODE</h6>
+                    <p class="small text-muted mb-0">Click the <strong>Maximize Icon</strong> on any schedule card to enter full-screen mode. Use your keyboard's <strong>Left/Right Arrows</strong> to flip through schedules while in this view.</p>
+                </div>
+
+                <!-- 6. HUD SHORTCUTS -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1">6. HUD SHORTCUTS</h6>
+                    <p class="small text-muted mb-0">Click <strong>'Fit All'</strong> to instantly center the viewport so every active schedule card is visible on your screen at once.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-muted-v2 { color: #adb5bd !important; }
+    .info-icon-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .info-icon-hover:hover {
+        color: #198754 !important;
+        transform: scale(1.2);
+    }
+    #viewInfoModal {
+        z-index: 3000 !important;
+    }
+</style>
 
 {% endblock %}

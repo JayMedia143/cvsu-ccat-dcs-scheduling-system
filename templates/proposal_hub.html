@@ -7,7 +7,7 @@
     <!-- 1. CONVO LIST -->
     <div class="messenger-sidebar">
         <div class="sidebar-header-main p-3">
-            <h4 class="fw-bold mb-3">Chats
+            <h4 class="fw-bold mb-3 d-flex align-items-center">Chats
                 <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#decisionHubInfoModal" title="How to use Decision Hub">
                     <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
                 </button>
@@ -137,11 +137,24 @@
                 </div>
                 <div class="pv-pill-select-wrap">
                     <span class="pv-pill-label">Sort:</span>
-                    <select id="pvSortSelect" class="form-select form-select-sm pv-pill-select"
-                        onchange="pvApplySort()">
-                        <option value="asc">A &mdash; Z</option>
-                        <option value="desc">Z &mdash; A</option>
-                    </select>
+                    <div class="dropdown d-inline-block">
+                        <button class="btn pv-pill-select dropdown-toggle p-0" type="button" id="pvSortDropdown"
+                            data-bs-toggle="dropdown" aria-expanded="false" style="width: auto; text-align: left;">
+                            Sort by: A — Z
+                        </button>
+                        <ul class="dropdown-menu google-sort-menu" aria-labelledby="pvSortDropdown">
+                            <li>
+                                <a class="dropdown-item google-sort-item active" href="javascript:void(0);" onclick="pvApplySort('asc', this)">
+                                    Sort by: A — Z
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item google-sort-item" href="javascript:void(0);" onclick="pvApplySort('desc', this)">
+                                    Sort by: Z — A
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="pv-search-pill">
                     <i class="bi bi-search" style="color:#999;font-size:0.8rem;"></i>
@@ -248,19 +261,19 @@
             </div>
             <div class="modal-body p-4">
                 <div class="mb-4">
-                    <h6 class="fw-bold text-primary small mb-1">1. STARTING A CHAT</h6>
+                    <h6 class="fw-bold text-primary small mb-1">1. Starting a Chat</h6>
                     <p class="small text-muted mb-0">Click any user on the left sidebar to start messaging. Click <strong>'Announcements'</strong> (at the very top) for department-wide broadcasts.</p>
                 </div>
                 <div class="mb-4">
-                    <h6 class="fw-bold text-success small mb-1">2. SENDING SCHEDULE DRAFTS</h6>
+                    <h6 class="fw-bold text-success small mb-1">2. Sending Schedule Drafts</h6>
                     <p class="small text-muted mb-0">To share a proposal, look for the <strong>(+) Plus Button</strong> at the bottom-left of the message box. Click it to select and attach your schedule draft to your message.</p>
                 </div>
                 <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1">3. MANAGING PROPOSALS</h6>
+                    <h6 class="fw-bold text-warning small mb-1">3. Managing Proposals</h6>
                     <p class="small text-muted mb-0">The <strong>'Pending Review'</strong> section on the right shows all schedule proposals. There is <strong>no limit</strong> to this list, but it will automatically <strong>scroll internally</strong> if it reaches the bottom of your screen, ensuring the website stays neat. Admins can click the <strong>Green Check (Approve)</strong> or <strong>Red X (Reject)</strong> icons to finalize them.</p>
                 </div>
                 <div class="mb-0">
-                    <h6 class="fw-bold text-info small mb-1">4. VISUALIZING THE PLAN</h6>
+                    <h6 class="fw-bold text-info small mb-1">4. Visualizing the Plan</h6>
                     <p class="small text-muted mb-0">Once you send a draft using the <strong>(+) Plus Button</strong>, a <strong>'Schedule Draft Card'</strong> (with a calendar icon) will appear in your chat. Simply <strong>click the card</strong> to open and launch the <strong>Interactive Canvas</strong>. Once the map opens, you can <strong>left-click and hold your mouse</strong> then drag in any direction to move the map. Use your <strong>mouse scroll wheel up to zoom in</strong> (magnify details) or <strong>scroll down to zoom out</strong>.</p>
                 </div>
             </div>
@@ -1858,7 +1871,10 @@
     };
 
     function pvGetCurrentList() {
-        const order = document.getElementById('pvSortSelect')?.value || 'asc';
+        // Use the current toggle text or a tracked state to determine direction
+        const toggle = document.getElementById('pvSortDropdown');
+        const order = (toggle && toggle.textContent.includes('Z → A')) ? 'desc' : 'asc';
+        
         let base;
         if (pvEntityMap) {
             base = pvEntityMap[pvCurrentType === 'section' ? 'sections'
@@ -2140,7 +2156,21 @@
         if (found && q.length > 2) pvFocusData(found);
     }
 
-    function pvApplySort() { pvLoadCanvas(); }
+    function pvApplySort(dir, el) {
+        if (dir) {
+            const toggle = document.getElementById('pvSortDropdown');
+            if (toggle) toggle.textContent = (dir === 'asc') ? 'Sort by: A — Z' : 'Sort by: Z — A';
+            
+            if (el) {
+                const menu = el.closest('.google-sort-menu');
+                if (menu) {
+                    menu.querySelectorAll('.google-sort-item').forEach(i => i.classList.remove('active'));
+                    el.classList.add('active');
+                }
+            }
+        }
+        pvLoadCanvas();
+    }
 
     function pvFocusData(data) {
         const vp = document.getElementById('pvViewport');

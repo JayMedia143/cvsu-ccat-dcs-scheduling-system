@@ -5,7 +5,11 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 text-gray-800 fw-light mb-1">Reports & Analytics</h1>
+        <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">Reports & Analytics 
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#reportsInfoModal" title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+            </button>
+        </h1>
         <p class="text-muted small mb-0">System performance and resource utilization analysis.</p>
     </div>
 </div>
@@ -45,7 +49,7 @@
                 <h6 class="text-secondary mb-0 fw-bold">BULK EXPORT</h6>
                 <small class="text-muted ms-2">— Download Excel schedules per semester</small>
             </div>
-            <form action="{{ url_for('export_excel_bulk') }}" method="GET">
+            <form id="bulkExportForm" action="{{ url_for('export_excel_bulk') }}" method="GET">
                 <div class="d-flex gap-2 align-items-center">
                     <select name="semester" class="form-select form-select-sm border-secondary bg-light fw-bold" style="width:145px;flex-shrink:0;">
                         {% for sem in available_semesters %}
@@ -59,9 +63,14 @@
                         <option value="faculty">All Faculty Loads (By Instructor)</option>
                         <option value="room">All Room Utilizations (By Room)</option>
                     </select>
-                    <button type="submit" class="btn btn-sm btn-success px-3 text-nowrap" style="flex-shrink:0;">
-                        <i class="bi bi-download me-1"></i> Download
-                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="submit" form="bulkExportForm" onclick="this.form.action='{{ url_for('export_excel_bulk') }}'" class="btn btn-sm btn-success px-3 text-nowrap">
+                            <i class="bi bi-file-earmark-excel me-1"></i> Excel
+                        </button>
+                        <button type="submit" form="bulkExportForm" onclick="this.form.action='{{ url_for('export_pdf_bulk') }}'" class="btn btn-sm btn-danger px-3 text-nowrap">
+                            <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -143,4 +152,73 @@
         });
 })();
 </script>
+
+<!-- HOW-TO GUIDE MODAL (Reports & Analytics) -->
+<div class="modal fade" id="reportsInfoModal" tabindex="-1" aria-labelledby="reportsInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-dark" id="reportsInfoLabel">
+                    Reports & Analytics Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <!-- 1. ANALYTICS OVERVIEW -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1">1. ANALYTICS OVERVIEW</h6>
+                    <p class="small text-muted mb-0">This dashboard provides <strong>live data</strong> on system performance, specifically tracking how many classes are scheduled and how efficiently your campus rooms are being utilized.</p>
+                </div>
+
+                <!-- 2. SYSTEM STAT CARDS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1">2. SYSTEM STAT CARDS</h6>
+                    <p class="small text-muted mb-0">The <strong>Classes</strong> card shows the total number of approved schedule blocks. The <strong>Utilization</strong> card displays the global percentage of room usage across all active days.</p>
+                </div>
+
+                <!-- 3. BULK EXPORT TOOLS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1">3. BULK EXPORT TOOLS</h6>
+                    <p class="small text-muted mb-0">Use the <strong>Excel Download</strong> form to generate complete schedule reports. Select your <strong>Semester</strong> and <strong>Report Type</strong> (Sections, Faculty, or Rooms) to download a formatted spreadsheet.</p>
+                </div>
+
+                <!-- 4. ROOM UTILIZATION -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1">4. ROOM UTILIZATION</h6>
+                    <p class="small text-muted mb-0">The table breaks down usage per room. <strong>Hours Used</strong> counts actual scheduled time, while <strong>Available</strong> reflects the system's operating capacity (e.g., 7am-7pm, 6 days/week).</p>
+                </div>
+
+                <!-- 5. COLOR INDICATORS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1">5. COLOR INDICATORS</h6>
+                    <p class="small text-muted mb-0">The progress bars use color-coding: <strong>Green</strong> for healthy usage (<50%), <strong>Yellow</strong> for high demand (50-80%), and <strong>Red</strong> for critically saturated rooms (>80%).</p>
+                </div>
+
+                <!-- 6. LIVE DATA REFRESH -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1">6. LIVE DATA REFRESH</h6>
+                    <p class="small text-muted mb-0">Reports are generated in real-time. Any changes made in the <strong>Schedule Editor</strong> or <strong>Proposal Hub</strong> are reflected here immediately upon refreshing the page.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-muted-v2 { color: #adb5bd !important; }
+    .info-icon-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .info-icon-hover:hover {
+        color: #198754 !important;
+        transform: scale(1.2);
+    }
+</style>
+
 {% endblock %}

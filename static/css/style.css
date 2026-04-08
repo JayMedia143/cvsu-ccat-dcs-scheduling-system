@@ -2546,3 +2546,8 @@ table.table tbody tr.irreg-row.selected:hover td {
 }
 /* Table selection highlight */
 
+
+/* DYNAMIC WIDTH OVERRIDE FOR SORT AND FILTER toggles */
+.google-sort-toggle { width: auto !important; min-width: 0 !important; white-space: nowrap !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; justify-content: center !important; }
+.google-sort-menu { width: max-content !important; min-width: 180px !important; box-sizing: border-box; }
+

@@ -57,15 +57,12 @@
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="archiveSortDropdown"
                 data-bs-toggle="dropdown" aria-expanded="false">
-                {% if current_sort == 'newest' %}
-                Sort by: Newest
-                {% else %}
-                Sort by: Code (A-Z)
-                {% endif %}
+                Sort by: {% if current_sort == 'newest' %}Newest
+                {% else %}Code (A-Z){% endif %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="archiveSortDropdown">
                 <li>
-                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' %}active{% endif %}"
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' or not current_sort %}active{% endif %}"
                         href="{{ url_for('code_rules_archive', sort='default', search=search_query) }}">
                         Sort by: Code (A-Z)
                     </a>
@@ -125,15 +122,11 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" class="text-center text-muted py-5">
+                        <td colspan="5" class="text-center py-3 text-muted">
                             {% if search_query %}
                             No rules found matching "{{ search_query }}".
                             {% else %}
-                            <div class="text-success opacity-75">
-                                <i class="bi bi-check-circle-fill display-4 d-block mb-2"></i>
-                                <h5>Recycle bin is empty</h5>
-                                <p class="text-muted small">No deleted code rules.</p>
-                            </div>
+                            No deleted rules found.
                             {% endif %}
                         </td>
                     </tr>

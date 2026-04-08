@@ -477,6 +477,10 @@
                                 class="bi bi-shield-check text-muted me-2"></i> Code Rules</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('departments_archive') }}"><i
                                 class="bi bi-building-fill text-muted me-2"></i> Departments</a></li>
+                    {% if session.get('role') == 'superadmin' %}
+                    <li><a class="dropdown-item" href="{{ url_for('users_recycle_bin') }}"><i
+                                class="bi bi-people-fill text-muted me-2"></i> Users</a></li>
+                    {% endif %}
                     <li>
                         <hr class="dropdown-divider">
                     </li>

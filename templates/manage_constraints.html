@@ -16,8 +16,7 @@
     <div>
         <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
             Constraints
-            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#constraintInfoModal"
-                title="How to use this page">
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#constraintInfoModal" title="How to use this page">
                 <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
             </button>
         </h1>
@@ -123,6 +122,10 @@
                 {% endif %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="filterDropdown">
+                <li><a class="dropdown-item text-danger" href="{{ url_for('manage_constraints', filter='all', sort=current_sort, search=search_query) }}">
+                    <i class="bi bi-x-circle me-2"></i>Clear Filter
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item google-sort-item {% if current_filter == 'all' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='all', sort=current_sort) }}">All Types</a></li>
                 <li><a class="dropdown-item google-sort-item {% if current_filter == 'HC' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='HC', sort=current_sort) }}">Hard Constraints</a></li>
                 <li><a class="dropdown-item google-sort-item {% if current_filter == 'SC1' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='SC1', sort=current_sort) }}">Soft Constraints I</a></li>
@@ -134,16 +137,15 @@
         <!-- Sort Dropdown -->
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                {% if current_sort == 'name-asc' %}Name (A-Z)
+                Sort by: {% if current_sort == 'name-asc' %}Name (A-Z)
                 {% elif current_sort == 'name-desc' %}Name (Z-A)
                 {% elif current_sort == 'category' %}Category
-                {% else %}Sort by
-                {% endif %}
+                {% else %}Sort Order{% endif %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
-                <li><a class="dropdown-item google-sort-item {% if current_sort == 'name-asc' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='name-asc', filter=current_filter) }}">Name (A-Z)</a></li>
-                <li><a class="dropdown-item google-sort-item {% if current_sort == 'name-desc' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='name-desc', filter=current_filter) }}">Name (Z-A)</a></li>
-                <li><a class="dropdown-item google-sort-item {% if current_sort == 'category' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='category', filter=current_filter) }}">Category</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_sort == 'name-asc' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='name-asc', filter=current_filter) }}">Sort by: Name (A-Z)</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_sort == 'name-desc' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='name-desc', filter=current_filter) }}">Sort by: Name (Z-A)</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_sort == 'category' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='category', filter=current_filter) }}">Sort by: Category</a></li>
             </ul>
         </div>
 
@@ -330,37 +332,37 @@
             <div class="modal-body p-4">
                 <!-- 1. WHAT ARE CONSTRAINTS? -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. WHAT ARE CONSTRAINTS?</h6>
+                    <h6 class="fw-bold text-primary small mb-1">1. What Are Constraints?</h6>
                     <p class="small text-muted mb-0">Constraints are the "rules of the game" for the Genetic Algorithm (GA). They define what makes a schedule valid or high-quality (e.g., "No overlapping classes" or "Faculty preferred hours").</p>
                 </div>
 
                 <!-- 2. PRIORITY LEVELS -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-success small mb-1 uppercase">2. PRIORITY LEVELS</h6>
+                    <h6 class="fw-bold text-success small mb-1">2. Priority Levels</h6>
                     <p class="small text-muted mb-0">Use the dropdowns to set a rule as <strong>Hard (HC)</strong>, which must never be broken, or <strong>Soft (SC-I/II)</strong>, which are goals the system tries its best to meet. Use <strong>None (NC)</strong> to disable a rule entirely.</p>
                 </div>
 
                 <!-- 3. PENALTY WEIGHTS -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-info small mb-1 uppercase">3. PENALTY WEIGHTS</h6>
+                    <h6 class="fw-bold text-info small mb-1">3. Penalty Weights</h6>
                     <p class="small text-muted mb-0">Each Soft Constraint has a weight (1-100). A higher weight tells the GA that breaking this rule is very "painful" for the final score, forcing the system to prioritize it over lower-weighted rules.</p>
                 </div>
 
                 <!-- 4. SYNCING RULES -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. SYNCING RULES</h6>
+                    <h6 class="fw-bold text-warning small mb-1">4. Syncing Rules</h6>
                     <p class="small text-muted mb-0">If rules seem missing or outdated, click the <strong>'Sync Constraints'</strong> button at the top-right. This refreshes the master list from the system core without losing your current weight settings.</p>
                 </div>
 
                 <!-- 5. DETAILED VIEW & SAVING -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. DETAILED VIEW & SAVING</h6>
+                    <h6 class="fw-bold text-danger small mb-1">5. Detailed View & Saving</h6>
                     <p class="small text-muted mb-0">Click any row to open the <strong>Right-Side Detail Panel</strong> for full descriptions. Note: Changes are not instant; you must click the <strong>Floating Green 'Save Changes'</strong> button to commit your updates.</p>
                 </div>
 
                 <!-- 6. FINDING & SORTING -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1 uppercase">6. FINDING & SORTING</h6>
+                    <h6 class="fw-bold text-warning small mb-1">6. Finding & Sorting</h6>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Search Bar:</strong> Type any part of a rule name or category; the list will update <strong>instantly</strong> as you type.</li>
                         <li><strong>Funnel Icon:</strong> Click this to filter the list by a specific <strong>Priority</strong> (e.g., Hard, Soft-I, or Soft-II).</li>
@@ -370,7 +372,7 @@
 
                 <!-- 7. PAGINATION -->
                 <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1 uppercase">7. PAGINATION</h6>
+                    <h6 class="fw-bold text-secondary small mb-1">7. Pagination</h6>
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
                 </div>
             </div>

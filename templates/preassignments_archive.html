@@ -60,18 +60,14 @@
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="archiveSortDropdown"
                 data-bs-toggle="dropdown" aria-expanded="false">
-                {% if current_sort == 'course-asc' %}
-                Sort by: Course (A-Z)
-                {% elif current_sort == 'section-asc' %}
-                Sort by: Section (A-Z)
-                {% else %}
-                Sort by: Default
-                {% endif %}
+                Sort by: {% if current_sort == 'course-asc' %}Course (A-Z)
+                {% elif current_sort == 'section-asc' %}Section (A-Z)
+                {% else %}Default{% endif %}
             </button>
 
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="archiveSortDropdown">
                 <li>
-                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' %}active{% endif %}"
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' or not current_sort %}active{% endif %}"
                         href="{{ url_for('preassignments_archive', sort='default') }}">
                         Sort by: Default
                     </a>

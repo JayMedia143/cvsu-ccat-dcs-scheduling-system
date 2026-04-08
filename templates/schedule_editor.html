@@ -1352,27 +1352,6 @@
                                 oninput="allDraftsPage=1;renderAllDrafts()">
                         </div>
                     </div>
-                    <!-- Sort dropdown -->
-                    <div class="col-auto">
-                        <div class="dropdown">
-                            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="allDraftsSortBtn"
-                                data-bs-toggle="dropdown" style="min-width:130px; font-size:.82rem">
-                                <i class="bi bi-sort-alpha-down me-1"></i><span id="allDraftsSortLabel">Newest</span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end google-sort-menu"
-                                style="max-height: 400px; overflow-y: auto;">
-                                <li><a class="dropdown-item google-sort-item" href="#"
-                                        onclick="setAllDraftsSort('','Newest');return false">Newest first</a></li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
-                                <li><a class="dropdown-item google-sort-item" href="#"
-                                        onclick="setAllDraftsSort('az','Name A→Z');return false">Name A→Z</a></li>
-                                <li><a class="dropdown-item google-sort-item" href="#"
-                                        onclick="setAllDraftsSort('za','Name Z→A');return false">Name Z→A</a></li>
-                            </ul>
-                        </div>
-                    </div>
                     <!-- Filter (Unified with submenus) -->
                     <div class="col-auto">
                         <div class="dropdown">
@@ -1404,6 +1383,27 @@
                                         {% endfor %}
                                     </ul>
                                 </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Sort dropdown -->
+                    <div class="col-auto">
+                        <div class="dropdown">
+                            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="allDraftsSortBtn"
+                                data-bs-toggle="dropdown" style="min-width:130px; font-size:.82rem">
+                                <i class="bi bi-sort-alpha-down me-1"></i>Sort by: <span id="allDraftsSortLabel">Newest</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end google-sort-menu"
+                                style="max-height: 400px; overflow-y: auto;">
+                                <li><a class="dropdown-item google-sort-item" href="#"
+                                        onclick="setAllDraftsSort('','Newest');return false">Newest first</a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li><a class="dropdown-item google-sort-item" href="#"
+                                        onclick="setAllDraftsSort('az','Name A→Z');return false">Name A→Z</a></li>
+                                <li><a class="dropdown-item google-sort-item" href="#"
+                                        onclick="setAllDraftsSort('za','Name Z→A');return false">Name Z→A</a></li>
                             </ul>
                         </div>
                     </div>
@@ -1496,23 +1496,6 @@
                             <input type="text" id="mdSearch" class="google-search-input" placeholder="Search drafts..."
                                 oninput="_mdPage=1;renderManageDrafts()">
                         </div>
-                        <div class="dropdown">
-                            <button class="btn google-sort-toggle dropdown-toggle" type="button"
-                                data-bs-toggle="dropdown" style="min-width:130px;font-size:.82rem;padding:6px 12px">
-                                <i class="bi bi-sort-alpha-down me-1"></i><span id="mdSortLabel">Newest</span>
-                            </button>
-                            <ul class="dropdown-menu google-sort-menu">
-                                <li><a class="dropdown-item google-sort-item" href="#"
-                                        onclick="setMdSort('','Newest');return false">Newest first</a></li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
-                                <li><a class="dropdown-item google-sort-item" href="#"
-                                        onclick="setMdSort('az','Name A→Z');return false">Name A→Z</a></li>
-                                <li><a class="dropdown-item google-sort-item" href="#"
-                                        onclick="setMdSort('za','Name Z→A');return false">Name Z→A</a></li>
-                            </ul>
-                        </div>
                         <!-- Filter (Unified) -->
                         <div class="dropdown">
                             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="mdFilterBtn"
@@ -1543,6 +1526,23 @@
                                         {% endfor %}
                                     </ul>
                                 </li>
+                            </ul>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn google-sort-toggle dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown" style="min-width:130px;font-size:.82rem;padding:6px 12px">
+                                <i class="bi bi-sort-alpha-down me-1"></i>Sort by: <span id="mdSortLabel">Newest</span>
+                            </button>
+                            <ul class="dropdown-menu google-sort-menu">
+                                <li><a class="dropdown-item google-sort-item" href="#"
+                                        onclick="setMdSort('','Newest');return false">Newest first</a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li><a class="dropdown-item google-sort-item" href="#"
+                                        onclick="setMdSort('az','Name A→Z');return false">Name A→Z</a></li>
+                                <li><a class="dropdown-item google-sort-item" href="#"
+                                        onclick="setMdSort('za','Name Z→A');return false">Name Z→A</a></li>
                             </ul>
                         </div>
                     </div>
@@ -3801,9 +3801,23 @@
         data.isMounted = false;
     }
 
-    function pvApplySort() {
-        const sel = document.getElementById('pvSortSelect');
-        const dir = sel ? sel.value : 'asc';
+    function pvApplySort(dir, el) {
+        if (!dir) {
+            dir = 'asc';
+        }
+        
+        // Update UI state
+        const toggle = document.getElementById('pvSortDropdown');
+        if (toggle) toggle.textContent = (dir === 'asc') ? 'Sort by: A — Z' : 'Sort by: Z — A';
+        
+        if (el) {
+            const menu = el.closest('.google-sort-menu');
+            if (menu) {
+                menu.querySelectorAll('.google-sort-item').forEach(i => i.classList.remove('active'));
+                el.classList.add('active');
+            }
+        }
+
         [['section', _pvSec], ['faculty', _pvFac], ['room', _pvRom]].forEach(([type, orig]) => {
             const nonTba = orig.filter(x => !x.label.startsWith('T.B.A.'));
             const tba    = orig.filter(x =>  x.label.startsWith('T.B.A.'));
@@ -4125,10 +4139,24 @@
 
                 <div class="pv-pill-select-wrap">
                     <span class="pv-pill-label">Sort:</span>
-                    <select id="pvSortSelect" class="form-select form-select-sm pv-pill-select" onchange="pvApplySort()">
-                        <option value="asc">A — Z</option>
-                        <option value="desc">Z — A</option>
-                    </select>
+                    <div class="dropdown d-inline-block">
+                        <button class="btn pv-pill-select dropdown-toggle p-0" type="button" id="pvSortDropdown"
+                            data-bs-toggle="dropdown" aria-expanded="false" style="width: auto; text-align: left;">
+                            Sort by: A — Z
+                        </button>
+                        <ul class="dropdown-menu google-sort-menu" aria-labelledby="pvSortDropdown">
+                            <li>
+                                <a class="dropdown-item google-sort-item active" href="javascript:void(0);" onclick="pvApplySort('asc', this)">
+                                    Sort by: A — Z
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item google-sort-item" href="javascript:void(0);" onclick="pvApplySort('desc', this)">
+                                    Sort by: Z — A
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
 
                 <div class="pv-search-pill">

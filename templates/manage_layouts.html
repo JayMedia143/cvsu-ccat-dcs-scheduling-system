@@ -174,7 +174,12 @@
 {% block content %}
 <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
-        <h5 class="mb-0 fw-semibold">Layout Settings</h5>
+        <h5 class="mb-0 fw-semibold d-flex align-items-center">
+            Layout Settings
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#layoutInfoModal" title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+            </button>
+        </h5>
         <small class="text-muted">Manage Excel templates and schedule document variables.</small>
     </div>
     {% if not is_hist %}
@@ -1497,4 +1502,76 @@ document.getElementById('settingsForm').addEventListener('submit', function(e) {
 
 initCharCounters();
 </script>
+
+<!-- HOW-TO GUIDE MODAL (Layout Settings) -->
+<div class="modal fade" id="layoutInfoModal" tabindex="-1" aria-labelledby="layoutInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-dark" id="layoutInfoLabel">
+                    Layout Settings Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <!-- 1. WHAT IS THIS? -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1">1. LAYOUT TYPES & TABS</h6>
+                    <p class="small text-muted mb-0">Use the <strong>Left Sidebar</strong> to switch between different schedule document types (Course, Section, Faculty, Room). Each tab maintains its own independent set of templates and settings.</p>
+                </div>
+
+                <!-- 2. TEMPLATE MANAGEMENT -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1">2. TEMPLATE MANAGEMENT</h6>
+                    <p class="small text-muted mb-0">Upload <code>.xlsx</code> files to set the visual base for your schedules. You can <strong>Preview</strong> the current template to see cell mappings or <strong>Delete</strong> it to upload a fresh version.</p>
+                </div>
+
+                <!-- 3. PAPER & MARGINS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1">3. PAPER SIZE & MARGINS</h6>
+                    <p class="small text-muted mb-0">Select your preferred paper size (e.g., A4, Legal) and adjust margins in inches. These settings directly affect the <strong>PDF Export</strong> scaling and layout alignment.</p>
+                </div>
+
+                <!-- 4. IMAGE CALIBRATION -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1">4. IMAGE CALIBRATION</h6>
+                    <p class="small text-muted mb-0">Fine-tune the placement of logos/seals from your Excel template. Adjust **X/Y Offsets** for position, **Scale** for size, and **Z-Order** to determine if images appear above or below the text grid.</p>
+                </div>
+
+                <!-- 5. HEADER & SIGNATORIES -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1">5. HEADER & SIGNATORIES</h6>
+                    <p class="small text-muted mb-0">Customize institutional details (Campus, Address, Contact) and set the display names and titles for the <strong>Signatory Blocks</strong> used in the printed schedules.</p>
+                </div>
+
+                <!-- 6. AUTO-FILLED FIELDS -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1">6. AUTO-FILLED FIELDS</h6>
+                    <p class="small text-muted mb-0">Fields marked with a dashed border (Gray background) are auto-populated during the actual export process and cannot be manually edited here.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-muted-v2 { color: #adb5bd !important; }
+    .info-icon-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .info-icon-hover:hover {
+        color: #198754 !important;
+        transform: scale(1.2);
+    }
+    #layoutInfoModal {
+        z-index: 1070 !important;
+    }
+</style>
+
 {% endblock %}

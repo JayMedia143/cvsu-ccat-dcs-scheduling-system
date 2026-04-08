@@ -57,11 +57,11 @@
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button"
                 data-bs-toggle="dropdown" aria-expanded="false">
-                {% if current_sort == 'name-asc' %}Sort by: Name (A-Z)
-                {% else %}Sort by: Newest{% endif %}
+                Sort by: {% if current_sort == 'name-asc' %}Name (A-Z)
+                {% else %}Newest{% endif %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
-                <li><a class="dropdown-item google-sort-item {% if current_sort == 'default' %}active{% endif %}"
+                <li><a class="dropdown-item google-sort-item {% if current_sort == 'default' or not current_sort %}active{% endif %}"
                     href="{{ url_for('students_archive', sort='default') }}">Sort by: Newest</a></li>
                 <li><a class="dropdown-item google-sort-item {% if current_sort == 'name-asc' %}active{% endif %}"
                     href="{{ url_for('students_archive', sort='name-asc') }}">Sort by: Name (A-Z)</a></li>

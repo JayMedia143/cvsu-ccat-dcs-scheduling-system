@@ -145,7 +145,7 @@
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown"
                 data-bs-toggle="dropdown" aria-expanded="false">
-                {% if current_sort == 'a-z' %} Code (A-Z)
+                Sort by: {% if current_sort == 'a-z' %} Code (A-Z)
                 {% elif current_sort == 'z-a' %} Code (Z-A)
                 {% elif current_sort == 'dept-asc' %} Dept (A-Z)
                 {% elif current_sort == 'dept-desc' %} Dept (Z-A)
@@ -720,11 +720,11 @@
             
             <div class="modal-body p-4">
                 <div class="mb-4">
-                    <h6 class="fw-bold text-primary small mb-1 uppercase">1. CREATING NEW COURSES (Manual)</h6>
+                    <h6 class="fw-bold text-primary small mb-1">1. Creating New Courses (Manual)</h6>
                     <p class="small text-muted mb-0">Click the green <strong>'New Course'</strong> button to add a single subject. You will need to fill in the <strong>Course Code</strong> (e.g., COSC 101), <strong>Full Name</strong>, and <strong>Department</strong>. You must also specify the <strong>Lecture/Lab units</strong> and <strong>Weekly Hours</strong> (Sync/Async) so the system knows how much time is needed for scheduling.</p>
                 </div>
                 <div class="mb-4">
-                    <h6 class="fw-bold text-success small mb-1 uppercase">2. BULK IMPORTING FROM CURRICULUM</h6>
+                    <h6 class="fw-bold text-success small mb-1">2. Bulk Importing from Curriculum</h6>
                     <p class="small text-muted mb-0">Instead of adding subjects one by one, use the <strong>Import</strong> buttons:</p>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>PDF Import:</strong> Best for standard curriculum files; the system scans the text to extract subjects automatically.</li>
@@ -732,11 +732,11 @@
                     </ul>
                 </div>
                 <div class="mb-4">
-                    <h6 class="fw-bold text-info small mb-1 uppercase">3. ASSIGNING DEPARTMENTS</h6>
+                    <h6 class="fw-bold text-info small mb-1">3. Assigning Departments</h6>
                     <p class="small text-muted mb-0">Click the <strong>'Dept. Assignment'</strong> button (with the diagram icon) to manage which departments "own" specific subjects. This ensures that only the correct department handles the scheduling for those courses.</p>
                 </div>
                 <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1 uppercase">4. FINDING & SORTING</h6>
+                    <h6 class="fw-bold text-warning small mb-1">4. Finding & Sorting</h6>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Search Bar:</strong> Type any part of a code or name; the list will update <strong>instantly</strong> as you type.</li>
                         <li><strong>Funnel Icon:</strong> Click this to filter the list by a specific <strong>Department</strong> or common <strong>Subject Code</strong> (like Math or COSC).</li>
@@ -744,7 +744,7 @@
                     </ul>
                 </div>
                 <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1 uppercase">5. MANAGING & MASS ACTIONS</h6>
+                    <h6 class="fw-bold text-danger small mb-1">5. Managing & Mass Actions</h6>
                     <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many rows at once:</p>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Calendar Icon:</strong> View the real-time <strong>Schedule</strong> for that specific subject.</li>
@@ -754,7 +754,7 @@
                     </ul>
                 </div>
                 <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1 uppercase">6. PAGINATION</h6>
+                    <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
                 </div>
             </div>

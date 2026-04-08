@@ -55,7 +55,6 @@
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="filterDropdown"
                 data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                <i class="bi bi-funnel me-2"></i>
                 {% if current_filter_by == 'semester' %}
                 Sem: {{ current_filter_val }}
                 {% elif current_filter_by == 'ay' %}
@@ -112,16 +111,16 @@
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown"
                 data-bs-toggle="dropdown" aria-expanded="false">
-                {% if current_sort == 'newest' %} Sort by: Newest First
-                {% elif current_sort == 'oldest' %} Sort by: Oldest First
-                {% elif current_sort == 'semester-asc' %} Sort by: Semester (A-Z)
-                {% elif current_sort == 'ay-asc' %} Sort by: Academic Year (A-Z)
-                {% else %} Sort by: Newest First
+                Sort by: {% if current_sort == 'newest' %} Newest First
+                {% elif current_sort == 'oldest' %} Oldest First
+                {% elif current_sort == 'semester-asc' %} Semester (A-Z)
+                {% elif current_sort == 'ay-asc' %} Academic Year (A-Z)
+                {% else %} Newest First
                 {% endif %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
                 <li>
-                    <a class="dropdown-item google-sort-item {% if current_sort == 'newest' %}active{% endif %}"
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'newest' or not current_sort %}active{% endif %}"
                         href="{{ url_for('manage_archives', sort='newest', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
                         Sort by: Newest First
                     </a>
