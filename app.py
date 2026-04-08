@@ -5225,7 +5225,7 @@ def export_pdf_bulk():
         static_overrides = build_static_cell_overrides(ws, report_type, settings, entity_name=entity_name, sem_ay='')
         all_overrides = {**static_overrides, **cell_overrides}
 
-        html, _, scale_v, total_h_px = render_excel_to_html(
+        html, _, scale_v, total_h_px = render_excel_to_html_pdf(
             ws, cell_overrides=all_overrides, variable_map=var_map,
             extra_merge_map=extra_merge_map, extra_skip_cells=extra_skip_cells,
             bounds=bounds, layout_type=report_type, margins=_margins,
@@ -9862,7 +9862,7 @@ def detect_content_bounds(ws):
     return (min_r, min_c, max_r, max_c)
 
 
-def _extract_ws_images_html(ws, col_offsets, row_offsets, col_start, row_start, total_w_px=1, left_offset_px=0, img_dim_ref_w_px=None, img_settings_list=None):
+def _extract_ws_images_html(ws, col_offsets, row_offsets, col_start, row_start, total_w_px=1, left_offset_px=0, img_dim_ref_w_px=None, img_settings_list=None, scale_v=1.0):
     """Extract images from worksheet and return absolutely-positioned <img> HTML tags.
 
     col_offsets      : {0-based col index Ã¢â€ â€™ left px from table origin}
@@ -9922,7 +9922,8 @@ def _extract_ws_images_html(ws, col_offsets, row_offsets, col_start, row_start, 
                 return base + row_off_emu / EMU_PER_PX
 
             left_ref = _col_ref(fr.col, fr.colOff)
-            top_px   = _row_abs(fr.row, fr.rowOff)
+            # Add safety rounding and +0.1 buffer to prevent WeasyPrint from clipping base64 boundaries
+            top_px   = round(_row_abs(fr.row, fr.rowOff), 1) + 0.1
 
             # Per-image overrides from manage_layouts settings
             _cfg     = (img_settings_list[i] if img_settings_list and i < len(img_settings_list) else {})
@@ -9935,8 +9936,8 @@ def _extract_ws_images_html(ws, col_offsets, row_offsets, col_start, row_start, 
             # The parent div CSS transform handles all vertical scaling uniformly.
             top_px  += _y_off
 
-            # Ã¢â€â‚¬Ã¢â€â‚¬ Image size Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-            # Priority 1: anchor.ext.cx / .cy Ã¢â‚¬â€ exact EMU dimensions stored by Excel.
+            # Ã¢â€ â‚¬Ã¢â€ â‚¬ Image size Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
+            # Priority 1: anchor.ext.cx / .cy Ã¢â‚¬â€  exact EMU dimensions stored by Excel.
             # These are the definitive pixel-perfect dimensions regardless of anchor type.
             ext = getattr(anchor, 'ext', None)
             cx  = getattr(ext, 'cx', None) if ext else None
@@ -9953,7 +9954,7 @@ def _extract_ws_images_html(ws, col_offsets, row_offsets, col_start, row_start, 
 
             if cx and cy:
                 # Image dimensions: raw px from Excel. The parent div transform
-                # will scale them visually Ã¢â‚¬â€ no manual multiplication needed.
+                # will scale them visually Ã¢â€ â€™ no manual multiplication needed.
                 w_px  = cx / EMU_PER_PX
                 h_px  = cy / EMU_PER_PX
                 if img_dim_ref_w_px:
@@ -9996,6 +9997,8 @@ def _extract_ws_images_html(ws, col_offsets, row_offsets, col_start, row_start, 
                 f'top:{top_px:.1f}px',
                 w_css,
                 h_css,
+                f'transform:scaleX({scale_v:.4f})' if scale_v != 1.0 else '',
+                'transform-origin:0% 50%' if scale_v != 1.0 else '',
                 'z-index:2' if _z_above else 'z-index:0',
                 'pointer-events:none',
             ] if p)
@@ -10235,11 +10238,11 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
         mt = float(margins.get('top', 1.0))
         mb = float(margins.get('bottom', 1.0))
         _, ph, _ = PAPER_SIZES.get(paper_key, PAPER_SIZES['A4'])
-        # sum ALL rows in rendered range Ã¢â‚¬â€ includes title rows, header rows, footer/signatory rows
+        # sum ALL rows in rendered range — includes title rows, header rows, footer/signatory rows
         available_h_px = (ph - mt - mb) * 96
         total_th_px = sum(row_heights)
         if total_th_px > available_h_px and available_h_px > 0:
-            # Use 0.995 as a tiny rounding buffer only Ã¢â‚¬â€ not an artificial margin.
+            # Use 0.995 as a tiny rounding buffer only — not an artificial margin.
             # @page handles all physical top/bottom gutters, so we must NOT over-shrink here.
             scale_v = (available_h_px / total_th_px) * 0.995
 
@@ -10316,6 +10319,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
                     span_attrs += f' colspan="{cs_span}"'
 
             sp = [f'height:{total_rh}px', 'overflow:hidden']
+
 
             # Fill Ã¢â‚¬â€ solid fgColor; fall back to bgColor for pattern fills
             fill = cell.fill
@@ -10420,15 +10424,410 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
         _pk = _m.get('paper', 'A4')
         _pw, _, _ = PAPER_SIZES.get(_pk, PAPER_SIZES['A4'])
         _paper_content_px = (_pw - _ml - _mr) * 96
-        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _paper_content_px, left_offset_px=20, img_settings_list=img_settings)
+        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _paper_content_px, left_offset_px=20, img_settings_list=img_settings, scale_v=scale_v)
     else:
-        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _orig_total_w_px, img_settings_list=img_settings)
+        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _orig_total_w_px, img_settings_list=img_settings, scale_v=scale_v)
 
     # Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Final HTML assembly Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     # Simple position:relative wrapper Ã¢â‚¬â€ NO transform applied here.
     # The View Page JS (render_a4_page) applies scale at runtime.
     # The PDF route (export_pdf_bulk) wraps this in a transform div before WeasyPrint.
     # Both use scale_v returned as the 3rd element of this function.
+    html_out = (
+        '<div style="position:relative;width:100%;isolation:isolate;">\n'
+        + imgs_below + '\n'
+        + '<div style="position:relative;z-index:1;">'
+        + '\n'.join(lines)
+        + '</div>\n'
+        + imgs_above + '\n'
+        + '</div>'
+    )
+    return html_out, table_px, scale_v, total_th_px
+
+
+def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
+                         extra_merge_map=None, extra_skip_cells=None,
+                         bounds=None, layout_type=None, margins=None,
+                         img_settings=None):
+    """
+    DEDICATED PDF CLONE of render_excel_to_html.
+    Optimized for WeasyPrint rendering by avoiding height-clumping on rowspans
+    and enforcing tight line-heights to prevent auto-row-stretching.
+    """
+    variable_map    = variable_map    or {}
+    cell_overrides  = cell_overrides  or {}
+    extra_merge_map = extra_merge_map or {}
+    skip_cells      = set(extra_skip_cells or set())
+
+    MDW   = 7          # avg char width px (Excel default)
+    PT_PX = 96 / 72    # 1pt Ã¢â€ â€™ px
+
+    # Apply content bounds (smart crop)
+    if bounds:
+        row_start, col_start, max_row, max_col = bounds
+    else:
+        row_start, col_start = 1, 1
+        max_col = ws.max_column or 1
+        max_row = ws.max_row    or 1
+
+    # Column widths (only for visible range)
+    # Reference px widths (from Excel chars Ã¢â€ â€™ px) used for proportional sizing only.
+    col_widths = []
+    col_hidden = []
+    for c in range(col_start, max_col + 1):
+        cd = ws.column_dimensions.get(get_column_letter(c))
+        hidden = bool(cd and cd.hidden)
+        col_hidden.append(hidden)
+        if hidden:
+            col_widths.append(0)
+        else:
+            chars = (cd.width if cd and cd.width else 8.43)
+            col_widths.append(max(4, round(chars * MDW)))
+    # Ã¢â€ â‚¬Ã¢â€ â‚¬ Step A: Snapshot ORIGINAL col_offsets for pixel-perfect image placement Ã¢â€ â‚¬Ã¢â€ â‚¬
+    # Must be done BEFORE any equalization or tightening so that image anchor
+    # positions map correctly to the original Excel column layout.
+    _orig_col_offsets = {}
+    _acc = 0
+    for _i, _w in enumerate(col_widths):
+        _orig_col_offsets[_i] = _acc
+        _acc += _w
+    _orig_total_w_px = sum(w for w, h in zip(col_widths, col_hidden) if not h) or 1
+
+    # Extend _orig_col_offsets to include pre-start columns with negative keys.
+    # Image anchors can start in columns before col_start (e.g. logo in col A when
+    # table starts at col B). Without this, _col_ref falls back to 0, shifting
+    # images right by exactly the width of those pre-start columns.
+    if col_start > 1:
+        _pre_acc = 0
+        for _c in range(col_start - 1, 0, -1):
+            _cd = ws.column_dimensions.get(get_column_letter(_c))
+            _hidden = bool(_cd and _cd.hidden)
+            _cw = 0 if _hidden else max(4, round((_cd.width if _cd and _cd.width else 8.43) * MDW))
+            _pre_acc += _cw
+            # rel_idx = (_c - 1) - (col_start - 1) = _c - col_start  (always < 0)
+            _orig_col_offsets[_c - col_start] = -_pre_acc
+
+    # Ã¢â€ â‚¬Ã¢â€ â‚¬ Step B: Detect day-header row and collect day/time column indices Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
+    _DAY_KW = {
+        'MON', 'TUE', 'WED', 'THU', 'THURS', 'FRI', 'SAT', 'SUN',
+        'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY',
+    }
+    _best_row_hits = 0
+    _day_col_indices = []   # 0-based indices into col_widths
+    for _r in range(row_start, max_row + 1):
+        _hits = []
+        for _ci, _c in enumerate(range(col_start, max_col + 1)):
+            _v = ws.cell(row=_r, column=_c).value
+            if _v and str(_v).strip().upper() in _DAY_KW:
+                _hits.append(_ci)
+        if len(_hits) >= 3 and len(_hits) > _best_row_hits:
+            _best_row_hits = len(_hits)
+            _day_col_indices = _hits
+
+    # Time columns = only columns that ACTUALLY contain time values, found by
+    # scanning BACKWARDS from the first day column and stopping at the first
+    # column whose cells contain no time values.
+    # This prevents header/info columns (e.g. "DEPARTMENT OF COMPUTER STUDIES")
+    # from being incorrectly included and inflating the time-column width.
+    _TIME_VAL_PAT = re.compile(r'^\d{1,2}:\d{2}')  # matches "HH:MM" or "HH:MM:SS"
+
+    def _col_has_time_values(ci_0based):
+        """Return True if any cell in this column holds a time value."""
+        _ce = col_start + ci_0based
+        for _r in range(row_start, max_row + 1):
+            _v = ws.cell(row=_r, column=_ce).value
+            if _v is None:
+                continue
+            # datetime.time: has strftime but no .year attribute
+            if hasattr(_v, 'strftime') and not hasattr(_v, 'year'):
+                return True
+            # String that starts with "HH:MM"
+            if isinstance(_v, str) and _TIME_VAL_PAT.match(_v.strip()):
+                return True
+        return False
+
+    _time_col_indices = []
+    if _day_col_indices:
+        _first_day_idx = min(_day_col_indices)
+        for _ti in range(_first_day_idx - 1, -1, -1):
+            if col_hidden[_ti]:
+                continue          # skip hidden cols, don't stop scanning
+            if _col_has_time_values(_ti):
+                _time_col_indices.insert(0, _ti)
+            else:
+                # Check if this column is completely empty (e.g. non-anchor of a
+                # merged "TIME/DAYS" cell whose anchor is further left).
+                # If fully empty Ã¢â€ â€™ skip it and keep scanning left.
+                # If it has non-time content Ã¢â€ â€™ stop (real content boundary).
+                _ce = col_start + _ti
+                _col_empty = all(
+                    ws.cell(row=_r, column=_ce).value is None
+                    for _r in range(row_start, max_row + 1)
+                )
+                if _col_empty:
+                    continue      # empty placeholder Ã¢â‚¬â€  keep scanning left
+                break             # non-empty non-time col Ã¢â€ â€™ stop
+
+    # Ã¢â€ â‚¬Ã¢â€ â‚¬ Step C: Auto-fit each time column to its own content width Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
+    # Only measure cells that contain ACTUAL TIME VALUES Ã¢â‚¬â€  datetime.time objects
+    # or strings matching the HH:MM pattern.  All other cells (headers, labels,
+    # "DAILY CONTACT HOURS", "Prepared by:", etc.) are skipped.  This restricts
+    # measurement to the schedule data rows only, regardless of template layout.
+    for _ti in _time_col_indices:
+        _col_excel = col_start + _ti   # 1-based Excel column number
+        _max_len = 0
+        _col_has_time_obj = False
+        for _r in range(row_start, max_row + 1):
+            _val = ws.cell(row=_r, column=_col_excel).value
+            if _val is None:
+                continue
+            # Ã¢â€ â‚¬Ã¢â€ â‚¬ Identify time values only Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
+            _is_time_obj = hasattr(_val, 'strftime') and not hasattr(_val, 'year')
+            _is_time_str = isinstance(_val, str) and _TIME_VAL_PAT.match(_val.strip())
+            if not (_is_time_obj or _is_time_str):
+                continue    # skip non-time cells (headers, labels, totals, etc.)
+            # Ã¢â€ â‚¬Ã¢â€ â‚¬ Measure display string Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
+            # datetime.time Ã¢â€ â€™ strftime('%H:%M') = "07:00" (matches Excel display)
+            # strings Ã¢â€ â€™ unchanged
+            if _is_time_obj:
+                _s = f"{_val.hour}:{_val.minute:02d}"   # "7:00" Ã¢â‚¬â€  no leading zero
+                _col_has_time_obj = True
+            else:
+                _s = str(_val).strip()
+            _max_len = max(_max_len, len(_s))
+        # datetime.time cols (Faculty): +20px padding
+        # string time cols (Section): no extra padding
+        _pad = 20 if _col_has_time_obj else 0
+        _tight_w = max(MDW * 3, _max_len * MDW + _pad)
+        col_widths[_ti] = _tight_w
+
+    # Ã¢â€ â‚¬Ã¢â€ â‚¬ Step D: Day columns fill the space freed by time-col tightening Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
+    # remaining = original_total Ã¢Ë†â€™ new_tight_time Ã¢Ë†â€™ other_non-day_non-time cols
+    # Each day col gets an equal share of remaining, guaranteeing symmetry AND
+    # that they are as wide as possible given the tightened time columns.
+    if _day_col_indices:
+        _tight_time_total = sum(col_widths[_i] for _i in _time_col_indices)
+        _other_indices    = [_i for _i in range(len(col_widths))
+                             if not col_hidden[_i]
+                             and _i not in _day_col_indices
+                             and _i not in _time_col_indices]
+        _other_total      = sum(col_widths[_i] for _i in _other_indices)
+        _remaining        = _orig_total_w_px - _tight_time_total - _other_total
+        _day_col_w        = max(MDW * 5, round(_remaining / len(_day_col_indices)))
+        for _di in _day_col_indices:
+            col_widths[_di] = _day_col_w
+
+    # total_w_px = reference pixel sum of ALL visible columns (used for % and image coords)
+    total_w_px = sum(w for w, h in zip(col_widths, col_hidden) if not h) or 1
+    num_visible = sum(1 for h in col_hidden if not h)
+    table_px = total_w_px  # kept for API compatibility; actual table uses width:100%
+
+    # Row heights (only for visible range)
+    row_heights = []
+    for r in range(row_start, max_row + 1):
+        rd = ws.row_dimensions.get(r)
+        pts = (rd.height if rd and rd.height else 13.5)
+        row_heights.append(max(8, round(pts * PT_PX)))
+
+    # Merged cell spans (full sheet Ã¢â‚¬â€  clip rendering handles out-of-range)
+    merged_spans = {}
+    for merge in ws.merged_cells.ranges:
+        r1, c1, r2, c2 = merge.min_row, merge.min_col, merge.max_row, merge.max_col
+        merged_spans.setdefault(r1, {})[c1] = (r2 - r1 + 1, c2 - c1 + 1)
+        for r in range(r1, r2 + 1):
+            for c in range(c1, c2 + 1):
+                if r != r1 or c != c1:
+                    skip_cells.add((r, c))
+
+    for (r, c), (rs, cs) in extra_merge_map.items():
+        merged_spans.setdefault(r, {})[c] = (rs, cs)
+        for dr in range(r, r + rs):
+            for dc in range(c, c + cs):
+                if dr != r or dc != c:
+                    skip_cells.add((dr, dc))
+
+    def subst(text):
+        if not text or not variable_map:
+            return text
+        for tok, val in variable_map.items():
+            text = text.replace(tok, str(val) if val is not None else '')
+        return text
+
+    def esc(t):
+        return str(t).replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
+
+    # FIX #1: Calculate Absolute Math Scale Factor covering ALL rows (header + data + footer).
+    # Previously only time-slot rows were considered, causing underestimation of total height.
+    scale_v = 1.0
+    if margins:
+        paper_key = margins.get('paper', 'A4')
+        mt = float(margins.get('top', 1.0))
+        mb = float(margins.get('bottom', 1.0))
+        _, ph, _ = PAPER_SIZES.get(paper_key, PAPER_SIZES['A4'])
+        # sum ALL rows in rendered range — includes title rows, header rows, footer/signatory rows
+        available_h_px = (ph - mt - mb) * 96
+        total_th_px = sum(row_heights)
+        if total_th_px > available_h_px and available_h_px > 0:
+            scale_v = (available_h_px / total_th_px) * 0.995
+
+    lines = [
+        '<table style="border-collapse:collapse;table-layout:fixed;width:100%;">',
+        '<colgroup>',
+    ]
+    _time_col_set = set(_time_col_indices)
+    _day_col_set  = set(_day_col_indices)
+    for i, w in enumerate(col_widths):
+        if col_hidden[i]:
+            lines.append(f'  <col style="width:0;visibility:collapse;">')
+        elif i in _time_col_set:
+            _tcw = w + 20 if layout_type == 'faculty' else w
+            lines.append(f'  <col style="width:{_tcw}px;">')
+        elif layout_type in ('section', 'room', 'course', 'faculty') and i in _day_col_set:
+            lines.append(f'  <col style="width:auto;">')
+        else:
+            pct = w / total_w_px * 100
+            lines.append(f'  <col style="width:{pct:.4f}%;">')
+    lines.append('</colgroup><tbody>')
+
+    for r in range(row_start, max_row + 1):
+        rh = row_heights[r - row_start]
+        lines.append(f'<tr style="height:{rh}px;">')
+
+        for c in range(col_start, max_col + 1):
+            if (r, c) in skip_cells:
+                continue
+
+            cell = ws.cell(row=r, column=c)
+
+            # Cell value
+            if (r, c) in cell_overrides:
+                raw = cell_overrides[(r, c)]
+                is_override = True
+            else:
+                v = cell.value
+                if v is None:
+                    raw = ''
+                elif hasattr(v, 'strftime') and not hasattr(v, 'year'):
+                    raw = f"{v.hour}:{v.minute:02d}"
+                else:
+                    raw = str(v)
+                is_override = False
+
+            cell_text = subst(raw) if not is_override else raw
+
+            # Span attrs
+            span_info = merged_spans.get(r, {}).get(c)
+            span_attrs = ''
+            total_rh = rh  # default: single row height
+            if span_info:
+                rs, cs_span = span_info
+                if rs > 1:
+                    span_attrs += f' rowspan="{rs}"'
+                    # WEASYPRINT FIX: Do NOT assign explicit full height for merged cells! 
+                    # If you do, WeasyPrint clumps the entire sum onto ONE row.
+                    # By leaving total_rh = rh, we let rowspan divide the height naturally.
+                    total_rh = rh  
+                if cs_span > 1:
+                    span_attrs += f' colspan="{cs_span}"'
+
+            sp = [f'height:{total_rh}px', 'overflow:hidden']
+
+            # Fill Ã¢â‚¬â€  solid fgColor; fall back to bgColor for pattern fills
+            fill = cell.fill
+            if fill and fill.fill_type not in (None, 'none'):
+                fg = _argb_to_css(fill.fgColor) if fill.fgColor else None
+                if not fg and fill.bgColor:
+                    fg = _argb_to_css(fill.bgColor)
+                if fg:
+                    sp.append(f'background-color:{fg}')
+
+            # Font Ã¢â‚¬â€  name, size, weight, style, decorations, color
+            font = cell.font
+            # WEASYPRINT FIX: Forcibly constrain line-height and remove padding
+            # to prevent multi-line text from auto-stretching the table rows.
+            sp.append('padding:0;line-height:0.8')
+            if font:
+                sz = font.size or 11
+                sp.append(f'font-size:{round(sz * PT_PX, 1)}px')
+                fname = font.name or 'Calibri'
+                sp.append(f"font-family:'{fname}',sans-serif")
+                if font.bold:   sp.append('font-weight:bold')
+                if font.italic: sp.append('font-style:italic')
+                td_deco = []
+                if font.underline: td_deco.append('underline')
+                if font.strike:    td_deco.append('line-through')
+                if td_deco: sp.append(f'text-decoration:{" ".join(td_deco)}')
+                fc = _argb_to_css(font.color) if font.color else None
+                if fc: sp.append(f'color:{fc}')
+
+            al = cell.alignment
+            _indent_px = int(al.indent) * MDW if al and al.indent else 0
+            _pad_left  = _indent_px + 4   # base 4 px + indent
+            if is_override:
+                sp.append('padding:0')
+            else:
+                sp.append(f'padding:0 4px 0 {_pad_left}px')
+            if al:
+                h_map = {'center':'center','right':'right','left':'left',
+                         'justify':'justify','general':'left'}
+                v_map = {'center':'middle','top':'top','bottom':'bottom'}
+                sp.append(f'text-align:{h_map.get(al.horizontal or "left","left")}')
+                _valign = 'middle' if layout_type == 'faculty' else v_map.get(al.vertical or 'bottom', 'bottom')
+                sp.append(f'vertical-align:{_valign}')
+                sp.append('white-space:pre-wrap;word-wrap:break-word' if al.wrap_text else 'white-space:pre')
+            else:
+                sp += ['text-align:left', 'vertical-align:middle', 'white-space:pre']
+
+            # Borders Ã¢â‚¬â€  per-side explicit control.
+            bd = cell.border
+            for _s in ('top', 'right', 'bottom', 'left'):
+                _real = _border_side_css(getattr(bd, _s, None) if bd else None)
+                sp.append(f'border-{_s}:{_real if _real else "none"}')
+
+            style_str = ';'.join(sp)
+
+            if is_override:
+                html_text = cell_text  # already HTML
+            else:
+                html_text = esc(cell_text).replace('\n', '<br>') if cell_text else ''
+
+            lines.append(f'  <td{span_attrs} style="{style_str}">{html_text}</td>')
+
+        lines.append('</tr>')
+
+    lines += ['</tbody>', '</table>']
+
+    # Build cumulative pixel offsets for image placement
+    col_offsets = {}  # 0-based col index Ã¢â€ â€™ left px
+    acc = 0
+    for i, w in enumerate(col_widths):
+        col_offsets[i] = acc
+        acc += w
+    row_offsets = {}  # 0-based row index Ã¢â€ â€™ top px
+    acc = 0
+    for i, h in enumerate(row_heights):
+        row_offsets[i] = acc
+        acc += h
+
+    if layout_type in ('section', 'room', 'course') and margins:
+        _m  = margins
+        _ml = float(_m.get('left',  1.0))
+        _mr = float(_m.get('right', 1.0))
+        _pk = _m.get('paper', 'A4')
+        _pw, _, _ = PAPER_SIZES.get(_pk, PAPER_SIZES['A4'])
+        _paper_content_px = (_pw - _ml - _mr) * 96
+        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _paper_content_px, left_offset_px=-30, img_settings_list=img_settings)
+    elif layout_type == 'faculty' and margins:
+        _m  = margins
+        _ml = float(_m.get('left',  1.0))
+        _mr = float(_m.get('right', 1.0))
+        _pk = _m.get('paper', 'A4')
+        _pw, _, _ = PAPER_SIZES.get(_pk, PAPER_SIZES['A4'])
+        _paper_content_px = (_pw - _ml - _mr) * 96
+        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _paper_content_px, left_offset_px=20, img_settings_list=img_settings, scale_v=scale_v)
+    else:
+        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _orig_total_w_px, img_settings_list=img_settings, scale_v=scale_v)
+
     html_out = (
         '<div style="position:relative;width:100%;isolation:isolate;">\n'
         + imgs_below + '\n'
@@ -10673,10 +11072,23 @@ def render_pdf_page(html_content, orientation='landscape', margins=None):
     border-collapse: collapse;
     table-layout: fixed;
   }}
-  /* Excel-derived per-side borders are on each <td> inline style.
-     Only provide a faint fallback outline so empty cells have a visible grid. */
+  /* Faint outline grid for PDF layout verification and precise cell rendering */
   table td, table th {{
-    outline: 0.3px solid rgba(0,0,0,0.08);
+    outline: 1px solid rgba(0,0,0,0.2);
+    /* Enforce strict row heights - NO expansion allowed */
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+    line-height: 1.0;
+  }}
+  /* WEASYPRINT REPAIR: Tell Weasyprint to ignore the explicit height passed from python so it doesn't clump it in one row. */
+  table td[rowspan] {{
+    height: auto !important;
+  }}
+  /* WEASYPRINT REPAIR: Force a tight text bounding box purely inside the PDF engine so it doesn't request row-stretching. */
+  table td {{
+    padding: 0 !important;
+    line-height: 0.8 !important;
   }}
   /* Images must not be clipped by default max-width */
   .a4 img {{
@@ -11512,7 +11924,7 @@ def section_timetable_pdf(section_id):
 
     _margins = _get_margins(settings)
     _img_settings = _get_img_settings(settings, 'section')
-    html_content, _, scale_v, total_h_px = render_excel_to_html(
+    html_content, _, scale_v, total_h_px = render_excel_to_html_pdf(
         ws,
         cell_overrides=all_overrides,
         variable_map=var_map,
@@ -12298,7 +12710,7 @@ def faculty_timetable_pdf(faculty_id):
 
     _margins = _get_faculty_margins(settings)
     _img_settings = _get_img_settings(settings, 'faculty')
-    html_content, _, scale_v, total_h_px = render_excel_to_html(
+    html_content, _, scale_v, total_h_px = render_excel_to_html_pdf(
         ws, cell_overrides=all_overrides, variable_map=None,
         extra_merge_map=extra_merge_map, extra_skip_cells=extra_skip_cells,
         bounds=bounds, layout_type='faculty', margins=_margins,
@@ -12442,7 +12854,7 @@ def room_timetable_pdf(room_id):
     all_overrides = {**static_overrides, **cell_overrides}
     _margins = _get_margins(settings)
     _img_settings = _get_img_settings(settings, 'room')
-    html_content, _, scale_v, total_h_px = render_excel_to_html(
+    html_content, _, scale_v, total_h_px = render_excel_to_html_pdf(
         ws, cell_overrides=all_overrides, variable_map=var_map,
         extra_merge_map=extra_merge_map, extra_skip_cells=extra_skip_cells,
         bounds=bounds, layout_type='room', margins=_margins,
@@ -12570,7 +12982,7 @@ def course_timetable_pdf(course_id):
     all_overrides = {**static_overrides, **cell_overrides}
     _margins = _get_margins(settings)
     _img_settings = _get_img_settings(settings, 'course')
-    html_content, _, scale_v, total_h_px = render_excel_to_html(
+    html_content, _, scale_v, total_h_px = render_excel_to_html_pdf(
         ws, cell_overrides=all_overrides, variable_map=var_map,
         extra_merge_map=extra_merge_map, extra_skip_cells=extra_skip_cells,
         bounds=bounds, layout_type='course', margins=_margins,
@@ -14794,7 +15206,7 @@ def public_student_schedule_pdf(student_id):
     _margins = _get_margins(settings)
     _img_settings = _get_img_settings(settings, 'section')
 
-    html_content, _, scale_v, total_h_px = render_excel_to_html(
+    html_content, _, scale_v, total_h_px = render_excel_to_html_pdf(
         ws, cell_overrides=all_overrides, variable_map=var_map,
         extra_merge_map=extra_merge_map, extra_skip_cells=extra_skip_cells,
         bounds=bounds, layout_type='section', margins=_margins,
