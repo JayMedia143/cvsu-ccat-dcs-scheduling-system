@@ -10727,8 +10727,7 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
             cs_span = 1
             if span_info:
                 rs_val, cs_span = span_info
-            
-            # FULL MERGED HEIGHT: Calculate the sum of scaled row heights for this span
+                # FULL MERGED HEIGHT: Calculate the sum of scaled row heights for this span
             _sum_h = sum(
                 scaled_row_heights[_r - row_start]
                 for _r in range(r, r + rs_val)
@@ -10763,8 +10762,8 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
                 # ULTRA-TIGHT SPACING for the Grid
                 sp.append('padding:0 !important;line-height:0.7 !important')
             else:
-                # COMFORTABLE SPACING for Header/Footer
-                sp.append('line-height:1.2')
+                # COMFORTABLE SPACING for Header/Footer (Mirroring Grid Tightness for Centering)
+                sp.append('line-height:0.7 !important')
 
             if font:
                 sz = font.size or 11
@@ -10793,11 +10792,14 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
             else:
                 sp.append(f'padding:0 4px 0 {_pad_left}px !important')
 
+            _valign = 'middle'
+            _halign = 'left'
             if al:
                 h_map = {'center':'center','right':'right','left':'left',
                          'justify':'justify','general':'left'}
                 v_map = {'center':'middle','top':'top','bottom':'bottom'}
                 _halign = h_map.get(al.horizontal or "left","left")
+                _valign = v_map.get(al.vertical or "center","middle")
                 sp.append(f'text-align:{_halign}')
                 
                 # STRICT VERTICAL MIRRORING (from preview)
@@ -10807,10 +10809,11 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
                 if _valign == 'bottom':
                     sp.append('padding-bottom:4px !important')
 
-                sp.append(f'vertical-align:{_valign}')
+                # Standardize to top !important so internal flexbox controls centering 100%
+                sp.append('vertical-align:top !important')
                 sp.append('white-space:pre-wrap;word-break:break-all' if al.wrap_text else 'white-space:pre')
             else:
-                sp += ['text-align:left', 'vertical-align:middle', 'white-space:pre']
+                sp += ['text-align:left', 'vertical-align:top !important', 'white-space:pre']
 
             # Borders — per-side explicit control.
             bd = cell.border
@@ -10821,6 +10824,10 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
             style_str = ';'.join(sp)
 
             if is_override:
+                # -- DIAGNOSTIC: Force yellow if it's a Header/Footer override --
+                if not is_grid_row:
+                    style_str += ';background-color:yellow !important'
+
                 # WEASYPRINT FIX #4: Flush Top Alignment
                 # Force the cell to align to the top to eliminate gaps outside the subject box.
                 style_str += ';vertical-align:top !important'
@@ -10834,22 +10841,43 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
                 html_text = html_text.replace('padding:3px;', 'padding:0px !important;')
                 html_text = html_text.replace('font-size:11px;', f'font-size:{_inner_fs}px;')
                 html_text = html_text.replace('line-height:1.3;', 'line-height:1.1 !important;')
-                # Clipping wrapper div
-                html_text = f'<div style="height:{_sum_h}px;max-height:{_sum_h}px;width:100%;overflow:hidden;position:relative;display:block;">{html_text}</div>'
+                if not is_grid_row:
+                    # 1. HEADER/FOOTER CENTERING (Isolated)
+                    _v_flex = {'top':'flex-start','middle':'center','bottom':'flex-end'}.get(_valign, 'center')
+                    _h_flex = {'left':'flex-start','center':'center','right':'flex-end'}.get(_halign, 'center')
+                    _inner_pad = 'padding-bottom:4px;' if _valign == 'bottom' else ''
+
+                    html_text = (
+                        f'<div style="height:{_sum_h}px;width:100%;display:flex;flex-direction:column;justify-content:{_v_flex};align-items:{_h_flex};background-color:yellow !important;box-sizing:border-box;{_inner_pad}">'
+                        f'<span style="line-height:0.7 !important;display:block;width:100%;">{cell_text}</span>'
+                        f'</div>'
+                    )
+                else:
+                    # 2. CLASS/SUBJECTS (Original Logic Restored)
+                    _inner_fs = max(8.5, round(11 * 0.8 * scale_v, 1))
+                    html_text = html_text.replace('display:table;', f'display:flex;flex-direction:column;justify-content:center;align-items:stretch;height:{_sum_h}px;box-sizing:border-box;')
+                    html_text = html_text.replace('padding:3px;', 'padding:0px !important;')
+                    html_text = html_text.replace('font-size:11px;', f'font-size:{_inner_fs}px;')
+                    html_text = html_text.replace('line-height:1.3;', 'line-height:1.1 !important;')
+                    # Clipping wrapper div
+                    html_text = f'<div style="height:{_sum_h}px;max-height:{_sum_h}px;width:100%;overflow:hidden;position:relative;display:block;">{html_text}</div>'
             else:
-                # -- TRUE FLEXBOX MIRRORING (Grid Subject Style) --
-                # We map Excel alignments to Flexbox properties for perfect PDF mirroring.
+                # -- TRUE GRID-STYLE MIRRORING (Restored Flexbox Engine) --
                 _v_flex = {'top':'flex-start','middle':'center','bottom':'flex-end'}.get(_valign, 'center')
-                _h_flex = {'left':'flex-start','center':'center','right':'flex-end'}.get(_halign, 'flex-start')
+                _h_flex = {'left':'flex-start','center':'center','right':'flex-end'}.get(_halign, 'center')
                 _clip_h = rh if not span_info else total_rh
-                
-                # Breathable padding for bottom-aligned text
                 _inner_pad = 'padding-bottom:4px;' if _valign == 'bottom' else ''
-                
+
                 html_text = esc(cell_text).replace('\n', '<br>') if cell_text else ''
-                
-                # By using display:flex with fixed height, we bypass the PDF engine's vertical-align issues.
-                html_text = f'<div style="height:{_clip_h}px;display:flex;flex-direction:column;justify-content:{_v_flex};align-items:{_h_flex};overflow:hidden;box-sizing:border-box;{_inner_pad}">{html_text}</div>'
+
+                # Double-Wrapper: Restored Flexbox centering
+                style_str += ';background-color:yellow !important'
+                html_text = (
+                    f'<div style="height:{_clip_h}px;max-height:{_clip_h}px;overflow:hidden;position:relative;display:block;background-color:yellow !important;">'
+                    f'<div style="height:{_clip_h}px;width:100%;display:flex;flex-direction:column;justify-content:{_v_flex};align-items:{_h_flex};box-sizing:border-box;{_inner_pad}">'
+                    f'<span style="line-height:0.7 !important;display:block;width:100%;">{html_text}</span>'
+                    f'</div></div>'
+                )
             lines.append(f'  <td{span_attrs} style="{style_str}">{html_text}</td>')
 
         lines.append('</tr>')
@@ -11146,8 +11174,8 @@ def render_pdf_page(html_content, orientation='landscape', margins=None):
   }}
   /* WEASYPRINT REPAIR: Force a tight text bounding box purely inside the PDF engine so it doesn't request row-stretching. */
   table td {{
-    padding: 0 !important;
-    line-height: 0.8 !important;
+    padding: 0;
+    line-height: 0.8;
   }}
   /* Images must not be clipped by default max-width */
   .a4 img {{
