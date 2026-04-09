@@ -9,6 +9,8 @@ from sqlalchemy import or_, and_, cast, desc, asc
 from sqlalchemy.orm import joinedload
 import os
 from flask import Response
+import traceback
+
 from flask import send_file
 from weasyprint import HTML 
 from genetic_algorithm import GeneticScheduler
@@ -270,7 +272,7 @@ def block_mutations_in_hist_mode():
         return  # GET requests are always fine
 
     if not session.get('historical_mode_active', False):
-        return  # Not in historical mode Ã¢â‚¬â€ allow everything
+        return  # Not in historical mode -- allow everything
 
     # Bypass for Superadmins (Admin override)
     if session.get('role') == 'superadmin':
@@ -278,7 +280,7 @@ def block_mutations_in_hist_mode():
 
     endpoint = request.endpoint or ''
     if endpoint in _HIST_SAFE_ENDPOINTS:
-        return  # Whitelisted Ã¢â‚¬â€ always allowed
+        return  # Whitelisted -- always allowed
 
     # Block the mutation
     if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -366,13 +368,13 @@ class SystemSettings(db.Model):
     course_signatory_3 = db.Column(db.String(100), default="LAURO B. PASCUA, EdD")  # Binago para maging consistent
 
     # --- DYNAMIC SIGNATORIES (JSON array: [{"name":"...", "title":"..."}, ...]) ---
-    # Replaces fixed sig1/sig2/sig3 Ã¢â‚¬â€ backward-compatible (old cols still exist)
+    # Replaces fixed sig1/sig2/sig3 -- backward-compatible (old cols still exist)
     section_signatories_json = db.Column(db.Text, nullable=True, default=None)
     faculty_signatories_json = db.Column(db.Text, nullable=True, default=None)
     room_signatories_json    = db.Column(db.Text, nullable=True, default=None)
     course_signatories_json  = db.Column(db.Text, nullable=True, default=None)
 
-    # Image adjustment settings per layout type Ã¢â‚¬â€ JSON array of per-image overrides
+    # Image adjustment settings per layout type -- JSON array of per-image overrides
     # Format: [{"x": 0.0, "y": 0.0, "scale": 1.0, "z_above": true}, ...]
     # Index matches Excel image order (0-based). Extra entries are ignored.
     section_img_settings = db.Column(db.Text, nullable=True)
@@ -380,7 +382,7 @@ class SystemSettings(db.Model):
     room_img_settings    = db.Column(db.Text, nullable=True)
     course_img_settings  = db.Column(db.Text, nullable=True)
     blocked_slots_json   = db.Column(db.Text, nullable=True)
-    # Module 3: Global AI-Lock Ã¢â‚¬â€ when True, GA entries are immutable for 'user' role
+    # Module 3: Global AI-Lock -- when True, GA entries are immutable for 'user' role
     schedule_lock        = db.Column(db.Boolean, default=False, nullable=False)
 
     # --- PHASE 1: Fixed Layout Variables ---
@@ -421,7 +423,7 @@ class SystemSettings(db.Model):
     # --- FACULTY PAPER SIZE (independent) ---
     fac_paper_size    = db.Column(db.String(30), default='A4')
 
-    # --- FACULTY-SPECIFIC LABELS (independent Ã¢â‚¬â€ never shared with Section/Room/Course) ---
+    # --- FACULTY-SPECIFIC LABELS (independent -- never shared with Section/Room/Course) ---
     # Card 1: Header Information
     fac_republic_text    = db.Column(db.String(255), default="Republic of the Philippines")
     fac_univ_name        = db.Column(db.String(255), default="CAVITE STATE UNIVERSITY")
@@ -433,18 +435,18 @@ class SystemSettings(db.Model):
     fac_dept_label       = db.Column(db.String(150), default="DEPARTMENT OF COMPUTER STUDIES")
     fac_sched_title      = db.Column(db.String(150), default="FACULTY CLASS SCHEDULE")
     fac_sem_ay_label     = db.Column(db.String(150), default="SECOND SEMESTER SY 2023 - 2024")
-    # Card 2: Faculty Info Block Ã¢â‚¬â€ Labels
+    # Card 2: Faculty Info Block -- Labels
     fac_name_label       = db.Column(db.String(100), default="Name:")
     fac_educ_label       = db.Column(db.String(150), default="Highest Educ. Attainment:")
     fac_prep_label       = db.Column(db.String(150), default="No. of Preparation/s:")
     fac_hours_label      = db.Column(db.String(200), default="Total no. of contact hours per week:")
-    # Card 3: Signatories Ã¢â‚¬â€ Labels
+    # Card 3: Signatories -- Labels
     fac_conforme_label   = db.Column(db.String(100), default="Conforme:")
     fac_rec_approval_label = db.Column(db.String(150), default="Recommending Approval:")
     fac_reviewed_label   = db.Column(db.String(100), default="Reviewed by:")
     fac_approved_label   = db.Column(db.String(100), default="Approved:")
     fac_registrar_label  = db.Column(db.String(100), default="OIC, Registrar")
-    # Card 3: Signatories Ã¢â‚¬â€ Names & Titles
+    # Card 3: Signatories -- Names & Titles
     fac_chair_name       = db.Column(db.String(150), default="ARIES M. GELERA")
     fac_chair_title      = db.Column(db.String(150), default="Department Chairperson")
     fac_director_name    = db.Column(db.String(150), default="ARIEL G. SANTOS, EdD")
@@ -622,9 +624,9 @@ class ScheduledClass(db.Model):
     start_time = db.Column(db.String(20), nullable=False)
     end_time = db.Column(db.String(20), nullable=False)
     semester = db.Column(db.String(30), nullable=False, default='1st Semester')
-    # True = GA could not resolve a hard conflict for this gene Ã¢â‚¬â€ appears in Issues page
+    # True = GA could not resolve a hard conflict for this gene -- appears in Issues page
     has_conflict = db.Column(db.Boolean, nullable=False, default=False)
-    # 'Lec', 'Lab', or 'Async' Ã¢â‚¬â€ stored from GA gene_type so checker doesn't guess from room
+    # 'Lec', 'Lab', or 'Async' -- stored from GA gene_type so checker doesn't guess from room
     session_type = db.Column(db.String(10), nullable=False, default='Lec')
     # Module 3: source tracking + draft layer
     # source: 'ga' = created by Genetic Algorithm | 'manual' = manually added
@@ -902,7 +904,7 @@ def check_conflict(new_entry):
 # Ã¢â€â‚¬Ã¢â€â‚¬ Module 6: PROPOSAL HUB REAL-TIME HANDLERS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 # In-memory: { room_name: { sid: {username, role} } }
 hub_online_users = {}
-# In-memory: { sid: {username, role, user_id} } Ã¢â‚¬â€ for private message routing
+# In-memory: { sid: {username, role, user_id} } -- for private message routing
 hub_sid_map = {}
 
 # Module 7: Global monitoring of all online users
@@ -2412,7 +2414,7 @@ def restore_course(course_id):
     return redirect(url_for('courses_archive'))
 
 # =====================================================================
-# CODE PREFIX Ã¢â€ â€™ DEPARTMENT ASSIGNMENT
+# CODE PREFIX -> DEPARTMENT ASSIGNMENT
 # =====================================================================
 
 MASTER_PREFIX_RULES = [
@@ -2435,7 +2437,7 @@ MASTER_PREFIX_RULES = [
     ('MATH',  True,  'Department of Teachers Education'),
     ('STAT',  True,  'Department of Teachers Education'),
     ('NSTP',  True,  'NSTP Department'),
-    # is_prefix=False (exact code exceptions Ã¢â‚¬â€ override prefix rules)
+    # is_prefix=False (exact code exceptions -- override prefix rules)
     ('MATH 10', False, 'Department of Engineering'),
     ('MATH 11', False, 'Department of Engineering'),
 ]
@@ -2857,7 +2859,7 @@ def bulk_delete_departments_permanent():
 @login_required
 @role_required('admin', 'superadmin')
 def save_code_assignment():
-    # --- Update existing prefix rules (department only Ã¢â‚¬â€ archive done via dedicated route) ---
+    # --- Update existing prefix rules (department only -- archive done via dedicated route) ---
     for rule in CodePrefixRule.query.filter_by(is_prefix=True, is_archived=False).all():
         dept = request.form.get(f'dept_p_{rule.id}')
         if dept:
@@ -3024,7 +3026,7 @@ def api_prefix_courses():
         )
     ).order_by(Course.course_code).all()
     
-    return jsonify([{'code': c.course_code, 'name': c.course_name, 'dept': c.department or 'Ã¢â‚¬â€'} for c in courses])
+    return jsonify([{'code': c.course_code, 'name': c.course_name, 'dept': c.department or '--'} for c in courses])
 
 # I-UPDATE ANG LUMANG delete_course FUNCTION
 @app.route('/manage/course/delete/<int:course_id>', methods=['POST'])
@@ -4087,7 +4089,7 @@ def manage_faculty():
         .all()
     )
 
-    # Fix B Ã¢â‚¬â€ SC workload: use actual scheduled duration (end_time - start_time) per gene
+    # Fix B -- SC workload: use actual scheduled duration (end_time - start_time) per gene
     def _sc_hours(start, end):
         try:
             sh, sm = map(int, start.split(':'))
@@ -4104,7 +4106,7 @@ def manage_faculty():
             )
     workload_map = {k: int(v) for k, v in workload_map.items()}
 
-    # Fix A Ã¢â‚¬â€ FA workload: use split hours when configured, full course hours otherwise
+    # Fix A -- FA workload: use split hours when configured, full course hours otherwise
     _fa_objs = (
         FacultyAssignment.query
         .filter(FacultyAssignment.faculty_id.in_(_fids))
@@ -4132,7 +4134,7 @@ def manage_faculty():
         if _fa_map.get(_fid, 0) > 0:
             workload_map[_fid] = int(_fa_map[_fid])
 
-    # Fix C Ã¢â‚¬â€ fa_split_hours_map: per-faculty per-(course_id-section_id) effective hours for Step 2 badges
+    # Fix C -- fa_split_hours_map: per-faculty per-(course_id-section_id) effective hours for Step 2 badges
     fa_split_hours_map = {}  # {str(faculty_id): {"course_id-section_id": {"lec": x, "lab": y}}}
     for _fa in _fa_objs:
         _c = _fa.course
@@ -4210,7 +4212,7 @@ def manage_faculty():
                 'section_id':     _sc.section_id,
                 'course_code':    _sc.course.course_code,
                 'course_name':    _sc.course.course_name,
-                'section_name':   _sc.section.section_name if _sc.section else 'Ã¢â‚¬â€',
+                'section_name':   _sc.section.section_name if _sc.section else '--',
                 'session_type':   _stype,
                 'duration_hours': round(_dur, 1),
                 'semester':       _sc.course.semester_offered or '',
@@ -4997,7 +4999,7 @@ def api_room_utilization():
     settings  = get_settings()
     start_h   = settings.start_hour if settings else 7
     end_h     = settings.end_hour   if settings else 20
-    day_hours = end_h - start_h           # e.g. 7-20 Ã¢â€ â€™ 13 h per day
+    day_hours = end_h - start_h           # e.g. 7-20 -> 13 h per day
     active_days = len(settings.allowed_days.split(',')) if settings and settings.allowed_days else 6
     total_avail_h = day_hours * active_days   # per-room available hours per week
 
@@ -5017,9 +5019,9 @@ def api_room_utilization():
     schedules = room_q.all()
 
     # Accumulate used hours and class counts per room
-    room_used  = {}   # room_id Ã¢â€ â€™ float hours
-    room_count = {}   # room_id Ã¢â€ â€™ int
-    room_names = {}   # room_id Ã¢â€ â€™ str
+    room_used  = {}   # room_id -> float hours
+    room_count = {}   # room_id -> int
+    room_names = {}   # room_id -> str
 
     for sc in schedules:
         rid = sc.room_id
@@ -5242,7 +5244,7 @@ def export_pdf_bulk():
                 + '</div></div>'
             )
 
-        # Wrap each schedule in the .a4 structure Ã¢â‚¬â€ one schedule per paper page.
+        # Wrap each schedule in the .a4 structure -- one schedule per paper page.
         all_html_chunks.append(f'<div class="a4">{html}</div>')
 
     # 3. MERGE & RENDER PDF
@@ -5253,7 +5255,14 @@ def export_pdf_bulk():
     
     pdf_html = render_pdf_page(combined_html, orientation=orientation, margins=_margins)
     
-    pdf_bytes = HTML(string=pdf_html).write_pdf()
+    try:
+        pdf_bytes = HTML(string=pdf_html).write_pdf()
+    except Exception as e:
+        print("PDF GENERATION ERROR:")
+        print(traceback.format_exc())
+        flash(f"Failed to generate PDF: {str(e)}", "danger")
+        return redirect(url_for('reports_page'))
+
     sem_label = export_semester.replace(' ', '_')
     filename = f"Bulk_{report_type.capitalize()}_Schedules_{sem_label}.pdf"
     
@@ -5280,7 +5289,7 @@ def export_excel_bulk():
     wb = load_workbook(template_path)
     template_sheet = wb.active
     
-    # 2. GET ITEMS TO PRINT Ã¢â‚¬â€ only those with scheduled classes in the selected semester
+    # 2. GET ITEMS TO PRINT -- only those with scheduled classes in the selected semester
     sem_label = export_semester.replace(' ', '_')
     if report_type == 'section':
         scheduled_ids = {r[0] for r in db.session.query(ScheduledClass.section_id)
@@ -5328,19 +5337,19 @@ def export_excel_bulk():
                         if len(_t_occurrences[t_str]) < 2:
                             _t_occurrences[t_str].append(cell.row)
     # Pass 2: build row_map
-    # If a 12hr time string appears TWICE in template Ã¢â€ â€™ AM(h<=12)=1st, PM(h>12)=2nd
-    # If it appears ONCE Ã¢â€ â€™ use it directly (unique time, no AM/PM conflict)
+    # If a 12hr time string appears TWICE in template -> AM(h<=12)=1st, PM(h>12)=2nd
+    # If it appears ONCE -> use it directly (unique time, no AM/PM conflict)
     for h in range(7, 21):
         for m in [0, 30]:
             t_12 = f"{h if h <= 12 else h - 12}:{m:02d}"
             if t_12 in _t_occurrences:
                 occ_list = _t_occurrences[t_12]
                 if len(occ_list) == 1:
-                    row_map[f"{h}:{m:02d}"] = occ_list[0]   # unique Ã¢â‚¬â€ use directly
+                    row_map[f"{h}:{m:02d}"] = occ_list[0]   # unique -- use directly
                 elif h <= 12:
-                    row_map[f"{h}:{m:02d}"] = occ_list[0]   # AM Ã¢â€ â€™ first occurrence
+                    row_map[f"{h}:{m:02d}"] = occ_list[0]   # AM -> first occurrence
                 else:
-                    row_map[f"{h}:{m:02d}"] = occ_list[1]   # PM Ã¢â€ â€™ second occurrence
+                    row_map[f"{h}:{m:02d}"] = occ_list[1]   # PM -> second occurrence
 
     # 4. GENERATE SHEETS
     for item in items:
@@ -5488,7 +5497,7 @@ def export_excel_bulk():
                 cell = target_ws.cell(row=start_r, column=target_col)
                 if isinstance(cell, MergedCell):
                     continue
-                # Append instead of overwrite Ã¢â‚¬â€ handles multiple classes in same room+time (e.g. NSTP)
+                # Append instead of overwrite -- handles multiple classes in same room+time (e.g. NSTP)
                 if cell.value:
                     cell.value = str(cell.value).rstrip('\n') + '\nÃ¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬\n' + content.strip()
                 else:
@@ -5787,7 +5796,7 @@ def manage_constraints():
         search_query=search_query
     )
 
-# --- SYNC CONSTRAINTS (Safe upsert Ã¢â‚¬â€ preserves user-set types/weights) ---
+# --- SYNC CONSTRAINTS (Safe upsert -- preserves user-set types/weights) ---
 @app.route('/manage/constraints/sync', methods=['POST'])
 @login_required
 @role_required('admin', 'superadmin')
@@ -5811,7 +5820,7 @@ def sync_constraints():
 
         # Ã¢â€â‚¬Ã¢â€â‚¬ COURSE Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         {'code': 'LEC_LAB_SEQUENCE',           'cat': 'Course', 'type': 'HC',
-         'name': '(HC-04) LectureÃ¢â‚¬â€œLaboratory Sequence',
+         'name': '(HC-04) Lecture--œLaboratory Sequence',
          'desc': 'The Lecture component must be scheduled earlier than the Laboratory component.'},
         {'code': 'STRICT_ALLOC_LEC',           'cat': 'Course', 'type': 'HC',
          'name': '(HC-05) Strict Lecture Allocation',
@@ -5916,7 +5925,7 @@ def sync_constraints():
          'desc': 'All course session start times must begin exactly on the hour or half-hour.'},
         {'code': 'LUNCH_BREAK',                'cat': 'Time', 'type': 'SC2',
          'name': '(SC-II-04) Lunch Break Allocation',
-         'desc': 'Each section must have at least 1 free hour within the 10:00 AMÃ¢â‚¬â€œ2:00 PM lunch window per day.'},
+         'desc': 'Each section must have at least 1 free hour within the 10:00 AM--œ2:00 PM lunch window per day.'},
         {'code': 'EVENING_AVOIDANCE',          'cat': 'Time', 'type': 'SC2',
          'name': '(SC-II-06) Evening Class Avoidance',
          'desc': 'Avoid scheduling classes in the evening (from 6:00 PM onwards).'},
@@ -5936,7 +5945,7 @@ def sync_constraints():
     for c in MASTER_CONSTRAINTS:
         existing = Constraint.query.filter_by(logic_code=c['code']).first()
         if existing:
-            # Update metadata only Ã¢â‚¬â€ preserve user's type & weight settings
+            # Update metadata only -- preserve user's type & weight settings
             existing.name        = c['name']
             existing.description = c['desc']
             existing.category    = c['cat']
@@ -6007,7 +6016,7 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
             # Match GA warm-start formula: max(12, min(20, n*0.05))
             generation_status['pop_size'] = max(12, min(20, int(_n_est * 0.05)))
         except Exception:
-            generation_status['pop_size'] = None  # fallback Ã¢â‚¬â€ UI shows '...'
+            generation_status['pop_size'] = None  # fallback -- UI shows '...'
 
         try:
             best_schedule = scheduler.run_algorithm(
@@ -6046,7 +6055,7 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                 db.session.query(ScheduledClass).filter_by(semester=target_semester).delete()
                 db.session.commit()
 
-                # 2. Convert GA genes Ã¢â€ â€™ DB records with semester tag
+                # 2. Convert GA genes -> DB records with semester tag
                 #    Detect room-conflict genes by re-scanning the final chromosome.
                 objects_to_save = []
                 days_list = scheduler.days
@@ -6121,7 +6130,7 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                     slots_used = set(range(gene.start_idx, gene.end_idx))
                     key = (gene.room_id, gene.day_idx)
                     
-                    # Room conflict check Ã¢â‚¬â€ SKIP if it's the University Field
+                    # Room conflict check -- SKIP if it's the University Field
                     room_info = scheduler.room_map.get(gene.room_id, {})
                     room_name = room_info.get('room_name', '')
                     is_field  = "FIELD" in room_name.upper()
@@ -6370,7 +6379,7 @@ def start_generation():
     db_constraints = Constraint.query.all()
     constraints_config = {c.logic_code: {'type': c.constraint_type, 'weight': c.weight} for c in db_constraints}
 
-    # Build split_assignments list Ã¢â‚¬â€ one entry per (assignment, gtype) with split data
+    # Build split_assignments list -- one entry per (assignment, gtype) with split data
     raw_splits = (
         FacultyAssignment.query
         .join(Course, FacultyAssignment.course_id == Course.id)
@@ -6471,7 +6480,7 @@ def pending_faculty():
     tba_ids = [f.id for f in Faculty.query.filter_by(full_name='T.B.A.').all()]
 
     # Query real ScheduledClass records that are unassigned (NULL or any T.B.A. faculty)
-    # NSTP is excluded Ã¢â‚¬â€ it intentionally has no DCS faculty assigned
+    # NSTP is excluded -- it intentionally has no DCS faculty assigned
     query = (
         ScheduledClass.query
         .join(Course, ScheduledClass.course_id == Course.id)
@@ -6564,8 +6573,8 @@ def run_unassigned_resolver():
                         datetime.strptime(ex.end_time,   fmt).time()):
                 ex_course = ex.course.course_code if ex.course else '?'
                 conflicts.append(
-                    f"{sc.course.course_code if sc.course else '?'} ({sc.day} {sc.start_time}Ã¢â‚¬â€œ{sc.end_time}) "
-                    f"conflicts with {ex_course} Ã¢â‚¬â€ {faculty.full_name} is already booked."
+                    f"{sc.course.course_code if sc.course else '?'} ({sc.day} {sc.start_time}--œ{sc.end_time}) "
+                    f"conflicts with {ex_course} -- {faculty.full_name} is already booked."
                 )
                 break
 
@@ -6579,7 +6588,7 @@ def run_unassigned_resolver():
                 conflicts.append(
                     f"{sc.course.course_code if sc.course else '?'} and "
                     f"{other_sc.course.course_code if other_sc.course else '?'} "
-                    f"both assigned to {faculty.full_name} on {sc.day} Ã¢â‚¬â€ time overlap."
+                    f"both assigned to {faculty.full_name} on {sc.day} -- time overlap."
                 )
                 break
 
@@ -6588,7 +6597,7 @@ def run_unassigned_resolver():
             flash(f'Faculty conflict: {msg}', 'danger')
         return redirect(url_for('pending_faculty'))
 
-    # No conflicts Ã¢â‚¬â€ save
+    # No conflicts -- save
     for sc, faculty in assignments:
         sc.faculty_id = faculty.id
     db.session.commit()
@@ -6671,8 +6680,8 @@ def run_pending_sections():
                         datetime.strptime(ex.end_time,   fmt).time()):
                 ex_course = ex.course.course_code if ex.course else '?'
                 conflicts.append(
-                    f"{sc.course.course_code if sc.course else '?'} ({sc.day} {sc.start_time}Ã¢â‚¬â€œ{sc.end_time}) "
-                    f"conflicts with {ex_course} Ã¢â‚¬â€ {section.section_name} already has a class at this time."
+                    f"{sc.course.course_code if sc.course else '?'} ({sc.day} {sc.start_time}--œ{sc.end_time}) "
+                    f"conflicts with {ex_course} -- {section.section_name} already has a class at this time."
                 )
                 break
 
@@ -6686,7 +6695,7 @@ def run_pending_sections():
                 conflicts.append(
                     f"{sc.course.course_code if sc.course else '?'} and "
                     f"{other_sc.course.course_code if other_sc.course else '?'} "
-                    f"both assigned to {section.section_name} on {sc.day} Ã¢â‚¬â€ time overlap."
+                    f"both assigned to {section.section_name} on {sc.day} -- time overlap."
                 )
                 break
 
@@ -6695,7 +6704,7 @@ def run_pending_sections():
             flash(f'Section conflict: {msg}', 'danger')
         return redirect(url_for('pending_sections'))
 
-    # No conflicts Ã¢â‚¬â€ save
+    # No conflicts -- save
     for sc, section in assignments:
         sc.section_id = section.id
     db.session.commit()
@@ -6704,7 +6713,7 @@ def run_pending_sections():
 
 
 def _fmt_time_12h(t_str):
-    """Convert '13:30' Ã¢â€ â€™ '1:30 PM', '07:00' Ã¢â€ â€™ '7:00 AM'."""
+    """Convert '13:30' -> '1:30 PM', '07:00' -> '7:00 AM'."""
     try:
         h, m = map(int, t_str.split(':'))
         suffix = 'AM' if h < 12 else 'PM'
@@ -6814,10 +6823,10 @@ def get_schedule_grid(view_type, entity_id):
         # Check if this class overlaps (same start OR falls within an existing cell's rowspan)
         parent_key = find_covering_cell(s.day, si)
         if parent_key:
-            # Partial or same-start overlap Ã¢â‚¬â€ attach to existing cell
+            # Partial or same-start overlap -- attach to existing cell
             cell_data[parent_key].append(entry)
         else:
-            # New cell Ã¢â‚¬â€ mark its slots as occupied
+            # New cell -- mark its slots as occupied
             for i in range(si, min(si + rowspan, len(slots))):
                 occupied_set[s.day].add(i)
             cell_data[(s.day, si)] = [entry]
@@ -6834,7 +6843,7 @@ def get_schedule_grid(view_type, entity_id):
                 primary = entries[0]
                 # Build popover lines for all overlapping classes
                 pop_lines = [
-                    f"{e['pop_course']} | {e['pop_section']} | {_fmt_time_12h(e['start'])}Ã¢â‚¬â€œ{_fmt_time_12h(e['end'])}"
+                    f"{e['pop_course']} | {e['pop_section']} | {_fmt_time_12h(e['start'])}--œ{_fmt_time_12h(e['end'])}"
                     for e in entries
                 ]
                 cells.append({
@@ -6860,7 +6869,7 @@ def get_schedule_grid(view_type, entity_id):
 @role_required('admin', 'superadmin')
 def view_schedule_modal(view_type, entity_id):
     """Smart schedule viewer: uses uploaded layout template if available, else default grid."""
-    # Student Ã¢â€ â€™ delegate to their assigned section (or irregular timetable)
+    # Student -> delegate to their assigned section (or irregular timetable)
     if view_type == 'student':
         student = Student.query.get(entity_id)
         if not student:
@@ -6951,7 +6960,7 @@ def api_move_class():
                 continue
             if not (t_end <= o_start or t_start >= o_end):
                 cc   = other.course.course_code if other.course else str(other.course_id)
-                slot = f'{other.start_time}Ã¢â‚¬â€œ{other.end_time}'
+                slot = f'{other.start_time}--œ{other.end_time}'
                 if sched.faculty_id and other.faculty_id == sched.faculty_id:
                     fn = other.faculty.full_name if other.faculty else None
                     if fn and fn != 'T.B.A.':
@@ -6974,7 +6983,7 @@ def api_move_class():
         sched.room_id = new_room
     db.session.commit()
     return jsonify({'ok': True,
-                    'message': f'Moved to {new_day} {new_start}Ã¢â‚¬â€œ{new_end}'})
+                    'message': f'Moved to {new_day} {new_start}--œ{new_end}'})
 
 
 @app.route('/api/preview-conflicts')
@@ -7031,7 +7040,7 @@ def api_preview_conflicts():
                 new_end   = new_start + duration
                 slot_key  = f"{h:02d}:{minute:02d}"
 
-                # Class would extend past operating hours Ã¢â€ â€™ not droppable
+                # Class would extend past operating hours -> not droppable
                 if new_end > end_h * 60:
                     result[day][slot_key] = 'out'
                     continue
@@ -7051,7 +7060,7 @@ def api_preview_conflicts():
                         if hard:
                             level = 'hard'
                             break
-                        # Resources conflict but different entity Ã¢â€ â€™ semi
+                        # Resources conflict but different entity -> semi
                         if level != 'hard':
                             level = 'semi'
 
@@ -7101,8 +7110,8 @@ def toggle_schedule_lock():
 def api_check_conflicts():
     """Check if a specific day/time slot has room, faculty, or section conflicts.
     Params: day, start, end, faculty_id, room_id, section_id, semester
-            exclude_id (optional Ã¢â‚¬â€ ignore self when moving)
-            draft_version_id (optional Ã¢â‚¬â€ also check against this draft's entries)
+            exclude_id (optional -- ignore self when moving)
+            draft_version_id (optional -- also check against this draft's entries)
     Returns: {hard_conflicts: [{type, entry_id, label}]}
     """
     day        = request.args.get('day', '')
@@ -7165,7 +7174,7 @@ def api_check_conflicts():
         # Time overlap check
         if not (t_end <= sc_start or t_start >= sc_end):
             cc = sc.course.course_code if sc.course else str(sc.course_id)
-            slot = f'{sc.start_time}Ã¢â‚¬â€œ{sc.end_time}'
+            slot = f'{sc.start_time}--œ{sc.end_time}'
             # Faculty conflict (skip T.B.A.)
             if faculty_id and sc.faculty_id == faculty_id:
                 fac_name = sc.faculty.full_name if sc.faculty else None
@@ -7365,7 +7374,7 @@ def api_add_schedule():
             continue
         if not (t_end <= o_start or t_start >= o_end):
             cc   = other.course.course_code if other.course else str(other.course_id)
-            slot = f'{other.start_time}Ã¢â‚¬â€œ{other.end_time}'
+            slot = f'{other.start_time}--œ{other.end_time}'
             if faculty_id and other.faculty_id == faculty_id:
                 fn = other.faculty.full_name if other.faculty else None
                 if fn and fn != 'T.B.A.':
@@ -7430,7 +7439,7 @@ def api_delete_schedule(sched_id):
     # Regular user guards
     if sc.source == 'ga' and lock_on:
         return jsonify({'ok': False, 'error': 'Cannot delete GA entry while schedule is locked'}), 403
-    # Users cannot delete master (non-draft) entries Ã¢â‚¬â€ only admins can
+    # Users cannot delete master (non-draft) entries -- only admins can
     if not sc.is_draft:
         return jsonify({'ok': False, 'error': 'Cannot delete master schedule entries. Create a draft to make changes.'}), 403
     if sc.is_draft:
@@ -7510,7 +7519,7 @@ def api_patch_schedule(sched_id):
                 continue
             if not (t_end <= o_start or t_start >= o_end):
                 cc   = other.course.course_code if other.course else str(other.course_id)
-                slot = f'{other.start_time}Ã¢â‚¬â€œ{other.end_time}'
+                slot = f'{other.start_time}--œ{other.end_time}'
                 if faculty_id and other.faculty_id == faculty_id:
                     fn = other.faculty.full_name if other.faculty else None
                     if fn and fn != 'T.B.A.':
@@ -7672,7 +7681,7 @@ def api_draft_publish(draft_id):
                    (sc.room_id    and sc.room_id    == ms.room_id   ) or \
                    (sc.section_id == ms.section_id):
                     course = Course.query.get(sc.course_id)
-                    conflicts.append(f'{course.course_code if course else sc.course_id} on {sc.day} {sc.start_time}Ã¢â‚¬â€œ{sc.end_time}')
+                    conflicts.append(f'{course.course_code if course else sc.course_id} on {sc.day} {sc.start_time}--œ{sc.end_time}')
                     break
 
     if conflicts:
@@ -8203,7 +8212,7 @@ def check_constraints():
     # Pre-compute HC-28 div4 mode: dynamic threshold = special_long_lec_count + 5.
     # Only count sections belonging to the current semester so NSTP from other semesters
     # don't inflate the count and incorrectly disable div4 for unrelated schedules.
-    # Special-room courses (e.g. NSTP Ã¢â€ â€™ University Field) are exempt from div4 already,
+    # Special-room courses (e.g. NSTP -> University Field) are exempt from div4 already,
     # so their count is added to the threshold as a buffer.
     _special_cids_cc = set()
     for _r in Room.query.filter_by(is_archived=False).all():
@@ -8212,7 +8221,7 @@ def check_constraints():
             if _cid_str:
                 try: _special_cids_cc.add(int(_cid_str))
                 except ValueError: pass
-    # Also include pre-assigned course IDs Ã¢â‚¬â€ fixed genes are already exempt from div4
+    # Also include pre-assigned course IDs -- fixed genes are already exempt from div4
     # via `not g.is_fixed`, so they count as "special" for the threshold.
     for _pa in PreAssignment.query.filter_by(is_archived=False).all():
         _special_cids_cc.add(_pa.course_id)
@@ -8269,7 +8278,7 @@ def check_constraints():
 
     # Pre-compute total Lab/Lec duration per (course_id, section_id) pair.
     # Used by HC-08/HC-09 to correctly handle day-split sessions:
-    # a 6h Lab split 3+3 creates two 3h rows Ã¢â‚¬â€ summing them gives 6h (no violation).
+    # a 6h Lab split 3+3 creates two 3h rows -- summing them gives 6h (no violation).
     from collections import defaultdict as _ddict
     _lab_dur_sum = _ddict(float)   # (course_id, section_id) -> total Lab hours
     _lec_dur_sum = _ddict(float)   # (course_id, section_id) -> total Lec hours
@@ -8293,7 +8302,7 @@ def check_constraints():
     _hc09_seen = set()
 
     def _room_has_daytime_slot(room_id, day, duration_m):
-        """Return True if room has a free block >= duration_m minutes between 7AMÃ¢â‚¬â€œ7PM."""
+        """Return True if room has a free block >= duration_m minutes between 7AM--œ7PM."""
         DAY_S, DAY_E = 420, 1140   # 7AM, 7PM in minutes
         occupied = sorted(_room_day_occ.get((room_id, day), []))
         free_start = DAY_S
@@ -8318,9 +8327,9 @@ def check_constraints():
         if s.day == 'Sunday':
             add_v('GLOBAL_DAY_RESTRICTION', 'Global Day Restriction', 'No classes on Sunday.', s)
 
-        # HC-23: Operating Hours (7:00 AM Ã¢â‚¬â€œ 8:00 PM)
+        # HC-23: Operating Hours (7:00 AM --œ 8:00 PM)
         if start_m < 420 or end_m > 1200:
-            add_v('OPERATING_HOURS', 'Operating Hours Compliance', 'Class scheduled outside 7 AMÃ¢â‚¬â€œ8 PM.', s)
+            add_v('OPERATING_HOURS', 'Operating Hours Compliance', 'Class scheduled outside 7 AM--œ8 PM.', s)
 
         # HC-24: Hourly Alignment (start on the hour or half-hour)
         if start_m % 30 != 0:
@@ -8343,7 +8352,7 @@ def check_constraints():
                 add_v('ROOM_CAPACITY_PROPORTIONAL', 'Room Capacity Check',
                       f'Room seats {s.room.capacity}, section has {s.section.number_of_students} students.', s)
 
-        # SC-I-08: Lunch Break Ã¢â‚¬â€ checked at section-day level in GROUP 3 below
+        # SC-I-08: Lunch Break -- checked at section-day level in GROUP 3 below
 
         # SC-II-03: Evening Avoidance (starts at 7:00 PM or later)
         if start_m >= 1140:
@@ -8354,7 +8363,7 @@ def check_constraints():
             no_choice = bool(suitable_rooms) and not any(
                 _room_has_daytime_slot(r_id, s.day, dur_m) for r_id in suitable_rooms
             )
-            note = ' No choice Ã¢â‚¬â€ all suitable rooms were fully occupied 7AMÃ¢â‚¬â€œ7PM.' if no_choice else ''
+            note = ' No choice -- all suitable rooms were fully occupied 7AM--œ7PM.' if no_choice else ''
             add_v('EVENING_AVOIDANCE', 'Evening Avoidance',
                   f'Class starts at 7:00 PM or later.{note}', s)
 
@@ -8367,7 +8376,7 @@ def check_constraints():
             if is_lec_session and start_m not in _div4_start_minutes:
                 _sys_start_label = f"{_sys_sh}:00 AM"
                 add_v('LECTURE_SLOT_ALIGNMENT', 'Lecture Slot Alignment (Div4)',
-                      f'Lecture in {s.room.room_name} starts at {s.start_time} Ã¢â‚¬â€ '
+                      f'Lecture in {s.room.room_name} starts at {s.start_time} -- '
                       f'must start on a 2-hour boundary (7AM, 9AM, 11AM, 1PM, 3PM, 5PM from {_sys_start_label}).', s)
 
         # SC-I-04: PE Morning Placement (PE/FITT should start before noon)
@@ -8375,10 +8384,10 @@ def check_constraints():
             add_v('PE_MORNING_PLACEMENT', 'PE Morning Placement',
                   f'PE/FITT course ({s.course.course_code}) should start before noon.', s)
 
-        # SC-II-01: PE Early Week (PE/FITT should be MonÃ¢â‚¬â€œWed)
+        # SC-II-01: PE Early Week (PE/FITT should be Mon--œWed)
         if any(k in code_up for k in pe_keywords) and s.day not in ('Monday', 'Tuesday', 'Wednesday'):
             add_v('PE_EARLY_WEEK', 'PE Early Week Preference',
-                  f'PE/FITT course ({s.course.course_code}) should be scheduled MonÃ¢â‚¬â€œWed.', s)
+                  f'PE/FITT course ({s.course.course_code}) should be scheduled Mon--œWed.', s)
 
         # SC-I-02: Async Strategic Placement (Async sessions on Mon or Fri)
         async_total = (s.course.asynchronous_lec_hours or 0) + (s.course.asynchronous_lab_hours or 0)
@@ -8407,7 +8416,7 @@ def check_constraints():
                 _allowed_days = [d for d, _ in _split_days]
                 if s.day not in _allowed_days:
                     add_v('FACULTY_DAY_SPLIT', 'Faculty Day Split',
-                          f'{s.faculty.full_name} Ã¢â‚¬â€ {s.course.course_code} in section '
+                          f'{s.faculty.full_name} -- {s.course.course_code} in section '
                           f'{s.section.section_name} is on {s.day} but split requires '
                           f'{" or ".join(_allowed_days)}.', s)
 
@@ -8421,8 +8430,8 @@ def check_constraints():
             is_lab_r    = s.room and 'Computer Lab' in (s.room.capabilities or '')
             stype       = s.session_type or 'Lec'
             if stype == 'Lab' and req_slab_d > 0:
-                # HC-09: Lab session duration Ã¢â‚¬â€ use group sum to handle day-split sessions
-                # (e.g. 3h+3h split Ã¢â€ â€™ total 6h = expected 6h Ã¢â€ â€™ no violation)
+                # HC-09: Lab session duration -- use group sum to handle day-split sessions
+                # (e.g. 3h+3h split -> total 6h = expected 6h -> no violation)
                 _hc09_pair = (s.course_id, s.section_id)
                 if _hc09_pair not in _hc09_seen:
                     _hc09_seen.add(_hc09_pair)
@@ -8431,7 +8440,7 @@ def check_constraints():
                         add_v('STRICT_LAB_DURATION', 'Strict Laboratory Duration',
                               f'Lab for {s.course.course_code} is {_total_lab_h:.1f}h total, expected {req_slab_d}h.', s)
             elif stype == 'Async' and async_d > 0:
-                # Async session Ã¢â‚¬â€ check HC-10 and HC-11 independently
+                # Async session -- check HC-10 and HC-11 independently
                 if abs(dur_h - async_d) > 0.5:
                     # HC-10: Async Lecture Duration (fires if course has async lec component)
                     if async_lec_d > 0:
@@ -8444,7 +8453,7 @@ def check_constraints():
                               f'Async session for {s.course.course_code} is {dur_h:.1f}h; '
                               f'async lab component expects {async_lab_d}h.', s)
             elif stype == 'Lec' and req_sl_d > 0:
-                # HC-08: Lecture session duration Ã¢â‚¬â€ use group sum to handle day-split sessions
+                # HC-08: Lecture session duration -- use group sum to handle day-split sessions
                 _hc08_pair = (s.course_id, s.section_id)
                 if _hc08_pair not in _hc08_seen:
                     _hc08_seen.add(_hc08_pair)
@@ -8497,7 +8506,7 @@ def check_constraints():
     # =========================================================
     _sys_start_m    = (_sys.start_hour if _sys else 7) * 60   # e.g. 7AM = 420 min
     _max_first_m    = _sys_start_m + 60                        # e.g. 8AM = 480 min
-    _room_day_first = {}                                        # (room_id, day) Ã¢â€ â€™ earliest schedule
+    _room_day_first = {}                                        # (room_id, day) -> earliest schedule
     for s in schedules:
         key = (s.room_id, s.day)
         if key not in _room_day_first or to_minutes(s.start_time) < to_minutes(_room_day_first[key].start_time):
@@ -8507,8 +8516,8 @@ def check_constraints():
             sys_start_label = f"{_sys.start_hour}:00 AM" if _sys else "7:00 AM"
             add_v('EARLY_START_ENFORCEMENT', 'Early Start Enforcement',
                   f'First class in {first_s.room.room_name} on {day} starts at {first_s.start_time} '
-                  f'Ã¢â‚¬â€ more than 1 hour after system start ({sys_start_label}). '
-                  f'Room is idle during {sys_start_label}Ã¢â‚¬â€œ{first_s.start_time}.', first_s)
+                  f'-- more than 1 hour after system start ({sys_start_label}). '
+                  f'Room is idle during {sys_start_label}--œ{first_s.start_time}.', first_s)
 
     # =========================================================
     # GROUP 3: LOAD, SEQUENCE & DAILY DISTRIBUTION CHECKS
@@ -8588,7 +8597,7 @@ def check_constraints():
             daily.setdefault(c.day, []).append(c)
 
         for day, day_classes in daily.items():
-            # SC-I-08: Lunch Break Ã¢â‚¬â€ section must have Ã¢â€°Â¥1 free hour in 10:00 AMÃ¢â‚¬â€œ2:00 PM window
+            # SC-I-08: Lunch Break -- section must have Ã¢â€°Â¥1 free hour in 10:00 AM--œ2:00 PM window
             # Build set of occupied minute-intervals within the window for this section+day
             _LUNCH_START = 600   # 10:00 AM in minutes
             _LUNCH_END   = 840   # 2:00 PM in minutes
@@ -8604,7 +8613,7 @@ def check_constraints():
                 for _m in range(_LUNCH_START, _LUNCH_END - 30, 30)
             ):
                 add_v('LUNCH_BREAK', 'Lunch Break Preference',
-                      f'Section {day_classes[0].section.section_name} has no free hour in the 10 AMÃ¢â‚¬â€œ2 PM '
+                      f'Section {day_classes[0].section.section_name} has no free hour in the 10 AM--œ2 PM '
                       f'lunch window on {day}.', day_classes[0])
 
             # SC-II-02: Fewer than 2 classes on an active day
@@ -8633,7 +8642,7 @@ def check_constraints():
     for s in schedules:
         key = (s.section_id, s.course_id)
         allocation_audit.setdefault(key, set())
-        # Use stored session_type directly Ã¢â‚¬â€ no more room-type guessing
+        # Use stored session_type directly -- no more room-type guessing
         allocation_audit[key].add(s.session_type or 'Lec')
 
     scheduled_pairs = {(s.section_id, s.course_id) for s in schedules}
@@ -8675,7 +8684,7 @@ def check_constraints():
                            if pa.course and pa.course.semester_offered == target_semester]
 
     if pre_assignments:
-        # HC-01: Locked Schedules Ã¢â‚¬â€ pre-assigned class must not have been moved
+        # HC-01: Locked Schedules -- pre-assigned class must not have been moved
         for pa in pre_assignments:
             matching = [s for s in schedules
                         if s.section_id == pa.section_id and s.course_id == pa.course_id]
@@ -8684,10 +8693,10 @@ def check_constraints():
                         or s.end_time != pa.end_time or s.room_id != pa.room_id):
                     add_v('LOCKED_SCHEDULES', 'Locked Schedule Moved',
                           f'Pre-assigned slot for {pa.course.course_code} ({pa.section.section_name}) '
-                          f'was changed: expected {pa.day} {pa.start_time}Ã¢â‚¬â€œ{pa.end_time} '
-                          f'but found {s.day} {s.start_time}Ã¢â‚¬â€œ{s.end_time}.', s)
+                          f'was changed: expected {pa.day} {pa.start_time}--œ{pa.end_time} '
+                          f'but found {s.day} {s.start_time}--œ{s.end_time}.', s)
 
-        # HC-26: Pre-assignment Exclusivity Ã¢â‚¬â€ no other class may overlap a pre-assigned slot
+        # HC-26: Pre-assignment Exclusivity -- no other class may overlap a pre-assigned slot
         for pa in pre_assignments:
             pa_start = to_minutes(pa.start_time)
             pa_end   = to_minutes(pa.end_time)
@@ -8704,10 +8713,10 @@ def check_constraints():
                 if not is_same:
                     add_v('PREASSIGNMENT_EXCLUSIVITY', 'Pre-assignment Exclusivity',
                           f'Class overlaps a pre-assigned slot for {pa.course.course_code} '
-                          f'({pa.section.section_name}) on {pa.day} {pa.start_time}Ã¢â‚¬â€œ{pa.end_time}.', s)
+                          f'({pa.section.section_name}) on {pa.day} {pa.start_time}--œ{pa.end_time}.', s)
 
     # =========================================================
-    # GROUP 6: HC-02 Ã¢â‚¬â€ MINOR SUBJECT GAP CHECK
+    # GROUP 6: HC-02 -- MINOR SUBJECT GAP CHECK
     # =========================================================
     # "Minor subjects" = courses from departments NOT included in the last generation run.
     # Each section must have enough free time gaps to accommodate their assigned minor courses.
@@ -8797,14 +8806,14 @@ def check_constraints():
                 filtered.append(v)
         violations = filtered
 
-    # Department filter Ã¢â‚¬â€ multi-select checkboxes; empty = all
+    # Department filter -- multi-select checkboxes; empty = all
     if selected_depts:
         violations = [
             v for v in violations
             if (_get_course_dept(v['class_a'].course) or 'Unknown') in selected_depts
         ]
 
-    # Constraint type filter Ã¢â‚¬â€ multi-select checkboxes; empty = all
+    # Constraint type filter -- multi-select checkboxes; empty = all
     if selected_types:
         violations = [v for v in violations if v['type'] in selected_types]
 
@@ -8954,7 +8963,7 @@ def manage_layouts():
             {'name': settings.section_signatory_3, 'title': settings.section_sig3_title},
         ])
 
-        # --- Faculty (independent fac_ fields only Ã¢â‚¬â€ never touches Section/Room/Course) ---
+        # --- Faculty (independent fac_ fields only -- never touches Section/Room/Course) ---
         settings.fac_republic_text     = request.form.get('fac_republic_text',     '')
         settings.fac_univ_name         = request.form.get('fac_univ_name',         '')
         settings.fac_campus_name       = request.form.get('fac_campus_name',       '')
@@ -9737,7 +9746,7 @@ def build_variable_map(layout_type, settings, section_name=None, entity_name=Non
 
 
 def _argb_to_css(color_obj):
-    """Convert openpyxl Color Ã¢â€ â€™ CSS hex string, or None.
+    """Convert openpyxl Color -> CSS hex string, or None.
 
     Returns None for transparent/auto colours so callers can fall back to
     CSS inherit rather than rendering a wrong colour.
@@ -9750,7 +9759,7 @@ def _argb_to_css(color_obj):
             if argb and len(argb) == 8 and argb[:2] != '00' and argb != '00000000':
                 return '#' + argb[2:]
         elif color_obj.type == 'indexed':
-            # Index 64 = Excel "auto" (inherit) Ã¢â‚¬â€ return None so CSS inherits
+            # Index 64 = Excel "auto" (inherit) -- return None so CSS inherits
             if color_obj.indexed == 64:
                 return None
             # Standard 64-entry Excel indexed colour palette
@@ -9777,7 +9786,7 @@ def _argb_to_css(color_obj):
                 return '#' + idx_map[idx]
         elif color_obj.type == 'theme':
             # Office 2013 default theme baseline (theme1.xml).
-            # Tint/shade ignored Ã¢â‚¬â€ covers ~90 % of cases without XML parsing.
+            # Tint/shade ignored -- covers ~90 % of cases without XML parsing.
             _THEME = {
                 0: '#FFFFFF', 1: '#000000', 2: '#E7E6E6', 3: '#44546A',
                 4: '#4472C4', 5: '#ED7D31', 6: '#A5A5A5', 7: '#FFC000',
@@ -9790,7 +9799,7 @@ def _argb_to_css(color_obj):
 
 
 def _border_side_css(side):
-    """Convert openpyxl border side Ã¢â€ â€™ CSS border string, or None.
+    """Convert openpyxl border side -> CSS border string, or None.
 
     Returns None when the side carries no real Excel border so the caller
     can set border-{side}:none and let the CSS outline debug-grid show through.
@@ -9816,7 +9825,7 @@ def _border_side_css(side):
 
 
 def detect_content_bounds(ws):
-    """Return (min_r, min_c, max_r, max_c) Ã¢â‚¬â€ the tightest bounding box around
+    """Return (min_r, min_c, max_r, max_c) -- the tightest bounding box around
     all cells that have a value, a fill colour, or at least one visible border.
     Returns None if the sheet is completely empty.
     """
@@ -9865,11 +9874,11 @@ def detect_content_bounds(ws):
 def _extract_ws_images_html(ws, col_offsets, row_offsets, col_start, row_start, total_w_px=1, left_offset_px=0, img_dim_ref_w_px=None, img_settings_list=None, scale_v=1.0):
     """Extract images from worksheet and return absolutely-positioned <img> HTML tags.
 
-    col_offsets      : {0-based col index Ã¢â€ â€™ left px from table origin}
-    row_offsets      : {0-based row index Ã¢â€ â€™ top px from table origin}
+    col_offsets      : {0-based col index -> left px from table origin}
+    row_offsets      : {0-based row index -> top px from table origin}
     col_start        : 1-based first rendered column (for offset correction)
     row_start        : 1-based first rendered row   (for offset correction)
-    total_w_px       : sum of all visible reference column px widths Ã¢â‚¬â€ used only for the
+    total_w_px       : sum of all visible reference column px widths -- used only for the
                        left/top position (as %) so images track their column as the table
                        stretches.  Width and height use fixed px from Excel metadata.
     img_settings_list: optional list of per-image dicts from manage_layouts settings.
@@ -9878,7 +9887,7 @@ def _extract_ws_images_html(ws, col_offsets, row_offsets, col_start, row_start, 
     # 1 EMU = 1 inch / 914400.  At 96 DPI: 1 inch = 96 px.
     # Therefore: px = EMU / (914400 / 96) = EMU / 9525  (exact integer divisor)
     EMU_PER_PX = 9525
-    imgs_above = []   # rendered AFTER table (on top of text) Ã¢â‚¬â€ default
+    imgs_above = []   # rendered AFTER table (on top of text) -- default
     imgs_below = []   # rendered BEFORE table (behind text)
 
     _img_bytes_cache = getattr(ws, '_img_bytes_cache', None)
@@ -9907,17 +9916,17 @@ def _extract_ws_images_html(ws, col_offsets, row_offsets, col_start, row_start, 
             has_one_cell = hasattr(anchor, '_from') and not has_two_cell
 
             if not (has_two_cell or has_one_cell):
-                continue  # unknown anchor type Ã¢â‚¬â€ skip
+                continue  # unknown anchor type -- skip
 
             fr = anchor._from
 
             def _col_ref(col_idx_0based, col_off_emu):
-                """0-based col + EMU offset Ã¢â€ â€™ reference px (same space as col_widths)."""
+                """0-based col + EMU offset -> reference px (same space as col_widths)."""
                 base = col_offsets.get(col_idx_0based - (col_start - 1), 0)
                 return base + col_off_emu / EMU_PER_PX
 
             def _row_abs(row_idx_0based, row_off_emu):
-                """0-based row + EMU offset Ã¢â€ â€™ absolute px from table top."""
+                """0-based row + EMU offset -> absolute px from table top."""
                 base = row_offsets.get(row_idx_0based - (row_start - 1), 0)
                 return base + row_off_emu / EMU_PER_PX
 
@@ -9937,7 +9946,7 @@ def _extract_ws_images_html(ws, col_offsets, row_offsets, col_start, row_start, 
             top_px  += _y_off
 
             # Ã¢â€ â‚¬Ã¢â€ â‚¬ Image size Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
-            # Priority 1: anchor.ext.cx / .cy Ã¢â‚¬â€  exact EMU dimensions stored by Excel.
+            # Priority 1: anchor.ext.cx / .cy --  exact EMU dimensions stored by Excel.
             # These are the definitive pixel-perfect dimensions regardless of anchor type.
             ext = getattr(anchor, 'ext', None)
             cx  = getattr(ext, 'cx', None) if ext else None
@@ -9954,7 +9963,7 @@ def _extract_ws_images_html(ws, col_offsets, row_offsets, col_start, row_start, 
 
             if cx and cy:
                 # Image dimensions: raw px from Excel. The parent div transform
-                # will scale them visually Ã¢â€ â€™ no manual multiplication needed.
+                # will scale them visually -> no manual multiplication needed.
                 w_px  = cx / EMU_PER_PX
                 h_px  = cy / EMU_PER_PX
                 if img_dim_ref_w_px:
@@ -10017,16 +10026,17 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
                          extra_merge_map=None, extra_skip_cells=None,
                          bounds=None, layout_type=None, margins=None,
                          img_settings=None):
-    """Convert openpyxl worksheet -> (html_div_string, table_width_px, scale_v, total_h_px).
+    """Convert openpyxl worksheet → (html_div_string, table_width_px).
 
     The returned HTML is wrapped in a position:relative div so that
     absolutely-positioned worksheet images sit correctly over the table.
-    Row heights and image coordinates are RAW (unscaled) from Excel.
-    The caller is responsible for applying any vertical scaling transform.
 
-    scale_v is returned so callers can apply CSS transform themselves:
-      - render_a4_page JS applies it at runtime in the browser
-      - export_pdf_bulk wraps the html in a transform div before WeasyPrint
+    variable_map     : {{{token}}}: value}  — substituted into cell text
+    cell_overrides   : {(row, col): html_string}  — replaces cell content
+    extra_merge_map  : {(row, col): (rowspan, colspan)}  — additional merges
+    extra_skip_cells : set of (row, col) to skip
+    bounds           : (min_r, min_c, max_r, max_c) from detect_content_bounds
+                       — restricts rendering to content area only
     """
     variable_map    = variable_map    or {}
     cell_overrides  = cell_overrides  or {}
@@ -10034,7 +10044,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
     skip_cells      = set(extra_skip_cells or set())
 
     MDW   = 7          # avg char width px (Excel default)
-    PT_PX = 96 / 72    # 1pt Ã¢â€ â€™ px
+    PT_PX = 96 / 72    # 1pt → px
 
     # Apply content bounds (smart crop)
     if bounds:
@@ -10045,7 +10055,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
         max_row = ws.max_row    or 1
 
     # Column widths (only for visible range)
-    # Reference px widths (from Excel chars Ã¢â€ â€™ px) used for proportional sizing only.
+    # Reference px widths (from Excel chars → px) used for proportional sizing only.
     col_widths = []
     col_hidden = []
     for c in range(col_start, max_col + 1):
@@ -10057,7 +10067,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
         else:
             chars = (cd.width if cd and cd.width else 8.43)
             col_widths.append(max(4, round(chars * MDW)))
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Step A: Snapshot ORIGINAL col_offsets for pixel-perfect image placement Ã¢â€â‚¬Ã¢â€â‚¬
+    # ── Step A: Snapshot ORIGINAL col_offsets for pixel-perfect image placement ──
     # Must be done BEFORE any equalization or tightening so that image anchor
     # positions map correctly to the original Excel column layout.
     _orig_col_offsets = {}
@@ -10081,7 +10091,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
             # rel_idx = (_c - 1) - (col_start - 1) = _c - col_start  (always < 0)
             _orig_col_offsets[_c - col_start] = -_pre_acc
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Step B: Detect day-header row and collect day/time column indices Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ── Step B: Detect day-header row and collect day/time column indices ───────
     _DAY_KW = {
         'MON', 'TUE', 'WED', 'THU', 'THURS', 'FRI', 'SAT', 'SUN',
         'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY',
@@ -10131,19 +10141,19 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
             else:
                 # Check if this column is completely empty (e.g. non-anchor of a
                 # merged "TIME/DAYS" cell whose anchor is further left).
-                # If fully empty Ã¢â€ â€™ skip it and keep scanning left.
-                # If it has non-time content Ã¢â€ â€™ stop (real content boundary).
+                # If fully empty → skip it and keep scanning left.
+                # If it has non-time content → stop (real content boundary).
                 _ce = col_start + _ti
                 _col_empty = all(
                     ws.cell(row=_r, column=_ce).value is None
                     for _r in range(row_start, max_row + 1)
                 )
                 if _col_empty:
-                    continue      # empty placeholder Ã¢â‚¬â€ keep scanning left
-                break             # non-empty non-time col Ã¢â€ â€™ stop
+                    continue      # empty placeholder — keep scanning left
+                break             # non-empty non-time col → stop
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Step C: Auto-fit each time column to its own content width Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    # Only measure cells that contain ACTUAL TIME VALUES Ã¢â‚¬â€ datetime.time objects
+    # ── Step C: Auto-fit each time column to its own content width ──────────────
+    # Only measure cells that contain ACTUAL TIME VALUES — datetime.time objects
     # or strings matching the HH:MM pattern.  All other cells (headers, labels,
     # "DAILY CONTACT HOURS", "Prepared by:", etc.) are skipped.  This restricts
     # measurement to the schedule data rows only, regardless of template layout.
@@ -10155,16 +10165,16 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
             _val = ws.cell(row=_r, column=_col_excel).value
             if _val is None:
                 continue
-            # Ã¢â€â‚¬Ã¢â€â‚¬ Identify time values only Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+            # ── Identify time values only ──────────────────────────────────────
             _is_time_obj = hasattr(_val, 'strftime') and not hasattr(_val, 'year')
             _is_time_str = isinstance(_val, str) and _TIME_VAL_PAT.match(_val.strip())
             if not (_is_time_obj or _is_time_str):
                 continue    # skip non-time cells (headers, labels, totals, etc.)
-            # Ã¢â€â‚¬Ã¢â€â‚¬ Measure display string Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-            # datetime.time Ã¢â€ â€™ strftime('%H:%M') = "07:00" (matches Excel display)
-            # strings Ã¢â€ â€™ unchanged
+            # ── Measure display string ─────────────────────────────────────────
+            # datetime.time → strftime('%H:%M') = "07:00" (matches Excel display)
+            # strings → unchanged
             if _is_time_obj:
-                _s = f"{_val.hour}:{_val.minute:02d}"   # "7:00" Ã¢â‚¬â€ no leading zero
+                _s = f"{_val.hour}:{_val.minute:02d}"   # "7:00" — no leading zero
                 _col_has_time_obj = True
             else:
                 _s = str(_val).strip()
@@ -10175,8 +10185,8 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
         _tight_w = max(MDW * 3, _max_len * MDW + _pad)
         col_widths[_ti] = _tight_w
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Step D: Day columns fill the space freed by time-col tightening Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    # remaining = original_total Ã¢Ë†â€™ new_tight_time Ã¢Ë†â€™ other_non-day_non-time cols
+    # ── Step D: Day columns fill the space freed by time-col tightening ─────────
+    # remaining = original_total − new_tight_time − other_non-day_non-time cols
     # Each day col gets an equal share of remaining, guaranteeing symmetry AND
     # that they are as wide as possible given the tightened time columns.
     if _day_col_indices:
@@ -10203,7 +10213,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
         pts = (rd.height if rd and rd.height else 13.5)
         row_heights.append(max(8, round(pts * PT_PX)))
 
-    # Merged cell spans (full sheet Ã¢â‚¬â€ clip rendering handles out-of-range)
+    # Merged cell spans (full sheet — clip rendering handles out-of-range)
     merged_spans = {}
     for merge in ws.merged_cells.ranges:
         r1, c1, r2, c2 = merge.min_row, merge.min_col, merge.max_row, merge.max_col
@@ -10230,22 +10240,6 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
     def esc(t):
         return str(t).replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
 
-    # FIX #1: Calculate Absolute Math Scale Factor covering ALL rows (header + data + footer).
-    # Previously only time-slot rows were considered, causing underestimation of total height.
-    scale_v = 1.0
-    if margins:
-        paper_key = margins.get('paper', 'A4')
-        mt = float(margins.get('top', 1.0))
-        mb = float(margins.get('bottom', 1.0))
-        _, ph, _ = PAPER_SIZES.get(paper_key, PAPER_SIZES['A4'])
-        # sum ALL rows in rendered range — includes title rows, header rows, footer/signatory rows
-        available_h_px = (ph - mt - mb) * 96
-        total_th_px = sum(row_heights)
-        if total_th_px > available_h_px and available_h_px > 0:
-            # Use 0.995 as a tiny rounding buffer only — not an artificial margin.
-            # @page handles all physical top/bottom gutters, so we must NOT over-shrink here.
-            scale_v = (available_h_px / total_th_px) * 0.995
-
     lines = [
         '<table style="border-collapse:collapse;table-layout:fixed;width:100%;">',
         '<colgroup>',
@@ -10256,12 +10250,12 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
         if col_hidden[i]:
             lines.append(f'  <col style="width:0;visibility:collapse;">')
         elif i in _time_col_set:
-            # Time columns: absolute px Ã¢â‚¬â€ fixed tight width.
+            # Time columns: absolute px — fixed tight width.
             # Faculty gets +20px extra for readability.
             _tcw = w + 20 if layout_type == 'faculty' else w
             lines.append(f'  <col style="width:{_tcw}px;">')
         elif layout_type in ('section', 'room', 'course', 'faculty') and i in _day_col_set:
-            # Day columns: auto Ã¢â‚¬â€ browser splits all remaining space
+            # Day columns: auto — browser splits all remaining space
             # (paper_content_w - time_col_px) equally among day cols
             # so the schedule grid fills edge-to-edge across the paper.
             lines.append(f'  <col style="width:auto;">')
@@ -10271,8 +10265,6 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
     lines.append('</colgroup><tbody>')
 
     for r in range(row_start, max_row + 1):
-        # RAW row heights Ã¢â‚¬â€ no scaling applied here.
-        # Callers apply CSS transform externally (JS for View Page, wrapper div for PDF).
         rh = row_heights[r - row_start]
         lines.append(f'<tr style="height:{rh}px;">')
 
@@ -10302,30 +10294,16 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
             # Span attrs
             span_info = merged_spans.get(r, {}).get(c)
             span_attrs = ''
-            # Use RAW total height (unscaled) Ã¢â‚¬â€ the CSS transform on the wrapper
-            # handles proportional compression for both table and images.
-            total_rh = rh  # default: single row height
             if span_info:
                 rs, cs_span = span_info
-                if rs > 1:
-                    span_attrs += f' rowspan="{rs}"'
-                    # Sum raw (unscaled) heights of all spanned rows for correct border extent
-                    total_rh = sum(
-                        row_heights[_r - row_start]
-                        for _r in range(r, r + rs)
-                        if 0 <= (_r - row_start) < len(row_heights)
-                    )
-                if cs_span > 1:
-                    span_attrs += f' colspan="{cs_span}"'
+                if rs > 1: span_attrs += f' rowspan="{rs}"'
+                if cs_span > 1: span_attrs += f' colspan="{cs_span}"'
 
-            # Base style. Schedule blocks must be clipped; headers/footers can overflow like Excel.
-            sp = [f'height:{total_rh}px', 'overflow:visible']
-            if is_override:
-                sp.pop() # Remove visible
-                sp.append('overflow:hidden')
+            # Style parts — overflow:visible lets text spill like Excel does
+            # Padding computed after alignment so we can factor in Excel indent.
+            sp = [f'height:{rh}px', 'overflow:visible']
 
-
-            # Fill Ã¢â‚¬â€ solid fgColor; fall back to bgColor for pattern fills
+            # Fill — solid fgColor; fall back to bgColor for pattern fills
             fill = cell.fill
             if fill and fill.fill_type not in (None, 'none'):
                 fg = _argb_to_css(fill.fgColor) if fill.fgColor else None
@@ -10334,12 +10312,9 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
                 if fg:
                     sp.append(f'background-color:{fg}')
 
-            # Font Ã¢â‚¬â€ name, size, weight, style, decorations, color
+            # Font — name, size, weight, style, decorations, color
             font = cell.font
-            # Use compact line-height to match View Page header look
-            sp.append('line-height:1.1')
             if font:
-                # RAW font size Ã¢â‚¬â€ CSS transform handles visual compression
                 sz = font.size or 11
                 sp.append(f'font-size:{round(sz * PT_PX, 1)}px')
                 fname = font.name or 'Calibri'
@@ -10355,14 +10330,12 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
 
             # Alignment + indent-aware padding
             # Excel cell indent (alignment.indent) adds character-width leading space.
-            # Each indent level Ã¢â€°Ë† MDW px.  We convert it to CSS padding-left so the
+            # Each indent level ≈ MDW px.  We convert it to CSS padding-left so the
             # visual indentation in Excel is faithfully reproduced in HTML.
             al = cell.alignment
             _indent_px = int(al.indent) * MDW if al and al.indent else 0
             _pad_left  = _indent_px + 4   # base 4 px + indent
-            # FIX #8: Schedule block cells (is_override=True) must never have extra padding.
-            # The inner <div> already handles its own padding:3px.
-            if is_override:
+            if cell_overrides and str(cell_overrides.get((r, c), '')).startswith('<'):
                 sp.append('padding:0')
             else:
                 sp.append(f'padding:0 4px 0 {_pad_left}px')
@@ -10373,16 +10346,12 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
                 sp.append(f'text-align:{h_map.get(al.horizontal or "left","left")}')
                 _valign = 'middle' if layout_type == 'faculty' else v_map.get(al.vertical or 'bottom', 'bottom')
                 sp.append(f'vertical-align:{_valign}')
-                # Revert to 'pre' for 'pahaba' overflow; set z-index to overlap neighbors
                 sp.append('white-space:pre-wrap;word-wrap:break-word' if al.wrap_text else 'white-space:pre')
             else:
                 sp += ['text-align:left', 'vertical-align:middle', 'white-space:pre']
 
-            if cell_text:
-                sp.append('position:relative;z-index:10')
-
-            # Borders Ã¢â‚¬â€ per-side explicit control.
-            # Real Excel border Ã¢â€ â€™ use its CSS.  No real border Ã¢â€ â€™ 'none' so the
+            # Borders — per-side explicit control.
+            # Real Excel border → use its CSS.  No real border → 'none' so the
             # CSS outline debug-grid (rgba 0,0,0,0.10) shows through cleanly.
             bd = cell.border
             for _s in ('top', 'right', 'bottom', 'left'):
@@ -10392,32 +10361,33 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
             style_str = ';'.join(sp)
 
             if is_override:
-                # Schedule blocks stay as-is
-                lines.append(f'  <td{span_attrs} style="{style_str}">{html_text}</td>')
+                html_text = cell_text  # already HTML
             else:
                 html_text = esc(cell_text).replace('\n', '<br>') if cell_text else ''
-                # Restored simple injection: uses z-index:10 + overflow:visible to spill over neighbors
-                lines.append(f'  <td{span_attrs} style="{style_str}">{html_text}</td>')
+
+            lines.append(f'  <td{span_attrs} style="{style_str}">{html_text}</td>')
 
         lines.append('</tr>')
 
     lines += ['</tbody>', '</table>']
 
-    # Build cumulative pixel offsets for image placement (col/row index Ã¢â€ â€™ px from top-left of table)
-    col_offsets = {}  # 0-based col index Ã¢â€ â€™ left px
+    # Build cumulative pixel offsets for image placement (col/row index → px from top-left of table)
+    col_offsets = {}  # 0-based col index → left px
     acc = 0
     for i, w in enumerate(col_widths):
         col_offsets[i] = acc
         acc += w
-    row_offsets = {}  # 0-based row index Ã¢â€ â€™ top px
+    row_offsets = {}  # 0-based row index → top px
     acc = 0
     for i, h in enumerate(row_heights):
         row_offsets[i] = acc
         acc += h
 
-    # Images use RAW pixel coordinates from Excel.
-    # scale_v=1.0 is passed so _extract_ws_images_html does NOT apply any
-    # per-image scaling Ã¢â‚¬â€ the parent div CSS transform does it uniformly.
+    # Extract and embed worksheet images.
+    # For section/room/course: image left% must be relative to the actual paper content width
+    # (not _orig_total_w_px from Excel) so the logo lands at its true Excel position.
+    # Paper content width = (paper_w - left_margin - right_margin) × 96dpi.
+    # left_offset_px=-30 compensates for pre-start column offset (logo in col A, table at col B).
     if layout_type in ('section', 'room', 'course') and margins:
         _m  = margins
         _ml = float(_m.get('left',  1.0))
@@ -10433,15 +10403,13 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
         _pk = _m.get('paper', 'A4')
         _pw, _, _ = PAPER_SIZES.get(_pk, PAPER_SIZES['A4'])
         _paper_content_px = (_pw - _ml - _mr) * 96
-        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _paper_content_px, left_offset_px=20, img_settings_list=img_settings, scale_v=scale_v)
+        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _paper_content_px, left_offset_px=20, img_settings_list=img_settings)
     else:
-        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _orig_total_w_px, img_settings_list=img_settings, scale_v=scale_v)
+        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _orig_total_w_px, img_settings_list=img_settings)
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Final HTML assembly Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    # Simple position:relative wrapper Ã¢â‚¬â€ NO transform applied here.
-    # The View Page JS (render_a4_page) applies scale at runtime.
-    # The PDF route (export_pdf_bulk) wraps this in a transform div before WeasyPrint.
-    # Both use scale_v returned as the 3rd element of this function.
+    # Wrapper is width:100% so the table always fills the paper content area.
+    # Images use percentage left/width so they scale with the table.
+    # below-images go before the table (behind text), above-images after (on top of text).
     html_out = (
         '<div style="position:relative;width:100%;isolation:isolate;">\n'
         + imgs_below + '\n'
@@ -10451,7 +10419,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
         + imgs_above + '\n'
         + '</div>'
     )
-    return html_out, table_px, scale_v, total_th_px
+    return html_out, table_px, 1.0, 0
 
 
 def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
@@ -10469,7 +10437,7 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
     skip_cells      = set(extra_skip_cells or set())
 
     MDW   = 7          # avg char width px (Excel default)
-    PT_PX = 96 / 72    # 1pt Ã¢â€ â€™ px
+    PT_PX = 96 / 72    # 1pt -> px
 
     # Apply content bounds (smart crop)
     if bounds:
@@ -10480,7 +10448,7 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
         max_row = ws.max_row    or 1
 
     # Column widths (only for visible range)
-    # Reference px widths (from Excel chars Ã¢â€ â€™ px) used for proportional sizing only.
+    # Reference px widths (from Excel chars -> px) used for proportional sizing only.
     col_widths = []
     col_hidden = []
     for c in range(col_start, max_col + 1):
@@ -10492,7 +10460,7 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
         else:
             chars = (cd.width if cd and cd.width else 8.43)
             col_widths.append(max(4, round(chars * MDW)))
-    # Ã¢â€ â‚¬Ã¢â€ â‚¬ Step A: Snapshot ORIGINAL col_offsets for pixel-perfect image placement Ã¢â€ â‚¬Ã¢â€ â‚¬
+    # -- Step A: Snapshot ORIGINAL col_offsets for pixel-perfect image placement --
     # Must be done BEFORE any equalization or tightening so that image anchor
     # positions map correctly to the original Excel column layout.
     _orig_col_offsets = {}
@@ -10516,7 +10484,7 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
             # rel_idx = (_c - 1) - (col_start - 1) = _c - col_start  (always < 0)
             _orig_col_offsets[_c - col_start] = -_pre_acc
 
-    # Ã¢â€ â‚¬Ã¢â€ â‚¬ Step B: Detect day-header row and collect day/time column indices Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
+    # -- Step B: Detect day-header row and collect day/time column indices --
     _DAY_KW = {
         'MON', 'TUE', 'WED', 'THU', 'THURS', 'FRI', 'SAT', 'SUN',
         'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY',
@@ -10566,19 +10534,19 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
             else:
                 # Check if this column is completely empty (e.g. non-anchor of a
                 # merged "TIME/DAYS" cell whose anchor is further left).
-                # If fully empty Ã¢â€ â€™ skip it and keep scanning left.
-                # If it has non-time content Ã¢â€ â€™ stop (real content boundary).
+                # If fully empty -> skip it and keep scanning left.
+                # If it has non-time content -> stop (real content boundary).
                 _ce = col_start + _ti
                 _col_empty = all(
                     ws.cell(row=_r, column=_ce).value is None
                     for _r in range(row_start, max_row + 1)
                 )
                 if _col_empty:
-                    continue      # empty placeholder Ã¢â‚¬â€  keep scanning left
-                break             # non-empty non-time col Ã¢â€ â€™ stop
+                    continue      # empty placeholder --  keep scanning left
+                break             # non-empty non-time col -> stop
 
-    # Ã¢â€ â‚¬Ã¢â€ â‚¬ Step C: Auto-fit each time column to its own content width Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
-    # Only measure cells that contain ACTUAL TIME VALUES Ã¢â‚¬â€  datetime.time objects
+    # -- Step C: Auto-fit each time column to its own content width --
+    # Only measure cells that contain ACTUAL TIME VALUES --  datetime.time objects
     # or strings matching the HH:MM pattern.  All other cells (headers, labels,
     # "DAILY CONTACT HOURS", "Prepared by:", etc.) are skipped.  This restricts
     # measurement to the schedule data rows only, regardless of template layout.
@@ -10596,10 +10564,10 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
             if not (_is_time_obj or _is_time_str):
                 continue    # skip non-time cells (headers, labels, totals, etc.)
             # Ã¢â€ â‚¬Ã¢â€ â‚¬ Measure display string Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
-            # datetime.time Ã¢â€ â€™ strftime('%H:%M') = "07:00" (matches Excel display)
-            # strings Ã¢â€ â€™ unchanged
+            # datetime.time -> strftime('%H:%M') = "07:00" (matches Excel display)
+            # strings -> unchanged
             if _is_time_obj:
-                _s = f"{_val.hour}:{_val.minute:02d}"   # "7:00" Ã¢â‚¬â€  no leading zero
+                _s = f"{_val.hour}:{_val.minute:02d}"   # "7:00" --  no leading zero
                 _col_has_time_obj = True
             else:
                 _s = str(_val).strip()
@@ -10610,7 +10578,7 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
         _tight_w = max(MDW * 3, _max_len * MDW + _pad)
         col_widths[_ti] = _tight_w
 
-    # Ã¢â€ â‚¬Ã¢â€ â‚¬ Step D: Day columns fill the space freed by time-col tightening Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
+    # -- Step D: Day columns fill the space freed by time-col tightening --
     # remaining = original_total Ã¢Ë†â€™ new_tight_time Ã¢Ë†â€™ other_non-day_non-time cols
     # Each day col gets an equal share of remaining, guaranteeing symmetry AND
     # that they are as wide as possible given the tightened time columns.
@@ -10638,7 +10606,7 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
         pts = (rd.height if rd and rd.height else 13.5)
         row_heights.append(max(8, round(pts * PT_PX)))
 
-    # Merged cell spans (full sheet Ã¢â‚¬â€  clip rendering handles out-of-range)
+    # Merged cell spans (full sheet --  clip rendering handles out-of-range)
     merged_spans = {}
     for merge in ws.merged_cells.ranges:
         r1, c1, r2, c2 = merge.min_row, merge.min_col, merge.max_row, merge.max_col
@@ -10686,25 +10654,26 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
     # SMART GRID DETECTION: Identify the timetable area to separate Grid Styles from Header/Footer Styles
     grid_start_r = row_start
     grid_end_r   = max_row
-    _found_start = False
-    for _r in range(row_start, max_row + 1):
-        for _c in range(col_start, max_col + 1):
-            _val = str(ws.cell(row=_r, column=_c).value or '').strip().upper()
-            if "TIME/DAYS" in _val:
-                grid_start_r = _r
-                _found_start = True
-                break
-        if _found_start: break
-    
-    _found_end = False
-    for _r in range(grid_start_r + 1, max_row + 1):
-        for _c in range(col_start, max_col + 1):
-            _val = str(ws.cell(row=_r, column=_c).value or '').strip().upper()
-            if any(k in _val for k in ["PREPARED BY:", "RECOMMENDING APPROVAL:", "APPROVED:"]):
-                grid_end_r = _r - 1
-                _found_end = True
-                break
-        if _found_end: break
+    if layout_type != 'faculty':
+        _found_start = False
+        for _r in range(row_start, max_row + 1):
+            for _c in range(col_start, max_col + 1):
+                _val = str(ws.cell(row=_r, column=_c).value or '').strip().upper()
+                if "TIME/DAYS" in _val:
+                    grid_start_r = _r
+                    _found_start = True
+                    break
+            if _found_start: break
+        
+        _found_end = False
+        for _r in range(grid_start_r + 1, max_row + 1):
+            for _c in range(col_start, max_col + 1):
+                _val = str(ws.cell(row=_r, column=_c).value or '').strip().upper()
+                if any(k in _val for k in ["PREPARED BY:", "RECOMMENDING APPROVAL:", "APPROVED:"]):
+                    grid_end_r = _r - 1
+                    _found_end = True
+                    break
+            if _found_end: break
 
     lines = [
         '<table style="border-collapse:collapse;table-layout:fixed;width:100%;">',
@@ -10831,20 +10800,12 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
                 _halign = h_map.get(al.horizontal or "left","left")
                 sp.append(f'text-align:{_halign}')
                 
-                # SMART VERTICAL ALIGNMENT
-                if is_grid_row:
-                    _valign = 'middle' if layout_type == 'faculty' else v_map.get(al.vertical or 'bottom', 'bottom')
-                else:
-                    # Header/Footer Restoration
-                    # If centered horizontally, force center vertically
-                    if _halign == 'center':
-                        _valign = 'middle'
-                    else:
-                        _valign = v_map.get(al.vertical or 'bottom', 'bottom')
-                    
-                    # Special padding for bottom-aligned text (e.g. Semester info)
-                    if _valign == 'bottom':
-                        sp.append('padding-bottom:2px !important')
+                # STRICT VERTICAL MIRRORING (from preview)
+                _valign = v_map.get(al.vertical or 'bottom', 'bottom')
+                
+                # BREATHABLE SPACE: Add padding-bottom if vertical align is bottom
+                if _valign == 'bottom':
+                    sp.append('padding-bottom:4px !important')
 
                 sp.append(f'vertical-align:{_valign}')
                 sp.append('white-space:pre-wrap;word-break:break-all' if al.wrap_text else 'white-space:pre')
@@ -10876,17 +10837,19 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
                 # Clipping wrapper div
                 html_text = f'<div style="height:{_sum_h}px;max-height:{_sum_h}px;width:100%;overflow:hidden;position:relative;display:block;">{html_text}</div>'
             else:
-                html_text = esc(cell_text).replace('\n', '<br>') if cell_text else ''
-                # Clipping wrapper for regular text cells (only if inside grid or tight header)
+                # -- TRUE FLEXBOX MIRRORING (Grid Subject Style) --
+                # We map Excel alignments to Flexbox properties for perfect PDF mirroring.
+                _v_flex = {'top':'flex-start','middle':'center','bottom':'flex-end'}.get(_valign, 'center')
+                _h_flex = {'left':'flex-start','center':'center','right':'flex-end'}.get(_halign, 'flex-start')
                 _clip_h = rh if not span_info else total_rh
-                if not is_grid_row:
-                    # HEADER/FOOTER RESTORATION: Use Flexbox to ensure vertical alignment works inside the clipped container
-                    _v_flex = {'top':'flex-start','middle':'center','bottom':'flex-end'}.get(_valign, 'center')
-                    _h_flex = {'left':'flex-start','center':'center','right':'flex-end'}.get(_halign, 'flex-start')
-                    _inner_pad = 'padding-bottom:2px;' if _valign == 'bottom' else ''
-                    html_text = f'<div style="height:{_clip_h}px;display:flex;flex-direction:column;justify-content:{_v_flex};align-items:{_h_flex};overflow:hidden;{_inner_pad}">{html_text}</div>'
-                else:
-                    html_text = f'<div style="max-height:{_clip_h}px;overflow:hidden;">{html_text}</div>'
+                
+                # Breathable padding for bottom-aligned text
+                _inner_pad = 'padding-bottom:4px;' if _valign == 'bottom' else ''
+                
+                html_text = esc(cell_text).replace('\n', '<br>') if cell_text else ''
+                
+                # By using display:flex with fixed height, we bypass the PDF engine's vertical-align issues.
+                html_text = f'<div style="height:{_clip_h}px;display:flex;flex-direction:column;justify-content:{_v_flex};align-items:{_h_flex};overflow:hidden;box-sizing:border-box;{_inner_pad}">{html_text}</div>'
             lines.append(f'  <td{span_attrs} style="{style_str}">{html_text}</td>')
 
         lines.append('</tr>')
@@ -10894,12 +10857,12 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
     lines += ['</tbody>', '</table>']
 
     # Build cumulative pixel offsets for image placement
-    col_offsets = {}  # 0-based col index Ã¢â€ â€™ left px
+    col_offsets = {}  # 0-based col index -> left px
     acc = 0
     for i, w in enumerate(col_widths):
         col_offsets[i] = acc
         acc += w
-    row_offsets = {}  # 0-based row index Ã¢â€ â€™ top px
+    row_offsets = {}  # 0-based row index -> top px
     acc = 0
     for i, h in enumerate(row_heights):
         row_offsets[i] = acc
@@ -10985,11 +10948,11 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
     overflow: visible;
     position: relative;
   }}
-  /* Debug grid Ã¢â‚¬â€ faint outline on every cell */
+  /* Debug grid -- faint outline on every cell */
   table td, table th {{
     outline: 0.5px solid rgba(0,0,0,0.10);
   }}
-  /* Overlap badge Ã¢â‚¬â€ cursor only, tooltip via JS */
+  /* Overlap badge -- cursor only, tooltip via JS */
   .sched-overlap-badge {{ cursor: pointer; }}
   table {{
     width: 100%;
@@ -11018,14 +10981,14 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
 
       var tableH = table.scrollHeight;  // height of table rows (images are absolute, don't add)
 
-      // No horizontal scaling Ã¢â‚¬â€ table fills paper via CSS width:100%.
+      // No horizontal scaling -- table fills paper via CSS width:100%.
       // Only scale down vertically if content is taller than the page.
       var scaleH = (tableH > paperContentH && paperContentH > 0)
                    ? paperContentH / tableH : 1.0;
       var scale  = Math.min(scaleH, 1.0);
 
       if (scale < 1.0) {{
-        // scale(1, s) Ã¢â‚¬â€ height-only compression: preserves full width (no right gap),
+        // scale(1, s) -- height-only compression: preserves full width (no right gap),
         // only compresses vertically to fit page height.
         inner.style.transform = 'scale(1,' + scale + ')';
         inner.style.transformOrigin = 'top left';
@@ -11089,7 +11052,7 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
             + (i > 0 ? 'border-top:1px solid #f0f0f0;margin-top:3px;' : '') + '">'
             + (en.t ? '<span style="color:#666;font-size:10px;">' + en.t + '</span><br>' : '')
             + '<strong style="font-size:12px;">' + (en.c || '') + '</strong>'
-            + (en.s ? ' <span style="color:#555;">Ã¢â‚¬â€ ' + en.s + '</span>' : '')
+            + (en.s ? ' <span style="color:#555;">-- ' + en.s + '</span>' : '')
             + (en.f ? '<br><span style="color:#888;font-size:10px;">' + en.f + '</span>' : '')
             + '</div>';
         }}).join('');
@@ -11145,7 +11108,7 @@ def render_pdf_page(html_content, orientation='landscape', margins=None):
     font-family: Calibri, Arial, sans-serif; 
     background: white;
   }}
-  /* .a4 = one physical page. NO padding here Ã¢â‚¬â€ @page already sets the gutters.
+  /* .a4 = one physical page. NO padding here -- @page already sets the gutters.
      overflow:hidden clips anything that exceeds one page height. */
   .a4 {{
     width: 100%;
@@ -11219,7 +11182,7 @@ def detect_schedule_grid(ws):
         'sunday': 'Sunday',   'sun': 'Sunday',
     }
     timere        = re.compile(
-        r'(\d{1,2}:\d{2})\s*(AM|PM)?\s*[-Ã¢â‚¬â€œ]\s*(\d{1,2}:\d{2})\s*(AM|PM)?',
+        r'(\d{1,2}:\d{2})\s*(AM|PM)?\s*[---œ]\s*(\d{1,2}:\d{2})\s*(AM|PM)?',
         re.IGNORECASE)
     simple_timere = re.compile(r'\b(\d{1,2}:\d{2})\s*(AM|PM)?\b', re.IGNORECASE)
 
@@ -11268,7 +11231,7 @@ def detect_schedule_grid(ws):
         for (r, s, e) in slots:
             h, m = map(int, s.split(':'))
             sm   = h * 60 + m + offset
-            if prev_sm is not None and sm < prev_sm:  # backwards jump Ã¢â€ â€™ 12h wrap
+            if prev_sm is not None and sm < prev_sm:  # backwards jump -> 12h wrap
                 offset += 720
                 sm     += 720
             new_s = f'{sm // 60:02d}:{sm % 60:02d}'
@@ -11308,7 +11271,7 @@ def detect_schedule_grid(ws):
                 return {'header_row': header_row, 'time_col': time_anchor_col,
                         'day_cols': day_cols, 'time_slots': time_slots}
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Pass 2: auto-detect Ã¢â‚¬â€ find time column + day name headers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # Ã¢â€â‚¬Ã¢â€â‚¬ Pass 2: auto-detect -- find time column + day name headers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     # Score columns: range-format "HH:MM-HH:MM" (strong signal) vs bare "HH:MM" (weak)
     col_range_counts   = {}
     col_time_counts    = {}
@@ -11338,7 +11301,7 @@ def detect_schedule_grid(ws):
     else:
         best_col = max(col_time_counts, key=lambda c: col_time_counts[c])
     if col_time_counts[best_col] < 3:
-        return None  # Too few time values Ã¢â‚¬â€ probably not a timetable
+        return None  # Too few time values -- probably not a timetable
 
     first_time_row = col_first_time_row[best_col]
 
@@ -11389,27 +11352,27 @@ def build_schedule_overlays(schedules, grid_info, view_type):
     cell_overrides   = {}
     extra_merge_map  = {}
     extra_skip_cells = set()
-    # cell_data: (start_row, col) Ã¢â€ â€™ list of (rowspan, lines, entry_dict)
+    # cell_data: (start_row, col) -> list of (rowspan, lines, entry_dict)
     cell_data = {}
 
-    # Badge view-type: some entities are not real conflicts Ã¢â‚¬â€ treat as neutral.
+    # Badge view-type: some entities are not real conflicts -- treat as neutral.
     _vtype_for_badge = view_type
     if view_type == 'room' and schedules:
         _first_room = getattr(schedules[0], 'room', None)
         if _first_room and getattr(_first_room, 'capacity', 0) == 999:
-            _vtype_for_badge = 'room_neutral'  # NSTP universal room Ã¢â‚¬â€ not a real conflict
+            _vtype_for_badge = 'room_neutral'  # NSTP universal room -- not a real conflict
     if view_type == 'faculty' and schedules:
         _first_faculty = getattr(schedules[0], 'faculty', None)
         if _first_faculty:
             _fname = (getattr(_first_faculty, 'full_name', '') or '').strip().upper()
             if 'T.B.A' in _fname or _fname == 'TBA':
-                _vtype_for_badge = 'faculty_neutral'  # T.B.A. is not a real teacher Ã¢â‚¬â€ not a conflict
+                _vtype_for_badge = 'faculty_neutral'  # T.B.A. is not a real teacher -- not a conflict
 
     day_cols   = grid_info['day_cols']
     time_slots = grid_info['time_slots']  # [(row, start_str, end_str|None)]
 
     def t2m(t):
-        """'HH:MM' Ã¢â€ â€™ minutes from midnight."""
+        """'HH:MM' -> minutes from midnight."""
         if not t:
             return 0
         try:
@@ -11490,7 +11453,7 @@ def build_schedule_overlays(schedules, grid_info, view_type):
         start_t = _fmt_time_12h(sched.start_time) if sched.start_time else ''
         end_t   = _fmt_time_12h(sched.end_time)   if sched.end_time   else ''
         entry_dict = {'c': course_code, 's': section_name, 'f': faculty_name,
-                      't': f'{start_t}Ã¢â‚¬â€œ{end_t}'}
+                      't': f'{start_t}--œ{end_t}'}
         cell_data.setdefault((start_row, col), []).append((rowspan, lines, entry_dict))
 
     # Ã¢â€â‚¬Ã¢â€â‚¬ Pass 2: build HTML for each cell, stacking all entries Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
@@ -11499,7 +11462,7 @@ def build_schedule_overlays(schedules, grid_info, view_type):
         cnt     = len(entries)
 
         if cnt == 1:
-            # Single schedule Ã¢â‚¬â€ centered block
+            # Single schedule -- centered block
             _, lines, _ = entries[0]
             main_line = _esc(lines[0]) if lines else ''
             sub_html  = ''.join(
@@ -11517,7 +11480,7 @@ def build_schedule_overlays(schedules, grid_info, view_type):
                 '</div></div>'
             )
         else:
-            # Multiple overlapping schedules Ã¢â‚¬â€ show top schedule only, badge reveals all
+            # Multiple overlapping schedules -- show top schedule only, badge reveals all
             _, lines, _ = entries[0]
             main_line = _esc(lines[0]) if lines else ''
             sub_html  = ''.join(f'<div>{_esc(l)}</div>' for l in lines[1:] if l)
@@ -11552,7 +11515,7 @@ def build_schedule_overlays(schedules, grid_info, view_type):
 
 # Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
-# Paper size catalog Ã¢â‚¬â€ (width_in, height_in) in portrait orientation
+# Paper size catalog -- (width_in, height_in) in portrait orientation
 PAPER_SIZES = {
     'A4':        (8.27,  11.69,  'A4 Bond Paper (8.27 in Ãƒâ€” 11.69 in)'),
     'Letter':    (8.5,   11.0,   'Short Bond / US Letter (8.5 in Ãƒâ€” 11 in)'),
@@ -11794,7 +11757,7 @@ def section_timetable_html(section_id):
             schedules, grid_info, 'section'
         )
     else:
-        # Template has no detectable grid Ã¢â‚¬â€ render header/variables only
+        # Template has no detectable grid -- render header/variables only
         cell_overrides   = {}
         extra_merge_map  = {}
         extra_skip_cells = set()
@@ -11896,7 +11859,7 @@ def public_section_timetable(section_id):
 @app.route('/irregular-timetable/<string:student_id>')
 def irregular_timetable_html(student_id):
     """Render an irregular student's custom mixed schedule using the section template.
-    Publicly accessible Ã¢â‚¬â€ used by the Student Portal iframe."""
+    Publicly accessible -- used by the Student Portal iframe."""
     student = Student.query.filter_by(student_id=student_id, is_archived=False).first_or_404()
     if not student.is_irregular:
         abort(404)
@@ -11972,7 +11935,7 @@ def section_timetable_pdf(section_id):
     Query params:
       ?semester=1st Semester
       ?sem_ay=Second / 2023-2024
-      ?orientation=portrait  (default: portrait Ã¢â‚¬â€ matches preview)
+      ?orientation=portrait  (default: portrait -- matches preview)
     """
     section = Section.query.get_or_404(section_id)
 
@@ -12111,7 +12074,7 @@ def build_static_cell_overrides(ws, layout_type, settings, entity_name=None, sem
     website      = getattr(s, 'website',            '') or ''
 
     # Read signatory names DIRECTLY from individual DB fields.
-    # Do NOT use *_signatories_json Ã¢â‚¬â€ that JSON is written once at migration time
+    # Do NOT use *_signatories_json -- that JSON is written once at migration time
     # and never updated when the user edits individual fields, causing stale values.
     sig1_name = (getattr(s, f'{layout_type}_signatory_1', '') or '').strip()
     sig2_name = (getattr(s, f'{layout_type}_signatory_2', '') or '').strip()
@@ -12143,7 +12106,7 @@ def build_static_cell_overrides(ws, layout_type, settings, entity_name=None, sem
         # Ã¢â€â‚¬Ã¢â€â‚¬ Schedule details Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         ('Semester / Academic Year',     False, sem_ay_label),
         ('SEMESTER / ACADEMIC YEAR',     False, sem_ay_label),
-        # Class / Room / Course identifier label (exact Ã¢â‚¬â€ whole cell)
+        # Class / Room / Course identifier label (exact -- whole cell)
         ('CLASS',                        False, class_label),
         ('ROOM',                         False, class_label),
         ('COURSE',                       False, class_label),
@@ -12162,7 +12125,7 @@ def build_static_cell_overrides(ws, layout_type, settings, entity_name=None, sem
     ]
 
     # Signatory name swaps: replace known defaults with DB values.
-    # Always append Ã¢â‚¬â€ fallback to anchor itself so no-op replaces still register.
+    # Always append -- fallback to anchor itself so no-op replaces still register.
     _sig_name_defaults = [
         ('SCHEDULE COMMITTEE',   sig1_name or 'SCHEDULE COMMITTEE'),
         ('ARIES M. GELERA',      sig1_name or 'ARIES M. GELERA'),
@@ -12189,8 +12152,8 @@ def build_static_cell_overrides(ws, layout_type, settings, entity_name=None, sem
     # --- Build merge lookup so entity_name lands on the anchor (primary) cell ---
     # Writing to a secondary merged cell is silently skipped by render_excel_to_html,
     # so we must resolve c+1 to the actual anchor cell of the name field merge.
-    _merge_anchor = {}   # (r, c) secondary Ã¢â€ â€™ (r1, c1) primary
-    _merge_maxcol = {}   # (r1, c1) primary Ã¢â€ â€™ max_col of that merge
+    _merge_anchor = {}   # (r, c) secondary -> (r1, c1) primary
+    _merge_maxcol = {}   # (r1, c1) primary -> max_col of that merge
     for _mg in ws.merged_cells.ranges:
         _r1, _c1, _r2, _c2 = _mg.min_row, _mg.min_col, _mg.max_row, _mg.max_col
         _merge_maxcol[(_r1, _c1)] = _c2
@@ -12225,36 +12188,36 @@ def build_static_cell_overrides(ws, layout_type, settings, entity_name=None, sem
                     if anchor.lower() in val_lower:
                         if new_val:
                             overrides[(r, c)] = new_val
-                            print(f"[STATIC_SWAP] ({r},{c}) PARTIAL '{val}' Ã¢â€ â€™ '{new_val}'")
+                            print(f"[STATIC_SWAP] ({r},{c}) PARTIAL '{val}' -> '{new_val}'")
                         matched = True
                         break
                 else:
                     if val_lower == anchor.lower():
                         if new_val is not None:
                             overrides[(r, c)] = new_val
-                            print(f"[STATIC_SWAP] ({r},{c}) EXACT '{val}' Ã¢â€ â€™ '{new_val}'")
+                            print(f"[STATIC_SWAP] ({r},{c}) EXACT '{val}' -> '{new_val}'")
                         matched = True
                         # Also inject entity_name into anchor cell of name field when this is the entity identifier label
                         if entity_name and not entity_label_found and val_lower in {'class', 'room', 'course'}:
                             _tr, _tc = _entity_target(r, c)
                             overrides[(_tr, _tc)] = entity_name
                             entity_label_found = True
-                            print(f"[STATIC_SWAP] ({_tr},{_tc}) ENTITY_ID adjacent Ã¢â€ â€™ '{entity_name}'")
+                            print(f"[STATIC_SWAP] ({_tr},{_tc}) ENTITY_ID adjacent -> '{entity_name}'")
                         break
 
             # Strategy 4: Regex-based sem/ay value detection
             if not matched and sem_ay_val and _SEM_PAT.search(val):
                 overrides[(r, c)] = sem_ay_val
-                print(f"[STATIC_SWAP] ({r},{c}) SEM_REGEX '{val}' Ã¢â€ â€™ '{sem_ay_val}'")
+                print(f"[STATIC_SWAP] ({r},{c}) SEM_REGEX '{val}' -> '{sem_ay_val}'")
                 matched = True
 
-            # Strategy 3: entity label Ã¢â€ â€™ inject entity name in anchor cell of name field
+            # Strategy 3: entity label -> inject entity name in anchor cell of name field
             if not matched and entity_name and not entity_label_found:
                 if val_lower in ENTITY_LABELS:
                     _tr, _tc = _entity_target(r, c)
                     overrides[(_tr, _tc)] = entity_name
                     entity_label_found = True
-                    print(f"[STATIC_SWAP] ({_tr},{_tc}) ENTITY_LABEL adjacent Ã¢â€ â€™ '{entity_name}'")
+                    print(f"[STATIC_SWAP] ({_tr},{_tc}) ENTITY_LABEL adjacent -> '{entity_name}'")
 
             if not matched:
                 print(f"[STATIC_SCAN] ({r},{c}) no match: {val!r}")
@@ -12269,11 +12232,11 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
     them with current DB / dynamic values. No {{tokens}} needed in the Excel file.
 
     Strategies:
-      1. Exact CI  Ã¢â‚¬â€ val.strip().lower() == anchor.lower()
-      2. Partial   Ã¢â‚¬â€ anchor.lower() in val.lower()
-      3. Regex     Ã¢â‚¬â€ semester/year pattern for fac_sem_ay_label
-      4. Label+Adj Ã¢â‚¬â€ replace label cell AND write dynamic value to col+offset
-      5. PositionalÃ¢â‚¬â€ faculty name/rank injected N rows below 'Conforme:' anchor
+      1. Exact CI  -- val.strip().lower() == anchor.lower()
+      2. Partial   -- anchor.lower() in val.lower()
+      3. Regex     -- semester/year pattern for fac_sem_ay_label
+      4. Label+Adj -- replace label cell AND write dynamic value to col+offset
+      5. Positional-- faculty name/rank injected N rows below 'Conforme:' anchor
 
     Returns: cell_overrides dict {(row, col): new_value_str}
     """
@@ -12346,38 +12309,38 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
     # (anchor, is_partial, new_value)
     # All exact matches use case-insensitive + trimmed comparison in the scan loop.
     SWAPS = [
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Header (vars 1Ã¢â‚¬â€œ9) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # Ã¢â€â‚¬Ã¢â€â‚¬ Header (vars 1--œ9) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         ('Republic of the Philippines',    False, republic),
         ('CAVITE STATE UNIVERSITY',        False, univ_name),
         ('CCAT Campus',                    False, campus),
         ('Rosario, Cavite',                False, address),
-        ('437-9505',                       True,  contact),   # var 5 Ã¢â‚¬â€ partial (phone may have Ã¢ËœÅ½ prefix)
-        ('437-6659',                       True,  contact),   # var 5 Ã¢â‚¬â€ second phone fragment
-        ('@cvsu',                          True,  email),     # var 6 Ã¢â‚¬â€ partial
-        ('cvsu-rosario',                   True,  website),   # var 7 Ã¢â‚¬â€ partial
+        ('437-9505',                       True,  contact),   # var 5 -- partial (phone may have Ã¢ËœÅ½ prefix)
+        ('437-6659',                       True,  contact),   # var 5 -- second phone fragment
+        ('@cvsu',                          True,  email),     # var 6 -- partial
+        ('cvsu-rosario',                   True,  website),   # var 7 -- partial
         ('DEPARTMENT OF COMPUTER STUDIES', False, dept),      # var 8
         ('FACULTY CLASS SCHEDULE',         False, sched_ttl), # var 9
-        # var 10 (fac_sem_ay_label) handled by regex Ã¢â‚¬â€ see Strategy 3 below
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Form identifiers (vars 37Ã¢â‚¬â€œ38) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-        ('VPAA-QF-11',                     True,  form_top),  # partial Ã¢â‚¬â€ avoids version suffix issues
+        # var 10 (fac_sem_ay_label) handled by regex -- see Strategy 3 below
+        # Ã¢â€â‚¬Ã¢â€â‚¬ Form identifiers (vars 37--œ38) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        ('VPAA-QF-11',                     True,  form_top),  # partial -- avoids version suffix issues
         ('V01-2018-07-24',                 True,  form_bot),  # partial
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Signatory names & titles (vars 23Ã¢â‚¬â€œ24, 26Ã¢â‚¬â€œ29, 31Ã¢â‚¬â€œ32) Ã¢â€â‚¬Ã¢â€â‚¬
+        # Ã¢â€â‚¬Ã¢â€â‚¬ Signatory names & titles (vars 23--œ24, 26--œ29, 31--œ32) Ã¢â€â‚¬Ã¢â€â‚¬
         ('ARIES M. GELERA',                False, chair_name),
         ('Department Chairperson',         False, chair_ttl),
         ('ARIEL G. SANTOS, EdD',           False, dir_name),
         ('Director, Instruction',          False, dir_ttl),
         ('MARLYN A. QUINEZ',               False, reg_name),
-        ('OIC, Registrar',                 False, reg_lbl),   # var 24 Ã¢â‚¬â€ registrar's title label
+        ('OIC, Registrar',                 False, reg_lbl),   # var 24 -- registrar's title label
         ('LAURO B. PASCUA, EdD',           False, adm_name),
         ('Campus Administrator',           False, adm_ttl),
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Activity labels (vars 33Ã¢â‚¬â€œ36) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # Ã¢â€â‚¬Ã¢â€â‚¬ Activity labels (vars 33--œ36) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         ('Consultation:',                  False, consult),
         ('Research:',                      False, research),
-        ('Designation',                    True,  designat),  # partial Ã¢â‚¬â€ handles "Designation :" space variant
+        ('Designation',                    True,  designat),  # partial -- handles "Designation :" space variant
         ('Extension:',                     False, extension),
     ]
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Strategy 3: Regex Ã¢â‚¬â€ semester/year value for fac_sem_ay_label (var 10) Ã¢â€â‚¬
+    # Ã¢â€â‚¬Ã¢â€â‚¬ Strategy 3: Regex -- semester/year value for fac_sem_ay_label (var 10) Ã¢â€â‚¬
     _SEM_PAT = re.compile(
         r'(1st|2nd|first|second|third|midyear)\s*(sem(ester)?)?'
         r'|SY\s*\d{4}'
@@ -12389,13 +12352,13 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
     # (anchor, new_label, dynamic_value, col_offset_to_value_cell)
     # col_offset=2: value cell is 2 cols right of label (common in merged-col templates)
     LABEL_VALUE = [
-        # vars 11Ã¢â‚¬â€œ12: Name label + faculty name value
+        # vars 11--œ12: Name label + faculty name value
         ('Name:',                                name_lbl,  fac_name,  2),
-        # vars 13Ã¢â‚¬â€œ14: Educ label + value
+        # vars 13--œ14: Educ label + value
         ('Highest Educ. Attainment:',            educ_lbl,  fac_educ,  2),
-        # vars 15Ã¢â‚¬â€œ16: Prep label + value
+        # vars 15--œ16: Prep label + value
         ('No. of Preparation/s:',                prep_lbl,  prep_str,  2),
-        # vars 17Ã¢â‚¬â€œ18: Hours label + value
+        # vars 17--œ18: Hours label + value
         ('Total no. of contact hours per week:', hours_lbl, hours_str, 2),
         # vars 19, 22, 25, 30: Signatory block labels (no adjacent value cell)
         ('Conforme:',              conf_lbl, None, None),
@@ -12404,7 +12367,7 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
         ('Approved:',              appr_lbl, None, None),
     ]
 
-    conforme_pos = None  # (row, col) of Conforme: Ã¢â‚¬â€ for Strategy 5
+    conforme_pos = None  # (row, col) of Conforme: -- for Strategy 5
 
     # Ã¢â€â‚¬Ã¢â€â‚¬ Scan all cells Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     for row_cells in ws.iter_rows():
@@ -12424,20 +12387,20 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
                 if is_partial:
                     if anchor.lower() in val_lo:
                         overrides[(r, c)] = new_val if new_val else val
-                        print(f"[FAC_SWAP] ({r},{c}) PARTIAL '{val}' Ã¢â€ â€™ '{new_val}'")
+                        print(f"[FAC_SWAP] ({r},{c}) PARTIAL '{val}' -> '{new_val}'")
                         matched = True
                         break
                 else:
                     if val_lo == anchor.lower():
                         overrides[(r, c)] = new_val if new_val is not None else val
-                        print(f"[FAC_SWAP] ({r},{c}) EXACT '{val}' Ã¢â€ â€™ '{new_val}'")
+                        print(f"[FAC_SWAP] ({r},{c}) EXACT '{val}' -> '{new_val}'")
                         matched = True
                         break
 
-            # Strategy 3: regex Ã¢â‚¬â€ sem/ay label
+            # Strategy 3: regex -- sem/ay label
             if not matched and _SEM_PAT.search(val):
                 overrides[(r, c)] = sem_ay_lbl
-                print(f"[FAC_SWAP] ({r},{c}) SEM_REGEX '{val}' Ã¢â€ â€™ '{sem_ay_lbl}'")
+                print(f"[FAC_SWAP] ({r},{c}) SEM_REGEX '{val}' -> '{sem_ay_lbl}'")
                 matched = True
 
             # Strategy 4: Label + Adjacent Value (case-insensitive)
@@ -12445,10 +12408,10 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
                 for anchor, new_label, dyn_val, col_offset in LABEL_VALUE:
                     if val_lo == anchor.lower():
                         overrides[(r, c)] = new_label
-                        print(f"[FAC_SWAP] ({r},{c}) LABEL '{val}' Ã¢â€ â€™ '{new_label}'")
+                        print(f"[FAC_SWAP] ({r},{c}) LABEL '{val}' -> '{new_label}'")
                         if col_offset is not None and dyn_val is not None:
                             overrides[(r, c + col_offset)] = dyn_val
-                            print(f"[FAC_SWAP] ({r},{c+col_offset}) ADJ_VAL Ã¢â€ â€™ '{dyn_val}'")
+                            print(f"[FAC_SWAP] ({r},{c+col_offset}) ADJ_VAL -> '{dyn_val}'")
                         if anchor.lower() == 'conforme:':
                             conforme_pos = (r, c)
                         matched = True
@@ -12457,14 +12420,14 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
             if not matched:
                 print(f"[FAC_SCAN] ({r},{c}) no match: {val!r}")
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Strategy 5: Positional Ã¢â‚¬â€ faculty name & rank below "Conforme:" Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    # vars 20Ã¢â‚¬â€œ21: template puts faculty name at conforme_row+2, rank at conforme_row+3
+    # Ã¢â€â‚¬Ã¢â€â‚¬ Strategy 5: Positional -- faculty name & rank below "Conforme:" Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # vars 20--œ21: template puts faculty name at conforme_row+2, rank at conforme_row+3
     if conforme_pos:
         cr, cc = conforme_pos
         overrides[(cr + 2, cc)] = fac_name
         overrides[(cr + 3, cc)] = fac_rank
-        print(f"[FAC_SWAP] ({cr+2},{cc}) POSITIONAL fac_name Ã¢â€ â€™ '{fac_name}'")
-        print(f"[FAC_SWAP] ({cr+3},{cc}) POSITIONAL fac_rank Ã¢â€ â€™ '{fac_rank}'")
+        print(f"[FAC_SWAP] ({cr+2},{cc}) POSITIONAL fac_name -> '{fac_name}'")
+        print(f"[FAC_SWAP] ({cr+3},{cc}) POSITIONAL fac_rank -> '{fac_rank}'")
 
     print(f"[FAC_SWAP] Ã¢â€â‚¬Ã¢â€â‚¬ Done. {len(overrides)} overrides generated Ã¢â€â‚¬Ã¢â€â‚¬\n")
     return overrides
@@ -13152,7 +13115,7 @@ def api_courses_with_schedules():
                .filter(Course.id.in_(ids), Course.is_archived == False)
                .order_by(Course.course_code)
                .all())
-    return jsonify([{'id': c.id, 'name': c.course_code + ' Ã¢â‚¬â€ ' + c.course_name} for c in courses])
+    return jsonify([{'id': c.id, 'name': c.course_code + ' -- ' + c.course_name} for c in courses])
 
 
 @app.route('/save-layout-xlsx', methods=['POST'])
@@ -13633,7 +13596,7 @@ def download_student_template():
     # Notes row
     note_row = len(samples) + 2
     note_cell = ws.cell(row=note_row, column=1,
-        value='NOTES: Year Level must be 1Ã¢â‚¬â€œ4. Section Name must exactly match an existing section. Email is optional. Duplicate Student IDs will be skipped.')
+        value='NOTES: Year Level must be 1--œ4. Section Name must exactly match an existing section. Email is optional. Duplicate Student IDs will be skipped.')
     note_cell.font = Font(italic=True, color='AA0000', size=9)
     ws.merge_cells(start_row=note_row, start_column=1, end_row=note_row, end_column=5)
 
@@ -13665,12 +13628,12 @@ def download_faculty_loading_template():
     ws = wb.active
     ws.title = 'Faculty Loading'
 
-    # Header block (rows 1-14) Ã¢â‚¬â€ parser reads rows 1-15 for dept detection
-    ws['A1'] = 'CAVITE STATE UNIVERSITY Ã¢â‚¬â€œ CCAT'
+    # Header block (rows 1-14) -- parser reads rows 1-15 for dept detection
+    ws['A1'] = 'CAVITE STATE UNIVERSITY --œ CCAT'
     ws['A1'].font = Font(bold=True, size=13)
     ws['A2'] = 'COLLEGE OF COMPUTER STUDIES'  # "COMPUTER STUDIES" triggers dept detection
     ws['A2'].font = Font(bold=True, size=11)
-    ws['A3'] = 'Faculty Loading Ã¢â‚¬â€ Academic Year'
+    ws['A3'] = 'Faculty Loading -- Academic Year'
     ws['A3'].font = Font(italic=True, size=10, color='555555')
 
     # Column headers at row 15
@@ -13700,7 +13663,7 @@ def download_faculty_loading_template():
                 cell.font = spl_font
                 cell.fill = spl_fill
 
-    # "Prepared by" marker Ã¢â‚¬â€ parser stops here
+    # "Prepared by" marker -- parser stops here
     ws.cell(row=22, column=1, value='Prepared by:').font = Font(italic=True, color='888888', size=9)
 
     # Notes row
@@ -13735,7 +13698,7 @@ def download_curriculum_template():
     from docx.enum.text import WD_ALIGN_PARAGRAPH
 
     doc = DocxDocument()
-    title_p = doc.add_heading('BS Computer Science Ã¢â‚¬â€ Curriculum Import Template', 0)
+    title_p = doc.add_heading('BS Computer Science -- Curriculum Import Template', 0)
     title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     prog_p = doc.add_paragraph()
@@ -13811,7 +13774,7 @@ def download_curriculum_template():
 
     note_p = doc.add_paragraph()
     note_run = note_p.add_run(
-        'NOTES: Do NOT change heading text (FIRST YEAR, SECOND SEMESTER, etc.) Ã¢â‚¬â€ '
+        'NOTES: Do NOT change heading text (FIRST YEAR, SECOND SEMESTER, etc.) -- '
         'they are used for automatic detection. Table column order must be: '
         'Course Code | Course Title | Lec Units | Lab Units. '
         'Change "BSCoS" to "BSInfoTech" in the Program line for Information Technology. '
@@ -13909,7 +13872,7 @@ def import_students_xlsx():
     return redirect(url_for('manage_students'))
 
 
-# Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ STUDENT PORTAL (PUBLIC Ã¢â‚¬â€ no login required) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ STUDENT PORTAL (PUBLIC -- no login required) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 @app.route('/student-portal', methods=['GET', 'POST'])
 def student_portal():
@@ -13956,18 +13919,18 @@ def student_portal():
             _portal_attempts.pop(ip, None)
             return redirect(url_for('student_schedule', student_id=sid, term_id=archive_entry.term_archive_id))
 
-        # Successful live lookup Ã¢â‚¬â€ reset counter for this IP
+        # Successful live lookup -- reset counter for this IP
         _portal_attempts.pop(ip, None)
         return redirect(url_for('student_schedule', student_id=sid))
     return render_template('student_portal.html')
 
 
 # Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-# IRREGULAR STUDENT PATHFINDER Ã¢â‚¬â€ helpers & routes
+# IRREGULAR STUDENT PATHFINDER -- helpers & routes
 # Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 def _t2m(t):
-    """'HH:MM' Ã¢â€ â€™ minutes from midnight."""
+    """'HH:MM' -> minutes from midnight."""
     try:
         h, m = t.strip().split(':')
         return int(h) * 60 + int(m)
@@ -14019,7 +13982,7 @@ def _gap_per_day(all_slots):
     return result
 
 def _fmt12(t):
-    """'HH:MM' Ã¢â€ â€™ '8:00 AM' style."""
+    """'HH:MM' -> '8:00 AM' style."""
     try:
         h, m = int(t[:2]), int(t[3:5])
         suffix = 'AM' if h < 12 else 'PM'
@@ -14033,7 +13996,7 @@ def _irregular_solver(course_ids, semester):
     Main algorithm for the Irregular Pathfinder.
     Returns dict with keys: anchor, full_cover, combinations, deadlock_courses.
     """
-    # Step 1 Ã¢â‚¬â€ gather offerings per course
+    # Step 1 -- gather offerings per course
     offerings = {}  # course_id -> [(section_id, [ScheduledClass, ...])]
     all_section_ids = set()
     for cid in course_ids:
@@ -14048,10 +14011,10 @@ def _irregular_solver(course_ids, semester):
             all_section_ids.add(sc.section_id)
         offerings[cid] = list(by_sec.items())  # [(section_id, [slots]), ...]
 
-    # Step 2 Ã¢â‚¬â€ immediate deadlock: courses with no offerings at all
+    # Step 2 -- immediate deadlock: courses with no offerings at all
     deadlock_courses = [cid for cid in course_ids if not offerings[cid]]
 
-    # Step 3 Ã¢â‚¬â€ section coverage count
+    # Step 3 -- section coverage count
     # coverage[section_id] = set of course_ids that section offers
     coverage = {}
     for cid, sec_slots in offerings.items():
@@ -14091,17 +14054,17 @@ def _irregular_solver(course_ids, semester):
             'total_requested':   len(course_ids),
         }
 
-    # Step 4 Ã¢â‚¬â€ uncovered courses (need backtracking)
+    # Step 4 -- uncovered courses (need backtracking)
     uncovered = [cid for cid in course_ids if cid not in anchor_course_ids]
 
-    # Step 5 Ã¢â‚¬â€ collect options per uncovered course (exclude anchor section)
+    # Step 5 -- collect options per uncovered course (exclude anchor section)
     uncovered_options = {}  # cid -> [(section_id, [slots])]
     for cid in uncovered:
         opts = [(sec_id, slots) for sec_id, slots in offerings[cid]
                 if sec_id != best_sec_id]
         uncovered_options[cid] = opts
 
-    # Step 6 Ã¢â‚¬â€ backtracking over uncovered courses
+    # Step 6 -- backtracking over uncovered courses
     MAX_SOLUTIONS = 20
     solutions_raw = []  # list of [(cid, section_id, [slots]), ...]
 
@@ -14120,7 +14083,7 @@ def _irregular_solver(course_ids, semester):
 
     backtrack(0, [], [])
 
-    # Step 7 Ã¢â‚¬â€ score and serialize
+    # Step 7 -- score and serialize
     def serialize_slots(slots):
         out = []
         for sc in slots:
@@ -14417,7 +14380,7 @@ def api_irregular_pathfinder(student_id):
     if len(course_ids) > 20:
         return jsonify({'error': 'Maximum 20 courses per search.'}), 400
 
-    # Save/update profile (requested courses only Ã¢â‚¬â€ confirmed later)
+    # Save/update profile (requested courses only -- confirmed later)
     profile = IrregularAssignment.query.filter_by(student_id_fk=student_id).first()
     if not profile:
         profile = IrregularAssignment(student_id_fk=student_id)
@@ -14603,7 +14566,7 @@ def student_schedule(student_id):
                     ScheduledClass.day, ScheduledClass.start_time
                 ).all()
 
-    # Build simple dayÃ¢â€ â€™slot grid
+    # Build simple day->slot grid
     days_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
     grid = {day: [] for day in days_order}
     for sc in schedules:
@@ -14694,7 +14657,7 @@ def public_archived_timetable_html(archive_id, student_id):
 
 
 with app.app_context():
-    db.create_all()  # Creates any missing tables (safe Ã¢â‚¬â€ never drops existing data)
+    db.create_all()  # Creates any missing tables (safe -- never drops existing data)
     # Safe migrations: add missing columns to existing tables
     import sqlite3 as _sqlite3
     _db_path = app.config.get('SQLALCHEMY_DATABASE_URI', '').replace('sqlite:///', '')
@@ -14746,7 +14709,7 @@ with app.app_context():
                 'margin_left':        "REAL DEFAULT 1.0",
                 'margin_right':       "REAL DEFAULT 1.0",
                 'paper_size':         "VARCHAR(30) DEFAULT 'A4'",
-                # Faculty-specific columns (independent Ã¢â‚¬â€ Card 1: Header)
+                # Faculty-specific columns (independent -- Card 1: Header)
                 'fac_republic_text':    "VARCHAR(255) DEFAULT 'Republic of the Philippines'",
                 'fac_univ_name':        "VARCHAR(255) DEFAULT 'CAVITE STATE UNIVERSITY'",
                 'fac_campus_name':      "VARCHAR(255) DEFAULT 'CCAT Campus'",
@@ -14802,7 +14765,7 @@ with app.app_context():
                 if _col not in _ss_cols:
                     _conn.execute(f'ALTER TABLE system_settings ADD COLUMN {_col} {_col_def}')
                     _conn.commit()
-            # FacultyAssignment table migration Ã¢â‚¬â€ split-hour columns
+            # FacultyAssignment table migration -- split-hour columns
             _fa_cols_needed = {
                 'split_day_1':       'VARCHAR(20)',
                 'split_hours_1':     'FLOAT',
@@ -14825,12 +14788,12 @@ with app.app_context():
                 if _col not in _fac_cols:
                     _conn.execute(f'ALTER TABLE faculty ADD COLUMN {_col} {_col_def}')
                     _conn.commit()
-            # Student table migration Ã¢â‚¬â€ is_irregular flag
+            # Student table migration -- is_irregular flag
             _stu_cols = [row[1] for row in _conn.execute('PRAGMA table_info(student)').fetchall()]
             if 'is_irregular' not in _stu_cols:
                 _conn.execute('ALTER TABLE student ADD COLUMN is_irregular BOOLEAN NOT NULL DEFAULT 0')
                 _conn.commit()
-            # Module 3: ScheduledClass Ã¢â‚¬â€ source, is_draft, draft_version_id
+            # Module 3: ScheduledClass -- source, is_draft, draft_version_id
             _sc_cols2 = [row[1] for row in _conn.execute('PRAGMA table_info(scheduled_class)').fetchall()]
             if 'source' not in _sc_cols2:
                 _conn.execute("ALTER TABLE scheduled_class ADD COLUMN source VARCHAR(10) NOT NULL DEFAULT 'ga'")
@@ -14841,7 +14804,7 @@ with app.app_context():
             if 'draft_version_id' not in _sc_cols2:
                 _conn.execute('ALTER TABLE scheduled_class ADD COLUMN draft_version_id INTEGER')
                 _conn.commit()
-            # Module 3: SystemSettings Ã¢â‚¬â€ schedule_lock
+            # Module 3: SystemSettings -- schedule_lock
             _ss_cols2 = [row[1] for row in _conn.execute('PRAGMA table_info(system_settings)').fetchall()]
             if 'schedule_lock' not in _ss_cols2:
                 _conn.execute('ALTER TABLE system_settings ADD COLUMN schedule_lock BOOLEAN NOT NULL DEFAULT 0')
@@ -15188,7 +15151,7 @@ def run_pending_rooms():
                         datetime.strptime(ex.end_time,   fmt).time()):
                 ex_course = ex.course.course_code if ex.course else '?'
                 conflicts.append(
-                    f"{sc.course.course_code if sc.course else '?'} ({sc.day} {sc.start_time}Ã¢â‚¬â€œ{sc.end_time}) "
+                    f"{sc.course.course_code if sc.course else '?'} ({sc.day} {sc.start_time}--œ{sc.end_time}) "
                     f"conflicts with {ex_course} already booked in {room.room_name}."
                 )
                 break
@@ -15203,7 +15166,7 @@ def run_pending_rooms():
                 conflicts.append(
                     f"{sc.course.course_code if sc.course else '?'} and "
                     f"{other_sc.course.course_code if other_sc.course else '?'} "
-                    f"both assigned to {room.room_name} on {sc.day} Ã¢â‚¬â€ time overlap."
+                    f"both assigned to {room.room_name} on {sc.day} -- time overlap."
                 )
                 break
 
@@ -15212,7 +15175,7 @@ def run_pending_rooms():
             flash(f'Room conflict: {msg}', 'danger')
         return redirect(url_for('pending_room'))
 
-    # No conflicts Ã¢â‚¬â€ save
+    # No conflicts -- save
     for sc, room in assignments:
         sc.room_id = room.id
     db.session.commit()
