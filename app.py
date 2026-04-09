@@ -10695,6 +10695,11 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
     lines.append('</colgroup><tbody>')
 
     for r in range(row_start, max_row + 1):
+        # SKIP HIDDEN ROWS: Mirrors browser preview behavior to avoid "ghost" yellow rows in footer.
+        rd = ws.row_dimensions.get(r)
+        if rd and rd.hidden:
+            continue
+
         rh = scaled_row_heights[r - row_start]
         lines.append(f'<tr style="height:{rh}px;">')
         is_grid_row = (grid_start_r <= r <= grid_end_r)
