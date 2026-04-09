@@ -13,13 +13,30 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     {% block styles %}{% endblock %}
-    <script>if(sessionStorage.getItem('loginPending')){document.documentElement.classList.add('login-loading');}</script>
+    <style>
+        .text-muted-v2 {
+            color: #adb5bd;
+        }
+
+        .info-icon-hover {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .info-icon-hover:hover {
+            color: #198754 !important;
+            transform: scale(1.2) !important;
+        }
+    </style>
+    <script>if (sessionStorage.getItem('loginPending')) { document.documentElement.classList.add('login-loading'); }</script>
 </head>
 
 <body>
     <!-- Post-login loader overlay -->
-    <div id="page-loader" style="display:none; position:fixed; inset:0; background:#fff; z-index:9999; align-items:center; justify-content:center;">
-        <img src="{{ url_for('static', filename='assets/loader.gif') }}" style="width:150px; height:150px;" alt="Loading...">
+    <div id="page-loader"
+        style="display:none; position:fixed; inset:0; background:#fff; z-index:9999; align-items:center; justify-content:center;">
+        <img src="{{ url_for('static', filename='assets/loader.gif') }}" style="width:150px; height:150px;"
+            alt="Loading...">
     </div>
 
     {% if is_hist %}
@@ -32,86 +49,109 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-3">
-            <a href="{{ url_for('api_archive_exit') }}" class="btn btn-sm btn-light text-dark fw-bold px-3 border shadow-sm exit-btn-hist">
+            <a href="{{ url_for('api_archive_exit') }}"
+                class="btn btn-sm btn-light text-dark fw-bold px-3 border shadow-sm exit-btn-hist">
                 <i class="bi bi-box-arrow-left me-1"></i> EXIT ARCHIVE
             </a>
         </div>
     </div>
-    
+
     <style>
-    .historical-mode-banner {
-        background: linear-gradient(90deg, #f59e0b, #d97706);
-        color: white;
-        font-size: 0.85rem;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 44px;
-        z-index: 1065;
-        border-bottom: 2px solid #b45309;
-    }
-    .sheets-menubar {
-        top: 44px !important;
-    }
-    body {
-        padding-top: 92px !important;
-    }
-    .exit-btn-hist {
-        transition: all 0.2s ease;
-        font-size: 0.75rem;
-    }
-    .exit-btn-hist:hover {
-        background: #fff !important;
-        transform: scale(1.05);
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-    }
-    /* Historical Dropdown Styling */
-    .historical-item:hover {
-        background-color: rgba(25, 135, 84, 0.08) !important;
-        color: #198754 !important;
-    }
-    .historical-item:hover .fw-bold {
-        color: #198754 !important;
-    }
-    .historical-item:hover i {
-        color: #198754 !important;
-        transform: translateX(2px);
-    }
-    .historical-item i {
-        transition: all 0.2s ease;
-    }
+        .historical-mode-banner {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+            color: white;
+            font-size: 0.85rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 44px;
+            z-index: 1065;
+            border-bottom: 2px solid #b45309;
+        }
 
-    /* Glassmorphism Menubar */
-    .sheets-menubar {
-        background: rgba(255, 255, 255, 0.8) !important;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
-        z-index: 1060;
-    }
+        .sheets-menubar {
+            top: 44px !important;
+        }
 
-    /* Modern Toast Styling */
-    .toast-container {
-        pointer-events: none;
-    }
-    .toast {
-        pointer-events: auto;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(8px);
-        border: none;
-        border-radius: 12px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-    }
-    .toast-header {
-        background: transparent;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-    }
-    .toast-body {
-        font-size: 0.9rem;
-        padding: 1rem;
-    }
+        body {
+            padding-top: 92px !important;
+        }
+
+        .exit-btn-hist {
+            transition: all 0.2s ease;
+            font-size: 0.75rem;
+        }
+
+        .exit-btn-hist:hover {
+            background: #fff !important;
+            transform: scale(1.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Historical Dropdown Styling */
+        .historical-item:hover {
+            background-color: rgba(25, 135, 84, 0.08) !important;
+            color: #198754 !important;
+        }
+
+        .historical-item:hover .fw-bold {
+            color: #198754 !important;
+        }
+
+        .historical-item:hover i {
+            color: #198754 !important;
+            transform: translateX(2px);
+        }
+
+        .historical-item i {
+            transition: all 0.2s ease;
+        }
+
+        /* Glassmorphism Menubar */
+        .sheets-menubar {
+            background: rgba(255, 255, 255, 0.8) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+            z-index: 1060;
+        }
+
+        /* Modern Toast Styling */
+        .toast-container {
+            pointer-events: none;
+        }
+
+        .toast {
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .toast-header {
+            background: transparent;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .toast-body {
+            font-size: 0.9rem;
+            padding: 1rem;
+        }
+
+        /* Global Info Icon Style */
+        .info-icon-hover {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .info-icon-hover:hover {
+            color: #198754 !important;
+            transform: scale(1.2);
+        }
     </style>
     {% endif %}
 
@@ -154,7 +194,8 @@
                                 class="bi bi-person-badge me-2"></i> Faculty</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('manage_rooms') }}"><i
                                 class="bi bi-door-open me-2"></i> Rooms</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_departments') }}"><i class="bi bi-building-fill me-2"></i>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_departments') }}"><i
+                                class="bi bi-building-fill me-2"></i>
                             Departments</a></li>
                     <li>
                         <hr class="dropdown-divider">
@@ -183,10 +224,11 @@
                                 class="bi bi-person-fill-exclamation me-2"></i> Pending Faculty</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('pending_room') }}"><i
                                 class="bi bi-door-closed me-2"></i> Pending Room</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item"
-                               href="{{ url_for('schedule_editor') }}"><i
-                                 class="bi bi-pencil-square me-2"></i> Schedule Editor</a></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li><a class="dropdown-item" href="{{ url_for('schedule_editor') }}"><i
+                                class="bi bi-pencil-square me-2"></i> Schedule Editor</a></li>
                 </ul>
 
             </div>
@@ -221,14 +263,15 @@
                             <i class="bi bi-box-arrow-up-right me-2"></i> Open Student Portal
                         </a>
                     </li>
-                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
                     <li class="px-3 py-2">
                         <span class="text-muted small d-block mb-1">Share with students:</span>
                         <div class="d-flex gap-2">
-                            <input type="text" class="form-control form-control-sm font-monospace"
-                                id="portalUrlInput"
-                                value="{{ request.host_url }}student-portal"
-                                readonly style="font-size:0.72rem; min-width:0;">
+                            <input type="text" class="form-control form-control-sm font-monospace" id="portalUrlInput"
+                                value="{{ request.host_url }}student-portal" readonly
+                                style="font-size:0.72rem; min-width:0;">
                             <button class="btn btn-sm btn-outline-secondary flex-shrink-0"
                                 onclick="navigator.clipboard.writeText(document.getElementById('portalUrlInput').value); this.innerHTML='<i class=&quot;bi bi-check-lg&quot;></i>'; setTimeout(()=>this.innerHTML='<i class=&quot;bi bi-clipboard&quot;></i>',1500);"
                                 title="Copy URL">
@@ -247,11 +290,17 @@
                     Users
                 </a>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ url_for('manage_users') }}"><i class="bi bi-people me-2"></i> User Management</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('monitoring') }}"><i class="bi bi-display me-2"></i> User Monitoring</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('signup') }}"><i class="bi bi-person-plus me-2"></i> User Registration</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-primary fw-bold" href="{{ url_for('system_tester') }}"><i class="bi bi-shield-check me-2"></i> SYSTEM TESTER</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_users') }}"><i class="bi bi-people me-2"></i>
+                            User Management</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('monitoring') }}"><i class="bi bi-display me-2"></i>
+                            User Monitoring</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('signup') }}"><i class="bi bi-person-plus me-2"></i>
+                            User Registration</a></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li><a class="dropdown-item text-primary fw-bold" href="{{ url_for('system_tester') }}"><i
+                                class="bi bi-shield-check me-2"></i> SYSTEM TESTER</a></li>
                 </ul>
             </div>
             {% endif %}
@@ -264,19 +313,28 @@
             </a>
 
             <div class="dropdown">
-                <a class="menu-item dropdown-toggle {% if 'manage' in request.endpoint %}active{% endif %}"
-                    href="#" role="button" data-bs-toggle="dropdown">
+                <a class="menu-item dropdown-toggle {% if 'manage' in request.endpoint %}active{% endif %}" href="#"
+                    role="button" data-bs-toggle="dropdown">
                     Data
                 </a>
                 <ul class="dropdown-menu shadow-sm">
-                    <li><a class="dropdown-item" href="{{ url_for('manage_courses') }}"><i class="bi bi-book me-2"></i> Courses</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_sections') }}"><i class="bi bi-people-fill me-2"></i> Sections</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_students') }}"><i class="bi bi-person-lines-fill me-2"></i> Students</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_irregular') }}"><i class="bi bi-person-exclamation me-2"></i> Irregular Students</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_faculty') }}"><i class="bi bi-person-badge me-2"></i> Faculty</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_rooms') }}"><i class="bi bi-door-open me-2"></i> Rooms</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_preassignments') }}"><i class="bi bi-pin-angle-fill me-2"></i> Pre-assignments</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_courses') }}"><i class="bi bi-book me-2"></i>
+                            Courses</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_sections') }}"><i
+                                class="bi bi-people-fill me-2"></i> Sections</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_students') }}"><i
+                                class="bi bi-person-lines-fill me-2"></i> Students</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_irregular') }}"><i
+                                class="bi bi-person-exclamation me-2"></i> Irregular Students</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_faculty') }}"><i
+                                class="bi bi-person-badge me-2"></i> Faculty</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_rooms') }}"><i
+                                class="bi bi-door-open me-2"></i> Rooms</a></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_preassignments') }}"><i
+                                class="bi bi-pin-angle-fill me-2"></i> Pre-assignments</a></li>
                 </ul>
             </div>
 
@@ -302,14 +360,15 @@
                             <i class="bi bi-box-arrow-up-right me-2"></i> Open Student Portal
                         </a>
                     </li>
-                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
                     <li class="px-3 py-2">
                         <span class="text-muted small d-block mb-1">Share with students:</span>
                         <div class="d-flex gap-2">
                             <input type="text" class="form-control form-control-sm font-monospace"
-                                id="portalUrlInputArchive"
-                                value="{{ request.host_url }}student-portal"
-                                readonly style="font-size:0.72rem; min-width:0;">
+                                id="portalUrlInputArchive" value="{{ request.host_url }}student-portal" readonly
+                                style="font-size:0.72rem; min-width:0;">
                             <button class="btn btn-sm btn-outline-secondary flex-shrink-0"
                                 onclick="navigator.clipboard.writeText(document.getElementById('portalUrlInputArchive').value); this.innerHTML='<i class=&quot;bi bi-check-lg&quot;></i>'; setTimeout(()=>this.innerHTML='<i class=&quot;bi bi-clipboard&quot;></i>',1500);"
                                 title="Copy URL">
@@ -329,11 +388,16 @@
                     Data
                 </a>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ url_for('manage_courses') }}"><i class="bi bi-book me-2"></i> Courses</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_sections') }}"><i class="bi bi-people-fill me-2"></i> Sections</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_faculty') }}"><i class="bi bi-person-badge me-2"></i> Faculty</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_rooms') }}"><i class="bi bi-door-open me-2"></i> Rooms</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_departments') }}"><i class="bi bi-building-fill me-2"></i> Departments</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_courses') }}"><i class="bi bi-book me-2"></i>
+                            Courses</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_sections') }}"><i
+                                class="bi bi-people-fill me-2"></i> Sections</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_faculty') }}"><i
+                                class="bi bi-person-badge me-2"></i> Faculty</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_rooms') }}"><i
+                                class="bi bi-door-open me-2"></i> Rooms</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('manage_departments') }}"><i
+                                class="bi bi-building-fill me-2"></i> Departments</a></li>
                 </ul>
             </div>
             <a class="menu-item {% if 'proposal_hub' in request.endpoint %}active{% endif %}"
@@ -373,34 +437,39 @@
                     class="sem-btn-tool {% if session.get('selected_semester') == '2nd Semester' %}active{% endif %}">2nd</a>
                 <a href="{{ url_for('set_semester_filter', semester_name='Midyear') }}"
                     class="sem-btn-tool {% if session.get('selected_semester') == 'Midyear' %}active{% endif %}">Midyear</a>
-                
+
                 <div class="dropdown d-inline-block border-start ms-1 ps-1">
-                    <button class="sem-btn-tool dropdown-toggle no-caret" type="button" data-bs-toggle="dropdown" title="Archive History" style="color: #198754;">
+                    <button class="sem-btn-tool dropdown-toggle no-caret" type="button" data-bs-toggle="dropdown"
+                        title="Archive History" style="color: #198754;">
                         <i class="bi bi-clock-history"></i>
                     </button>
-                    <ul class="dropdown-menu shadow border-0 mt-2" style="min-width: 280px; border-radius: 12px; max-height: 360px; overflow-y: auto; overflow-x: hidden;">
+                    <ul class="dropdown-menu shadow border-0 mt-2"
+                        style="min-width: 280px; border-radius: 12px; max-height: 360px; overflow-y: auto; overflow-x: hidden;">
                         <li class="dropdown-header text-uppercase fw-bold small mb-2" style="color: #198754;">
                             <i class="bi bi-calendar-check me-1"></i> Previous Semesters (Read-Only)
                         </li>
                         {% if all_archives %}
-                            {% for arc in all_archives %}
-                            <li>
-                                <a class="dropdown-item py-2 px-3 rounded-2 historical-item" href="{{ url_for('api_archive_enter', archive_id=arc.id) }}">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="d-flex flex-column">
-                                            <span class="fw-bold" style="font-size: 0.85rem; color: #1e293b;">{{ arc.semester }}</span>
-                                            <span class="text-muted" style="font-size: 0.72rem;">Academic Year {{ arc.academic_year }}</span>
-                                        </div>
-                                        <i class="bi bi-chevron-right text-muted small"></i>
+                        {% for arc in all_archives %}
+                        <li>
+                            <a class="dropdown-item py-2 px-3 rounded-2 historical-item"
+                                href="{{ url_for('api_archive_enter', archive_id=arc.id) }}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex flex-column">
+                                        <span class="fw-bold" style="font-size: 0.85rem; color: #1e293b;">{{
+                                            arc.semester }}</span>
+                                        <span class="text-muted" style="font-size: 0.72rem;">Academic Year {{
+                                            arc.academic_year }}</span>
                                     </div>
-                                </a>
-                            </li>
-                            {% endfor %}
+                                    <i class="bi bi-chevron-right text-muted small"></i>
+                                </div>
+                            </a>
+                        </li>
+                        {% endfor %}
                         {% else %}
-                            <li class="p-4 text-center">
-                                <i class="bi bi-archive text-muted fs-3 mb-2 d-block"></i>
-                                <span class="text-muted small">No archives available yet.</span>
-                            </li>
+                        <li class="p-4 text-center">
+                            <i class="bi bi-archive text-muted fs-3 mb-2 d-block"></i>
+                            <span class="text-muted small">No archives available yet.</span>
+                        </li>
                         {% endif %}
                     </ul>
                 </div>
@@ -422,9 +491,11 @@
                     </span>
                 </button>
                 <ul class="dropdown-menu profile-dropdown-menu dropdown-menu-end shadow-sm">
-                    <li>
-                        <h6 class="dropdown-header text-uppercase text-muted fw-bold">Role: {{ session.get('role',
+                    <li class="d-flex align-items-center justify-content-between pe-3">
+                        <h6 class="dropdown-header text-uppercase text-muted fw-bold mb-0">Role: {{ session.get('role',
                             'User') | capitalize }}</h6>
+                        <i class="bi bi-info-circle text-muted info-icon-hover fs-6" data-bs-toggle="modal"
+                            data-bs-target="#profileInfoModal" title="Profile Guide"></i>
                     </li>
                     <li>
                         <hr class="dropdown-divider">
@@ -444,11 +515,12 @@
 
                     {% if session.get('role') in ['admin', 'superadmin'] %}
                     <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#settingsModal"><i
-                                 class="bi bi-gear me-2"></i> Settings</a></li>
-                    
+                                class="bi bi-gear me-2"></i> Settings</a></li>
+
                     {% if not is_hist %}
                     <li><a class="dropdown-item" href="#" onclick="openArchiveModal()"><i
-                                 class="bi bi-exclamation-triangle-fill text-warning me-2"></i> Finalize & Archive Semester</a></li>
+                                class="bi bi-exclamation-triangle-fill text-warning me-2"></i> Finalize & Archive
+                            Semester</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('manage_archives') }}"><i
                                 class="bi bi-archive-fill text-success me-2"></i> Manage Archives</a></li>
                     {% endif %}
@@ -456,7 +528,7 @@
                     <li>
                         <hr class="dropdown-divider">
                     </li>
-                    
+
                     {% if not is_hist %}
                     <li>
                         <h6 class="dropdown-header text-danger"><i class="bi bi-trash-fill me-1"></i> Recycle Bin</h6>
@@ -488,15 +560,23 @@
                     {% endif %}
 
                     {% if session.get('role') == 'user' and not is_hist %}
-                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
                     <li>
                         <h6 class="dropdown-header text-danger"><i class="bi bi-trash-fill me-1"></i> Recycle Bin</h6>
                     </li>
-                    <li><a class="dropdown-item" href="{{ url_for('courses_archive') }}"><i class="bi bi-book text-muted me-2"></i> Courses</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('faculty_archive') }}"><i class="bi bi-person-badge text-muted me-2"></i> Faculty</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('rooms_archive') }}"><i class="bi bi-door-open text-muted me-2"></i> Rooms</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('departments_archive') }}"><i class="bi bi-building-fill text-muted me-2"></i> Departments</a></li>
-                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ url_for('courses_archive') }}"><i
+                                class="bi bi-book text-muted me-2"></i> Courses</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('faculty_archive') }}"><i
+                                class="bi bi-person-badge text-muted me-2"></i> Faculty</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('rooms_archive') }}"><i
+                                class="bi bi-door-open text-muted me-2"></i> Rooms</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('departments_archive') }}"><i
+                                class="bi bi-building-fill text-muted me-2"></i> Departments</a></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
                     {% endif %}
 
                     <li><a class="dropdown-item text-danger fw-bold" href="{{ url_for('logout') }}"><i
@@ -513,9 +593,11 @@
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
             {% for category, message in messages %}
-            <div id="flashToast-{{ loop.index }}" class="toast show animate__animated animate__fadeInUp" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
+            <div id="flashToast-{{ loop.index }}" class="toast show animate__animated animate__fadeInUp" role="alert"
+                aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
                 <div class="toast-header">
-                    <span class="rounded me-2" style="width: 12px; height: 12px; background-color: {% if category == 'success' %}#198754{% elif category == 'danger' %}#dc3545{% else %}#f59e0b{% endif %};"></span>
+                    <span class="rounded me-2"
+                        style="width: 12px; height: 12px; background-color: {% if category == 'success' %}#198754{% elif category == 'danger' %}#dc3545{% else %}#f59e0b{% endif %};"></span>
                     <strong class="me-auto text-uppercase small fw-bold">System Notification</strong>
                     <small class="text-muted">Just now</small>
                     <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
@@ -538,8 +620,8 @@
         <div class="modal-dialog modal-dialog-below-nav">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header d-flex align-items-center py-3 border-bottom-0">
-                    <h5 class="modal-title fw-bold" id="settingsModalLabel"><i
-                            class="bi bi-gear-fill me-2"></i> Settings</h5>
+                    <h5 class="modal-title fw-bold" id="settingsModalLabel"><i class="bi bi-gear-fill me-2"></i>
+                        Settings</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form action="{{ url_for('save_settings') }}" method="POST">
@@ -566,13 +648,14 @@
                         <!-- Schedule Days -->
                         <div class="mb-4">
                             <label class="form-label text-muted small fw-bold d-block mb-1">SCHEDULE DAYS</label>
-                            <p class="text-muted" style="font-size:0.78rem; margin-bottom:8px;">Days the GA uses when plotting schedules.</p>
+                            <p class="text-muted" style="font-size:0.78rem; margin-bottom:8px;">Days the GA uses when
+                                plotting schedules.</p>
                             <div class="d-flex justify-content-between w-100">
                                 {% for day in all_days %}
                                 <div class="form-check form-check-inline m-0">
                                     <input class="form-check-input plain-check" type="checkbox" name="days"
-                                        value="{{ day }}" id="sched_{{ day }}"
-                                        {% if day in current_days %}checked{% endif %}>
+                                        value="{{ day }}" id="sched_{{ day }}" {% if day in current_days %}checked{%
+                                        endif %}>
                                     <label class="form-check-label small" for="sched_{{ day }}">{{ day[:3] }}</label>
                                 </div>
                                 {% endfor %}
@@ -585,16 +668,19 @@
                             <label class="form-label text-muted small fw-bold d-flex align-items-center gap-2 mb-1">
                                 <i class="bi bi-lock-fill text-danger"></i> Generated Schedules Lock
                             </label>
-                            <p class="text-muted" style="font-size:0.78rem; margin-bottom:8px;">When ON, GA-generated schedule entries are protected — regular users cannot move or delete them.</p>
+                            <p class="text-muted" style="font-size:0.78rem; margin-bottom:8px;">When ON, GA-generated
+                                schedule entries are protected — regular users cannot move or delete them.</p>
                             <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="scheduleLockToggle"
-                                    {% if global_settings and global_settings.schedule_lock %}checked{% endif %}
+                                <input class="form-check-input" type="checkbox" role="switch" id="scheduleLockToggle" {%
+                                    if global_settings and global_settings.schedule_lock %}checked{% endif %}
                                     onchange="toggleScheduleLock(this)">
                                 <label class="form-check-label small" for="scheduleLockToggle" id="lockToggleLabel">
                                     {% if global_settings and global_settings.schedule_lock %}
-                                    <span class="text-danger fw-semibold"><i class="bi bi-lock-fill me-1"></i>Lock ON — Protected Mode</span>
+                                    <span class="text-danger fw-semibold"><i class="bi bi-lock-fill me-1"></i>Lock ON —
+                                        Protected Mode</span>
                                     {% else %}
-                                    <span class="text-success"><i class="bi bi-unlock me-1"></i>Lock OFF — Open Collaborative Mode</span>
+                                    <span class="text-success"><i class="bi bi-unlock me-1"></i>Lock OFF — Open
+                                        Collaborative Mode</span>
                                     {% endif %}
                                 </label>
                             </div>
@@ -604,17 +690,21 @@
                         <!-- Blocked Time Slots -->
                         <div class="mb-2">
                             <label class="form-label text-muted small fw-bold d-block mb-1">BLOCKED TIME SLOTS</label>
-                            <p class="text-muted" style="font-size:0.78rem; margin-bottom:8px;">The GA will never place any class in these time ranges.</p>
+                            <p class="text-muted" style="font-size:0.78rem; margin-bottom:8px;">The GA will never place
+                                any class in these time ranges.</p>
                             <div class="d-flex gap-2 flex-wrap align-items-end mb-2">
                                 <select id="blockDay" class="form-select form-select-sm" style="width:auto;">
-                                    {% for day in all_days %}{% if day != 'Sunday' %}<option>{{ day }}</option>{% endif %}{% endfor %}
+                                    {% for day in all_days %}{% if day != 'Sunday' %}<option>{{ day }}</option>{% endif
+                                    %}{% endfor %}
                                 </select>
                                 <select id="blockStart" class="form-select form-select-sm" style="width:auto;"></select>
                                 <select id="blockEnd" class="form-select form-select-sm" style="width:auto;"></select>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="addBlockedSlot()"><i class="bi bi-plus-lg"></i> Add</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                    onclick="addBlockedSlot()"><i class="bi bi-plus-lg"></i> Add</button>
                             </div>
                             <div id="blockedSlotsList" class="d-flex flex-wrap gap-2 mb-1"></div>
-                            <input type="hidden" name="blocked_slots_json" id="blockedSlotsJson" value="{{ global_settings.blocked_slots_json or '[]' }}">
+                            <input type="hidden" name="blocked_slots_json" id="blockedSlotsJson"
+                                value="{{ global_settings.blocked_slots_json or '[]' }}">
                         </div>
 
                     </div>
@@ -767,106 +857,165 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    
+
     <!-- Module 7: Live Status Tracking -->
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        if (typeof io !== 'undefined') {
-            const socket = io();
-            
-            // Determine initial status based on route
-            let currentStatus = "Viewing";
-            const path = window.location.pathname;
-            
-            if (path.includes('editor') || path.includes('generate') || path.includes('manage')) {
-                currentStatus = "Editing";
-            }
-            
-            // Periodically report status (or on change)
-            socket.on('connect', () => {
-                socket.emit('status_update', { status: currentStatus });
-            });
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof io !== 'undefined') {
+                const socket = io();
 
-            // If we are in the editor, we might want to track finer state, 
-            // but for now route-based is a solid start.
-        }
-    });
+                // Determine initial status based on route
+                let currentStatus = "Viewing";
+                const path = window.location.pathname;
+
+                if (path.includes('editor') || path.includes('generate') || path.includes('manage')) {
+                    currentStatus = "Editing";
+                }
+
+                // Periodically report status (or on change)
+                socket.on('connect', () => {
+                    socket.emit('status_update', { status: currentStatus });
+                });
+
+                // If we are in the editor, we might want to track finer state, 
+                // but for now route-based is a solid start.
+            }
+        });
     </script>
     {% block scripts %}{% endblock %}
+
+    <!-- PROFILE INFO GUIDE MODAL (Identical to Dashboard UI) -->
+    <div class="modal fade" id="profileInfoModal" tabindex="-1" aria-labelledby="profileInfoModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-dark" id="profileInfoModalLabel">
+                        Account & System Guide
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary small mb-1">1. ACCOUNT MODIFICATION</h6>
+                        <p class="small text-muted mb-0"><strong>• Change Username:</strong> Update the account's
+                            display name. A security re-authentication is required.</p>
+                        <p class="small text-muted mb-0"><strong>• Change Password:</strong> Update security credentials
+                            to ensure account integrity.</p>
+                        <p class="small text-muted mb-0"><strong>• Profile Picture:</strong> Personalize the account
+                            with a formal photo (JPG/PNG supported).</p>
+                    </div>
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-success small mb-1">2. SYSTEM CONFIGURATION</h6>
+                        <p class="small text-muted mb-0"><strong>Settings:</strong> Administrative panel used to define
+                            global operating hours, active school days, and AI-driven schedule locks.</p>
+                    </div>
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-info small mb-1">3. ACADEMIC ARCHIVING</h6>
+                        <p class="small text-muted mb-0"><strong>Finalize & Archive:</strong> A critical procedure to
+                            lock the current semester's data and migrate it to historical records. Once archived, the
+                            data becomes read-only.</p>
+                    </div>
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-warning small mb-1">4. DATA RECOVERY (RECYCLE BIN)</h6>
+                        <p class="small text-muted mb-2">Restoration portal for deactivated records. The following
+                            entities can be recovered to the active state:</p>
+                        <p class="small text-muted mb-0">Courses, Sections, Students, Faculty, Rooms, and Departments.
+                        </p>
+                    </div>
+                    <div class="mb-0">
+                        <h6 class="fw-bold text-danger small mb-1">5. SESSION TERMINATION</h6>
+                        <p class="small text-muted mb-0"><strong>Sign Out:</strong> Properly ending the session to
+                            prevent unauthorized access and protect user data integrity.</p>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         if (sessionStorage.getItem('loginPending')) {
             sessionStorage.removeItem('loginPending');
             document.documentElement.classList.remove('login-loading');
             var pl = document.getElementById('page-loader');
             pl.style.display = 'flex';
-            setTimeout(function() { pl.style.display = 'none'; }, 2000);
+            setTimeout(function () { pl.style.display = 'none'; }, 2000);
         }
     </script>
     <script>
-    (function() {
-        var _gs = {{ global_settings.start_hour }};
-        var _ge = {{ global_settings.end_hour }};
-        function buildTimeOptions(sel, startH, endH) {
-            sel.innerHTML = '';
-            for (var h = startH; h <= endH; h++) {
-                for (var m = 0; m < 60; m += 30) {
-                    if (h === endH && m > 0) break;
-                    var lbl = (h % 12 || 12) + ':' + (m === 0 ? '00' : '30') + ' ' + (h < 12 ? 'AM' : 'PM');
-                    var val = (h < 10 ? '0' : '') + h + ':' + (m === 0 ? '00' : '30');
-                    sel.insertAdjacentHTML('beforeend', '<option value="' + val + '">' + lbl + '</option>');
+        (function () {
+            var _gs = Number("{{ global_settings.start_hour }}");
+            var _ge = Number("{{ global_settings.end_hour }}");
+
+            function buildTimeOptions(sel, startH, endH) {
+                sel.innerHTML = '';
+                for (var h = startH; h <= endH; h++) {
+                    for (var m = 0; m < 60; m += 30) {
+                        if (h === endH && m > 0) break;
+                        var lbl = (h % 12 || 12) + ':' + (m === 0 ? '00' : '30') + ' ' + (h < 12 ? 'AM' : 'PM');
+                        var val = (h < 10 ? '0' : '') + h + ':' + (m === 0 ? '00' : '30');
+                        sel.insertAdjacentHTML('beforeend', '<option value="' + val + '">' + lbl + '</option>');
+                    }
                 }
             }
-        }
-        function renderBlockedSlots() {
-            var list = document.getElementById('blockedSlotsList');
-            if (!list) return;
-            var slots = JSON.parse(document.getElementById('blockedSlotsJson').value || '[]');
-            list.innerHTML = '';
-            slots.forEach(function(s, i) {
-                list.insertAdjacentHTML('beforeend',
-                    '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1" style="font-size:0.8rem;">'
-                    + s.day + ' ' + s.start + '\u2013' + s.end
-                    + ' <button type="button" class="btn-close ms-1" style="font-size:0.55rem;vertical-align:middle;" onclick="removeBlockedSlot(' + i + ')"></button></span>');
-            });
-        }
-        window.addBlockedSlot = function() {
-            var day = document.getElementById('blockDay').value;
-            var start = document.getElementById('blockStart').value;
-            var end = document.getElementById('blockEnd').value;
-            if (start >= end) { alert('End time must be after start time.'); return; }
-            var slots = JSON.parse(document.getElementById('blockedSlotsJson').value || '[]');
-            var conflict = slots.some(function(s) {
-                if (s.day !== day) return false;
-                return s.start < end && start < s.end;
-            });
-            if (conflict) { alert('This time range overlaps an existing block on ' + day + '.'); return; }
-            slots.push({day: day, start: start, end: end});
-            document.getElementById('blockedSlotsJson').value = JSON.stringify(slots);
-            renderBlockedSlots();
-        };
-        window.removeBlockedSlot = function(idx) {
-            var slots = JSON.parse(document.getElementById('blockedSlotsJson').value || '[]');
-            slots.splice(idx, 1);
-            document.getElementById('blockedSlotsJson').value = JSON.stringify(slots);
-            renderBlockedSlots();
-        };
-        var sm = document.getElementById('settingsModal');
-        if (sm) {
-            sm.addEventListener('show.bs.modal', function() {
-                var bs = document.getElementById('blockStart');
-                var be = document.getElementById('blockEnd');
-                if (!bs) return;
-                buildTimeOptions(bs, _gs, _ge);
-                buildTimeOptions(be, _gs, _ge);
-                if (be.options.length > 2) be.selectedIndex = 2;
+
+            function renderBlockedSlots() {
+                var list = document.getElementById('blockedSlotsList');
+                if (!list) return;
+                var slots = JSON.parse(document.getElementById('blockedSlotsJson').value || '[]');
+                list.innerHTML = '';
+                slots.forEach(function (s, i) {
+                    list.insertAdjacentHTML('beforeend',
+                        '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle px-2 py-1" style="font-size:0.8rem;">'
+                        + s.day + ' ' + s.start + '\u2013' + s.end
+                        + ' <button type="button" class="btn-close ms-1" style="font-size:0.55rem;vertical-align:middle;" onclick="window.removeBlockedSlot(' + i + ')"></button></span>');
+                });
+            }
+
+            window.addBlockedSlot = function () {
+                var day = document.getElementById('blockDay').value;
+                var start = document.getElementById('blockStart').value;
+                var end = document.getElementById('blockEnd').value;
+                if (start >= end) { alert('End time must be after start time.'); return; }
+                var slots = JSON.parse(document.getElementById('blockedSlotsJson').value || '[]');
+                var conflict = slots.some(function (s) {
+                    if (s.day !== day) return false;
+                    return s.start < end && start < s.end;
+                });
+                if (conflict) { alert('This time range overlaps an existing block on ' + day + '.'); return; }
+                slots.push({ day: day, start: start, end: end });
+                document.getElementById('blockedSlotsJson').value = JSON.stringify(slots);
                 renderBlockedSlots();
-            });
-        }
-    })();
+            };
+
+            window.removeBlockedSlot = function (idx) {
+                var slots = JSON.parse(document.getElementById('blockedSlotsJson').value || '[]');
+                slots.splice(idx, 1);
+                document.getElementById('blockedSlotsJson').value = JSON.stringify(slots);
+                renderBlockedSlots();
+            };
+
+            var sm = document.getElementById('settingsModal');
+            if (sm) {
+                sm.addEventListener('show.bs.modal', function () {
+                    var bs = document.getElementById('blockStart');
+                    var be = document.getElementById('blockEnd');
+                    if (!bs) return;
+                    buildTimeOptions(bs, _gs, _ge);
+                    buildTimeOptions(be, _gs, _ge);
+                    if (be.options.length > 2) be.selectedIndex = 2;
+                    renderBlockedSlots();
+                });
+            }
+        })();
     </script>
 
     <!-- FINALIZATION & ARCHIVE MODAL (Step 1) -->
-    <div class="modal fade" id="archiveSnapshotModal" tabindex="-1" aria-labelledby="archiveSnapshotModalLabel" aria-hidden="true">
+    <div class="modal fade" id="archiveSnapshotModal" tabindex="-1" aria-labelledby="archiveSnapshotModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg">
                 <div class="modal-header bg-warning text-dark py-3">
@@ -876,12 +1025,15 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <p class="text-muted small mb-4">This will lock all current schedules and records for the term. It creates a final version for your archives that is 'view-only' to make sure the data stays accurate and safe from accidental changes.</p>
-                    
+                    <p class="text-muted small mb-4">This will lock all current schedules and records for the term. It
+                        creates a final version for your archives that is 'view-only' to make sure the data stays
+                        accurate and safe from accidental changes.</p>
+
                     <form id="archiveForm">
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Academic Year</label>
-                            <input type="text" class="form-control" id="archiveAY" placeholder="e.g. 2024-2025" required>
+                            <input type="text" class="form-control" id="archiveAY" placeholder="e.g. 2024-2025"
+                                required>
                             <div class="form-text">Specify the year coverage of this archive.</div>
                         </div>
                         <div class="mb-4">
@@ -896,14 +1048,16 @@
                         <div class="bg-light rounded-3 p-3 border">
                             <h6 class="fw-bold text-dark mb-2 small text-uppercase">Archive Summary</h6>
                             <ul class="list-unstyled mb-0 small text-muted" id="archiveSummaryList">
-                                <li class="mb-1"><i class="bi bi-check2-circle text-success me-2"></i>Loading counts...</li>
+                                <li class="mb-1"><i class="bi bi-check2-circle text-success me-2"></i>Loading counts...
+                                </li>
                             </ul>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer bg-light border-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" id="archiveConfirmBtn" class="btn btn-warning px-4" onclick="startArchivingProcess(this)">
+                    <button type="button" id="archiveConfirmBtn" class="btn btn-warning px-4"
+                        onclick="startArchivingProcess(this)">
                         Create Archive <i class="bi bi-arrow-right ms-1"></i>
                     </button>
                 </div>
@@ -912,140 +1066,142 @@
     </div>
 
     <script>
-    // Module 4 Phase 2: Archive logic Step 1
-    window.openArchiveModal = function() {
-        // 1. Fetch live stats
-        const summaryUl = document.getElementById('archiveSummaryList');
-        if (summaryUl) summaryUl.innerHTML = '<li class="mb-1"><i class="bi bi-hourglass-split me-2"></i>Calculating system state...</li>';
-        
-        // 2. Pre-fill metadata from settings
-        const val = "{{ global_settings.sem_ay_value if global_settings else '' }}";
-        if (val && val.includes('/')) {
-            const parts = val.split('/').map(p => p.trim());
-            if (parts.length >= 2) {
-                const ayInput = document.getElementById('archiveAY');
-                if (ayInput) ayInput.value = parts[1];
-                // Try matching semester select
-                const semSelect = document.getElementById('archiveSemester');
-                if (semSelect) {
-                    for (let i=0; i < semSelect.options.length; i++) {
-                        if (semSelect.options[i].value.includes(parts[0])) {
-                            semSelect.selectedIndex = i;
-                            break;
+        // Module 4 Phase 2: Archive logic Step 1
+        window.openArchiveModal = function () {
+            // 1. Fetch live stats
+            const summaryUl = document.getElementById('archiveSummaryList');
+            if (summaryUl) summaryUl.innerHTML = '<li class="mb-1"><i class="bi bi-hourglass-split me-2"></i>Calculating system state...</li>';
+
+            // 2. Pre-fill metadata from settings
+            const val = "{{ global_settings.sem_ay_value if global_settings else '' }}";
+            if (val && val.includes('/')) {
+                const parts = val.split('/').map(p => p.trim());
+                if (parts.length >= 2) {
+                    const ayInput = document.getElementById('archiveAY');
+                    if (ayInput) ayInput.value = parts[1];
+                    // Try matching semester select
+                    const semSelect = document.getElementById('archiveSemester');
+                    if (semSelect) {
+                        for (let i = 0; i < semSelect.options.length; i++) {
+                            if (semSelect.options[i].value.includes(parts[0])) {
+                                semSelect.selectedIndex = i;
+                                break;
+                            }
                         }
                     }
                 }
             }
-        }
 
-        // Show modal
-        const modalEl = document.getElementById('archiveSnapshotModal');
-        if (modalEl) new bootstrap.Modal(modalEl).show();
+            // Show modal
+            const modalEl = document.getElementById('archiveSnapshotModal');
+            if (modalEl) new bootstrap.Modal(modalEl).show();
 
-        // 3. Fetch stats via API
-        fetch('/api/archive/stats')
-            .then(r => r.json())
-            .then(d => {
-                if (d.ok && summaryUl) {
-                    summaryUl.innerHTML = `
+            // 3. Fetch stats via API
+            fetch('/api/archive/stats')
+                .then(r => r.json())
+                .then(d => {
+                    if (d.ok && summaryUl) {
+                        summaryUl.innerHTML = `
                         <li class="mb-1"><i class="bi bi-layers me-2"></i> <strong>${d.counts.sections}</strong> Block Sections</li>
                         <li class="mb-1"><i class="bi bi-book me-2"></i> <strong>${d.counts.courses}</strong> Active Courses</li>
                         <li class="mb-1"><i class="bi bi-person-badge me-2"></i> <strong>${d.counts.faculty}</strong> Faculty Records</li>
                         <li class="mb-1"><i class="bi bi-calendar3 me-2"></i> <strong>${d.counts.scheduled}</strong> Plotted Classes</li>
                     `;
-                } else if (summaryUl) {
-                    summaryUl.innerHTML = '<li class="text-danger">Failed to load system stats.</li>';
-                }
+                    } else if (summaryUl) {
+                        summaryUl.innerHTML = '<li class="text-danger">Failed to load system stats.</li>';
+                    }
+                })
+                .catch(() => {
+                    if (summaryUl) summaryUl.innerHTML = '<li class="text-danger">Connection error.</li>';
+                });
+        };
+
+        window.startArchivingProcess = function (btn) {
+            const ay = document.getElementById('archiveAY').value;
+            const sem = document.getElementById('archiveSemester').value;
+            const btnText = btn.innerHTML;
+
+            if (!ay) {
+                alert('Please enter a valid Academic Year.');
+                return;
+            }
+
+            if (!confirm(`FINAL WARNING: You are about to archive the ${sem} of AY ${ay}. This process will take a full archive and make it Read-Only. Proceed?`)) {
+                return;
+            }
+
+            // 1. Loading State
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Cloning Records...';
+
+            // 2. Archive API Call
+            fetch('/api/archive/capture', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({ ay: ay, semester: sem })
             })
-            .catch(() => {
-                if (summaryUl) summaryUl.innerHTML = '<li class="text-danger">Connection error.</li>';
-            });
-    };
+                .then(r => r.json())
+                .then(d => {
+                    if (d.ok) {
+                        // Step 4: Multi-step transition
+                        const msg = 'Success! ' + d.message + '\n\nArchive is secured. Would you like to clear the active system and prepare for the next term now?';
+                        if (confirm(msg)) {
+                            // Refresh the page so the new snapshot appears in the navbar switcher
+                            window.location.reload();
+                        } else {
+                            const m = bootstrap.Modal.getInstance(document.getElementById('archiveSnapshotModal'));
+                            if (m) m.hide();
+                            window.location.reload();
+                        }
+                    } else {
+                        alert('Error: ' + d.message);
+                        btn.disabled = false;
+                        btn.innerHTML = btnText;
+                    }
+                })
+                .catch(err => {
+                    console.error('Archive Error:', err);
+                    alert('A system error occurred during cloning. Please check your connection.');
+                    btn.disabled = false;
+                    btn.innerHTML = btnText;
+                });
+        };
 
-    window.startArchivingProcess = function(btn) {
-        const ay = document.getElementById('archiveAY').value;
-        const sem = document.getElementById('archiveSemester').value;
-        const btnText = btn.innerHTML;
-        
-        if (!ay) {
-            alert('Please enter a valid Academic Year.');
-            return;
-        }
-
-        if (!confirm(`FINAL WARNING: You are about to archive the ${sem} of AY ${ay}. This process will take a full archive and make it Read-Only. Proceed?`)) {
-            return;
-        }
-
-        // 1. Loading State
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Cloning Records...';
-
-        // 2. Archive API Call
-        fetch('/api/archive/capture', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
-            },
-            body: JSON.stringify({ ay: ay, semester: sem })
-        })
-        .then(r => r.json())
-        .then(d => {
-            if (d.ok) {
-                // Step 4: Multi-step transition
-                const msg = 'Success! ' + d.message + '\n\nArchive is secured. Would you like to clear the active system and prepare for the next term now?';
-                if (confirm(msg)) {
-                    // Refresh the page so the new snapshot appears in the navbar switcher
-                    window.location.reload();
-                } else {
-                    const m = bootstrap.Modal.getInstance(document.getElementById('archiveSnapshotModal'));
-                    if (m) m.hide();
-                    window.location.reload(); 
+        // Module 3: Global AI-Lock toggle
+        window.toggleScheduleLock = function (cb) {
+            var locked = cb.checked;
+            var label = document.getElementById('lockToggleLabel');
+            fetch('/api/settings/schedule-lock', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({ locked: locked })
+            }).then(function (r) { return r.json(); }).then(function (d) {
+                if (!d.ok) { cb.checked = !locked; return; }
+                if (label) {
+                    label.innerHTML = locked
+                        ? '<span class="text-danger fw-semibold"><i class="bi bi-lock-fill me-1"></i>Lock ON \u2014 Protected Mode</span>'
+                        : '<span class="text-success"><i class="bi bi-unlock me-1"></i>Lock OFF \u2014 Open Collaborative Mode</span>';
                 }
-            } else {
-                alert('Error: ' + d.message);
-                btn.disabled = false;
-                btn.innerHTML = btnText;
-            }
-        })
-        .catch(err => {
-            console.error('Archive Error:', err);
-            alert('A system error occurred during cloning. Please check your connection.');
-            btn.disabled = false;
-            btn.innerHTML = btnText;
-        });
-    };
-
-    // Module 3: Global AI-Lock toggle
-    window.toggleScheduleLock = function(cb) {
-        var locked = cb.checked;
-        var label  = document.getElementById('lockToggleLabel');
-        fetch('/api/settings/schedule-lock', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json',
-                      'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''},
-            body: JSON.stringify({locked: locked})
-        }).then(function(r) { return r.json(); }).then(function(d) {
-            if (!d.ok) { cb.checked = !locked; return; }
-            if (label) {
-                label.innerHTML = locked
-                    ? '<span class="text-danger fw-semibold"><i class="bi bi-lock-fill me-1"></i>Lock ON \u2014 Protected Mode</span>'
-                    : '<span class="text-success"><i class="bi bi-unlock me-1"></i>Lock OFF \u2014 Open Collaborative Mode</span>';
-            }
-            // Update nav badge without full reload
-            var badge = document.querySelector('.lock-badge-nav');
-            if (locked && !badge) {
-                var b = document.createElement('span');
-                b.className = 'lock-badge-nav';
-                b.title = 'Generated Schedules Lock is ON \u2014 Protected Mode';
-                b.innerHTML = '<i class="bi bi-lock-fill me-1"></i>Locked';
-                var rightBar = document.querySelector('.sheets-menubar .d-flex.align-items-center.gap-3');
-                if (rightBar) rightBar.prepend(b);
-            } else if (!locked && badge) {
-                badge.remove();
-            }
-        }).catch(function() { cb.checked = !locked; });
-    };
+                // Update nav badge without full reload
+                var badge = document.querySelector('.lock-badge-nav');
+                if (locked && !badge) {
+                    var b = document.createElement('span');
+                    b.className = 'lock-badge-nav';
+                    b.title = 'Generated Schedules Lock is ON \u2014 Protected Mode';
+                    b.innerHTML = '<i class="bi bi-lock-fill me-1"></i>Locked';
+                    var rightBar = document.querySelector('.sheets-menubar .d-flex.align-items-center.gap-3');
+                    if (rightBar) rightBar.prepend(b);
+                } else if (!locked && badge) {
+                    badge.remove();
+                }
+            }).catch(function () { cb.checked = !locked; });
+        };
     </script>
 </body>
 

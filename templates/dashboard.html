@@ -8,7 +8,8 @@
 <div class="mb-4 d-flex align-items-center">
     <div>
         <h1 class="h3 text-gray-800 fw-light mb-0 d-flex align-items-center">Dashboard Overview
-            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#dashboardInfoModal" title="How to use this page">
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal"
+                data-bs-target="#dashboardInfoModal" title="How to use this page">
                 <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
             </button>
         </h1>
@@ -17,7 +18,8 @@
 </div>
 
 <!-- Info Modal -->
-<div class="modal fade" id="dashboardInfoModal" tabindex="-1" aria-labelledby="dashboardInfoModalLabel" aria-hidden="true">
+<div class="modal fade" id="dashboardInfoModal" tabindex="-1" aria-labelledby="dashboardInfoModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header">
@@ -29,36 +31,56 @@
             <div class="modal-body p-4">
                 <div class="mb-4">
                     <h6 class="fw-bold text-primary small mb-1">1. DATA SHORTCUTS</h6>
-                    <p class="small text-muted mb-0">These cards show your total counts. You can <strong>click any card</strong> to jump straight to its management page (Courses, Sections, etc.).</p>
+                    <p class="small text-muted mb-0">These cards show your total counts. You can <strong>click any
+                            card</strong> to jump straight to its management page (Courses, Sections, etc.).</p>
                 </div>
                 <div class="mb-4">
                     <h6 class="fw-bold text-success small mb-1">2. PROGRESS TRACKER</h6>
-                    <p class="small text-muted mb-0">The bar shows how much of your work is done. <strong>100%</strong> means every required class has already been given a schedule slot.</p>
+                    <p class="small text-muted mb-0">The bar shows how much of your work is done. <strong>100%</strong>
+                        means every required class has already been given a schedule slot.</p>
                 </div>
-                {% if stats.completion_rate < 100 %}
-                <div class="mb-0">
+                {% if stats.completion_rate < 100 %} <div class="mb-4">
                     <h6 class="fw-bold text-info small mb-1">3. FINISH AUTOMATICALLY</h6>
-                    <p class="small text-muted mb-0">If your progress is below 100%, use the <strong>'Run Auto-Schedule'</strong> button. The system will finish the rest of the schedule for you.</p>
-                </div>
-                {% endif %}
+                    <p class="small text-muted mb-0">If your progress is below 100%, use the <strong>'Run
+                            Auto-Schedule'</strong> button. The system will finish the rest of the schedule for you.</p>
             </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            {% endif %}
+            <div class="mb-4">
+                <h6 class="fw-bold text-warning small mb-1">4. SEMESTER SELECTION</h6>
+                <p class="small text-muted mb-0">These controls are located at the <strong>top-right portion of the
+                        screen</strong> (adjacent to the profile menu). These allow users to filter dashboard statistics
+                    based on the academic term. Selecting '1st Semester' or '2nd Semester' will update all overview data
+                    to reflect only the selected academic period.</p>
             </div>
+            <div class="mb-0">
+                <h6 class="fw-bold text-danger small mb-1">5. ACADEMIC ARCHIVES</h6>
+                <p class="small text-muted mb-0">Located beside the semester selection (represented by a <strong>Clock
+                        History icon</strong>), this feature provides access to historical schedule records. Users can
+                    review finalized schedules from previous academic years in a read-only format.</p>
+            </div>
+        </div>
+        <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
         </div>
     </div>
 </div>
+</div>
 
 <style>
-    .text-muted-v2 { color: #adb5bd; }
+    .text-muted-v2 {
+        color: #adb5bd;
+    }
+
     .info-icon-hover {
         transition: all 0.2s ease;
         cursor: pointer;
     }
+
     .info-icon-hover:hover {
         color: #198754 !important;
         transform: scale(1.2);
     }
+
     .modal-dialog-centered {
         display: flex;
         align-items: center;
@@ -143,7 +165,7 @@
                 <p class="text-muted small mb-0">
                     <i class="bi bi-funnel-fill me-1"></i>
                     {% for dept in stats.selected_depts %}
-                        <span class="badge bg-secondary fw-normal me-1">{{ dept }}</span>
+                    <span class="badge bg-secondary fw-normal me-1">{{ dept }}</span>
                     {% endfor %}
                 </p>
             </div>

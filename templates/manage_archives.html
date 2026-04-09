@@ -7,10 +7,31 @@
 <!-- 1. HEADER (Static) -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 text-gray-800 fw-light mb-1">Archive Management</h1>
+        <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">Archive Management
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal"
+                data-bs-target="#archiveInfoModal" title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+            </button>
+        </h1>
         <p class="text-muted small mb-0">Manage and permanently delete previous semester snapshots.</p>
     </div>
 </div>
+
+<style>
+    .text-muted-v2 {
+        color: #adb5bd;
+    }
+
+    .info-icon-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .info-icon-hover:hover {
+        color: #198754 !important;
+        transform: scale(1.2);
+    }
+</style>
 
 <!-- 2. SEARCH & FILTER WRAPPER (With Bulk Action Overlay) -->
 <div class="row mb-4 position-relative align-items-center" style="height: 50px;">
@@ -25,7 +46,7 @@
         </div>
 
         <!-- Trash Icon -->
-        <button type="button" class="bulk-btn delete-icon" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal" 
+        <button type="button" class="bulk-btn delete-icon" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal"
             title="Permanently Delete Archives">
             <i class="bi bi-trash"></i>
         </button>
@@ -34,7 +55,7 @@
     <!-- B. SEARCH INPUT (Server-Side Trigger) -->
     <div class="col h-100">
         <form action="{{ url_for('manage_archives') }}" method="GET" class="h-100 w-100">
-             <!-- Keep Sort & Filter parameters hidden so they don't reset when searching -->
+            <!-- Keep Sort & Filter parameters hidden so they don't reset when searching -->
             <input type="hidden" name="sort" value="{{ current_sort }}">
             <input type="hidden" name="filter_by" value="{{ current_filter_by }}">
             <input type="hidden" name="filter_val" value="{{ current_filter_val }}">
@@ -50,7 +71,7 @@
 
     <!-- C. SORT & FILTER GROUP -->
     <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end gap-2">
-        
+
         <!-- 1. FILTER DROPDOWN (Nested) -->
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="filterDropdown"
@@ -131,7 +152,9 @@
                         Sort by: Oldest First
                     </a>
                 </li>
-                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
                 <li>
                     <a class="dropdown-item google-sort-item {% if current_sort == 'semester-asc' %}active{% endif %}"
                         href="{{ url_for('manage_archives', sort='semester-asc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
@@ -171,13 +194,15 @@
                     {% for arc in archives %}
                     <tr class="archive-row" data-id="{{ arc.id }}">
                         <td class="select-cell ps-0 pe-0 text-center">
-                            <input class="form-check-input row-checkbox" type="checkbox" name="row_ids" value="{{ arc.id }}">
+                            <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
+                                value="{{ arc.id }}">
                         </td>
                         <td class="fw-bold text-dark ps-0 text-start">{{ arc.semester }}</td>
                         <td class="text-muted text-start">{{ arc.academic_year }}</td>
                         <td class="text-muted small text-start">
                             {{ arc.created_at.strftime('%Y-%m-%d %H:%M') }}<br>
-                            <span class="small opacity-75">by {{ arc.creator.username if arc.creator else 'System' }}</span>
+                            <span class="small opacity-75">by {{ arc.creator.username if arc.creator else 'System'
+                                }}</span>
                         </td>
                         <td class="text-center">
                             <div class="d-flex flex-column gap-1">
@@ -193,10 +218,11 @@
                             </div>
                         </td>
                         <td class="text-center pe-0">
-                            <a href="{{ url_for('api_archive_enter', archive_id=arc.id) }}" class="btn-icon view" title="View Archive">
+                            <a href="{{ url_for('api_archive_enter', archive_id=arc.id) }}" class="btn-icon view"
+                                title="View Archive">
                                 <i class="bi bi-eye-fill"></i>
                             </a>
-                            <button type="button" class="btn-icon delete" title="Permanently Delete" 
+                            <button type="button" class="btn-icon delete" title="Permanently Delete"
                                 data-bs-toggle="modal" data-bs-target="#deleteModal{{ arc.id }}">
                                 <i class="bi bi-trash"></i>
                             </button>
@@ -223,7 +249,8 @@
         <ul class="pagination justify-content-center mb-2">
             <!-- Previous -->
             <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('manage_archives', page=pagination.prev_num, sort=current_sort, search=search_query) }}">
+                <a class="page-link"
+                    href="{{ url_for('manage_archives', page=pagination.prev_num, sort=current_sort, search=search_query) }}">
                     <i class="bi bi-chevron-left"></i>
                 </a>
             </li>
@@ -232,7 +259,9 @@
             {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
             {% if page_num %}
             <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
-                <a class="page-link" href="{{ url_for('manage_archives', page=page_num, sort=current_sort, search=search_query) }}">{{ page_num }}</a>
+                <a class="page-link"
+                    href="{{ url_for('manage_archives', page=page_num, sort=current_sort, search=search_query) }}">{{
+                    page_num }}</a>
             </li>
             {% else %}
             <li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>
@@ -241,7 +270,8 @@
 
             <!-- Next -->
             <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('manage_archives', page=pagination.next_num, sort=current_sort, search=search_query) }}">
+                <a class="page-link"
+                    href="{{ url_for('manage_archives', page=pagination.next_num, sort=current_sort, search=search_query) }}">
                     <i class="bi bi-chevron-right"></i>
                 </a>
             </li>
@@ -253,7 +283,8 @@
         <input type="number" id="pageJumpInput" class="form-control form-control-sm text-center" style="width:70px;"
             min="1" max="{{ pagination.pages }}" placeholder="1–{{ pagination.pages }}">
         <button class="btn btn-sm btn-outline-secondary px-3" onclick="jumpToPage()">Go</button>
-        <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i class="bi bi-arrow-right-short"></i> arrow keys</span>
+        <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i class="bi bi-arrow-right-short"></i>
+            arrow keys</span>
     </div>
     {% endif %}
 </div>
@@ -270,11 +301,13 @@
             </div>
             <div class="modal-body text-danger fw-bold">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                Are you sure you want to PERMANENTLY delete the <span id="modalSelectedCount">0</span> selected archives? This action cannot be undone.
+                Are you sure you want to PERMANENTLY delete the <span id="modalSelectedCount">0</span> selected
+                archives? This action cannot be undone.
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" onclick="document.getElementById('bulkDeleteForm').submit()">Yes, Delete Forever</button>
+                <button type="button" class="btn btn-danger"
+                    onclick="document.getElementById('bulkDeleteForm').submit()">Yes, Delete Forever</button>
             </div>
         </div>
     </div>
@@ -290,8 +323,10 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to permanently delete the archive for <strong>{{ arc.semester }} ({{ arc.academic_year }})</strong>?</p>
-                <p class="text-danger small fw-bold mt-2"><i class="bi bi-exclamation-triangle-fill me-1"></i> Warning: This will remove all historical records associated with this term snapshot.</p>
+                <p>Are you sure you want to permanently delete the archive for <strong>{{ arc.semester }} ({{
+                        arc.academic_year }})</strong>?</p>
+                <p class="text-danger small fw-bold mt-2"><i class="bi bi-exclamation-triangle-fill me-1"></i> Warning:
+                    This will remove all historical records associated with this term snapshot.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -305,6 +340,40 @@
 </div>
 {% endfor %}
 
+<!-- INFO GUIDE MODAL (Identical to Dashboard UI) -->
+<div class="modal fade" id="archiveInfoModal" tabindex="-1" aria-labelledby="archiveInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="archiveInfoModalLabel">
+                    Archive Management Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1">1. ABOUT ARCHIVE MANAGEMENT</h6>
+                    <p class="small text-muted mb-0">Use this page to manage old records from past semesters. These are
+                        the finished schedules and data from previous years.</p>
+                </div>
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1">2. VIEWING OLD RECORDS</h6>
+                    <p class="small text-muted mb-0">Click the <strong>Eye icon</strong> to open an archive. You can
+                        only read these records. You cannot change them to make sure the data stays safe.</p>
+                </div>
+                <div class="mb-0">
+                    <h6 class="fw-bold text-danger small mb-1">3. DELETE ARCHIVES (TESTING)</h6>
+                    <p class="small text-muted mb-0">The <strong>Trash icon</strong> is for deleting archives forever.
+                        Right now, this is only a <strong>Prototype</strong> and is used for testing only.</p>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -317,8 +386,8 @@
         const searchInput = document.getElementById('liveSearchInput');
         const archivesTable = document.getElementById('archivesTable');
         const paginationContainer = document.querySelector('.pagination');
-        
-        // Define these globally so they can be re-queried after AJAX
+
+        // Global variables for AJAX
         let rowCheckboxes = [];
         let allRows = [];
 
@@ -327,10 +396,9 @@
             allRows = document.querySelectorAll('.archive-row');
 
             allRows.forEach(row => {
-                // Clear existing listeners to prevent duplicates
                 const newRow = row.cloneNode(true);
                 row.parentNode.replaceChild(newRow, row);
-                
+
                 newRow.addEventListener('click', function (e) {
                     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.form-check-input')) return;
                     const checkbox = this.querySelector('.row-checkbox');
@@ -339,9 +407,7 @@
                 });
             });
 
-            // Re-query checkboxes after cloning rows
             rowCheckboxes = document.querySelectorAll('.row-checkbox');
-            
             rowCheckboxes.forEach(cb => {
                 cb.addEventListener('change', updateSelectionState);
             });
@@ -383,53 +449,40 @@
             });
         }
 
-        window.deselectAll = function() {
+        window.deselectAll = function () {
             if (selectAllCheckbox) selectAllCheckbox.checked = false;
             rowCheckboxes.forEach(cb => cb.checked = false);
             updateSelectionState();
         };
 
-        // --- AJAX LIVE SEARCH ---
         let debounceTimer;
         if (searchInput) {
-            searchInput.addEventListener('input', function() {
+            searchInput.addEventListener('input', function () {
                 const query = this.value;
-                const currentSort = "{{ current_sort }}";
-                const currentFilterBy = "{{ current_filter_by }}";
-                const currentFilterVal = "{{ current_filter_val }}";
-
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
-                    // Update URL
                     const params = new URLSearchParams(window.location.search);
                     params.set('search', query);
-                    params.set('page', '1'); // Reset to page 1 on search
+                    params.set('page', '1');
                     const newUrl = `${window.location.pathname}?${params.toString()}`;
                     window.history.pushState({ path: newUrl }, '', newUrl);
 
-                    // Fetch background
                     fetch(newUrl)
                         .then(response => response.text())
                         .then(html => {
                             const parser = new DOMParser();
                             const doc = parser.parseFromString(html, 'text/html');
-
-                            // Update Table Body
                             const newBody = doc.querySelector('#archivesTable tbody').innerHTML;
                             archivesTable.querySelector('tbody').innerHTML = newBody;
 
-                            // Update Pagination Container
                             const newPagination = doc.querySelector('.pagination');
                             if (newPagination && paginationContainer) {
                                 paginationContainer.innerHTML = newPagination.innerHTML;
                                 paginationContainer.parentElement.style.display = 'block';
                             } else if (!newPagination && paginationContainer) {
-                                // If no pagination returned (e.g. 1 page), hide it
                                 paginationContainer.innerHTML = '';
                                 paginationContainer.parentElement.style.display = 'none';
                             }
-
-                            // Re-init selection logic for new rows
                             initializeSelectionLogic();
                             updateSelectionState();
                         })
@@ -438,20 +491,17 @@
             });
         }
 
-        // Initialize on first load
         initializeSelectionLogic();
 
-        // Jump to page
-        window.jumpToPage = function() {
+        window.jumpToPage = function () {
             const input = document.getElementById('pageJumpInput');
             const page = parseInt(input.value);
-            if (page >= 1 && page <= {{ pagination.pages }}) {
+            if (page >= 1 && page <= Number("{{ pagination.pages }}")) {
                 window.location.href = "{{ url_for('manage_archives', page=0, sort=current_sort, search=search_query) }}".replace('page=0', 'page=' + page);
             }
         };
 
-        // Arrow keys
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             {% if pagination.has_prev %}
             if (e.key === 'ArrowLeft') window.location.href = "{{ url_for('manage_archives', page=pagination.prev_num, sort=current_sort, search=search_query) }}";
@@ -468,27 +518,35 @@
         cursor: pointer;
         transition: background-color 0.15s ease;
     }
-    
+
     table.table tbody tr.archive-row.selected td {
-        background-color: #e6f4ea !important; /* Light Green */
+        background-color: #e6f4ea !important;
+        /* Light Green */
         transition: background-color 0.2s ease;
     }
 
     table.table tbody tr.archive-row.selected:hover td {
-        background-color: #dcece0 !important; /* Slightly darker green on hover */
+        background-color: #dcece0 !important;
+        /* Slightly darker green on hover */
     }
 
     /* 2. BULK ACTION BAR (Overlay Animation Fix) */
     .google-sort-menu {
-        min-width: 260px; /* Prevent text overflow for longer sort labels */
+        min-width: 260px;
+        /* Prevent text overflow for longer sort labels */
     }
+
     .bulk-action-bar {
         display: flex;
         visibility: hidden;
         opacity: 0;
         position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background-color: #e6f4ea; /* Match parent row highlight when active */
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #e6f4ea;
+        /* Match parent row highlight when active */
         z-index: 1050;
         padding: 0 20px;
         align-items: center;
@@ -533,7 +591,14 @@
         display: none;
     }
 
-    .btn-icon.delete:hover { color: #d93025 !important; background-color: #fce8e6; }
-    .btn-icon.view:hover { color: #1967d2 !important; background-color: #e8f0fe; }
+    .btn-icon.delete:hover {
+        color: #d93025 !important;
+        background-color: #fce8e6;
+    }
+
+    .btn-icon.view:hover {
+        color: #1967d2 !important;
+        background-color: #e8f0fe;
+    }
 </style>
 {% endblock %}
