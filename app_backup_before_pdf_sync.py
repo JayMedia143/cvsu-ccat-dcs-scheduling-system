@@ -5238,7 +5238,7 @@ def export_pdf_bulk():
         if scale_v < 1.0:
             _scaled_h_px = total_h_px * scale_v
             html = (
-                f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:visible;">'
+                f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:hidden;">'
                 f'<div style="position:relative;width:100%;transform:scale(1,{scale_v:.6f});transform-origin:top left;">'
                 + html
                 + '</div></div>'
@@ -5268,6 +5268,9 @@ def export_pdf_bulk():
     
     return Response(pdf_bytes, mimetype='application/pdf',
                     headers={'Content-Disposition': f'attachment; filename="{filename}"'})
+
+
+
 
 
 @app.route('/export/excel_bulk')
@@ -10749,8 +10752,13 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
             if cs_span > 1:
                 span_attrs += f' colspan="{cs_span}"'
 
-            # HARD HEIGHT CONSTRAINT: max-height and overflow:visible prevent auto-stretching
-            sp = [f'height:{total_rh}px', f'max-height:{total_rh}px', 'overflow:visible']
+            # HARD HEIGHT CONSTRAINT: max-height and overflow:hidden prevent auto-stretching
+            if not is_grid_row:
+                # Signatory Area: Allow text to bleed horizontally (Overflow)
+                sp = [f'height:{total_rh}px', 'overflow:visible']
+            else:
+                # Grid Area: Strict clipping to prevent schedule overlap
+                sp = [f'height:{total_rh}px', f'max-height:{total_rh}px', 'overflow:hidden']
 
             # Fill — solid fgColor; fall back to bgColor for pattern fills
             fill = cell.fill
@@ -10762,7 +10770,7 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
                     sp.append(f'background-color:{fg}')
 
             # Font / Spacing — CONDITIONALLY apply slimming or restoration
-            font = cell.font
+            font, al = cell.font, cell.alignment
             if is_grid_row:
                 # ULTRA-TIGHT SPACING for the Grid
                 sp.append('padding:0 !important;line-height:0.7 !important')
@@ -10789,13 +10797,16 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
                 fc = _argb_to_css(font.color) if font.color else None
                 if fc: sp.append(f'color:{fc}')
 
-            al = cell.alignment
+            # INDENTATION: Detect literal spaces in cell text AND Excel's indent property
+            _leading_spaces = len(raw) - len(raw.lstrip(' ')) if raw else 0
+            _space_padding = _leading_spaces * (MDW * 0.8)  # Estimate px for spaces
             _indent_px = int(al.indent) * MDW if al and al.indent else 0
-            _pad_left  = _indent_px + 4
+            _pad_left  = _indent_px + _space_padding + 4
+            
             if is_override:
                 sp.append('padding:0 !important')
             else:
-                sp.append(f'padding:0 4px 0 {_pad_left}px !important')
+                sp.append(f'padding:0 4px !important')
 
             _valign = 'middle'
             _halign = 'left'
@@ -10816,9 +10827,20 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
 
                 # Standardize to top !important so internal flexbox controls centering 100%
                 sp.append('vertical-align:top !important')
-                sp.append('white-space:pre-wrap;word-break:break-all' if al.wrap_text else 'white-space:pre')
+                
+                if not is_grid_row:
+                    # Forced to respect leading spaces in placeholders (Stable version)
+                    sp.append('white-space:pre')
+                else:
+                    sp.append('white-space:pre-wrap;word-break:break-all' if al.wrap_text else 'white-space:pre')
             else:
-                sp += ['text-align:left', 'vertical-align:top !important', 'white-space:pre']
+                sp.append('text-align:left')
+                sp.append('vertical-align:top !important')
+                if not is_grid_row:
+                    # Forced to respect leading spaces in placeholders (Stable version)
+                    sp.append('white-space:pre')
+                else:
+                    sp.append('white-space:pre')
 
             # Borders — per-side explicit control.
             bd = cell.border
@@ -10839,8 +10861,8 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
 
                 # WEASYPRINT FIX #3: Flexbox Conversion
                 html_text = cell_text
-                html_text = html_text.replace('display:table;', f'display:flex;flex-direction:column;justify-content:center;align-items:stretch;height:{_sum_h}px;box-sizing:border-box;overflow:visible !important;')
-                html_text = html_text.replace('display:table-cell;', 'display:block;width:100%;overflow:visible !important;')
+                html_text = html_text.replace('display:table;', f'display:flex;flex-direction:column;justify-content:center;align-items:stretch;height:{_sum_h}px;box-sizing:border-box;')
+                html_text = html_text.replace('display:table-cell;', 'display:block;width:100%;')
                 html_text = html_text.replace('height:100%;', f'height:{_sum_h}px;')
                 _inner_fs = max(8.0, round(10 * scale_v, 1))
                 html_text = html_text.replace('padding:3px;', 'padding:0px !important;')
@@ -10854,7 +10876,7 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
 
                     html_text = (
                         f'<div style="height:{_sum_h}px;width:100%;display:flex;flex-direction:column;justify-content:{_v_flex};align-items:{_h_flex};background-color:yellow !important;box-sizing:border-box;{_inner_pad}">'
-                        f'<span style="line-height:0.7 !important;display:block;width:100%;">{cell_text}</span>'
+                        f'<span style="line-height:0.7 !important;display:block;width:100%;padding-left:{_pad_left}px;">{cell_text}</span>'
                         f'</div>'
                     )
                 else:
@@ -10865,7 +10887,7 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
                     html_text = html_text.replace('font-size:11px;', f'font-size:{_inner_fs}px;')
                     html_text = html_text.replace('line-height:1.3;', 'line-height:1.1 !important;')
                     # Clipping wrapper div
-                    html_text = f'<div style="height:{_sum_h}px;max-height:{_sum_h}px;width:100%;overflow:visible;position:relative;display:block;">{html_text}</div>'
+                    html_text = f'<div style="height:{_sum_h}px;max-height:{_sum_h}px;width:100%;overflow:hidden;position:relative;display:block;">{html_text}</div>'
             else:
                 # -- TRUE GRID-STYLE MIRRORING (Restored Flexbox Engine) --
                 _v_flex = {'top':'flex-start','middle':'center','bottom':'flex-end'}.get(_valign, 'center')
@@ -10876,9 +10898,11 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
                 html_text = esc(cell_text).replace('\n', '<br>') if cell_text else ''
 
                 # Double-Wrapper: Restored Flexbox centering
-                style_str += ';background-color:yellow !important'
+                if not is_grid_row:
+                    style_str += ';background-color:yellow !important'
+                
                 html_text = (
-                    f'<div style="height:{_clip_h}px;max-height:{_clip_h}px;overflow:visible;position:relative;display:block;background-color:yellow !important;">'
+                    f'<div style="height:{_clip_h}px;max-height:{_clip_h}px;overflow:hidden;position:relative;display:block;">'
                     f'<div style="height:{_clip_h}px;width:100%;display:flex;flex-direction:column;justify-content:{_v_flex};align-items:{_h_flex};box-sizing:border-box;{_inner_pad}">'
                     f'<span style="line-height:0.7 !important;display:block;width:100%;">{html_text}</span>'
                     f'</div></div>'
@@ -10929,6 +10953,28 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
         + imgs_above + '\n'
         + '</div>'
     )
+    return html_out, table_px, scale_v, total_th_px
+
+
+
+
+    row_offsets = {}
+    acc = 0
+    for i, h in enumerate(row_heights):
+        row_offsets[i] = acc
+        acc += h
+
+    if margins:
+        _m  = margins
+        _pk = _m.get('paper', 'A4')
+        _pw, _, _ = PAPER_SIZES.get(_pk, PAPER_SIZES['A4'])
+        _paper_content_px = (_pw - float(_m.get('left', 1.0)) - float(_m.get('right', 1.0))) * 96
+        left_off = -30 if layout_type != 'faculty' else 20
+        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _paper_content_px, left_offset_px=left_off, img_settings_list=img_settings, scale_v=scale_v)
+    else:
+        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _orig_total_w_px, img_settings_list=img_settings, scale_v=scale_v)
+
+    html_out = f'<div style="position:relative;width:100%;isolation:isolate;">\n{imgs_below}\n<div style="position:relative;z-index:1;">' + '\n'.join(lines) + f'</div>\n{imgs_above}\n</div>'
     return html_out, table_px, scale_v, total_th_px
 
 
@@ -12030,7 +12076,7 @@ def section_timetable_pdf(section_id):
     if scale_v < 1.0:
         _scaled_h_px = total_h_px * scale_v
         html_content = (
-            f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:visible;">'
+            f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:hidden;">'
             f'<div style="position:relative;width:100%;transform:scale(1,{scale_v:.6f});transform-origin:top left;">'
             + html_content
             + '</div></div>'
@@ -12811,7 +12857,7 @@ def faculty_timetable_pdf(faculty_id):
     if scale_v < 1.0:
         _scaled_h_px = total_h_px * scale_v
         html_content = (
-            f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:visible;">'
+            f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:hidden;">'
             f'<div style="position:relative;width:100%;transform:scale(1,{scale_v:.6f});transform-origin:top left;">'
             + html_content
             + '</div></div>'
@@ -12955,7 +13001,7 @@ def room_timetable_pdf(room_id):
     if scale_v < 1.0:
         _scaled_h_px = total_h_px * scale_v
         html_content = (
-            f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:visible;">'
+            f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:hidden;">'
             f'<div style="position:relative;width:100%;transform:scale(1,{scale_v:.6f});transform-origin:top left;">'
             + html_content
             + '</div></div>'
@@ -13083,7 +13129,7 @@ def course_timetable_pdf(course_id):
     if scale_v < 1.0:
         _scaled_h_px = total_h_px * scale_v
         html_content = (
-            f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:visible;">'
+            f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:hidden;">'
             f'<div style="position:relative;width:100%;transform:scale(1,{scale_v:.6f});transform-origin:top left;">'
             + html_content
             + '</div></div>'
@@ -15307,7 +15353,7 @@ def public_student_schedule_pdf(student_id):
     if scale_v < 1.0:
         _scaled_h_px = total_h_px * scale_v
         html_content = (
-            f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:visible;">'
+            f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:hidden;">'
             f'<div style="position:relative;width:100%;transform:scale(1,{scale_v:.6f});transform-origin:top left;">'
             + html_content
             + '</div></div>'
