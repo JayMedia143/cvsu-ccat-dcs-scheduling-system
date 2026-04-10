@@ -82,7 +82,7 @@ _HIST_SAFE_ENDPOINTS = {
     'manage_archives', 'delete_archive', 'bulk_delete_archives', # Added to whitelist
 }
 
-# Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Backend Route Protection Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# --- Time Machine: Backend Route Protection ---
 def hist_lockdown(f):
     """Blocks all POST/DELETE mutation routes when Ghost Mode (historical view) is active.
     Returns 403 JSON for API calls and redirects with a flash for normal form submissions.
@@ -92,12 +92,12 @@ def hist_lockdown(f):
         if session.get('historical_mode_active', False):
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return jsonify(ok=False, error='System is in read-only Archive Mode. Exit Archive to make changes.'), 403
-            flash('Ã¢ÂÂ³ Action blocked: System is in Archive Mode (read-only). Exit Archive to make changes.', 'warning')
+            flash('Action blocked: System is in Archive Mode (read-only). Exit Archive to make changes.', 'warning')
             return redirect(request.referrer or url_for('dashboard'))
         return f(*args, **kwargs)
     return decorated_function
 
-# Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Archive Entity Reconstructor Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# --- Time Machine: Archive Entity Reconstructor ---
 from types import SimpleNamespace
 
 def get_archive_entities(archive_id, entity_type):
@@ -251,7 +251,7 @@ def inject_archive_vars():
 
 function_list = ['manage_courses', 'manage_sections', 'manage_students', 'manage_irregular', 'manage_faculty', 'manage_rooms', 'manage_preassignments']
 
-# Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Global POST/MUTATION Firewall Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# ------------------------------------ Time Machine: Global POST/MUTATION Firewall ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Whitelisted endpoints that are always allowed (auth + time machine controls)
 _HIST_SAFE_ENDPOINTS = {
     'login', 'logout', 'api_archive_exit', 'api_archive_enter',
@@ -272,7 +272,7 @@ def block_mutations_in_hist_mode():
         return  # GET requests are always fine
 
     if not session.get('historical_mode_active', False):
-        return  # Not in historical mode -- allow everything
+        return  # Not in historical mode ---- allow everything
 
     # Bypass for Superadmins (Admin override)
     if session.get('role') == 'superadmin':
@@ -280,13 +280,13 @@ def block_mutations_in_hist_mode():
 
     endpoint = request.endpoint or ''
     if endpoint in _HIST_SAFE_ENDPOINTS:
-        return  # Whitelisted -- always allowed
+        return  # Whitelisted --  always allowed
 
     # Block the mutation
     if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify(ok=False, error='System is in read-only Archive Mode. Exit Archive to make changes.'), 403
 
-    flash('Ã¢ÂÂ³ Action blocked: System is in Archive Mode (read-only). Exit Archive to make changes.', 'warning')
+    flash('Action blocked: System is in Archive Mode (read-only). Exit Archive to make changes.', 'warning')
     return redirect(request.referrer or url_for('dashboard'))
 
 # Concurrency Locks
@@ -368,13 +368,13 @@ class SystemSettings(db.Model):
     course_signatory_3 = db.Column(db.String(100), default="LAURO B. PASCUA, EdD")  # Binago para maging consistent
 
     # --- DYNAMIC SIGNATORIES (JSON array: [{"name":"...", "title":"..."}, ...]) ---
-    # Replaces fixed sig1/sig2/sig3 -- backward-compatible (old cols still exist)
+    # Replaces fixed sig1/sig2/sig3 --  backward-compatible (old cols still exist)
     section_signatories_json = db.Column(db.Text, nullable=True, default=None)
     faculty_signatories_json = db.Column(db.Text, nullable=True, default=None)
     room_signatories_json    = db.Column(db.Text, nullable=True, default=None)
     course_signatories_json  = db.Column(db.Text, nullable=True, default=None)
 
-    # Image adjustment settings per layout type -- JSON array of per-image overrides
+    # Image adjustment settings per layout type --  JSON array of per-image overrides
     # Format: [{"x": 0.0, "y": 0.0, "scale": 1.0, "z_above": true}, ...]
     # Index matches Excel image order (0-based). Extra entries are ignored.
     section_img_settings = db.Column(db.Text, nullable=True)
@@ -382,7 +382,7 @@ class SystemSettings(db.Model):
     room_img_settings    = db.Column(db.Text, nullable=True)
     course_img_settings  = db.Column(db.Text, nullable=True)
     blocked_slots_json   = db.Column(db.Text, nullable=True)
-    # Module 3: Global AI-Lock -- when True, GA entries are immutable for 'user' role
+    # Module 3: Global AI-Lock --  when True, GA entries are immutable for 'user' role
     schedule_lock        = db.Column(db.Boolean, default=False, nullable=False)
 
     # --- PHASE 1: Fixed Layout Variables ---
@@ -423,7 +423,7 @@ class SystemSettings(db.Model):
     # --- FACULTY PAPER SIZE (independent) ---
     fac_paper_size    = db.Column(db.String(30), default='A4')
 
-    # --- FACULTY-SPECIFIC LABELS (independent -- never shared with Section/Room/Course) ---
+    # --- FACULTY-SPECIFIC LABELS (independent --  never shared with Section/Room/Course) ---
     # Card 1: Header Information
     fac_republic_text    = db.Column(db.String(255), default="Republic of the Philippines")
     fac_univ_name        = db.Column(db.String(255), default="CAVITE STATE UNIVERSITY")
@@ -435,18 +435,18 @@ class SystemSettings(db.Model):
     fac_dept_label       = db.Column(db.String(150), default="DEPARTMENT OF COMPUTER STUDIES")
     fac_sched_title      = db.Column(db.String(150), default="FACULTY CLASS SCHEDULE")
     fac_sem_ay_label     = db.Column(db.String(150), default="SECOND SEMESTER SY 2023 - 2024")
-    # Card 2: Faculty Info Block -- Labels
+    # Card 2: Faculty Info Block --  Labels
     fac_name_label       = db.Column(db.String(100), default="Name:")
     fac_educ_label       = db.Column(db.String(150), default="Highest Educ. Attainment:")
     fac_prep_label       = db.Column(db.String(150), default="No. of Preparation/s:")
     fac_hours_label      = db.Column(db.String(200), default="Total no. of contact hours per week:")
-    # Card 3: Signatories -- Labels
+    # Card 3: Signatories --  Labels
     fac_conforme_label   = db.Column(db.String(100), default="Conforme:")
     fac_rec_approval_label = db.Column(db.String(150), default="Recommending Approval:")
     fac_reviewed_label   = db.Column(db.String(100), default="Reviewed by:")
     fac_approved_label   = db.Column(db.String(100), default="Approved:")
     fac_registrar_label  = db.Column(db.String(100), default="OIC, Registrar")
-    # Card 3: Signatories -- Names & Titles
+    # Card 3: Signatories --  Names & Titles
     fac_chair_name       = db.Column(db.String(150), default="ARIES M. GELERA")
     fac_chair_title      = db.Column(db.String(150), default="Department Chairperson")
     fac_director_name    = db.Column(db.String(150), default="ARIEL G. SANTOS, EdD")
@@ -624,9 +624,9 @@ class ScheduledClass(db.Model):
     start_time = db.Column(db.String(20), nullable=False)
     end_time = db.Column(db.String(20), nullable=False)
     semester = db.Column(db.String(30), nullable=False, default='1st Semester')
-    # True = GA could not resolve a hard conflict for this gene -- appears in Issues page
+    # True = GA could not resolve a hard conflict for this gene --  appears in Issues page
     has_conflict = db.Column(db.Boolean, nullable=False, default=False)
-    # 'Lec', 'Lab', or 'Async' -- stored from GA gene_type so checker doesn't guess from room
+    # 'Lec', 'Lab', or 'Async' --  stored from GA gene_type so checker doesn't guess from room
     session_type = db.Column(db.String(10), nullable=False, default='Lec')
     # Module 3: source tracking + draft layer
     # source: 'ga' = created by Genetic Algorithm | 'manual' = manually added
@@ -901,10 +901,10 @@ def check_conflict(new_entry):
     session['selected_semester'] = semester_name
     return redirect(request.referrer or url_for('dashboard'))
 
-# Ã¢â€â‚¬Ã¢â€â‚¬ Module 6: PROPOSAL HUB REAL-TIME HANDLERS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# --- Module 6: PROPOSAL HUB REAL-TIME HANDLERS ---
 # In-memory: { room_name: { sid: {username, role} } }
 hub_online_users = {}
-# In-memory: { sid: {username, role, user_id} } -- for private message routing
+# In-memory: { sid: {username, role, user_id} } --  for private message routing
 hub_sid_map = {}
 
 # Module 7: Global monitoring of all online users
@@ -1351,7 +1351,7 @@ def api_hub_mark_read():
     return jsonify(ok=True)
 
 
-# Ã¢â€â‚¬Ã¢â€â‚¬ Module 6: HUB SYSTEM ALERTS & CONFLICTS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# --- Module 6: HUB SYSTEM ALERTS & CONFLICTS ---
 def check_and_post_hub_conflicts(semester, draft_id=None):
     """Detects ROOM overlaps between different departments and posts to Hub."""
     fmt = '%H:%M'
@@ -1419,7 +1419,7 @@ def check_and_post_hub_conflicts(semester, draft_id=None):
                 'type': 'system_alert'
             }, room=room_name)
 
-# Ã¢â€â‚¬Ã¢â€â‚¬ Module 7: MONITORING HELPERS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# --- Module 7: MONITORING HELPERS ---
 def log_activity(action, details=None):
     """Saves an administrative action to the ActivityLog and broadcasts it."""
     if 'user_id' in session:
@@ -1475,7 +1475,7 @@ def update_user_activity():
         User.query.filter_by(id=session['user_id']).update({'last_activity': datetime.utcnow()})
         db.session.commit()
 
-# Ã¢â€â‚¬Ã¢â€â‚¬ END MODULE 6 HANDLERS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# --- END MODULE 6 HANDLERS ---
 
 
 
@@ -1774,7 +1774,7 @@ def upload_profile_pic():
     return redirect(request.referrer or url_for('dashboard'))
 
 
-# Ã¢â€â‚¬Ã¢â€â‚¬ Module 6: PROPOSAL HUB & DECISION TERMINAL ROUTES Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# --- Module 6: PROPOSAL HUB & DECISION TERMINAL ROUTES ---
 
 @app.route('/proposal-hub')
 @login_required
@@ -1953,7 +1953,7 @@ def set_department_filter(dept_name):
 @login_required
 @role_required('admin', 'superadmin')
 def dashboard():
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Historical Mode Dashboard Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # --- Time Machine: Historical Mode Dashboard ---
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
         archive = TermArchive.query.get(archive_id) if archive_id else None
@@ -1975,7 +1975,7 @@ def dashboard():
                      'selected_depts': [], 'hist_archive': None}
         return render_template('dashboard.html', stats=stats)
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Live Mode Dashboard Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # --- Live Mode Dashboard ---
     # Get Current Semester Filter
     selected_semester = session.get('selected_semester', 'All')
 
@@ -2000,7 +2000,7 @@ def dashboard():
     
     # 2. COMPLETION RATE (Scoped by Semester)
     # FOR DASHBOARD OVERVIEW: We want the total completion across ALL departments in that semester.
-    # This provides a true campus-wide accurately as requested by the user.
+    # This provides a true campus-wide accuracy as requested by the user.
     all_depts_q = db.session.query(Course.department).filter(Course.is_archived == False)
     if selected_semester != 'All':
         all_depts_q = all_depts_q.filter(Course.semester_offered == selected_semester)
@@ -2078,7 +2078,7 @@ def manage_courses():
 
     selected_semester = session.get('selected_semester', 'All')
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Historical Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Time Machine: Historical Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
         query = get_archive_query(archive_id, 'Course')
@@ -2136,7 +2136,7 @@ def manage_courses():
             current_filter_val=filter_val
         )
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Live Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Live Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # Base Query
     query = Course.query.filter_by(is_archived=False)
 
@@ -2437,7 +2437,7 @@ MASTER_PREFIX_RULES = [
     ('MATH',  True,  'Department of Teachers Education'),
     ('STAT',  True,  'Department of Teachers Education'),
     ('NSTP',  True,  'NSTP Department'),
-    # is_prefix=False (exact code exceptions -- override prefix rules)
+    # is_prefix=False (exact code exceptions ---- override prefix rules)
     ('MATH 10', False, 'Department of Engineering'),
     ('MATH 11', False, 'Department of Engineering'),
 ]
@@ -2859,7 +2859,7 @@ def bulk_delete_departments_permanent():
 @login_required
 @role_required('admin', 'superadmin')
 def save_code_assignment():
-    # --- Update existing prefix rules (department only -- archive done via dedicated route) ---
+    # --- Update existing prefix rules (department only ---- archive done via dedicated route) ---
     for rule in CodePrefixRule.query.filter_by(is_prefix=True, is_archived=False).all():
         dept = request.form.get(f'dept_p_{rule.id}')
         if dept:
@@ -3026,7 +3026,7 @@ def api_prefix_courses():
         )
     ).order_by(Course.course_code).all()
     
-    return jsonify([{'code': c.course_code, 'name': c.course_name, 'dept': c.department or '--'} for c in courses])
+    return jsonify([{'code': c.course_code, 'name': c.course_name, 'dept': c.department or '----'} for c in courses])
 
 # I-UPDATE ANG LUMANG delete_course FUNCTION
 @app.route('/manage/course/delete/<int:course_id>', methods=['POST'])
@@ -3101,7 +3101,7 @@ def manage_rooms():
     filter_by = request.args.get('filter_by', '', type=str) # 'building' or 'status'
     filter_val = request.args.get('filter_val', '', type=str)
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Historical Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Time Machine: Historical Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
         query = get_archive_query(archive_id, 'Room')
@@ -3115,7 +3115,7 @@ def manage_rooms():
         pagination = query.paginate(page=page, per_page=10, error_out=False)
         return render_template('manage_rooms.html', rooms=pagination.items, pagination=pagination, search_query=search_query)
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Live Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Live Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # 2. Base Query
     query = Room.query.filter_by(is_archived=False)
     
@@ -3558,7 +3558,7 @@ def manage_sections():
 
     selected_semester = session.get('selected_semester', 'All')
     
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Historical Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Time Machine: Historical Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
         query = get_archive_query(archive_id, 'Section')
@@ -3923,7 +3923,7 @@ def manage_faculty():
 
     selected_semester = session.get('selected_semester', 'All')
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Historical Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Time Machine: Historical Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
         all_objs = get_archive_entities(archive_id, 'Faculty')
@@ -3990,7 +3990,7 @@ def manage_faculty():
             all_faculty_for_modals=items,
         )
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Live Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Live Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # 2. Base Query
     query = Faculty.query.filter_by(is_archived=False)
     
@@ -4089,7 +4089,7 @@ def manage_faculty():
         .all()
     )
 
-    # Fix B -- SC workload: use actual scheduled duration (end_time - start_time) per gene
+    # Fix B ---- SC workload: use actual scheduled duration (end_time - start_time) per gene
     def _sc_hours(start, end):
         try:
             sh, sm = map(int, start.split(':'))
@@ -4106,7 +4106,7 @@ def manage_faculty():
             )
     workload_map = {k: int(v) for k, v in workload_map.items()}
 
-    # Fix A -- FA workload: use split hours when configured, full course hours otherwise
+    # Fix A ---- FA workload: use split hours when configured, full course hours otherwise
     _fa_objs = (
         FacultyAssignment.query
         .filter(FacultyAssignment.faculty_id.in_(_fids))
@@ -4134,7 +4134,7 @@ def manage_faculty():
         if _fa_map.get(_fid, 0) > 0:
             workload_map[_fid] = int(_fa_map[_fid])
 
-    # Fix C -- fa_split_hours_map: per-faculty per-(course_id-section_id) effective hours for Step 2 badges
+    # Fix C ---- fa_split_hours_map: per-faculty per-(course_id-section_id) effective hours for Step 2 badges
     fa_split_hours_map = {}  # {str(faculty_id): {"course_id-section_id": {"lec": x, "lab": y}}}
     for _fa in _fa_objs:
         _c = _fa.course
@@ -4212,7 +4212,7 @@ def manage_faculty():
                 'section_id':     _sc.section_id,
                 'course_code':    _sc.course.course_code,
                 'course_name':    _sc.course.course_name,
-                'section_name':   _sc.section.section_name if _sc.section else '--',
+                'section_name':   _sc.section.section_name if _sc.section else '----',
                 'session_type':   _stype,
                 'duration_hours': round(_dur, 1),
                 'semester':       _sc.course.semester_offered or '',
@@ -4650,7 +4650,7 @@ def view_timetable():
     filter_type = request.args.get('type', 'section')
     filter_id   = request.args.get('id', type=int)
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Historical Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Time Machine: Historical Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
         
@@ -4711,7 +4711,7 @@ def view_timetable():
         settings = get_settings()
 
     else:
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Live Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ Live Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         # Semester history: collect distinct semesters that have saved schedules
         _sem_rows = db.session.query(ScheduledClass.semester).distinct().all()
         available_semesters = sorted(
@@ -4791,7 +4791,7 @@ def view_timetable():
         schedules = query.all()
         settings = get_settings()
 
-    # --- UPDATED GRID LOGIC (Perfect Alignment) ---
+    # --- UPDATED GRID LOGIC ---
     def to_12hr(h, m):
         d = h if h <= 12 else h - 12
         if d == 0: d = 12
@@ -4880,12 +4880,34 @@ def view_timetable():
     faculty_json  = [{'id': f.id, 'label': f.full_name}                            for f in all_faculty]
     rooms_json    = [{'id': r.id, 'label': f"{r.room_name} ({r.building})"}        for r in all_rooms]
 
+    is_hist = session.get('historical_mode_active', False)
+    active_draft_id = session.get('active_editor_draft_id') or request.args.get('draft_id', type=int)
+
+    # Calculate Paper Sizes for all types (Manifest)
+    settings = get_settings()
+    def _pdim(pk):
+        w, h, _ = PAPER_SIZES.get(pk, PAPER_SIZES['A4'])
+        return {'w': w, 'h': h}
+
+    sec_p = getattr(settings, 'paper_size', 'A4') or 'A4'
+    fac_p = getattr(settings, 'fac_paper_size', 'A4') or 'A4'
+    
+    layout_configs = {
+        'section': _pdim(sec_p),
+        'room':    _pdim(sec_p),
+        'course':  _pdim(sec_p),
+        'faculty': _pdim(fac_p)
+    }
+
     return render_template('view_timetable.html',
                            all_sections=all_sections, all_faculty=all_faculty, all_rooms=all_rooms,
                            sections_json=sections_json, faculty_json=faculty_json, rooms_json=rooms_json,
                            current_type=filter_type, current_id=filter_id,
                            current_semester=current_semester,
-                           available_semesters=available_semesters)
+                           available_semesters=available_semesters,
+                           active_draft_id=active_draft_id,
+                           layout_configs=layout_configs,
+                           is_hist=is_hist)
 
 @app.route('/reports')
 @login_required
@@ -5140,7 +5162,7 @@ def clean_archives_page():
 @login_required
 @role_required('admin', 'superadmin')
 def export_pdf(view_type, entity_id):
-    """Legacy PDF export â€” now delegates to the new per-type PDF routes."""
+    """Legacy PDF export -------- now delegates to the new per-type PDF routes."""
     semester = request.args.get('semester', '')
     route_map = {
         'section': ('section_timetable_pdf', 'section_id'),
@@ -5233,7 +5255,7 @@ def export_pdf_bulk():
             bounds=bounds, layout_type=report_type, margins=_margins,
             img_settings=_img_settings)
 
-        # Apply CSS transform for PDF scaling â€” done HERE (not inside render_excel_to_html)
+        # Apply CSS transform for PDF scaling -------- done HERE (not inside render_excel_to_html)
         # so the View Page JS can still do its own scaling independently.
         if scale_v < 1.0:
             _scaled_h_px = total_h_px * scale_v
@@ -5244,7 +5266,7 @@ def export_pdf_bulk():
                 + '</div></div>'
             )
 
-        # Wrap each schedule in the .a4 structure -- one schedule per paper page.
+        # Wrap each schedule in the .a4 structure ---- one schedule per paper page.
         all_html_chunks.append(f'<div class="a4">{html}</div>')
 
     # 3. MERGE & RENDER PDF
@@ -5270,14 +5292,40 @@ def export_pdf_bulk():
                     headers={'Content-Disposition': f'attachment; filename="{filename}"'})
 
 
+def _apply_style_from_template(target_cell, source_cell):
+    """Deep copy font, border, fill, alignment, and number_format from source to target."""
+    from copy import copy
+    if source_cell.has_style:
+        target_cell.font = copy(source_cell.font)
+        target_cell.border = copy(source_cell.border)
+        target_cell.fill = copy(source_cell.fill)
+        target_cell.alignment = copy(source_cell.alignment)
+        target_cell.number_format = copy(source_cell.number_format)
+
+def _inject_layout_images(ws, settings, layout_type):
+    """Reposition and scale template images based on layout settings."""
+    import json
+    img_settings_raw = getattr(settings, f"{layout_type}_img_settings", None)
+    if not img_settings_raw or not hasattr(ws, '_images'): return
+    try:
+        img_slots = json.loads(img_settings_raw)
+        for i, img in enumerate(ws._images):
+            if i < len(img_slots):
+                slot = img_slots[i]
+                if 'scale' in slot:
+                    img.width = float(img.width) * float(slot['scale'])
+                    img.height = float(img.height) * float(slot['scale'])
+    except: pass
+
 @app.route('/export/excel_bulk')
 @login_required
 @role_required('admin', 'superadmin')
 def export_excel_bulk():
     report_type = request.args.get('type', 'section') # section, faculty, room
     export_semester = request.args.get('semester', '1st Semester')
+    settings = get_settings()
 
-    # 1. LOAD SPECIFIC TEMPLATE
+    # 1. LOAD SPECIFIC TEMPLATE (Uploaded via Layout Management)
     template_filename = f"{report_type}_template.xlsx"
     template_path = os.path.join(basedir, 'static', 'assets', template_filename)
     
@@ -5289,7 +5337,7 @@ def export_excel_bulk():
     wb = load_workbook(template_path)
     template_sheet = wb.active
     
-    # 2. GET ITEMS TO PRINT -- only those with scheduled classes in the selected semester
+    # 2. GET ITEMS TO PRINT (Active schedules for this semester)
     sem_label = export_semester.replace(' ', '_')
     if report_type == 'section':
         scheduled_ids = {r[0] for r in db.session.query(ScheduledClass.section_id)
@@ -5314,209 +5362,418 @@ def export_excel_bulk():
                  .order_by(Room.room_name).all()
                  if r.id in scheduled_ids]
         out_filename = f"All_Rooms_Utilization_{sem_label}.xlsx"
-    
-    # 3. PREPARE ANCHOR MAP
-    day_headers = {'Monday': ['MON', 'MONDAY'], 'Tuesday': ['TUE', 'TUESDAY'], 'Wednesday': ['WED', 'WEDNESDAY'], 'Thursday': ['THU', 'THURS', 'THURSDAY'], 'Friday': ['FRI', 'FRIDAY'], 'Saturday': ['SAT', 'SATURDAY']}
-    col_map = {} 
-    row_map = {} 
-    
-    # Scan Template for Time/Day Grid Coordinates
-    # Pass 1: collect day column headers + all occurrences of each 12hr time string in row order
-    _t_occurrences = {}  # "7:00" -> [row_of_AM, row_of_PM]
-    for row in template_sheet.iter_rows(min_row=1, max_row=50, max_col=20):
-        for cell in row:
-            val = str(cell.value).strip().upper() if cell.value else ""
-            for db_day, keywords in day_headers.items():
-                if val in keywords: col_map[db_day] = cell.column
-            for h in range(1, 13):   # 1-12 covers all 12hr labels (1pm-6:30pm use h=1-6)
-                for m in [0, 30]:
-                    t_str = f"{h}:{m:02d}"
-                    if val.startswith(t_str):
-                        if t_str not in _t_occurrences:
-                            _t_occurrences[t_str] = []
-                        if len(_t_occurrences[t_str]) < 2:
-                            _t_occurrences[t_str].append(cell.row)
-    # Pass 2: build row_map
-    # If a 12hr time string appears TWICE in template -> AM(h<=12)=1st, PM(h>12)=2nd
-    # If it appears ONCE -> use it directly (unique time, no AM/PM conflict)
-    for h in range(7, 21):
-        for m in [0, 30]:
-            t_12 = f"{h if h <= 12 else h - 12}:{m:02d}"
-            if t_12 in _t_occurrences:
-                occ_list = _t_occurrences[t_12]
-                if len(occ_list) == 1:
-                    row_map[f"{h}:{m:02d}"] = occ_list[0]   # unique -- use directly
-                elif h <= 12:
-                    row_map[f"{h}:{m:02d}"] = occ_list[0]   # AM -> first occurrence
-                else:
-                    row_map[f"{h}:{m:02d}"] = occ_list[1]   # PM -> second occurrence
+    else:
+        flash("Invalid report type.", "danger")
+        return redirect(url_for('reports_page'))
 
-    # 4. GENERATE SHEETS
+    if not items:
+        flash(f'No schedules found for {report_type} in {export_semester}.', 'warning')
+        return redirect(url_for('reports_page'))
+
+    # ------------------------------------------------------------------------------------------------------------------------------
+    # 3. CREATE MASTER DATA SHEET (Sheet Index 0)
+    # ------------------------------------------------------------------------------------------------------------------------------
+    master_ws = wb.create_sheet("Master_Data_List", 0)
+    master_ws.sheet_properties.tabColor = "198754" # Success Green
+    
+    m_headers = ["Semester", "AY", "Course Code", "Subject Title", "Section", "Faculty", "Room", "Day", "Time Slot"]
+    master_ws.append(m_headers)
+    
+    for cell in master_ws[1]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="198754", end_color="198754", fill_type="solid")
+        cell.alignment = Alignment(horizontal='center')
+
     for item in items:
-        # Clone Template
-        target_ws = wb.copy_worksheet(template_sheet)
-        
-        sheet_name = ""
-        display_name = ""
-        dept_name = ""
-        
-        if report_type == 'section': 
-            sheet_name = item.section_name
-            display_name = item.section_name
-            dept_name = "N/A"
-        elif report_type == 'faculty': 
-            sheet_name = item.full_name
-            display_name = item.full_name
-            dept_name = item.department
-        elif report_type == 'room': 
-            sheet_name = item.room_name
-            display_name = item.room_name
-            dept_name = item.building
-            
-        safe_title = "".join([c for c in sheet_name if c.isalnum() or c in " -_"])[:30]
-        target_ws.title = safe_title
-
-        # A. COPY IMAGES
-        if hasattr(template_sheet, '_images'):
-            for image in template_sheet._images:
-                target_ws.add_image(copy.deepcopy(image))
-
-        # B. GET DATA & STATS
-        schedules = []
         if report_type == 'section':
             schedules = ScheduledClass.query.filter_by(section_id=item.id, semester=export_semester).all()
         elif report_type == 'faculty':
             schedules = ScheduledClass.query.filter_by(faculty_id=item.id, semester=export_semester).all()
-        elif report_type == 'room':
+        else:
             schedules = ScheduledClass.query.filter_by(room_id=item.id, semester=export_semester).all()
+        
+        for sc in schedules:
+            master_ws.append([
+                export_semester,
+                settings.sem_ay_value if settings else "",
+                sc.course.course_code if sc.course else "",
+                sc.course.course_name if sc.course else "",
+                sc.section.section_name if sc.section else "",
+                sc.faculty.full_name if sc.faculty else "T.B.A.",
+                sc.room.room_name if sc.room else "T.B.A.",
+                sc.day,
+                f"{sc.start_time} - {sc.end_time}"
+            ])
 
-        stats_hours = "0"
-        stats_prep = "0"
-        if report_type == 'faculty':
-            total_minutes = 0
-            unique_subs = set()
-            for s in schedules:
-                sh, sm = map(int, s.start_time.split(':'))
-                eh, em = map(int, s.end_time.split(':'))
-                total_minutes += (eh * 60 + em) - (sh * 60 + sm)
-                unique_subs.add(s.course.course_code)
-            stats_hours = str(total_minutes / 60)
-            stats_prep = str(len(unique_subs))
+    for col in master_ws.columns:
+        master_ws.column_dimensions[col[0].column_letter].width = 25
 
-        # --- C. SMART HEADER INJECTION (FIXED LOGIC) ---
-        def get_real_top_left(ws, r, c):
-            """Helper to find the top-left cell if coordinate is inside a merged range."""
-            for merged in ws.merged_cells.ranges:
-                # Manual boundary check (Safe for all openpyxl versions)
-                if (r >= merged.min_row and r <= merged.max_row and 
-                    c >= merged.min_col and c <= merged.max_col):
-                    return ws.cell(row=merged.min_row, column=merged.min_col)
-            return ws.cell(row=r, column=c)
+    # ------------------------------------------------------------------------------------------------------------------------------
+    # 4. PROCESS INDIVIDUAL SHEETS (GRID PLOT)
+    # ------------------------------------------------------------------------------------------------------------------------------
+    day_headers = {'Monday':['MON','MONDAY'],'Tuesday':['TUE','TUESDAY'],'Wednesday':['WED','WEDNESDAY'],'Thursday':['THU','THURS','THURSDAY'],'Friday':['FRI','FRIDAY'],'Saturday':['SAT','SATURDAY']}
+    col_map = {} 
+    row_map = {} 
+    _t_occurrences = {}
+    
+    for row in template_sheet.iter_rows(min_row=1, max_row=60, max_col=26):
+        for cell in row:
+            val = str(cell.value).strip().upper() if cell.value else ""
+            if not val: continue
+            for db_day, keywords in day_headers.items():
+                if val in keywords: col_map[db_day] = cell.column
+            for h in range(1, 13):
+                for m in [0, 30]:
+                    t_str = f"{h}:{m:02d}"
+                    if val.startswith(t_str):
+                        if t_str not in _t_occurrences: _t_occurrences[t_str] = []
+                        if len(_t_occurrences[t_str]) < 2: _t_occurrences[t_str].append(cell.row)
+
+    for h in range(7, 21):
+        for m in [0, 30]:
+            t_12 = f"{h if h <= 12 else h - 12}:{m:02d}"
+            if t_12 in _t_occurrences:
+                occ = _t_occurrences[t_12]
+                row_map[f"{h}:{m:02d}"] = occ[0] if (h <= 12 or len(occ) == 1) else occ[1]
+
+    for item in items:
+        target_ws = wb.copy_worksheet(template_sheet)
+        if report_type == 'section': 
+            display_name = item.section_name
+            dept_name = "N/A"
+        elif report_type == 'faculty': 
+            display_name = item.full_name
+            dept_name = item.department
+        else: # room
+            display_name = item.room_name
+            dept_name = item.building
             
-        # Helper to copy style
-        def copy_style(source, target):
-            if source.font: target.font = copy.copy(source.font)
-            if source.alignment: target.alignment = copy.copy(source.alignment)
-            if source.border: target.border = copy.copy(source.border)
-            if source.fill: target.fill = copy.copy(source.fill)
+        safe_title = "".join([c for c in display_name if c.isalnum() or c in " -_"])[:30]
+        target_ws.title = safe_title
 
-        for row in target_ws.iter_rows(min_row=1, max_row=25, max_col=20):
-            for cell in row:
-                if not cell.value: continue
-                val = str(cell.value).strip()
-                val_upper = val.upper()
+        # A. SMART HEADER INJECTION & LOGO POSITIONING
+        f_hours = "0"
+        f_prep = "0"
+        item_schedules = []
+        f_hours = "0"
+        f_prep = "0"
+        f_educ = ""
+        
+        if report_type == 'section':
+             item_schedules = ScheduledClass.query.filter_by(section_id=item.id, semester=export_semester).all()
+        elif report_type == 'faculty':
+             item_schedules = ScheduledClass.query.filter_by(faculty_id=item.id, semester=export_semester).all()
+             f_educ = item.highest_educational_attainment or ""
+             item_schedules = ScheduledClass.query.filter_by(faculty_id=item.id, semester=export_semester).all()
+             total_mins = 0
+             unique_subs = set()
+             for s in item_schedules:
+                 try:
+                     sh_str, sm_str = s.start_time.split(':')
+                     eh_str, em_str = s.end_time.split(':')
+                     total_mins += (int(eh_str) * 60 + int(em_str)) - (int(sh_str) * 60 + int(sm_str))
+                 except: pass
+                 if s.course: unique_subs.add(s.course.course_code)
+             f_hours = str(round(total_mins / 60, 2))
+             f_prep = str(len(unique_subs))
+        else: # room
+             item_schedules = ScheduledClass.query.filter_by(room_id=item.id, semester=export_semester).all()
 
-                # 1. FACULTY/NAME Detection
-                if any(k in val for k in ["Name:", "Instructor", "Faculty"]):
-                    target_cell = get_real_top_left(target_ws, cell.row, cell.column + 1)
-                    if report_type == 'faculty':
-                        target_cell.value = display_name
-                        # Note: We rely on the template's existing style for the placeholder cell
+        # A. BUILD VARIABLE MAP & DYNAMIC INJECTION
+        # ----------------------------------------------------------------------------------------------------------
+        vmap = build_variable_map(
+            report_type, settings, 
+            entity_name=display_name,
+            faculty=(item if report_type == 'faculty' else None),
+            prep_count=f_prep, 
+            total_hours=f_hours, 
+            sem_ay=export_semester
+        )
 
-                # 2. DEPARTMENT Detection
-                if "Department" in val or "Dept" in val:
-                    if ":" in val:
-                        target_cell = get_real_top_left(target_ws, cell.row, cell.column + 1)
-                        target_cell.value = dept_name
+        def inject_with_style(ws, r, c, n_val, source_cell):
+            target = ws.cell(row=r, column=c) # Same cell now for tokens
+            target.value = n_val
+            # Inherit style if not already set
+            if not target.has_style:
+                _apply_style_from_template(target, source_cell)
 
-                # 3. STATS Detection
-                if "contact hours" in val.lower():
-                    for offset in range(1, 8):
-                        try:
-                            t_cell = get_real_top_left(target_ws, cell.row, cell.column + offset)
-                            if isinstance(t_cell.value, (int, float)) or str(t_cell.value).strip() in ['0', '0.0']:
-                                t_cell.value = stats_hours
-                                break 
-                        except: pass
-                
-                if "Preparation" in val: 
-                     target_cell = get_real_top_left(target_ws, cell.row, cell.column + 1)
-                     target_cell.value = stats_prep
+        # Scanner for Header (1-40) and Footer (Last 30)
+        max_r = target_ws.max_row
+        scan_ranges = [range(1, 41), range(max(1, max_r - 30), max_r + 1)]
+        
+        # Label-to-Value Offset Registry (Based on Master List)
+        # If we find the 'label' from settings, look to inject data at the 'offset'
+        offsets = {
+            'faculty': {
+                settings.fac_name_label:  (0, 2),  # A15 -> C15
+                settings.fac_educ_label:  (0, 2),  # A16 -> C16
+                settings.fac_prep_label:  (0, 2),  # A17 -> C17
+                settings.fac_hours_label: (0, 2),  # F17 -> H17
+            },
+            'section': {
+                settings.class_label:     (0, 1),  # B11 -> C11 (standard)
+                settings.sem_ay_label:    (-1, 0), # Value is above label in G10/G11
+            }
+        }
+        
+        # Mapping for actual data injection
+        val_map = {
+            'faculty': {
+                settings.fac_name_label:  display_name,
+                settings.fac_educ_label:  f_educ,
+                settings.fac_prep_label:  str(f_prep),
+                settings.fac_hours_label: str(f_hours),
+                settings.fac_dept_label:  dept_name,
+            },
+            'section': {
+                settings.class_label:     display_name,
+                settings.sem_ay_label:    export_semester,
+            }
+        }
 
-                # 4. ROOM / CLASS Detection
-                if val_upper == "ROOM" and report_type == 'room':
-                    # Check ABOVE
-                    cell_above = get_real_top_left(target_ws, cell.row - 1, cell.column)
-                    if cell_above.value:
-                        cell_above.value = display_name
-                    else: # Check BELOW
-                        cell_below = get_real_top_left(target_ws, cell.row + 1, cell.column)
-                        cell_below.value = display_name
-                        copy_style(cell, cell_below) # Copy style from Label
-                
-                if val_upper == "CLASS" and report_type == 'section':
-                    cell_below = get_real_top_left(target_ws, cell.row + 1, cell.column)
-                    cell_below.value = display_name
-                    copy_style(cell, cell_below) # Copy style from Label
+        # Marker Map: Default Template Text -> Variable Token
+        # This handles templates without {{braces}} by swapping literal strings
+        m_map = {
+            "Republic of the Philippines": "{{republic_text}}" if report_type != 'faculty' else "{{fac_republic_text}}",
+            "CAVITE STATE UNIVERSITY":    "{{school}}" if report_type != 'faculty' else "{{fac_univ_name}}",
+            "CCAT Campus":                "{{campus}}" if report_type != 'faculty' else "{{fac_campus_name}}",
+            "Rosario, Cavite":            "{{address}}" if report_type != 'faculty' else "{{fac_address}}",
+            "(046) 437-9505 / (046) 437-6659": "{{contact}}" if report_type != 'faculty' else "{{fac_contact_details}}",
+            "cvsurosario@cvsu.edu.ph":    "{{email}}" if report_type != 'faculty' else "{{fac_email}}",
+            "www.cvsu-rosario.edu.ph":    "{{website}}" if report_type != 'faculty' else "{{fac_website}}",
+            "Prepared by:":               "{{prepared_by_label}}",
+            "Recommending Approval:":     "{{rec_approval_label}}" if report_type != 'faculty' else "{{fac_rec_approval_label}}",
+            "APPROVED:":                  "{{approved_label}}" if report_type != 'faculty' else "{{fac_approved_label}}",
+            "CLASS":                      "{{class_label}}",
+            "ROOM":                       "{{room_label}}",
+            "COURSE":                     "{{course_label}}",
+            "Semester / Academic Year":   "{{sem_ay_label}}",
+            "DEPARTMENT OF COMPUTER STUDIES": "{{fac_dept_label}}",
+            "FACULTY CLASS SCHEDULE":      "{{fac_sched_title}}",
+            "SECOND SEMESTER SY 2023 - 2024": "{{fac_sem_ay_label}}",
+            "Highest Educ. Attainment:":  "{{fac_educ_label}}",
+            "No. of Preparation/s:":      "{{fac_prep_label}}",
+            "Total no. of contact hours per week:": "{{fac_hours_label}}",
+            "Consultation:":              "{{fac_consultation}}",
+            "Research:":                  "{{fac_research}}",
+            "Designation:":               "{{fac_designation}}",
+            "Extension:":                 "{{fac_extension}}",
+            "Conforme:":                  "{{fac_conforme_label}}",
+            "Reviewed by:":               "{{fac_reviewed_label}}",
+            "Approved:":                  "{{fac_approved_label}}",
+            "OIC, Registrar":             "{{fac_registrar_label}}",
+            "Director, Instruction":      "{{sig2_title}}" if report_type != 'faculty' else "{{fac_director_title}}",
+            "Campus Administrator":       "{{sig3_title}}" if report_type != 'faculty' else "{{fac_admin_title}}",
+            "Department Chairperson":     "{{fac_chair_title}}",
+            "V01-2018-07-24":             "{{fac_form_num_bottom}}",
+            "VPAA-QF-11":                 "{{fac_form_num_top}}",
+            "Name:":                      "{{fac_name_label}}" if report_type == 'faculty' else "{{name}}",
+        }
 
-        # --- D. PLOT SCHEDULE ---
-        for sched in schedules:
-            if sched.day not in col_map: continue
+        def fuzzy_clean(s):
+            if not s or not isinstance(s, str): return ""
+            # Normalized search key: No spaces, no specific marks
+            for char in " :/-.,":
+                s = s.replace(char, "")
+            return s.strip().upper()
+
+        def _safe_write_to_cell(ws, target_row, target_col, value):
+            """Writes to the provided coordinate, ensuring it hits the origin of a merged range."""
+            target_cell = ws.cell(row=target_row, column=target_col)
+            target_coord = target_cell.coordinate
+            for merged_range in ws.merged_cells.ranges:
+                if target_coord in merged_range:
+                    # Write to the top-left (origin) of the merge
+                    ws.cell(row=merged_range.min_row, column=merged_range.min_col).value = value
+                    return
+            target_cell.value = value
+
+        # SCAN THE ENTIRE SHEET (No row limits)
+        scan_ranges = [range(1, target_ws.max_row + 1)]
+
+        for r_range in scan_ranges:
+            for r_idx in r_range:
+                for c_idx in range(1, 26):
+                    cell = target_ws.cell(row=r_idx, column=c_idx)
+                    val = cell.value
+                    if not val or not isinstance(val, str): continue
+                    
+                    original_val = val
+                    clean_val = fuzzy_clean(val)
+                    
+                    # 1. LITERAL MARKER SWAP (Detect default text in Template)
+                    for m_text, t_token in m_map.items():
+                        if fuzzy_clean(m_text) == clean_val:
+                            # Use the real setting value (with spaces/colons) from vmap
+                            if t_token in vmap:
+                                val = str(vmap[t_token])
+                                cell.value = val
+                                # Since we replaced it, skip token interpolate for this cell
+                                original_val = val 
+                                break
+                    
+                    # 2. TOKEN INTERPOLATION ({{token}})
+                    match_replaced = False
+                    for t_key, t_val in vmap.items():
+                        if t_key in val:
+                            val = val.replace(t_key, str(t_val))
+                            match_replaced = True
+                    
+                    if match_replaced or cell.value != original_val:
+                        if match_replaced: cell.value = val
+                        
+                        # Signatory styling (Bold + Underline)
+                        # We only auto-style signatories, let other tokens use template font
+                        is_sig_field = any(f"{{sig{i}}}" in str(original_val) for i in range(1, 10)) or \
+                                     any(f"{{fac_chair_name}}" in str(original_val) for i in range(1, 10))
+                        
+                        if is_sig_field:
+                            cell.font = Font(name='Arial Narrow', size=11, bold=True, underline='single')
+                            cell.alignment = Alignment(horizontal='center')
+                    
+                    # 3. LABEL-BASED OVERRIDES (Coordinate Offsets)
+                    if settings:
+                        l_target = offsets.get(report_type, {})
+                        v_target = val_map.get(report_type, {})
+                        
+                        label_found = None
+                        for log_label, (dr, dc) in l_target.items():
+                            if log_label and fuzzy_clean(log_label) == clean_val:
+                                label_found = log_label
+                                break
+                        
+                        if label_found:
+                            dr, dc = l_target[label_found]
+                            target_val = v_target.get(label_found)
+                            if target_val:
+                                # Write value while PRESERVING the target cell's template style
+                                _safe_write_to_cell(target_ws, r_idx + dr, c_idx + dc, target_val)
+
+        _inject_layout_images(target_ws, template_sheet, report_type)
+
+        # B. PLOT SCHEDULES WITH STYLE INHERITANCE
+        # Use first grid cell as style reference for all schedule blocks
+        ref_cell = None
+        try:
+            first_day = list(col_map.keys())[0] if col_map else 'Monday'
+            ref_cell = template_sheet.cell(row=row_map.get("7:00", 20), column=col_map.get(first_day, 2))
+        except: pass
+
+        for sc in item_schedules:
+            if sc.day not in col_map: continue
+            try:
+                sh_s, sm_s = map(int, sc.start_time.split(':'))
+                eh_e, em_e = map(int, sc.end_time.split(':'))
+            except: continue
+            key = f"{sh_s}:{sm_s:02d}"
             
-            sh, sm = map(int, sched.start_time.split(':'))
-            start_key = f"{sh}:{sm:02d}"
-            eh, em = map(int, sched.end_time.split(':'))
-            
-            if start_key in row_map:
-                start_r = row_map[start_key]
-                target_col = col_map[sched.day]
-                
-                duration_mins = (eh * 60 + em) - (sh * 60 + sm)
-                slots = int(duration_mins / 30)
+            if key in row_map:
+                start_r = row_map[key]
+                t_col = col_map[sc.day]
+                slots = int(((eh_e * 60 + em_e) - (sh_s * 60 + sm_s)) / 30)
                 end_r = start_r + slots - 1
                 
                 if end_r > start_r:
-                    try: target_ws.merge_cells(start_row=start_r, start_column=target_col, end_row=end_r, end_column=target_col)
+                    try: target_ws.merge_cells(start_row=start_r, start_column=t_col, end_row=end_r, end_column=t_col)
                     except: pass
                 
-                content = f"{sched.course.course_code}\n"
-                if report_type != 'room': content += f"{sched.room.room_name}\n"
-                if report_type != 'faculty': content += f"{sched.faculty.full_name if sched.faculty else 'TBA'}\n"
-                if report_type != 'section': content += f"({sched.section.section_name})"
+                # B. DYNAMIC GRID CONTENT (Matches Browser format)
+                # Format: [CODE] [TYPE] \n [ROOM/FACULTY/SECTION]
+                ctype = f"({sc.session_type})" if sc.session_type else ""
+                txt = f"{sc.course.course_code} {ctype}\n"
                 
-                cell = target_ws.cell(row=start_r, column=target_col)
-                if isinstance(cell, MergedCell):
-                    continue
-                # Append instead of overwrite -- handles multiple classes in same room+time (e.g. NSTP)
-                if cell.value:
-                    cell.value = str(cell.value).rstrip('\n') + '\nÃ¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬\n' + content.strip()
+                if report_type == 'section':
+                    # Section Grid: Show Faculty & Room
+                    f_name = sc.faculty.full_name if sc.faculty else "T.B.A."
+                    # Shorten Faculty Name (e.g. Juan Luna -> MR. LUNA)
+                    p = f_name.split()
+                    short_f = f"MR. {p[-1].upper()}" if (len(p) > 1 and not f_name.startswith('T.B.A.')) else f_name.upper()
+                    txt += f"{short_f}\n"
+                    if sc.room: txt += f"{sc.room.room_name}"
+                elif report_type == 'faculty':
+                    # Faculty Grid: Show Section & Room
+                    if sc.section: txt += f"{sc.section.section_name}\n"
+                    if sc.room: txt += f"{sc.room.room_name}"
+                elif report_type == 'room':
+                    # Room Grid: Show Section & Faculty
+                    if sc.section: txt += f"{sc.section.section_name}\n"
+                    f_name = sc.faculty.full_name if sc.faculty else "T.B.A."
+                    p = f_name.split()
+                    short_f = f"MR. {p[-1].upper()}" if (len(p) > 1 and not f_name.startswith('T.B.A.')) else f_name.upper()
+                    txt += f"{short_f}"
+                
+                cell = target_ws.cell(row=start_r, column=t_col)
+                if isinstance(cell, MergedCell): continue 
+                if cell.value: cell.value = str(cell.value).rstrip('\n') + '\n---------------\n' + txt.strip()
+                else: cell.value = txt.strip()
+                
+                # Style Inheritance
+                if ref_cell:
+                    _apply_style_from_template(cell, ref_cell)
                 else:
-                    cell.value = content
-                cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-                cell.font = Font(name='Arial', size=9, bold=True)
-                cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+                    cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                    cell.font = Font(name='Arial Narrow', size=8, bold=True)
+                
+                # Border Fix
+                from openpyxl.styles import Border, Side
+                thin = Side(border_style="thin", color="000000")
+                cell.border = Border(top=thin, left=thin, right=thin, bottom=thin)
+
+        # C. POPULATE FACULTY SUMMARY TABLE (Bottom List)
+        if report_type == 'faculty':
+            # Search for the summary header (Subject, Course/Yr/Sec, etc.)
+            summary_start_row = 0
+            for r_idx in range(start_r + 2 if 'start_r' in locals() else 40, 100):
+                row_vals = [str(target_ws.cell(row=r_idx, column=c).value).upper() for c in range(1, 10)]
+                if any("SUBJECT" in v for v in row_vals if v):
+                    summary_start_row = r_idx + 1
+                    break
+            
+            if summary_start_row:
+                # Group schedules by course+section
+                summary_data = {}
+                for sc in item_schedules:
+                    key = (sc.course_id, sc.section_id)
+                    if key not in summary_data:
+                        summary_data[key] = {
+                            'code': sc.course.course_code if sc.course else "",
+                            'name': sc.course.course_name if sc.course else "",
+                            'section': sc.section.section_name if sc.section else "",
+                            'lec': sc.course.lec_units if sc.course else 0,
+                            'lab': sc.course.lab_units if sc.course else 0,
+                            'students': sc.section.number_of_students if sc.section else 0,
+                            'room': sc.room.room_name if sc.room else "T.B.A."
+                        }
+                
+                curr_row = summary_start_row
+                for data in summary_data.values():
+                    # Map to columns: B=Subject, C=Section, D=Lec, E=Lab, F=Total, G=Room, H=# of Students
+                    # (Adjust based on Image 5)
+                    target_ws.cell(row=curr_row, column=2).value = f"{data['code']} - {data['name']}"
+                    target_ws.cell(row=curr_row, column=3).value = data['section']
+                    target_ws.cell(row=curr_row, column=4).value = data['lec']
+                    target_ws.cell(row=curr_row, column=5).value = data['lab']
+                    target_ws.cell(row=curr_row, column=6).value = float(data['lec']) + float(data['lab'])
+                    target_ws.cell(row=curr_row, column=7).value = data['room']
+                    target_ws.cell(row=curr_row, column=8).value = data['students']
+                    curr_row += 1
+
+        # D. PAGE SETUP
+        if settings:
+            p_map = {'A4': 9, 'Letter': 1, 'Legal': 5}
+            target_ws.page_setup.paperSize = p_map.get(settings.paper_size, 9)
+            target_ws.page_margins.top    = settings.margin_top
+            target_ws.page_margins.bottom = settings.margin_bottom
+            target_ws.page_margins.left   = settings.margin_left
+            target_ws.page_margins.right  = settings.margin_right
+            target_ws.page_setup.orientation = target_ws.ORIENTATION_LANDSCAPE
 
     wb.remove(template_sheet)
-    
-    output = io.BytesIO()
-    wb.save(output)
-    output.seek(0)
-    
-    return Response(
-        output,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        headers={"Content-Disposition": f"attachment;filename={out_filename}"}
-    )
+    out = io.BytesIO()
+    wb.save(out)
+    out.seek(0)
+    return Response(out, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    headers={"Content-Disposition": f"attachment;filename={out_filename}"})
 
 
 @app.route('/manage/pre-assignments')
@@ -5524,7 +5781,7 @@ def export_excel_bulk():
 @role_required('admin', 'superadmin')
 def manage_preassignments():
     sort_by = request.args.get('sort', 'default', type=str)
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Historical Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Time Machine: Historical Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
         all_objs = get_archive_entities(archive_id, 'PreAssignment')
@@ -5554,7 +5811,7 @@ def manage_preassignments():
             current_sort=sort_by
         )
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Live Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Live Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     page = request.args.get('page', 1, type=int)
     search_query = request.args.get('search', '', type=str)
     
@@ -5796,7 +6053,7 @@ def manage_constraints():
         search_query=search_query
     )
 
-# --- SYNC CONSTRAINTS (Safe upsert -- preserves user-set types/weights) ---
+# --- SYNC CONSTRAINTS (Safe upsert ---- preserves user-set types/weights) ---
 @app.route('/manage/constraints/sync', methods=['POST'])
 @login_required
 @role_required('admin', 'superadmin')
@@ -5807,7 +6064,7 @@ def sync_constraints():
     - Missing rows: inserts with the default type and weight=10.
     """
     MASTER_CONSTRAINTS = [
-        # Ã¢â€â‚¬Ã¢â€â‚¬ ADMINISTRATIVE Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ ADMINISTRATIVE ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         {'code': 'LOCKED_SCHEDULES',           'cat': 'Administrative', 'type': 'HC',
          'name': '(HC-01) Locked Schedules',
          'desc': 'Manually plotted course schedules (Pre-assignments) are immovable.'},
@@ -5818,9 +6075,9 @@ def sync_constraints():
          'name': '(HC-03) Global Day Restriction',
          'desc': 'Courses must NOT be scheduled on declared non-academic days (e.g. Sunday, optionally Saturday).'},
 
-        # Ã¢â€â‚¬Ã¢â€â‚¬ COURSE Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ COURSE ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         {'code': 'LEC_LAB_SEQUENCE',           'cat': 'Course', 'type': 'HC',
-         'name': '(HC-04) Lecture--œLaboratory Sequence',
+         'name': '(HC-04) Lecture----Laboratory Sequence',
          'desc': 'The Lecture component must be scheduled earlier than the Laboratory component.'},
         {'code': 'STRICT_ALLOC_LEC',           'cat': 'Course', 'type': 'HC',
          'name': '(HC-05) Strict Lecture Allocation',
@@ -5868,7 +6125,7 @@ def sync_constraints():
          'name': '(SC-I-05) Early Week Placement for PE Courses',
          'desc': 'PE/FITT courses should ideally be scheduled on Mondays or Tuesdays.'},
 
-        # Ã¢â€â‚¬Ã¢â€â‚¬ SECTION Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ SECTION ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         {'code': 'SECTION_DAY_RESTRICTIONS',   'cat': 'Section', 'type': 'HC',
          'name': '(HC-14) Section Day Restrictions',
          'desc': 'Section schedules must only be assigned within allowed academic days for the year level.'},
@@ -5891,7 +6148,7 @@ def sync_constraints():
          'name': '(SC-II-05) Minimum Daily Section Load',
          'desc': 'A section should have at least two classes scheduled on any active academic day.'},
 
-        # Ã¢â€â‚¬Ã¢â€â‚¬ FACULTY Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ FACULTY ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         {'code': 'SINGLE_FACULTY_PER_TIMESLOT','cat': 'Faculty', 'type': 'HC',
          'name': '(HC-17) Single Faculty per Section Timeslot',
          'desc': 'A section cannot have two or more faculty members assigned at the same time.'},
@@ -5902,7 +6159,7 @@ def sync_constraints():
          'name': '(HC-19) Max Consecutive Faculty Load',
          'desc': 'A faculty member must not teach for more than 6 consecutive hours.'},
 
-        # Ã¢â€â‚¬Ã¢â€â‚¬ ROOM Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ ROOM ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         {'code': 'SINGLE_ROOM_PER_SESSION',    'cat': 'Room', 'type': 'HC',
          'name': '(HC-20) Single Room per Course Session',
          'desc': 'A scheduled course session cannot be assigned to two or more rooms at the same time.'},
@@ -5916,7 +6173,7 @@ def sync_constraints():
          'name': '(SC-II-03) Proportional Room Capacity Allocation',
          'desc': 'Sections with larger student populations should be prioritized for larger rooms.'},
 
-        # Ã¢â€â‚¬Ã¢â€â‚¬ TIME Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ TIME ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         {'code': 'OPERATING_HOURS',            'cat': 'Time', 'type': 'HC',
          'name': '(HC-23) Operating Hours Compliance',
          'desc': 'All course sessions must fall within official institutional start and end times.'},
@@ -5925,7 +6182,7 @@ def sync_constraints():
          'desc': 'All course session start times must begin exactly on the hour or half-hour.'},
         {'code': 'LUNCH_BREAK',                'cat': 'Time', 'type': 'SC2',
          'name': '(SC-II-04) Lunch Break Allocation',
-         'desc': 'Each section must have at least 1 free hour within the 10:00 AM--œ2:00 PM lunch window per day.'},
+         'desc': 'Each section must have at least 1 free hour within the 10:00 AM----2:00 PM lunch window per day.'},
         {'code': 'EVENING_AVOIDANCE',          'cat': 'Time', 'type': 'SC2',
          'name': '(SC-II-06) Evening Class Avoidance',
          'desc': 'Avoid scheduling classes in the evening (from 6:00 PM onwards).'},
@@ -5945,7 +6202,7 @@ def sync_constraints():
     for c in MASTER_CONSTRAINTS:
         existing = Constraint.query.filter_by(logic_code=c['code']).first()
         if existing:
-            # Update metadata only -- preserve user's type & weight settings
+            # Update metadata only ---- preserve user's type & weight settings
             existing.name        = c['name']
             existing.description = c['desc']
             existing.category    = c['cat']
@@ -5986,7 +6243,7 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                 generation_status['visual_matrix'] = matrix
             if generation_status['stop_requested']: raise Exception("StoppedByUser")
 
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Warm start: load THIS semester's saved schedule as seed Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ Warm start: load THIS semester's saved schedule as seed ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         seed_records = None
         try:
             existing = ScheduledClass.query.filter_by(semester=target_semester).all()
@@ -6003,9 +6260,9 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                     }
                     for sc in existing
                 ]
-                print(f"Ã°Å¸Å’Â± Warm-start: {len(seed_records)} genes from '{target_semester}' schedule.")
+                print(f"----------------- Warm-start: {len(seed_records)} genes from '{target_semester}' schedule.")
         except Exception as _e:
-            print(f"Ã¢Å¡Â Ã¯Â¸Â Could not load warm-start seed: {_e}")
+            print(f"------------------------ Could not load warm-start seed: {_e}")
             seed_records = None
 
         # Signal UI that we're in the init phase (before main loop starts)
@@ -6016,7 +6273,7 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
             # Match GA warm-start formula: max(12, min(20, n*0.05))
             generation_status['pop_size'] = max(12, min(20, int(_n_est * 0.05)))
         except Exception:
-            generation_status['pop_size'] = None  # fallback -- UI shows '...'
+            generation_status['pop_size'] = None  # fallback ---- UI shows '...'
 
         try:
             best_schedule = scheduler.run_algorithm(
@@ -6025,12 +6282,12 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
             )
         except Exception as e:
             import traceback
-            print(f"Ã¢ÂÅ’ GA error: {e}\n{traceback.format_exc()}")
+            print(f"------------- GA error: {e}\n{traceback.format_exc()}")
             best_schedule = None
 
-        # Ã¢â€â‚¬Ã¢â€â‚¬ C-3: Diagnostic print when HC > 0 at end of run Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ C-3: Diagnostic print when HC > 0 at end of run ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if best_schedule and best_schedule.hard_conflicts > 0:
-            print(f"Ã¢Å¡Â Ã¯Â¸Â  GA finished with HC={best_schedule.hard_conflicts} unresolved hard conflict(s):")
+            print(f"------------------------  GA finished with HC={best_schedule.hard_conflicts} unresolved hard conflict(s):")
             for _ci in best_schedule.conflicting_indices[:8]:
                 _g  = best_schedule.genes[_ci]
                 _c  = scheduler.course_map.get(_g.course_id, {})
@@ -6066,7 +6323,7 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                 fac_slots_seen  = defaultdict(set)  # (faculty_id, day_idx) -> set of occupied slot indices
                 sec_slots_seen  = defaultdict(set)  # (section_id, day_idx) -> set of occupied slot indices
 
-                # Ã¢â€â‚¬Ã¢â€â‚¬ HC-02 post-generation check (Minor Subject Gap) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+                # ------------------------------------ HC-02 post-generation check (Minor Subject Gap) ------------------------------------------------------------------------------------------------------------------------------------------------
                 # HC-02 is excluded from the GA (needs full section-gap scan).
                 # We compute it here once and flag affected sections so the
                 # viewer highlights them. Violation = not enough free hours
@@ -6110,14 +6367,14 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                                     f"{_sec.section_name}: needs {_minor_h}h, only {_free:.1f}h free"
                                 )
                         if _hc02_details:
-                            print(f"Ã¢Å¡Â Ã¯Â¸Â  HC-02 (Minor Subject Gap): {len(_hc02_details)} section(s) have insufficient free time for minor subjects:")
+                            print(f"------------------------  HC-02 (Minor Subject Gap): {len(_hc02_details)} section(s) have insufficient free time for minor subjects:")
                             for _msg in _hc02_details:
-                                print(f"   Ã¢â‚¬Â¢ {_msg}")
+                                print(f"   --------------- {_msg}")
                         else:
-                            print("Ã¢Å“â€¦ HC-02 (Minor Subject Gap): All sections have enough free time for minor subjects.")
+                            print("---------------- HC-02 (Minor Subject Gap): All sections have enough free time for minor subjects.")
                         generation_status['hc02_violations'] = len(_hc02_details)
                 except Exception as _hc02_err:
-                    print(f"Ã¢Å¡Â Ã¯Â¸Â  HC-02 post-gen check error: {_hc02_err}")
+                    print(f"------------------------  HC-02 post-gen check error: {_hc02_err}")
 
                 for gene in best_schedule.genes:
                     if gene.day_idx < 0 or gene.day_idx >= len(days_list):
@@ -6130,7 +6387,7 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                     slots_used = set(range(gene.start_idx, gene.end_idx))
                     key = (gene.room_id, gene.day_idx)
                     
-                    # Room conflict check -- SKIP if it's the University Field
+                    # Room conflict check ---- SKIP if it's the University Field
                     room_info = scheduler.room_map.get(gene.room_id, {})
                     room_name = room_info.get('room_name', '')
                     is_field  = "FIELD" in room_name.upper()
@@ -6185,12 +6442,12 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                     ))
 
                 issues_count = sum(1 for o in objects_to_save if o.has_conflict)
-                print(f"Ã¢Å¡Â Ã¯Â¸Â  {issues_count} conflicting gene(s) flagged as issues.")
+                print(f"------------------------  {issues_count} conflicting gene(s) flagged as issues.")
 
                 # 3. Bulk insert
                 db.session.bulk_save_objects(objects_to_save)
                 db.session.commit()
-                print(f"Ã¢Å“â€¦ Saved {len(objects_to_save)} genes for '{target_semester}' ({issues_count} issues).")
+                print(f"---------------- Saved {len(objects_to_save)} genes for '{target_semester}' ({issues_count} issues).")
 
                 # 4. T.B.A. Sequential Consolidation
                 # Redistribute T.B.A.-assigned classes: fill TBA-01 first, then TBA-02, etc.
@@ -6224,10 +6481,10 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                             if _idx >= len(tba_classes):
                                 break
                         db.session.commit()
-                        print(f"Ã¢Å“â€¦ T.B.A. consolidation: {len(tba_classes)} class(es) concentrated to TBA-01 first.")
+                        print(f"---------------- T.B.A. consolidation: {len(tba_classes)} class(es) concentrated to TBA-01 first.")
         except Exception as e:
             import traceback
-            print(f"Ã¢ÂÅ’ Save error: {e}\n{traceback.format_exc()}")
+            print(f"------------- Save error: {e}\n{traceback.format_exc()}")
         finally:
             generation_status['running'] = False
             generation_status['total_time'] = round(time.time() - _gen_start_time, 1)
@@ -6278,21 +6535,21 @@ def start_generation():
     # Persist selection in session so generate page remembers it
     session['scheduled_depts'] = selected_depts
 
-    print(f"Ã°Å¸Å¡â‚¬ Starting Generation for: {target_semester} (Fresh Start: {fresh_start})")
-    print(f"Ã°Å¸â€œÂ¦ Scheduled Departments: {selected_depts}")
+    print(f"------------------- Starting Generation for: {target_semester} (Fresh Start: {fresh_start})")
+    print(f"------------------- Scheduled Departments: {selected_depts}")
 
     # Module 7: Log action
     log_activity('Generate Schedule', f"Started generation for {target_semester} (Fresh: {fresh_start})")
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ FRESH START: Clear existing schedule if requested Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ FRESH START: Clear existing schedule if requested ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if fresh_start:
         try:
             num_deleted = ScheduledClass.query.filter_by(semester=target_semester).delete()
             db.session.commit()
-            print(f"Ã°Å¸Â§Â¹ Fresh Start: Deleted {num_deleted} existing records for {target_semester}.")
+            print(f"---------------- Fresh Start: Deleted {num_deleted} existing records for {target_semester}.")
         except Exception as e:
             db.session.rollback()
-            print(f"Ã¢Å¡Â Ã¯Â¸Â Failed to clear schedule for fresh start: {e}")
+            print(f"------------------------ Failed to clear schedule for fresh start: {e}")
     
     settings_db = get_settings()
     _adays_str  = settings_db.allowed_days or 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'
@@ -6379,7 +6636,7 @@ def start_generation():
     db_constraints = Constraint.query.all()
     constraints_config = {c.logic_code: {'type': c.constraint_type, 'weight': c.weight} for c in db_constraints}
 
-    # Build split_assignments list -- one entry per (assignment, gtype) with split data
+    # Build split_assignments list ---- one entry per (assignment, gtype) with split data
     raw_splits = (
         FacultyAssignment.query
         .join(Course, FacultyAssignment.course_id == Course.id)
@@ -6480,7 +6737,7 @@ def pending_faculty():
     tba_ids = [f.id for f in Faculty.query.filter_by(full_name='T.B.A.').all()]
 
     # Query real ScheduledClass records that are unassigned (NULL or any T.B.A. faculty)
-    # NSTP is excluded -- it intentionally has no DCS faculty assigned
+    # NSTP is excluded ---- it intentionally has no DCS faculty assigned
     query = (
         ScheduledClass.query
         .join(Course, ScheduledClass.course_id == Course.id)
@@ -6573,8 +6830,8 @@ def run_unassigned_resolver():
                         datetime.strptime(ex.end_time,   fmt).time()):
                 ex_course = ex.course.course_code if ex.course else '?'
                 conflicts.append(
-                    f"{sc.course.course_code if sc.course else '?'} ({sc.day} {sc.start_time}--œ{sc.end_time}) "
-                    f"conflicts with {ex_course} -- {faculty.full_name} is already booked."
+                    f"{sc.course.course_code if sc.course else '?'} ({sc.day} {sc.start_time}----{sc.end_time}) "
+                    f"conflicts with {ex_course} ---- {faculty.full_name} is already booked."
                 )
                 break
 
@@ -6588,7 +6845,7 @@ def run_unassigned_resolver():
                 conflicts.append(
                     f"{sc.course.course_code if sc.course else '?'} and "
                     f"{other_sc.course.course_code if other_sc.course else '?'} "
-                    f"both assigned to {faculty.full_name} on {sc.day} -- time overlap."
+                    f"both assigned to {faculty.full_name} on {sc.day} ---- time overlap."
                 )
                 break
 
@@ -6597,7 +6854,7 @@ def run_unassigned_resolver():
             flash(f'Faculty conflict: {msg}', 'danger')
         return redirect(url_for('pending_faculty'))
 
-    # No conflicts -- save
+    # No conflicts ---- save
     for sc, faculty in assignments:
         sc.faculty_id = faculty.id
     db.session.commit()
@@ -6680,8 +6937,8 @@ def run_pending_sections():
                         datetime.strptime(ex.end_time,   fmt).time()):
                 ex_course = ex.course.course_code if ex.course else '?'
                 conflicts.append(
-                    f"{sc.course.course_code if sc.course else '?'} ({sc.day} {sc.start_time}--œ{sc.end_time}) "
-                    f"conflicts with {ex_course} -- {section.section_name} already has a class at this time."
+                    f"{sc.course.course_code if sc.course else '?'} ({sc.day} {sc.start_time}----{sc.end_time}) "
+                    f"conflicts with {ex_course} ---- {section.section_name} already has a class at this time."
                 )
                 break
 
@@ -6695,7 +6952,7 @@ def run_pending_sections():
                 conflicts.append(
                     f"{sc.course.course_code if sc.course else '?'} and "
                     f"{other_sc.course.course_code if other_sc.course else '?'} "
-                    f"both assigned to {section.section_name} on {sc.day} -- time overlap."
+                    f"both assigned to {section.section_name} on {sc.day} ---- time overlap."
                 )
                 break
 
@@ -6704,7 +6961,7 @@ def run_pending_sections():
             flash(f'Section conflict: {msg}', 'danger')
         return redirect(url_for('pending_sections'))
 
-    # No conflicts -- save
+    # No conflicts ---- save
     for sc, section in assignments:
         sc.section_id = section.id
     db.session.commit()
@@ -6723,7 +6980,7 @@ def _fmt_time_12h(t_str):
     except Exception:
         return t_str
 
-# Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ INTERACTIVE SCHEDULE GRID (drag-and-drop) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# ------------------------------------------------------ INTERACTIVE SCHEDULE GRID (drag-and-drop) ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @app.route('/get-schedule-grid/<string:view_type>/<int:entity_id>')
 @login_required
 def get_schedule_grid(view_type, entity_id):
@@ -6823,10 +7080,10 @@ def get_schedule_grid(view_type, entity_id):
         # Check if this class overlaps (same start OR falls within an existing cell's rowspan)
         parent_key = find_covering_cell(s.day, si)
         if parent_key:
-            # Partial or same-start overlap -- attach to existing cell
+            # Partial or same-start overlap ---- attach to existing cell
             cell_data[parent_key].append(entry)
         else:
-            # New cell -- mark its slots as occupied
+            # New cell ---- mark its slots as occupied
             for i in range(si, min(si + rowspan, len(slots))):
                 occupied_set[s.day].add(i)
             cell_data[(s.day, si)] = [entry]
@@ -6843,7 +7100,7 @@ def get_schedule_grid(view_type, entity_id):
                 primary = entries[0]
                 # Build popover lines for all overlapping classes
                 pop_lines = [
-                    f"{e['pop_course']} | {e['pop_section']} | {_fmt_time_12h(e['start'])}--œ{_fmt_time_12h(e['end'])}"
+                    f"{e['pop_course']} | {e['pop_section']} | {_fmt_time_12h(e['start'])}----{_fmt_time_12h(e['end'])}"
                     for e in entries
                 ]
                 cells.append({
@@ -6960,7 +7217,7 @@ def api_move_class():
                 continue
             if not (t_end <= o_start or t_start >= o_end):
                 cc   = other.course.course_code if other.course else str(other.course_id)
-                slot = f'{other.start_time}--œ{other.end_time}'
+                slot = f'{other.start_time}----{other.end_time}'
                 if sched.faculty_id and other.faculty_id == sched.faculty_id:
                     fn = other.faculty.full_name if other.faculty else None
                     if fn and fn != 'T.B.A.':
@@ -6983,7 +7240,7 @@ def api_move_class():
         sched.room_id = new_room
     db.session.commit()
     return jsonify({'ok': True,
-                    'message': f'Moved to {new_day} {new_start}--œ{new_end}'})
+                    'message': f'Moved to {new_day} {new_start}----{new_end}'})
 
 
 @app.route('/api/preview-conflicts')
@@ -6993,7 +7250,7 @@ def api_preview_conflicts():
     """Pre-compute conflict level for every possible drop position for a class.
     Returns {day: {time: level}} where level is 'hard'|'semi'|'soft'|'free'|'out'.
       hard  = faculty/section/room double-booking (HC)
-      semi  = faculty already has Ã¢â€°Â¥3 classes that day, or class ends past 7 PM (SHC)
+      semi  = faculty already has ---------------3 classes that day, or class ends past 7 PM (SHC)
       soft  = Saturday placement (SC)
       free  = no constraint violations
       out   = class would extend past operating hours (not droppable)
@@ -7047,7 +7304,7 @@ def api_preview_conflicts():
 
                 level = 'free'
 
-                # Ã¢â€â‚¬Ã¢â€â‚¬ HARD: faculty / section / room overlap Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+                # ------------------------------------ HARD: faculty / section / room overlap ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
                 for o in today:
                     o_s = t2m(o.start_time)
                     o_e = t2m(o.end_time)
@@ -7064,16 +7321,16 @@ def api_preview_conflicts():
                         if level != 'hard':
                             level = 'semi'
 
-                # Ã¢â€â‚¬Ã¢â€â‚¬ SEMI-HARD: faculty overloaded that day (Ã¢â€°Â¥3 classes) Ã¢â€â‚¬Ã¢â€â‚¬
+                # ------------------------------------ SEMI-HARD: faculty overloaded that day (---------------3 classes) ------------------------------------
                 if level == 'free' and sched.faculty_id:
                     if fac_day_count.get(day, 0) >= 3:
                         level = 'semi'
 
-                # Ã¢â€â‚¬Ã¢â€â‚¬ SEMI-HARD: class ends after 7 PM Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+                # ------------------------------------ SEMI-HARD: class ends after 7 PM ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
                 if level == 'free' and new_end > 19 * 60:
                     level = 'semi'
 
-                # Ã¢â€â‚¬Ã¢â€â‚¬ SOFT: Saturday Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+                # ------------------------------------ SOFT: Saturday ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
                 if level == 'free' and day == 'Saturday':
                     level = 'soft'
 
@@ -7110,8 +7367,8 @@ def toggle_schedule_lock():
 def api_check_conflicts():
     """Check if a specific day/time slot has room, faculty, or section conflicts.
     Params: day, start, end, faculty_id, room_id, section_id, semester
-            exclude_id (optional -- ignore self when moving)
-            draft_version_id (optional -- also check against this draft's entries)
+            exclude_id (optional ---- ignore self when moving)
+            draft_version_id (optional ---- also check against this draft's entries)
     Returns: {hard_conflicts: [{type, entry_id, label}]}
     """
     day        = request.args.get('day', '')
@@ -7174,7 +7431,7 @@ def api_check_conflicts():
         # Time overlap check
         if not (t_end <= sc_start or t_start >= sc_end):
             cc = sc.course.course_code if sc.course else str(sc.course_id)
-            slot = f'{sc.start_time}--œ{sc.end_time}'
+            slot = f'{sc.start_time}----{sc.end_time}'
             # Faculty conflict (skip T.B.A.)
             if faculty_id and sc.faculty_id == faculty_id:
                 fac_name = sc.faculty.full_name if sc.faculty else None
@@ -7209,7 +7466,7 @@ def api_schedule_entries():
     faculty_id = request.args.get('faculty_id', type=int)
     room_id    = request.args.get('room_id', type=int)
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Historical Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Time Machine: Historical Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
         
@@ -7266,7 +7523,7 @@ def api_schedule_entries():
             })
         return jsonify(entries)
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Live Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Live Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     q = ScheduledClass.query.options(
         joinedload(ScheduledClass.course),
         joinedload(ScheduledClass.section),
@@ -7374,7 +7631,7 @@ def api_add_schedule():
             continue
         if not (t_end <= o_start or t_start >= o_end):
             cc   = other.course.course_code if other.course else str(other.course_id)
-            slot = f'{other.start_time}--œ{other.end_time}'
+            slot = f'{other.start_time}----{other.end_time}'
             if faculty_id and other.faculty_id == faculty_id:
                 fn = other.faculty.full_name if other.faculty else None
                 if fn and fn != 'T.B.A.':
@@ -7439,7 +7696,7 @@ def api_delete_schedule(sched_id):
     # Regular user guards
     if sc.source == 'ga' and lock_on:
         return jsonify({'ok': False, 'error': 'Cannot delete GA entry while schedule is locked'}), 403
-    # Users cannot delete master (non-draft) entries -- only admins can
+    # Users cannot delete master (non-draft) entries ---- only admins can
     if not sc.is_draft:
         return jsonify({'ok': False, 'error': 'Cannot delete master schedule entries. Create a draft to make changes.'}), 403
     if sc.is_draft:
@@ -7519,7 +7776,7 @@ def api_patch_schedule(sched_id):
                 continue
             if not (t_end <= o_start or t_start >= o_end):
                 cc   = other.course.course_code if other.course else str(other.course_id)
-                slot = f'{other.start_time}--œ{other.end_time}'
+                slot = f'{other.start_time}----{other.end_time}'
                 if faculty_id and other.faculty_id == faculty_id:
                     fn = other.faculty.full_name if other.faculty else None
                     if fn and fn != 'T.B.A.':
@@ -7681,7 +7938,7 @@ def api_draft_publish(draft_id):
                    (sc.room_id    and sc.room_id    == ms.room_id   ) or \
                    (sc.section_id == ms.section_id):
                     course = Course.query.get(sc.course_id)
-                    conflicts.append(f'{course.course_code if course else sc.course_id} on {sc.day} {sc.start_time}--œ{sc.end_time}')
+                    conflicts.append(f'{course.course_code if course else sc.course_id} on {sc.day} {sc.start_time}----{sc.end_time}')
                     break
 
     if conflicts:
@@ -8137,6 +8394,20 @@ def schedule_editor():
     start_hour = settings.start_hour if settings else 7
     end_hour   = settings.end_hour   if settings else 21
 
+    # Pass Layout Dimensions for Preview Sync
+    def _pdim(pk):
+        w, h, _ = PAPER_SIZES.get(pk, PAPER_SIZES['A4'])
+        return {'w': w, 'h': h}
+    
+    sec_p = getattr(settings, 'paper_size', 'A4') or 'A4'
+    fac_p = getattr(settings, 'fac_paper_size', 'A4') or 'A4'
+    layout_configs = {
+        'section': _pdim(sec_p),
+        'room':    _pdim(sec_p),
+        'course':  _pdim(sec_p),
+        'faculty': _pdim(fac_p)
+    }
+
     return render_template('schedule_editor.html',
         sections=sections, faculties=faculties, rooms=rooms,
         courses=courses, semesters=semesters,
@@ -8145,6 +8416,7 @@ def schedule_editor():
         allowed_days=allowed_days,
         start_hour=start_hour, end_hour=end_hour,
         lock_status=bool(settings.schedule_lock) if settings else False,
+        layout_configs=layout_configs
     )
 
 # --- END MODULE 3 ROUTES ---
@@ -8221,7 +8493,7 @@ def check_constraints():
             if _cid_str:
                 try: _special_cids_cc.add(int(_cid_str))
                 except ValueError: pass
-    # Also include pre-assigned course IDs -- fixed genes are already exempt from div4
+    # Also include pre-assigned course IDs ---- fixed genes are already exempt from div4
     # via `not g.is_fixed`, so they count as "special" for the threshold.
     for _pa in PreAssignment.query.filter_by(is_archived=False).all():
         _special_cids_cc.add(_pa.course_id)
@@ -8278,7 +8550,7 @@ def check_constraints():
 
     # Pre-compute total Lab/Lec duration per (course_id, section_id) pair.
     # Used by HC-08/HC-09 to correctly handle day-split sessions:
-    # a 6h Lab split 3+3 creates two 3h rows -- summing them gives 6h (no violation).
+    # a 6h Lab split 3+3 creates two 3h rows ---- summing them gives 6h (no violation).
     from collections import defaultdict as _ddict
     _lab_dur_sum = _ddict(float)   # (course_id, section_id) -> total Lab hours
     _lec_dur_sum = _ddict(float)   # (course_id, section_id) -> total Lec hours
@@ -8302,7 +8574,7 @@ def check_constraints():
     _hc09_seen = set()
 
     def _room_has_daytime_slot(room_id, day, duration_m):
-        """Return True if room has a free block >= duration_m minutes between 7AM--œ7PM."""
+        """Return True if room has a free block >= duration_m minutes between 7AM----7PM."""
         DAY_S, DAY_E = 420, 1140   # 7AM, 7PM in minutes
         occupied = sorted(_room_day_occ.get((room_id, day), []))
         free_start = DAY_S
@@ -8327,9 +8599,9 @@ def check_constraints():
         if s.day == 'Sunday':
             add_v('GLOBAL_DAY_RESTRICTION', 'Global Day Restriction', 'No classes on Sunday.', s)
 
-        # HC-23: Operating Hours (7:00 AM --œ 8:00 PM)
+        # HC-23: Operating Hours (7:00 AM ---- 8:00 PM)
         if start_m < 420 or end_m > 1200:
-            add_v('OPERATING_HOURS', 'Operating Hours Compliance', 'Class scheduled outside 7 AM--œ8 PM.', s)
+            add_v('OPERATING_HOURS', 'Operating Hours Compliance', 'Class scheduled outside 7 AM----8 PM.', s)
 
         # HC-24: Hourly Alignment (start on the hour or half-hour)
         if start_m % 30 != 0:
@@ -8352,7 +8624,7 @@ def check_constraints():
                 add_v('ROOM_CAPACITY_PROPORTIONAL', 'Room Capacity Check',
                       f'Room seats {s.room.capacity}, section has {s.section.number_of_students} students.', s)
 
-        # SC-I-08: Lunch Break -- checked at section-day level in GROUP 3 below
+        # SC-I-08: Lunch Break ---- checked at section-day level in GROUP 3 below
 
         # SC-II-03: Evening Avoidance (starts at 7:00 PM or later)
         if start_m >= 1140:
@@ -8363,7 +8635,7 @@ def check_constraints():
             no_choice = bool(suitable_rooms) and not any(
                 _room_has_daytime_slot(r_id, s.day, dur_m) for r_id in suitable_rooms
             )
-            note = ' No choice -- all suitable rooms were fully occupied 7AM--œ7PM.' if no_choice else ''
+            note = ' No choice ---- all suitable rooms were fully occupied 7AM----7PM.' if no_choice else ''
             add_v('EVENING_AVOIDANCE', 'Evening Avoidance',
                   f'Class starts at 7:00 PM or later.{note}', s)
 
@@ -8376,7 +8648,7 @@ def check_constraints():
             if is_lec_session and start_m not in _div4_start_minutes:
                 _sys_start_label = f"{_sys_sh}:00 AM"
                 add_v('LECTURE_SLOT_ALIGNMENT', 'Lecture Slot Alignment (Div4)',
-                      f'Lecture in {s.room.room_name} starts at {s.start_time} -- '
+                      f'Lecture in {s.room.room_name} starts at {s.start_time} ---- '
                       f'must start on a 2-hour boundary (7AM, 9AM, 11AM, 1PM, 3PM, 5PM from {_sys_start_label}).', s)
 
         # SC-I-04: PE Morning Placement (PE/FITT should start before noon)
@@ -8384,10 +8656,10 @@ def check_constraints():
             add_v('PE_MORNING_PLACEMENT', 'PE Morning Placement',
                   f'PE/FITT course ({s.course.course_code}) should start before noon.', s)
 
-        # SC-II-01: PE Early Week (PE/FITT should be Mon--œWed)
+        # SC-II-01: PE Early Week (PE/FITT should be Mon----Wed)
         if any(k in code_up for k in pe_keywords) and s.day not in ('Monday', 'Tuesday', 'Wednesday'):
             add_v('PE_EARLY_WEEK', 'PE Early Week Preference',
-                  f'PE/FITT course ({s.course.course_code}) should be scheduled Mon--œWed.', s)
+                  f'PE/FITT course ({s.course.course_code}) should be scheduled Mon----Wed.', s)
 
         # SC-I-02: Async Strategic Placement (Async sessions on Mon or Fri)
         async_total = (s.course.asynchronous_lec_hours or 0) + (s.course.asynchronous_lab_hours or 0)
@@ -8416,7 +8688,7 @@ def check_constraints():
                 _allowed_days = [d for d, _ in _split_days]
                 if s.day not in _allowed_days:
                     add_v('FACULTY_DAY_SPLIT', 'Faculty Day Split',
-                          f'{s.faculty.full_name} -- {s.course.course_code} in section '
+                          f'{s.faculty.full_name} ---- {s.course.course_code} in section '
                           f'{s.section.section_name} is on {s.day} but split requires '
                           f'{" or ".join(_allowed_days)}.', s)
 
@@ -8430,7 +8702,7 @@ def check_constraints():
             is_lab_r    = s.room and 'Computer Lab' in (s.room.capabilities or '')
             stype       = s.session_type or 'Lec'
             if stype == 'Lab' and req_slab_d > 0:
-                # HC-09: Lab session duration -- use group sum to handle day-split sessions
+                # HC-09: Lab session duration ---- use group sum to handle day-split sessions
                 # (e.g. 3h+3h split -> total 6h = expected 6h -> no violation)
                 _hc09_pair = (s.course_id, s.section_id)
                 if _hc09_pair not in _hc09_seen:
@@ -8440,7 +8712,7 @@ def check_constraints():
                         add_v('STRICT_LAB_DURATION', 'Strict Laboratory Duration',
                               f'Lab for {s.course.course_code} is {_total_lab_h:.1f}h total, expected {req_slab_d}h.', s)
             elif stype == 'Async' and async_d > 0:
-                # Async session -- check HC-10 and HC-11 independently
+                # Async session ---- check HC-10 and HC-11 independently
                 if abs(dur_h - async_d) > 0.5:
                     # HC-10: Async Lecture Duration (fires if course has async lec component)
                     if async_lec_d > 0:
@@ -8453,7 +8725,7 @@ def check_constraints():
                               f'Async session for {s.course.course_code} is {dur_h:.1f}h; '
                               f'async lab component expects {async_lab_d}h.', s)
             elif stype == 'Lec' and req_sl_d > 0:
-                # HC-08: Lecture session duration -- use group sum to handle day-split sessions
+                # HC-08: Lecture session duration ---- use group sum to handle day-split sessions
                 _hc08_pair = (s.course_id, s.section_id)
                 if _hc08_pair not in _hc08_seen:
                     _hc08_seen.add(_hc08_pair)
@@ -8516,8 +8788,8 @@ def check_constraints():
             sys_start_label = f"{_sys.start_hour}:00 AM" if _sys else "7:00 AM"
             add_v('EARLY_START_ENFORCEMENT', 'Early Start Enforcement',
                   f'First class in {first_s.room.room_name} on {day} starts at {first_s.start_time} '
-                  f'-- more than 1 hour after system start ({sys_start_label}). '
-                  f'Room is idle during {sys_start_label}--œ{first_s.start_time}.', first_s)
+                  f'---- more than 1 hour after system start ({sys_start_label}). '
+                  f'Room is idle during {sys_start_label}----{first_s.start_time}.', first_s)
 
     # =========================================================
     # GROUP 3: LOAD, SEQUENCE & DAILY DISTRIBUTION CHECKS
@@ -8597,7 +8869,7 @@ def check_constraints():
             daily.setdefault(c.day, []).append(c)
 
         for day, day_classes in daily.items():
-            # SC-I-08: Lunch Break -- section must have Ã¢â€°Â¥1 free hour in 10:00 AM--œ2:00 PM window
+            # SC-I-08: Lunch Break ---- section must have ---------------1 free hour in 10:00 AM----2:00 PM window
             # Build set of occupied minute-intervals within the window for this section+day
             _LUNCH_START = 600   # 10:00 AM in minutes
             _LUNCH_END   = 840   # 2:00 PM in minutes
@@ -8613,7 +8885,7 @@ def check_constraints():
                 for _m in range(_LUNCH_START, _LUNCH_END - 30, 30)
             ):
                 add_v('LUNCH_BREAK', 'Lunch Break Preference',
-                      f'Section {day_classes[0].section.section_name} has no free hour in the 10 AM--œ2 PM '
+                      f'Section {day_classes[0].section.section_name} has no free hour in the 10 AM----2 PM '
                       f'lunch window on {day}.', day_classes[0])
 
             # SC-II-02: Fewer than 2 classes on an active day
@@ -8642,7 +8914,7 @@ def check_constraints():
     for s in schedules:
         key = (s.section_id, s.course_id)
         allocation_audit.setdefault(key, set())
-        # Use stored session_type directly -- no more room-type guessing
+        # Use stored session_type directly ---- no more room-type guessing
         allocation_audit[key].add(s.session_type or 'Lec')
 
     scheduled_pairs = {(s.section_id, s.course_id) for s in schedules}
@@ -8684,7 +8956,7 @@ def check_constraints():
                            if pa.course and pa.course.semester_offered == target_semester]
 
     if pre_assignments:
-        # HC-01: Locked Schedules -- pre-assigned class must not have been moved
+        # HC-01: Locked Schedules ---- pre-assigned class must not have been moved
         for pa in pre_assignments:
             matching = [s for s in schedules
                         if s.section_id == pa.section_id and s.course_id == pa.course_id]
@@ -8693,10 +8965,10 @@ def check_constraints():
                         or s.end_time != pa.end_time or s.room_id != pa.room_id):
                     add_v('LOCKED_SCHEDULES', 'Locked Schedule Moved',
                           f'Pre-assigned slot for {pa.course.course_code} ({pa.section.section_name}) '
-                          f'was changed: expected {pa.day} {pa.start_time}--œ{pa.end_time} '
-                          f'but found {s.day} {s.start_time}--œ{s.end_time}.', s)
+                          f'was changed: expected {pa.day} {pa.start_time}----{pa.end_time} '
+                          f'but found {s.day} {s.start_time}----{s.end_time}.', s)
 
-        # HC-26: Pre-assignment Exclusivity -- no other class may overlap a pre-assigned slot
+        # HC-26: Pre-assignment Exclusivity ---- no other class may overlap a pre-assigned slot
         for pa in pre_assignments:
             pa_start = to_minutes(pa.start_time)
             pa_end   = to_minutes(pa.end_time)
@@ -8713,10 +8985,10 @@ def check_constraints():
                 if not is_same:
                     add_v('PREASSIGNMENT_EXCLUSIVITY', 'Pre-assignment Exclusivity',
                           f'Class overlaps a pre-assigned slot for {pa.course.course_code} '
-                          f'({pa.section.section_name}) on {pa.day} {pa.start_time}--œ{pa.end_time}.', s)
+                          f'({pa.section.section_name}) on {pa.day} {pa.start_time}----{pa.end_time}.', s)
 
     # =========================================================
-    # GROUP 6: HC-02 -- MINOR SUBJECT GAP CHECK
+    # GROUP 6: HC-02 ---- MINOR SUBJECT GAP CHECK
     # =========================================================
     # "Minor subjects" = courses from departments NOT included in the last generation run.
     # Each section must have enough free time gaps to accommodate their assigned minor courses.
@@ -8806,14 +9078,14 @@ def check_constraints():
                 filtered.append(v)
         violations = filtered
 
-    # Department filter -- multi-select checkboxes; empty = all
+    # Department filter ---- multi-select checkboxes; empty = all
     if selected_depts:
         violations = [
             v for v in violations
             if (_get_course_dept(v['class_a'].course) or 'Unknown') in selected_depts
         ]
 
-    # Constraint type filter -- multi-select checkboxes; empty = all
+    # Constraint type filter ---- multi-select checkboxes; empty = all
     if selected_types:
         violations = [v for v in violations if v['type'] in selected_types]
 
@@ -8963,7 +9235,7 @@ def manage_layouts():
             {'name': settings.section_signatory_3, 'title': settings.section_sig3_title},
         ])
 
-        # --- Faculty (independent fac_ fields only -- never touches Section/Room/Course) ---
+        # --- Faculty (independent fac_ fields only ---- never touches Section/Room/Course) ---
         settings.fac_republic_text     = request.form.get('fac_republic_text',     '')
         settings.fac_univ_name         = request.form.get('fac_univ_name',         '')
         settings.fac_campus_name       = request.form.get('fac_campus_name',       '')
@@ -9643,13 +9915,13 @@ def import_courses_docx():
     return redirect(url_for('manage_courses'))
 
 
-# Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # LAYOUT HELPER FUNCTIONS
-# Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def build_variable_map(layout_type, settings, section_name=None, entity_name=None, sem_ay=None,
                        faculty=None, prep_count=0, total_hours=0):
-    """Build a {{{token}}}: value dict for substitution into Excel templates."""
+    """Build a {{token}}: value dict for substitution into Excel templates."""
     s = settings
 
     # Entity name
@@ -9674,9 +9946,15 @@ def build_variable_map(layout_type, settings, section_name=None, entity_name=Non
             signatories = []
     if not signatories:
         for i in (1, 2, 3):
-            v = getattr(s, f'{layout_type}_signatory_{i}', '') or ''
-            if v.strip():
-                signatories.append({'name': v, 'title': ''})
+            v_name = getattr(s, f'{layout_type}_signatory_{i}', '') or ''
+            v_title = ''
+            if layout_type != 'faculty':
+                # For non-faculty, check sig2/sig3 title columns
+                if i == 2: v_title = getattr(s, f'{layout_type}_sig2_title', '') or 'Director, Instruction'
+                elif i == 3: v_title = getattr(s, f'{layout_type}_sig3_title', '') or 'Campus Administrator'
+            
+            if v_name.strip():
+                signatories.append({'name': v_name, 'title': v_title})
 
     from datetime import date as _date
     vmap = {
@@ -9691,6 +9969,8 @@ def build_variable_map(layout_type, settings, section_name=None, entity_name=Non
         '{{class_label}}':       (getattr(s, 'room_label',   'ROOM')   or 'ROOM')   if layout_type == 'room'
                                   else (getattr(s, 'course_label', 'COURSE') or 'COURSE') if layout_type == 'course'
                                   else (getattr(s, 'class_label',  'CLASS')  or 'CLASS'),
+        '{{room_label}}':        getattr(s, 'room_label',   'ROOM')   or 'ROOM',
+        '{{course_label}}':      getattr(s, 'course_label', 'COURSE') or 'COURSE',
         '{{sem_ay_label}}':      getattr(s, 'sem_ay_label', 'Semester / Academic Year') or 'Semester / Academic Year',
         '{{sem_ay_value}}':      sem_ay or getattr(s, 'sem_ay_value', '') or '',
         '{{prepared_by_label}}': getattr(s, 'prepared_by_label', 'Prepared by:') or 'Prepared by:',
@@ -9706,42 +9986,77 @@ def build_variable_map(layout_type, settings, section_name=None, entity_name=Non
         '{{GRID_SAT}}':          'SATURDAY',
         '{{GRID_SUN}}':          'SUNDAY',
     }
-    for i, sig in enumerate(signatories):
-        vmap[f'{{{{sig{i+1}}}}}']       = sig.get('name', '')
-        vmap[f'{{{{sig{i+1}_title}}}}'] = sig.get('title', '')
+    
+    # Generic sig mapping
+    for i in range(3):
+        n_key = f'{{{{sig{i+1}}}}}'
+        t_key = f'{{{{sig{i+1}_title}}}}'
+        if i < len(signatories):
+            vmap[n_key] = signatories[i].get('name', '')
+            vmap[t_key] = signatories[i].get('title', '')
+        else:
+            vmap[n_key] = ''
+            vmap[t_key] = ''
 
-    # --- Faculty-specific tokens ---
+    # --- Faculty-specific tokens (Hiwalay ang variables) ---
     if layout_type == 'faculty':
         fac_name  = (faculty.full_name  if faculty else None) or entity_name or '[Faculty Name]'
         fac_educ  = (faculty.highest_educational_attainment if faculty else None) or ''
         fac_rank  = (faculty.academic_rank if faculty else None) or ''
 
+        # Convert to numbers to avoid ValueError with string decimals
+        try:
+            th = float(total_hours)
+            pc = float(prep_count)
+        except (ValueError, TypeError):
+            th = 0.0
+            pc = 0.0
+
         vmap.update({
             '{{fac_name}}':          fac_name,
             '{{fac_educ}}':          fac_educ,
             '{{fac_title}}':         fac_rank,
-            '{{fac_prep}}':          str(prep_count),
-            '{{fac_total_hours}}':   str(round(total_hours, 1)) if total_hours != int(total_hours) else str(int(total_hours)),
+            '{{fac_rank}}':          fac_rank,
+            '{{fac_prep}}':          str(int(pc)) if pc == int(pc) else str(round(pc, 1)),
+            '{{fac_total_hours}}':   str(int(th)) if th == int(th) else str(round(th, 1)),
+            '{{fac_republic_text}}': getattr(s, 'fac_republic_text',  'Republic of the Philippines') or 'Republic of the Philippines',
+            '{{fac_univ_name}}':     getattr(s, 'fac_univ_name',      'CAVITE STATE UNIVERSITY') or 'CAVITE STATE UNIVERSITY',
+            '{{fac_campus_name}}':   getattr(s, 'fac_campus_name',    'CCAT Campus') or 'CCAT Campus',
+            '{{fac_address}}':       getattr(s, 'fac_address',        'Rosario, Cavite') or 'Rosario, Cavite',
+            '{{fac_contact_details}}':getattr(s, 'fac_contact_details','(046) 437-9505 / (046) 437-6659') or '(046) 437-9505 / (046) 437-6659',
+            '{{fac_email}}':         getattr(s, 'fac_email',          'cvsurosario@cvsu.edu.ph') or 'cvsurosario@cvsu.edu.ph',
+            '{{fac_website}}':       getattr(s, 'fac_website',        'www.cvsu-rosario.edu.ph') or 'www.cvsu-rosario.edu.ph',
             '{{fac_form_num_top}}':   getattr(s, 'fac_form_num_top',    'VPAA-QF-11')           or 'VPAA-QF-11',
             '{{fac_form_num_bottom}}':getattr(s, 'fac_form_num_bottom',  'V01-2018-07-24')       or 'V01-2018-07-24',
             '{{fac_dept_label}}':     getattr(s, 'fac_dept_label',       'DEPARTMENT OF COMPUTER STUDIES') or 'DEPARTMENT OF COMPUTER STUDIES',
             '{{fac_sched_title}}':    getattr(s, 'fac_sched_title',      'FACULTY CLASS SCHEDULE') or 'FACULTY CLASS SCHEDULE',
+            '{{fac_sem_ay_label}}':   getattr(s, 'fac_sem_ay_label',     'SECOND SEMESTER SY 2023 - 2024') or 'SECOND SEMESTER SY 2023 - 2024',
+            '{{fac_name_label}}':     getattr(s, 'fac_name_label',       'Name:') or 'Name:',
+            '{{fac_educ_label}}':     getattr(s, 'fac_educ_label',       'Highest Educ. Attainment:') or 'Highest Educ. Attainment:',
+            '{{fac_prep_label}}':     getattr(s, 'fac_prep_label',       'No. of Preparation/s:') or 'No. of Preparation/s:',
+            '{{fac_hours_label}}':    getattr(s, 'fac_hours_label',      'Total no. of contact hours per week:') or 'Total no. of contact hours per week:',
+            '{{fac_conforme_label}}': getattr(s, 'fac_conforme_label',   'Conforme:')            or 'Conforme:',
+            '{{fac_reviewed_label}}': getattr(s, 'fac_reviewed_label',   'Reviewed by:')         or 'Reviewed by:',
+            '{{fac_rec_approval_label}}':getattr(s, 'fac_rec_approval_label','Recommending Approval:') or 'Recommending Approval:',
+            '{{fac_approved_label}}': getattr(s, 'fac_approved_label',   'Approved:')            or 'Approved:',
+            '{{fac_registrar_label}}':getattr(s, 'fac_registrar_label',  'OIC, Registrar')       or 'OIC, Registrar',
+            '{{fac_chair_name}}':     getattr(s, 'fac_chair_name',       'ARIES M. GELERA')      or 'ARIES M. GELERA',
+            '{{fac_chair_title}}':    getattr(s, 'fac_chair_title',      'Department Chairperson') or 'Department Chairperson',
+            '{{fac_director_name}}':  getattr(s, 'fac_director_name',    'ARIEL G. SANTOS, EdD') or 'ARIEL G. SANTOS, EdD',
+            '{{fac_director_title}}': getattr(s, 'fac_director_title',   'Director, Instruction') or 'Director, Instruction',
+            '{{fac_registrar_name}}': getattr(s, 'sig_registrar_name',   'MARLYN A. QUINEZ')     or 'MARLYN A. QUINEZ',
+            '{{fac_admin_name}}':     getattr(s, 'fac_admin_name',       'LAURO B. PASCUA, EdD') or 'LAURO B. PASCUA, EdD',
+            '{{fac_admin_title}}':    getattr(s, 'fac_admin_title',      'Campus Administrator') or 'Campus Administrator',
             '{{fac_consultation}}':   getattr(s, 'fac_consultation',     'Consultation:')        or 'Consultation:',
             '{{fac_research}}':       getattr(s, 'fac_research',         'Research:')            or 'Research:',
             '{{fac_designation}}':    getattr(s, 'fac_designation',      'Designation :')        or 'Designation :',
             '{{fac_extension}}':      getattr(s, 'fac_extension',        'Extension:')           or 'Extension:',
-            '{{fac_conforme_label}}': getattr(s, 'fac_conforme_label',   'Conforme:')            or 'Conforme:',
-            '{{fac_reviewed_label}}': getattr(s, 'fac_reviewed_label',   'Reviewed by:')         or 'Reviewed by:',
-            '{{fac_registrar_label}}':getattr(s, 'fac_registrar_label',  'OIC, Registrar')       or 'OIC, Registrar',
-            '{{sig1_name}}':          getattr(s, 'sig1_name',            'ARIES M. GELERA')      or 'ARIES M. GELERA',
-            '{{sig1_title}}':         getattr(s, 'sig1_title',           'Department Chairperson') or 'Department Chairperson',
-            '{{sig2_name}}':          getattr(s, 'sig2_name',            'ARIEL G. SANTOS, EdD') or 'ARIEL G. SANTOS, EdD',
-            '{{sig_registrar_name}}': getattr(s, 'sig_registrar_name',   'MARLYN A. QUINEZ')     or 'MARLYN A. QUINEZ',
-            '{{sig3_name}}':          getattr(s, 'sig3_name',            'LAURO B. PASCUA, EdD') or 'LAURO B. PASCUA, EdD',
-            # Also map {{name}} so templates using {{name}} still work
-            '{{name}}':              fac_name,
+            # Also map sig1/sig2 equivalents for backward compatibility
+            '{{sig1}}':               getattr(s, 'fac_chair_name',    'ARIES M. GELERA'),
+            '{{sig2}}':               getattr(s, 'fac_director_name', 'ARIEL G. SANTOS, EdD'),
+            '{{sig3}}':               getattr(s, 'fac_admin_name',    'LAURO B. PASCUA, EdD'),
         })
-
+    
     return vmap
 
 
@@ -9759,7 +10074,7 @@ def _argb_to_css(color_obj):
             if argb and len(argb) == 8 and argb[:2] != '00' and argb != '00000000':
                 return '#' + argb[2:]
         elif color_obj.type == 'indexed':
-            # Index 64 = Excel "auto" (inherit) -- return None so CSS inherits
+            # Index 64 = Excel "auto" (inherit) ---- return None so CSS inherits
             if color_obj.indexed == 64:
                 return None
             # Standard 64-entry Excel indexed colour palette
@@ -9786,7 +10101,7 @@ def _argb_to_css(color_obj):
                 return '#' + idx_map[idx]
         elif color_obj.type == 'theme':
             # Office 2013 default theme baseline (theme1.xml).
-            # Tint/shade ignored -- covers ~90 % of cases without XML parsing.
+            # Tint/shade ignored ---- covers ~90 % of cases without XML parsing.
             _THEME = {
                 0: '#FFFFFF', 1: '#000000', 2: '#E7E6E6', 3: '#44546A',
                 4: '#4472C4', 5: '#ED7D31', 6: '#A5A5A5', 7: '#FFC000',
@@ -9825,7 +10140,7 @@ def _border_side_css(side):
 
 
 def detect_content_bounds(ws):
-    """Return (min_r, min_c, max_r, max_c) -- the tightest bounding box around
+    """Return (min_r, min_c, max_r, max_c) ---- the tightest bounding box around
     all cells that have a value, a fill colour, or at least one visible border.
     Returns None if the sheet is completely empty.
     """
@@ -9867,7 +10182,8 @@ def detect_content_bounds(ws):
                 max_c = c if max_c is None else max(max_c, c)
 
     if min_r is None:
-        return None
+        # Fallback: if the template is empty, provide a standard range so rendering doesn't skip
+        return (1, 1, 40, 10) 
     return (min_r, min_c, max_r, max_c)
 
 
@@ -9878,7 +10194,7 @@ def _extract_ws_images_html(ws, col_offsets, row_offsets, col_start, row_start, 
     row_offsets      : {0-based row index -> top px from table origin}
     col_start        : 1-based first rendered column (for offset correction)
     row_start        : 1-based first rendered row   (for offset correction)
-    total_w_px       : sum of all visible reference column px widths -- used only for the
+    total_w_px       : sum of all visible reference column px widths ---- used only for the
                        left/top position (as %) so images track their column as the table
                        stretches.  Width and height use fixed px from Excel metadata.
     img_settings_list: optional list of per-image dicts from manage_layouts settings.
@@ -9887,7 +10203,7 @@ def _extract_ws_images_html(ws, col_offsets, row_offsets, col_start, row_start, 
     # 1 EMU = 1 inch / 914400.  At 96 DPI: 1 inch = 96 px.
     # Therefore: px = EMU / (914400 / 96) = EMU / 9525  (exact integer divisor)
     EMU_PER_PX = 9525
-    imgs_above = []   # rendered AFTER table (on top of text) -- default
+    imgs_above = []   # rendered AFTER table (on top of text) ---- default
     imgs_below = []   # rendered BEFORE table (behind text)
 
     _img_bytes_cache = getattr(ws, '_img_bytes_cache', None)
@@ -9916,7 +10232,7 @@ def _extract_ws_images_html(ws, col_offsets, row_offsets, col_start, row_start, 
             has_one_cell = hasattr(anchor, '_from') and not has_two_cell
 
             if not (has_two_cell or has_one_cell):
-                continue  # unknown anchor type -- skip
+                continue  # unknown anchor type ---- skip
 
             fr = anchor._from
 
@@ -9945,7 +10261,7 @@ def _extract_ws_images_html(ws, col_offsets, row_offsets, col_start, row_start, 
             # The parent div CSS transform handles all vertical scaling uniformly.
             top_px  += _y_off
 
-            # Ã¢â€ â‚¬Ã¢â€ â‚¬ Image size Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
+            # --------- ---------------- ------- Image size --------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- -------# ---
             # Priority 1: anchor.ext.cx / .cy --  exact EMU dimensions stored by Excel.
             # These are the definitive pixel-perfect dimensions regardless of anchor type.
             ext = getattr(anchor, 'ext', None)
@@ -10026,17 +10342,17 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
                          extra_merge_map=None, extra_skip_cells=None,
                          bounds=None, layout_type=None, margins=None,
                          img_settings=None):
-    """Convert openpyxl worksheet → (html_div_string, table_width_px).
+    """Convert openpyxl worksheet --- (html_div_string, table_width_px).
 
     The returned HTML is wrapped in a position:relative div so that
     absolutely-positioned worksheet images sit correctly over the table.
 
-    variable_map     : {{{token}}}: value}  — substituted into cell text
-    cell_overrides   : {(row, col): html_string}  — replaces cell content
-    extra_merge_map  : {(row, col): (rowspan, colspan)}  — additional merges
+    variable_map     : {{{token}}}: value}  --- substituted into cell text
+    cell_overrides   : {(row, col): html_string}  --- replaces cell content
+    extra_merge_map  : {(row, col): (rowspan, colspan)}  --- additional merges
     extra_skip_cells : set of (row, col) to skip
     bounds           : (min_r, min_c, max_r, max_c) from detect_content_bounds
-                       — restricts rendering to content area only
+                       --- restricts rendering to content area only
     """
     variable_map    = variable_map    or {}
     cell_overrides  = cell_overrides  or {}
@@ -10044,7 +10360,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
     skip_cells      = set(extra_skip_cells or set())
 
     MDW   = 7          # avg char width px (Excel default)
-    PT_PX = 96 / 72    # 1pt → px
+    PT_PX = 96 / 72    # 1pt --- px
 
     # Apply content bounds (smart crop)
     if bounds:
@@ -10055,7 +10371,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
         max_row = ws.max_row    or 1
 
     # Column widths (only for visible range)
-    # Reference px widths (from Excel chars → px) used for proportional sizing only.
+    # Reference px widths (from Excel chars --- px) used for proportional sizing only.
     col_widths = []
     col_hidden = []
     for c in range(col_start, max_col + 1):
@@ -10067,7 +10383,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
         else:
             chars = (cd.width if cd and cd.width else 8.43)
             col_widths.append(max(4, round(chars * MDW)))
-    # ── Step A: Snapshot ORIGINAL col_offsets for pixel-perfect image placement ──
+    # ------ Step A: Snapshot ORIGINAL col_offsets for pixel-perfect image placement ------
     # Must be done BEFORE any equalization or tightening so that image anchor
     # positions map correctly to the original Excel column layout.
     _orig_col_offsets = {}
@@ -10091,7 +10407,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
             # rel_idx = (_c - 1) - (col_start - 1) = _c - col_start  (always < 0)
             _orig_col_offsets[_c - col_start] = -_pre_acc
 
-    # ── Step B: Detect day-header row and collect day/time column indices ───────
+    # ------ Step B: Detect day-header row and collect day/time column indices ---------------------
     _DAY_KW = {
         'MON', 'TUE', 'WED', 'THU', 'THURS', 'FRI', 'SAT', 'SUN',
         'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY',
@@ -10141,19 +10457,19 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
             else:
                 # Check if this column is completely empty (e.g. non-anchor of a
                 # merged "TIME/DAYS" cell whose anchor is further left).
-                # If fully empty → skip it and keep scanning left.
-                # If it has non-time content → stop (real content boundary).
+                # If fully empty --- skip it and keep scanning left.
+                # If it has non-time content --- stop (real content boundary).
                 _ce = col_start + _ti
                 _col_empty = all(
                     ws.cell(row=_r, column=_ce).value is None
                     for _r in range(row_start, max_row + 1)
                 )
                 if _col_empty:
-                    continue      # empty placeholder — keep scanning left
-                break             # non-empty non-time col → stop
+                    continue      # empty placeholder --- keep scanning left
+                break             # non-empty non-time col --- stop
 
-    # ── Step C: Auto-fit each time column to its own content width ──────────────
-    # Only measure cells that contain ACTUAL TIME VALUES — datetime.time objects
+    # ------ Step C: Auto-fit each time column to its own content width ------------------------------------------
+    # Only measure cells that contain ACTUAL TIME VALUES --- datetime.time objects
     # or strings matching the HH:MM pattern.  All other cells (headers, labels,
     # "DAILY CONTACT HOURS", "Prepared by:", etc.) are skipped.  This restricts
     # measurement to the schedule data rows only, regardless of template layout.
@@ -10165,16 +10481,16 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
             _val = ws.cell(row=_r, column=_col_excel).value
             if _val is None:
                 continue
-            # ── Identify time values only ──────────────────────────────────────
+            # ------ Identify time values only ------------------------------------------------------------------------------------------------------------------
             _is_time_obj = hasattr(_val, 'strftime') and not hasattr(_val, 'year')
             _is_time_str = isinstance(_val, str) and _TIME_VAL_PAT.match(_val.strip())
             if not (_is_time_obj or _is_time_str):
                 continue    # skip non-time cells (headers, labels, totals, etc.)
-            # ── Measure display string ─────────────────────────────────────────
-            # datetime.time → strftime('%H:%M') = "07:00" (matches Excel display)
-            # strings → unchanged
+            # ------ Measure display string ---------------------------------------------------------------------------------------------------------------------------
+            # datetime.time --- strftime('%H:%M') = "07:00" (matches Excel display)
+            # strings --- unchanged
             if _is_time_obj:
-                _s = f"{_val.hour}:{_val.minute:02d}"   # "7:00" — no leading zero
+                _s = f"{_val.hour}:{_val.minute:02d}"   # "7:00" --- no leading zero
                 _col_has_time_obj = True
             else:
                 _s = str(_val).strip()
@@ -10185,8 +10501,8 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
         _tight_w = max(MDW * 3, _max_len * MDW + _pad)
         col_widths[_ti] = _tight_w
 
-    # ── Step D: Day columns fill the space freed by time-col tightening ─────────
-    # remaining = original_total − new_tight_time − other_non-day_non-time cols
+    # ------ Step D: Day columns fill the space freed by time-col tightening ---------------------------
+    # remaining = original_total --- new_tight_time --- other_non-day_non-time cols
     # Each day col gets an equal share of remaining, guaranteeing symmetry AND
     # that they are as wide as possible given the tightened time columns.
     if _day_col_indices:
@@ -10213,7 +10529,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
         pts = (rd.height if rd and rd.height else 13.5)
         row_heights.append(max(8, round(pts * PT_PX)))
 
-    # Merged cell spans (full sheet — clip rendering handles out-of-range)
+    # Merged cell spans (full sheet --- clip rendering handles out-of-range)
     merged_spans = {}
     for merge in ws.merged_cells.ranges:
         r1, c1, r2, c2 = merge.min_row, merge.min_col, merge.max_row, merge.max_col
@@ -10250,12 +10566,12 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
         if col_hidden[i]:
             lines.append(f'  <col style="width:0;visibility:collapse;">')
         elif i in _time_col_set:
-            # Time columns: absolute px — fixed tight width.
+            # Time columns: absolute px --- fixed tight width.
             # Faculty gets +20px extra for readability.
             _tcw = w + 20 if layout_type == 'faculty' else w
             lines.append(f'  <col style="width:{_tcw}px;">')
         elif layout_type in ('section', 'room', 'course', 'faculty') and i in _day_col_set:
-            # Day columns: auto — browser splits all remaining space
+            # Day columns: auto --- browser splits all remaining space
             # (paper_content_w - time_col_px) equally among day cols
             # so the schedule grid fills edge-to-edge across the paper.
             lines.append(f'  <col style="width:auto;">')
@@ -10299,11 +10615,11 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
                 if rs > 1: span_attrs += f' rowspan="{rs}"'
                 if cs_span > 1: span_attrs += f' colspan="{cs_span}"'
 
-            # Style parts — overflow:visible lets text spill like Excel does
+            # Style parts --- overflow:visible lets text spill like Excel does
             # Padding computed after alignment so we can factor in Excel indent.
             sp = [f'height:{rh}px', 'overflow:visible']
 
-            # Fill — solid fgColor; fall back to bgColor for pattern fills
+            # Fill --- solid fgColor; fall back to bgColor for pattern fills
             fill = cell.fill
             if fill and fill.fill_type not in (None, 'none'):
                 fg = _argb_to_css(fill.fgColor) if fill.fgColor else None
@@ -10312,7 +10628,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
                 if fg:
                     sp.append(f'background-color:{fg}')
 
-            # Font — name, size, weight, style, decorations, color
+            # Font --- name, size, weight, style, decorations, color
             font = cell.font
             if font:
                 sz = font.size or 11
@@ -10330,7 +10646,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
 
             # Alignment + indent-aware padding
             # Excel cell indent (alignment.indent) adds character-width leading space.
-            # Each indent level ≈ MDW px.  We convert it to CSS padding-left so the
+            # Each indent level --- MDW px.  We convert it to CSS padding-left so the
             # visual indentation in Excel is faithfully reproduced in HTML.
             al = cell.alignment
             _indent_px = int(al.indent) * MDW if al and al.indent else 0
@@ -10350,8 +10666,8 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
             else:
                 sp += ['text-align:left', 'vertical-align:middle', 'white-space:pre']
 
-            # Borders — per-side explicit control.
-            # Real Excel border → use its CSS.  No real border → 'none' so the
+            # Borders --- per-side explicit control.
+            # Real Excel border --- use its CSS.  No real border --- 'none' so the
             # CSS outline debug-grid (rgba 0,0,0,0.10) shows through cleanly.
             bd = cell.border
             for _s in ('top', 'right', 'bottom', 'left'):
@@ -10371,13 +10687,13 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
 
     lines += ['</tbody>', '</table>']
 
-    # Build cumulative pixel offsets for image placement (col/row index → px from top-left of table)
-    col_offsets = {}  # 0-based col index → left px
+    # Build cumulative pixel offsets for image placement (col/row index --- px from top-left of table)
+    col_offsets = {}  # 0-based col index --- left px
     acc = 0
     for i, w in enumerate(col_widths):
         col_offsets[i] = acc
         acc += w
-    row_offsets = {}  # 0-based row index → top px
+    row_offsets = {}  # 0-based row index --- top px
     acc = 0
     for i, h in enumerate(row_heights):
         row_offsets[i] = acc
@@ -10386,7 +10702,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
     # Extract and embed worksheet images.
     # For section/room/course: image left% must be relative to the actual paper content width
     # (not _orig_total_w_px from Excel) so the logo lands at its true Excel position.
-    # Paper content width = (paper_w - left_margin - right_margin) × 96dpi.
+    # Paper content width = (paper_w - left_margin - right_margin) -- 96dpi.
     # left_offset_px=-30 compensates for pre-start column offset (logo in col A, table at col B).
     if layout_type in ('section', 'room', 'course') and margins:
         _m  = margins
@@ -10558,12 +10874,12 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
             _val = ws.cell(row=_r, column=_col_excel).value
             if _val is None:
                 continue
-            # Ã¢â€ â‚¬Ã¢â€ â‚¬ Identify time values only Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
+            # --------- ---------------- ------- Identify time values only --------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- -------# ---
             _is_time_obj = hasattr(_val, 'strftime') and not hasattr(_val, 'year')
             _is_time_str = isinstance(_val, str) and _TIME_VAL_PAT.match(_val.strip())
             if not (_is_time_obj or _is_time_str):
                 continue    # skip non-time cells (headers, labels, totals, etc.)
-            # Ã¢â€ â‚¬Ã¢â€ â‚¬ Measure display string Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
+            # --------- ---------------- ------- Measure display string --------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- -------# ---
             # datetime.time -> strftime('%H:%M') = "07:00" (matches Excel display)
             # strings -> unchanged
             if _is_time_obj:
@@ -10579,7 +10895,7 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
         col_widths[_ti] = _tight_w
 
     # -- Step D: Day columns fill the space freed by time-col tightening --
-    # remaining = original_total Ã¢Ë†â€™ new_tight_time Ã¢Ë†â€™ other_non-day_non-time cols
+    # remaining = original_total ----------------- new_tight_time ----------------- other_non-day_non-time cols
     # Each day col gets an equal share of remaining, guaranteeing symmetry AND
     # that they are as wide as possible given the tightened time columns.
     if _day_col_indices:
@@ -10641,7 +10957,7 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
         mt = float(margins.get('top', 1.0))
         mb = float(margins.get('bottom', 1.0))
         _, ph, _ = PAPER_SIZES.get(paper_key, PAPER_SIZES['A4'])
-        # sum ALL rows in rendered range — includes title rows, header rows, footer/signatory rows
+        # sum ALL rows in rendered range --- includes title rows, header rows, footer/signatory rows
         available_h_px = (ph - mt - mb) * 96
         total_th_px = sum(row_heights)
         if total_th_px > available_h_px and available_h_px > 0:
@@ -10752,7 +11068,7 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
             # HARD HEIGHT CONSTRAINT: max-height and overflow:visible prevent auto-stretching
             sp = [f'height:{total_rh}px', f'max-height:{total_rh}px', 'overflow:visible']
 
-            # Fill — solid fgColor; fall back to bgColor for pattern fills
+            # Fill --- solid fgColor; fall back to bgColor for pattern fills
             fill = cell.fill
             if fill and fill.fill_type not in (None, 'none'):
                 fg = _argb_to_css(fill.fgColor) if fill.fgColor else None
@@ -10761,7 +11077,7 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
                 if fg:
                     sp.append(f'background-color:{fg}')
 
-            # Font / Spacing — CONDITIONALLY apply slimming or restoration
+            # Font / Spacing --- CONDITIONALLY apply slimming or restoration
             font = cell.font
             if is_grid_row:
                 # ULTRA-TIGHT SPACING for the Grid
@@ -10820,7 +11136,7 @@ def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
             else:
                 sp += ['text-align:left', 'vertical-align:top !important', 'white-space:pre']
 
-            # Borders — per-side explicit control.
+            # Borders --- per-side explicit control.
             bd = cell.border
             for _s in ('top', 'right', 'bottom', 'left'):
                 _real = _border_side_css(getattr(bd, _s, None) if bd else None)
@@ -10981,11 +11297,11 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
     overflow: visible;
     position: relative;
   }}
-  /* Debug grid -- faint outline on every cell */
+  /* Debug grid ---- faint outline on every cell */
   table td, table th {{
     outline: 0.5px solid rgba(0,0,0,0.10);
   }}
-  /* Overlap badge -- cursor only, tooltip via JS */
+  /* Overlap badge ---- cursor only, tooltip via JS */
   .sched-overlap-badge {{ cursor: pointer; }}
   table {{
     width: 100%;
@@ -11003,40 +11319,48 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
       var paper = document.getElementById('a4Paper');
       // Scale the inner position:relative container (holds both table AND images)
       // so that images auto-resize together with the table.
-      var inner = wrap && wrap.querySelector('div');
-      var table = inner && inner.querySelector('table');
+      var table = wrap.querySelector('table');
+      if (!table) {{
+          // Fallback for sheets with logos where inner div exists
+          var inner = wrap.querySelector('div');
+          table = inner && inner.querySelector('table');
+      }}
       if (!table) return;
 
       // Available content area in px (paper minus CSS padding margins)
       var DPI = 96;
-      var paperContentW = wrap.offsetWidth;
+      var paperContentW = ({pw} - {ml} - {mr}) * DPI;
       var paperContentH = ({ph} - {mt} - {mb}) * DPI;
 
-      var tableH = table.scrollHeight;  // height of table rows (images are absolute, don't add)
+      // Identify the secure content wrapper (the isolation:isolate div)
+      var target = wrap.firstElementChild; 
+      if (!target) return;
+      var table = target.querySelector('table');
+      if (!table) return;
 
-      // No horizontal scaling -- table fills paper via CSS width:100%.
-      // Only scale down vertically if content is taller than the page.
-      var scaleH = (tableH > paperContentH && paperContentH > 0)
-                   ? paperContentH / tableH : 1.0;
-      var scale  = Math.min(scaleH, 1.0);
+      // Measure unscaled content bounds
+      var contentW = target.scrollWidth || target.offsetWidth;
+      var contentH = table.scrollHeight;
 
-      if (scale < 1.0) {{
-        // scale(1, s) -- height-only compression: preserves full width (no right gap),
-        // only compresses vertically to fit page height.
-        inner.style.transform = 'scale(1,' + scale + ')';
-        inner.style.transformOrigin = 'top left';
-        // Compensate aspect ratio: scale(1,s) squishes height but not width.
-        // Apply scaleX(s) to each image so visual width = w*s matches visual height = h*s.
-        inner.querySelectorAll('img').forEach(function(img) {{
-          img.style.transform = 'scaleX(' + scale + ')';
-          img.style.transformOrigin = '0% 50%';
-        }});
-        wrap.style.height   = (tableH * scale) + 'px';
-        wrap.style.overflow = 'hidden';
-        // Lock paper to fixed height when shrinking to fit
-        paper.style.height    = '{ph}in';
-        paper.style.minHeight = 'unset';
-        paper.style.overflow  = 'hidden';
+      // Calculate necessary scaling to fit both width and height
+      var scaleW = (contentW > paperContentW && paperContentW > 0) ? paperContentW / contentW : 1.0;
+      var scaleH = (contentH > paperContentH && paperContentH > 0) ? paperContentH / contentH : 1.0;
+
+      // Pick the stricter scale (the smaller one) to ensure no overflow
+      var finalScale = Math.min(scaleW, scaleH, 1.0);
+
+      if (finalScale < 1.0) {{
+          target.style.transform = 'scale(' + finalScale + ')';
+          target.style.transformOrigin = 'top center'; // Centered looks more professional on paper
+          
+          // Fix visual width of wrapper to avoid extra scroll-room
+          target.style.width = (contentW) + 'px'; 
+          wrap.style.overflow = 'hidden';
+
+          // Lock paper to fixed height when shrinking to fit
+          paper.style.height    = '{ph}in';
+          paper.style.minHeight = 'unset';
+          paper.style.overflow  = 'hidden';
       }}
     }})();
   </script>
@@ -11085,7 +11409,7 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
             + (i > 0 ? 'border-top:1px solid #f0f0f0;margin-top:3px;' : '') + '">'
             + (en.t ? '<span style="color:#666;font-size:10px;">' + en.t + '</span><br>' : '')
             + '<strong style="font-size:12px;">' + (en.c || '') + '</strong>'
-            + (en.s ? ' <span style="color:#555;">-- ' + en.s + '</span>' : '')
+            + (en.s ? ' <span style="color:#555;">---- ' + en.s + '</span>' : '')
             + (en.f ? '<br><span style="color:#888;font-size:10px;">' + en.f + '</span>' : '')
             + '</div>';
         }}).join('');
@@ -11141,7 +11465,7 @@ def render_pdf_page(html_content, orientation='landscape', margins=None):
     font-family: Calibri, Arial, sans-serif; 
     background: white;
   }}
-  /* .a4 = one physical page. NO padding here -- @page already sets the gutters.
+  /* .a4 = one physical page. NO padding here ---- @page already sets the gutters.
      overflow:hidden clips anything that exceeds one page height. */
   .a4 {{
     width: 100%;
@@ -11215,7 +11539,7 @@ def detect_schedule_grid(ws):
         'sunday': 'Sunday',   'sun': 'Sunday',
     }
     timere        = re.compile(
-        r'(\d{1,2}:\d{2})\s*(AM|PM)?\s*[---œ]\s*(\d{1,2}:\d{2})\s*(AM|PM)?',
+        r'(\d{1,2}:\d{2})\s*(AM|PM)?\s*[-----]\s*(\d{1,2}:\d{2})\s*(AM|PM)?',
         re.IGNORECASE)
     simple_timere = re.compile(r'\b(\d{1,2}:\d{2})\s*(AM|PM)?\b', re.IGNORECASE)
 
@@ -11280,7 +11604,7 @@ def detect_schedule_grid(ws):
             prev_sm = sm
         return result
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Pass 1: token-based detection Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Pass 1: token-based detection ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     time_anchor_row = time_anchor_col = None
     for row in ws.iter_rows():
         for cell in row:
@@ -11304,7 +11628,7 @@ def detect_schedule_grid(ws):
                 return {'header_row': header_row, 'time_col': time_anchor_col,
                         'day_cols': day_cols, 'time_slots': time_slots}
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Pass 2: auto-detect -- find time column + day name headers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Pass 2: auto-detect ---- find time column + day name headers ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # Score columns: range-format "HH:MM-HH:MM" (strong signal) vs bare "HH:MM" (weak)
     col_range_counts   = {}
     col_time_counts    = {}
@@ -11334,7 +11658,7 @@ def detect_schedule_grid(ws):
     else:
         best_col = max(col_time_counts, key=lambda c: col_time_counts[c])
     if col_time_counts[best_col] < 3:
-        return None  # Too few time values -- probably not a timetable
+        return None  # Too few time values ---- probably not a timetable
 
     first_time_row = col_first_time_row[best_col]
 
@@ -11377,6 +11701,26 @@ def detect_schedule_grid(ws):
             'day_cols': day_cols, 'time_slots': time_slots}
 
 
+    # ------------------------------------ Pass 3: Standard Fallback ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # If no tokens or auto-detection worked, provide a standard Monday to Friday grid
+    # starting from 7:00 AM to 7:00 PM (1-hour slots).
+    fallback_day_cols = {
+        'Monday': 2, 'Tuesday': 3, 'Wednesday': 4, 'Thursday': 5,
+        'Friday': 6, 'Saturday': 7, 'Sunday': 8
+    }
+    fallback_time_slots = []
+    for i, hour in enumerate(range(7, 19)):
+        fallback_time_slots.append((i + 2, f"{hour:02d}:00", f"{hour+1:02d}:00"))
+    
+    return {
+        'header_row': 1,
+        'time_col': 1,
+        'day_cols': fallback_day_cols,
+        'time_slots': fallback_time_slots,
+        'is_fallback': True
+    }
+
+
 def build_schedule_overlays(schedules, grid_info, view_type):
     """Map ScheduledClass objects onto the detected Excel grid.
 
@@ -11388,18 +11732,18 @@ def build_schedule_overlays(schedules, grid_info, view_type):
     # cell_data: (start_row, col) -> list of (rowspan, lines, entry_dict)
     cell_data = {}
 
-    # Badge view-type: some entities are not real conflicts -- treat as neutral.
+    # Badge view-type: some entities are not real conflicts ---- treat as neutral.
     _vtype_for_badge = view_type
     if view_type == 'room' and schedules:
         _first_room = getattr(schedules[0], 'room', None)
         if _first_room and getattr(_first_room, 'capacity', 0) == 999:
-            _vtype_for_badge = 'room_neutral'  # NSTP universal room -- not a real conflict
+            _vtype_for_badge = 'room_neutral'  # NSTP universal room ---- not a real conflict
     if view_type == 'faculty' and schedules:
         _first_faculty = getattr(schedules[0], 'faculty', None)
         if _first_faculty:
             _fname = (getattr(_first_faculty, 'full_name', '') or '').strip().upper()
             if 'T.B.A' in _fname or _fname == 'TBA':
-                _vtype_for_badge = 'faculty_neutral'  # T.B.A. is not a real teacher -- not a conflict
+                _vtype_for_badge = 'faculty_neutral'  # T.B.A. is not a real teacher ---- not a conflict
 
     day_cols   = grid_info['day_cols']
     time_slots = grid_info['time_slots']  # [(row, start_str, end_str|None)]
@@ -11447,7 +11791,7 @@ def build_schedule_overlays(schedules, grid_info, view_type):
         prefix = 'MR.' if sex == 'M' else 'MS.' if sex == 'F' else 'PROF.'
         return f'{prefix} {surname}'
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Pass 1: collect all schedule entries per grid cell Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Pass 1: collect all schedule entries per grid cell ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     for sched in schedules:
         col = day_cols.get(sched.day)
         if col is None:
@@ -11486,16 +11830,16 @@ def build_schedule_overlays(schedules, grid_info, view_type):
         start_t = _fmt_time_12h(sched.start_time) if sched.start_time else ''
         end_t   = _fmt_time_12h(sched.end_time)   if sched.end_time   else ''
         entry_dict = {'c': course_code, 's': section_name, 'f': faculty_name,
-                      't': f'{start_t}--œ{end_t}'}
+                      't': f'{start_t}----{end_t}'}
         cell_data.setdefault((start_row, col), []).append((rowspan, lines, entry_dict))
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Pass 2: build HTML for each cell, stacking all entries Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Pass 2: build HTML for each cell, stacking all entries ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     for (start_row, col), entries in sorted(cell_data.items()):
         rowspan = max(e[0] for e in entries)
         cnt     = len(entries)
 
         if cnt == 1:
-            # Single schedule -- centered block
+            # Single schedule ---- centered block
             _, lines, _ = entries[0]
             main_line = _esc(lines[0]) if lines else ''
             sub_html  = ''.join(
@@ -11513,7 +11857,7 @@ def build_schedule_overlays(schedules, grid_info, view_type):
                 '</div></div>'
             )
         else:
-            # Multiple overlapping schedules -- show top schedule only, badge reveals all
+            # Multiple overlapping schedules ---- show top schedule only, badge reveals all
             _, lines, _ = entries[0]
             main_line = _esc(lines[0]) if lines else ''
             sub_html  = ''.join(f'<div>{_esc(l)}</div>' for l in lines[1:] if l)
@@ -11546,21 +11890,21 @@ def build_schedule_overlays(schedules, grid_info, view_type):
     return cell_overrides, extra_merge_map, extra_skip_cells
 
 
-# Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# Paper size catalog -- (width_in, height_in) in portrait orientation
+# Paper size catalog ---- (width_in, height_in) in portrait orientation
 PAPER_SIZES = {
-    'A4':        (8.27,  11.69,  'A4 Bond Paper (8.27 in Ãƒâ€” 11.69 in)'),
-    'Letter':    (8.5,   11.0,   'Short Bond / US Letter (8.5 in Ãƒâ€” 11 in)'),
-    'Legal':     (8.5,   14.0,   'Long Bond / Legal (8.5 in Ãƒâ€” 14 in)'),
-    'Folio':     (8.5,   13.0,   'Folio / F4 (8.5 in Ãƒâ€” 13 in)'),
-    'A3':        (11.69, 16.54,  'A3 (11.69 in Ãƒâ€” 16.54 in)'),
-    'A5':        (5.83,  8.27,   'A5 (5.83 in Ãƒâ€” 8.27 in)'),
-    'B4':        (9.84,  13.90,  'B4 (9.84 in Ãƒâ€” 13.90 in)'),
-    'B5':        (6.93,  9.84,   'B5 (6.93 in Ãƒâ€” 9.84 in)'),
-    'Executive': (7.25,  10.5,   'Executive (7.25 in Ãƒâ€” 10.5 in)'),
-    'Tabloid':   (11.0,  17.0,   'Tabloid / Ledger (11 in Ãƒâ€” 17 in)'),
-    'Statement': (5.5,   8.5,    'Statement / Half Letter (5.5 in Ãƒâ€” 8.5 in)'),
+    'A4':        (8.27,  11.69,  'A4 Bond Paper (8.27 in ------------ 11.69 in)'),
+    'Letter':    (8.5,   11.0,   'Short Bond / US Letter (8.5 in ------------ 11 in)'),
+    'Legal':     (8.5,   14.0,   'Long Bond / Legal (8.5 in ------------ 14 in)'),
+    'Folio':     (8.5,   13.0,   'Folio / F4 (8.5 in ------------ 13 in)'),
+    'A3':        (11.69, 16.54,  'A3 (11.69 in ------------ 16.54 in)'),
+    'A5':        (5.83,  8.27,   'A5 (5.83 in ------------ 8.27 in)'),
+    'B4':        (9.84,  13.90,  'B4 (9.84 in ------------ 13.90 in)'),
+    'B5':        (6.93,  9.84,   'B5 (6.93 in ------------ 9.84 in)'),
+    'Executive': (7.25,  10.5,   'Executive (7.25 in ------------ 10.5 in)'),
+    'Tabloid':   (11.0,  17.0,   'Tabloid / Ledger (11 in ------------ 17 in)'),
+    'Statement': (5.5,   8.5,    'Statement / Half Letter (5.5 in ------------ 8.5 in)'),
 }
 
 
@@ -11680,7 +12024,7 @@ def preview_layout(layout_type):
     return render_a4_page(html_content, table_px, margins=_margins)
 
 
-# Ã¢â€â‚¬Ã¢â€â‚¬ Template cache Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# ------------------------------------ Template cache ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Caches (ws, grid_info, bounds) per template file path, keyed by mtime.
 # Avoids re-loading + re-parsing the Excel template on every request.
 # Invalidates automatically when a template is re-uploaded (mtime changes).
@@ -11716,7 +12060,7 @@ def section_timetable_html(section_id):
       ?semester=1st Semester   (default: most recent in DB)
       ?sem_ay=Second / 2023-2024
     """
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Historical Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Time Machine: Historical Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
         sections = get_archive_entities(archive_id, 'Section')
@@ -11735,7 +12079,7 @@ def section_timetable_html(section_id):
         semester = "Archived"
         sem_ay = request.args.get('sem_ay', '')
     else:
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Live Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ Live Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         section = Section.query.get(section_id)
         if not section:
             # Safe empty state for unassigned live sections
@@ -11745,6 +12089,8 @@ def section_timetable_html(section_id):
         _req_sem  = request.args.get('semester', '')
         _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
         semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
+        if _req_sem == 'All' and _all_sems:
+            semester = _all_sems[0]
         sem_ay    = request.args.get('sem_ay', '')
 
     path = os.path.join(basedir, 'static', 'assets', 'section_template.xlsx')
@@ -11790,12 +12136,12 @@ def section_timetable_html(section_id):
             schedules, grid_info, 'section'
         )
     else:
-        # Template has no detectable grid -- render header/variables only
+        # Template has no detectable grid ---- render header/variables only
         cell_overrides   = {}
         extra_merge_map  = {}
         extra_skip_cells = set()
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Build variable map (with real section name + sem/ay) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Build variable map (with real section name + sem/ay) ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     settings = get_settings()
     var_map  = build_variable_map(
         'section', settings,
@@ -11892,7 +12238,7 @@ def public_section_timetable(section_id):
 @app.route('/irregular-timetable/<string:student_id>')
 def irregular_timetable_html(student_id):
     """Render an irregular student's custom mixed schedule using the section template.
-    Publicly accessible -- used by the Student Portal iframe."""
+    Publicly accessible ---- used by the Student Portal iframe."""
     student = Student.query.filter_by(student_id=student_id, is_archived=False).first_or_404()
     if not student.is_irregular:
         abort(404)
@@ -11901,7 +12247,7 @@ def irregular_timetable_html(student_id):
     if not assignment or not assignment.assignments_json or assignment.assignments_json == '[]':
         return (
             "<div style='padding:40px;text-align:center;color:#5f6368;font-family:Arial,sans-serif;'>"
-            "<i style='font-size:2rem;'>Ã°Å¸â€œâ€¹</i><br><br>"
+            "<i style='font-size:2rem;'>----------------------</i><br><br>"
             "<strong>No schedule assigned yet.</strong><br>"
             "Please contact the administrator to set up your irregular schedule."
             "</div>"
@@ -11968,7 +12314,7 @@ def section_timetable_pdf(section_id):
     Query params:
       ?semester=1st Semester
       ?sem_ay=Second / 2023-2024
-      ?orientation=portrait  (default: portrait -- matches preview)
+      ?orientation=portrait  (default: portrait ---- matches preview)
     """
     section = Section.query.get_or_404(section_id)
 
@@ -12065,7 +12411,7 @@ def build_static_cell_overrides(ws, layout_type, settings, entity_name=None, sem
     s = settings
     overrides = {}
 
-    print(f"\n[STATIC_SWAP] Ã¢â€â‚¬Ã¢â€â‚¬ Starting build_static_cell_overrides layout_type={layout_type!r} Ã¢â€â‚¬Ã¢â€â‚¬")
+    print(f"\n[STATIC_SWAP] ------------------------------------ Starting build_static_cell_overrides layout_type={layout_type!r} ------------------------------------")
 
     # --- Resolve per-type values ---
     school_name = (
@@ -12107,7 +12453,7 @@ def build_static_cell_overrides(ws, layout_type, settings, entity_name=None, sem
     website      = getattr(s, 'website',            '') or ''
 
     # Read signatory names DIRECTLY from individual DB fields.
-    # Do NOT use *_signatories_json -- that JSON is written once at migration time
+    # Do NOT use *_signatories_json ---- that JSON is written once at migration time
     # and never updated when the user edits individual fields, causing stale values.
     sig1_name = (getattr(s, f'{layout_type}_signatory_1', '') or '').strip()
     sig2_name = (getattr(s, f'{layout_type}_signatory_2', '') or '').strip()
@@ -12126,24 +12472,24 @@ def build_static_cell_overrides(ws, layout_type, settings, entity_name=None, sem
     # Exact matches use case-insensitive + trimmed comparison.
     # Partial matches check if anchor_str.lower() appears anywhere in cell.lower().
     SWAPS = [
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Header block Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ Header block ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ('Republic of the Philippines',  False, republic),
         ('CAVITE STATE UNIVERSITY',      False, school_name),
         ('CCAT Campus',                  False, campus),
         ('Rosario, Cavite',              False, address),
-        # Partial: phone/email/website cells often have extra chars (Ã¢ËœÅ½, apostrophe)
+        # Partial: phone/email/website cells often have extra chars (------------, apostrophe)
         ('437-9505',                     True,  contact),
         ('437-6659',                     True,  contact),
         ('@cvsu',                        True,  email),
         ('cvsu-rosario',                 True,  website),
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Schedule details Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ Schedule details ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ('Semester / Academic Year',     False, sem_ay_label),
         ('SEMESTER / ACADEMIC YEAR',     False, sem_ay_label),
-        # Class / Room / Course identifier label (exact -- whole cell)
+        # Class / Room / Course identifier label (exact ---- whole cell)
         ('CLASS',                        False, class_label),
         ('ROOM',                         False, class_label),
         ('COURSE',                       False, class_label),
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Signatory block labels Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ Signatory block labels ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ('Prepared by:',                 False, prep_by),
         ('Prepared By:',                 False, prep_by),
         ('PREPARED BY:',                 False, prep_by),
@@ -12151,14 +12497,14 @@ def build_static_cell_overrides(ws, layout_type, settings, entity_name=None, sem
         ('RECOMMENDING APPROVAL:',       False, rec_appr),
         ('APPROVED:',                    False, approved),
         ('Approved:',                    False, approved),
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Signatory titles Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ Signatory titles ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ('Director, Instruction',        False, sig2_title),
         ('Campus Administrator',         False, sig3_title),
         ('Department Chairperson',       False, sig1_name if sig1_name else 'Department Chairperson'),
     ]
 
     # Signatory name swaps: replace known defaults with DB values.
-    # Always append -- fallback to anchor itself so no-op replaces still register.
+    # Always append ---- fallback to anchor itself so no-op replaces still register.
     _sig_name_defaults = [
         ('SCHEDULE COMMITTEE',   sig1_name or 'SCHEDULE COMMITTEE'),
         ('ARIES M. GELERA',      sig1_name or 'ARIES M. GELERA'),
@@ -12255,7 +12601,7 @@ def build_static_cell_overrides(ws, layout_type, settings, entity_name=None, sem
             if not matched:
                 print(f"[STATIC_SCAN] ({r},{c}) no match: {val!r}")
 
-    print(f"[STATIC_SWAP] Ã¢â€â‚¬Ã¢â€â‚¬ Done. {len(overrides)} overrides generated Ã¢â€â‚¬Ã¢â€â‚¬\n")
+    print(f"[STATIC_SWAP] ------------------------------------ Done. {len(overrides)} overrides generated ------------------------------------\n")
     return overrides
 
 
@@ -12265,20 +12611,20 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
     them with current DB / dynamic values. No {{tokens}} needed in the Excel file.
 
     Strategies:
-      1. Exact CI  -- val.strip().lower() == anchor.lower()
-      2. Partial   -- anchor.lower() in val.lower()
-      3. Regex     -- semester/year pattern for fac_sem_ay_label
-      4. Label+Adj -- replace label cell AND write dynamic value to col+offset
-      5. Positional-- faculty name/rank injected N rows below 'Conforme:' anchor
+      1. Exact CI  ---- val.strip().lower() == anchor.lower()
+      2. Partial   ---- anchor.lower() in val.lower()
+      3. Regex     ---- semester/year pattern for fac_sem_ay_label
+      4. Label+Adj ---- replace label cell AND write dynamic value to col+offset
+      5. Positional---- faculty name/rank injected N rows below 'Conforme:' anchor
 
     Returns: cell_overrides dict {(row, col): new_value_str}
     """
     s = settings
     overrides = {}
 
-    print(f"\n[FAC_SWAP] Ã¢â€â‚¬Ã¢â€â‚¬ Starting build_faculty_cell_overrides (faculty={getattr(faculty,'full_name','[preview]')!r}) Ã¢â€â‚¬Ã¢â€â‚¬")
+    print(f"\n[FAC_SWAP] ------------------------------------ Starting build_faculty_cell_overrides (faculty={getattr(faculty,'full_name','[preview]')!r}) ------------------------------------")
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Helper Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Helper ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     def _fmt_hours(h):
         try:
             h = float(h)
@@ -12289,7 +12635,7 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
     def _g(attr, default=''):
         return getattr(s, attr, default) or default
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Dynamic values (preview-safe) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Dynamic values (preview-safe) ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     is_preview = faculty is None
     fac_name   = (faculty.full_name                      if faculty else '[Faculty Name]') or '[Faculty Name]'
     fac_educ   = (faculty.highest_educational_attainment if faculty else '[Educational Attainment]') or '[Educational Attainment]'
@@ -12300,7 +12646,7 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
     print(f"[FAC_SWAP] Dynamic: name={fac_name!r}  educ={fac_educ!r}  rank={fac_rank!r}")
     print(f"[FAC_SWAP] Settings sample: dept={_g('fac_dept_label','DEPARTMENT OF COMPUTER STUDIES')!r}")
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Resolved setting values Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Resolved setting values ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     republic   = _g('fac_republic_text',    'Republic of the Philippines')
     univ_name  = _g('fac_univ_name',        'CAVITE STATE UNIVERSITY')
     campus     = _g('fac_campus_name',      'CCAT Campus')
@@ -12338,42 +12684,42 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
     designat   = _g('fac_designation',   'Designation :')
     extension  = _g('fac_extension',     'Extension:')
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Strategy 1 & 2: SWAPS list Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Strategy 1 & 2: SWAPS list ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # (anchor, is_partial, new_value)
     # All exact matches use case-insensitive + trimmed comparison in the scan loop.
     SWAPS = [
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Header (vars 1--œ9) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ Header (vars 1----9) ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ('Republic of the Philippines',    False, republic),
         ('CAVITE STATE UNIVERSITY',        False, univ_name),
         ('CCAT Campus',                    False, campus),
         ('Rosario, Cavite',                False, address),
-        ('437-9505',                       True,  contact),   # var 5 -- partial (phone may have Ã¢ËœÅ½ prefix)
-        ('437-6659',                       True,  contact),   # var 5 -- second phone fragment
-        ('@cvsu',                          True,  email),     # var 6 -- partial
-        ('cvsu-rosario',                   True,  website),   # var 7 -- partial
+        ('437-9505',                       True,  contact),   # var 5 ---- partial (phone may have ------------ prefix)
+        ('437-6659',                       True,  contact),   # var 5 ---- second phone fragment
+        ('@cvsu',                          True,  email),     # var 6 ---- partial
+        ('cvsu-rosario',                   True,  website),   # var 7 ---- partial
         ('DEPARTMENT OF COMPUTER STUDIES', False, dept),      # var 8
         ('FACULTY CLASS SCHEDULE',         False, sched_ttl), # var 9
-        # var 10 (fac_sem_ay_label) handled by regex -- see Strategy 3 below
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Form identifiers (vars 37--œ38) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-        ('VPAA-QF-11',                     True,  form_top),  # partial -- avoids version suffix issues
+        # var 10 (fac_sem_ay_label) handled by regex ---- see Strategy 3 below
+        # ------------------------------------ Form identifiers (vars 37----38) ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        ('VPAA-QF-11',                     True,  form_top),  # partial ---- avoids version suffix issues
         ('V01-2018-07-24',                 True,  form_bot),  # partial
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Signatory names & titles (vars 23--œ24, 26--œ29, 31--œ32) Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ Signatory names & titles (vars 23----24, 26----29, 31----32) ------------------------------------
         ('ARIES M. GELERA',                False, chair_name),
         ('Department Chairperson',         False, chair_ttl),
         ('ARIEL G. SANTOS, EdD',           False, dir_name),
         ('Director, Instruction',          False, dir_ttl),
         ('MARLYN A. QUINEZ',               False, reg_name),
-        ('OIC, Registrar',                 False, reg_lbl),   # var 24 -- registrar's title label
+        ('OIC, Registrar',                 False, reg_lbl),   # var 24 ---- registrar's title label
         ('LAURO B. PASCUA, EdD',           False, adm_name),
         ('Campus Administrator',           False, adm_ttl),
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Activity labels (vars 33--œ36) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ Activity labels (vars 33----36) ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ('Consultation:',                  False, consult),
         ('Research:',                      False, research),
-        ('Designation',                    True,  designat),  # partial -- handles "Designation :" space variant
+        ('Designation',                    True,  designat),  # partial ---- handles "Designation :" space variant
         ('Extension:',                     False, extension),
     ]
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Strategy 3: Regex -- semester/year value for fac_sem_ay_label (var 10) Ã¢â€â‚¬
+    # ------------------------------------ Strategy 3: Regex ---- semester/year value for fac_sem_ay_label (var 10) ------------------
     _SEM_PAT = re.compile(
         r'(1st|2nd|first|second|third|midyear)\s*(sem(ester)?)?'
         r'|SY\s*\d{4}'
@@ -12381,17 +12727,17 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
         re.IGNORECASE
     )
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Strategy 4: Label + Adjacent Value Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Strategy 4: Label + Adjacent Value ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # (anchor, new_label, dynamic_value, col_offset_to_value_cell)
     # col_offset=2: value cell is 2 cols right of label (common in merged-col templates)
     LABEL_VALUE = [
-        # vars 11--œ12: Name label + faculty name value
+        # vars 11----12: Name label + faculty name value
         ('Name:',                                name_lbl,  fac_name,  2),
-        # vars 13--œ14: Educ label + value
+        # vars 13----14: Educ label + value
         ('Highest Educ. Attainment:',            educ_lbl,  fac_educ,  2),
-        # vars 15--œ16: Prep label + value
+        # vars 15----16: Prep label + value
         ('No. of Preparation/s:',                prep_lbl,  prep_str,  2),
-        # vars 17--œ18: Hours label + value
+        # vars 17----18: Hours label + value
         ('Total no. of contact hours per week:', hours_lbl, hours_str, 2),
         # vars 19, 22, 25, 30: Signatory block labels (no adjacent value cell)
         ('Conforme:',              conf_lbl, None, None),
@@ -12400,9 +12746,9 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
         ('Approved:',              appr_lbl, None, None),
     ]
 
-    conforme_pos = None  # (row, col) of Conforme: -- for Strategy 5
+    conforme_pos = None  # (row, col) of Conforme: ---- for Strategy 5
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Scan all cells Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Scan all cells ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     for row_cells in ws.iter_rows():
         for cell in row_cells:
             raw = cell.value
@@ -12430,7 +12776,7 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
                         matched = True
                         break
 
-            # Strategy 3: regex -- sem/ay label
+            # Strategy 3: regex ---- sem/ay label
             if not matched and _SEM_PAT.search(val):
                 overrides[(r, c)] = sem_ay_lbl
                 print(f"[FAC_SWAP] ({r},{c}) SEM_REGEX '{val}' -> '{sem_ay_lbl}'")
@@ -12453,8 +12799,8 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
             if not matched:
                 print(f"[FAC_SCAN] ({r},{c}) no match: {val!r}")
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Strategy 5: Positional -- faculty name & rank below "Conforme:" Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-    # vars 20--œ21: template puts faculty name at conforme_row+2, rank at conforme_row+3
+    # ------------------------------------ Strategy 5: Positional ---- faculty name & rank below "Conforme:" ------------------------------------------------------------------------------------------------------------------------------------------------
+    # vars 20----21: template puts faculty name at conforme_row+2, rank at conforme_row+3
     if conforme_pos:
         cr, cc = conforme_pos
         overrides[(cr + 2, cc)] = fac_name
@@ -12462,7 +12808,7 @@ def build_faculty_cell_overrides(ws, settings, faculty=None, prep_count=0, total
         print(f"[FAC_SWAP] ({cr+2},{cc}) POSITIONAL fac_name -> '{fac_name}'")
         print(f"[FAC_SWAP] ({cr+3},{cc}) POSITIONAL fac_rank -> '{fac_rank}'")
 
-    print(f"[FAC_SWAP] Ã¢â€â‚¬Ã¢â€â‚¬ Done. {len(overrides)} overrides generated Ã¢â€â‚¬Ã¢â€â‚¬\n")
+    print(f"[FAC_SWAP] ------------------------------------ Done. {len(overrides)} overrides generated ------------------------------------\n")
     return overrides
 
 
@@ -12652,11 +12998,11 @@ def build_subject_table_overlays(ws, schedules):
     return overrides
 
 
-# Ã¢â€â‚¬Ã¢â€â‚¬ Faculty timetable HTML Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# ------------------------------------ Faculty timetable HTML ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @app.route('/faculty-timetable-html/<int:faculty_id>')
 @login_required
 def faculty_timetable_html(faculty_id):
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Historical Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Time Machine: Historical Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
         faculty_objs = get_archive_entities(archive_id, 'Faculty')
@@ -12673,13 +13019,15 @@ def faculty_timetable_html(faculty_id):
         # Count preps from schedules list since ArcherSchedule doesn't have course_id
         prep_count = len(set(sc.course.course_code for sc in schedules if sc.course))
     else:
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Live Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ Live Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         faculty  = Faculty.query.get_or_404(faculty_id)
 
         # Resolve semester
         _req_sem  = request.args.get('semester', '')
         _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
         semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
+        if _req_sem == 'All' and _all_sems:
+            semester = _all_sems[0]
 
         draft_id = request.args.get('draft_id', type=int)
         _opts_f = [
@@ -12831,11 +13179,11 @@ def faculty_timetable_pdf(faculty_id):
         return redirect(url_for('view_timetable'))
 
 
-# Ã¢â€â‚¬Ã¢â€â‚¬ Room timetable HTML Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# ------------------------------------ Room timetable HTML ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @app.route('/room-timetable-html/<int:room_id>')
 @login_required
 def room_timetable_html(room_id):
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Historical Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Time Machine: Historical Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
         room_objs = get_archive_entities(archive_id, 'Room')
@@ -12850,11 +13198,13 @@ def room_timetable_html(room_id):
         semester = "Archived"
         sem_ay = request.args.get('sem_ay', '')
     else:
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Live Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ Live Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         room     = Room.query.get_or_404(room_id)
         _req_sem = request.args.get('semester', '')
         _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
         semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
+        if _req_sem == 'All' and _all_sems:
+            semester = _all_sems[0]
         sem_ay    = request.args.get('sem_ay', '')
 
         draft_id = request.args.get('draft_id', type=int)
@@ -12978,7 +13328,7 @@ def room_timetable_pdf(room_id):
 @app.route('/course-timetable-html/<int:course_id>')
 @login_required
 def course_timetable_html(course_id):
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Historical Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Time Machine: Historical Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
         course_objs = get_archive_entities(archive_id, 'Course')
@@ -12993,7 +13343,7 @@ def course_timetable_html(course_id):
         semester = "Archived"
         sem_ay = request.args.get('sem_ay', '')
     else:
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Live Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ Live Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         course    = Course.query.get_or_404(course_id)
         _req_sem  = request.args.get('semester', '')
         _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
@@ -13148,7 +13498,7 @@ def api_courses_with_schedules():
                .filter(Course.id.in_(ids), Course.is_archived == False)
                .order_by(Course.course_code)
                .all())
-    return jsonify([{'id': c.id, 'name': c.course_code + ' -- ' + c.course_name} for c in courses])
+    return jsonify([{'id': c.id, 'name': c.course_code + ' ---- ' + c.course_name} for c in courses])
 
 
 @app.route('/save-layout-xlsx', methods=['POST'])
@@ -13239,7 +13589,7 @@ def update_manual_schedule():
         return redirect(_ref)
     return redirect(url_for('dashboard'))
 
-# Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ STUDENT MASTERLIST Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# ------------------------------------------------------ STUDENT MASTERLIST ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 @app.route('/manage/students')
 @login_required
@@ -13251,7 +13601,7 @@ def manage_students():
     filter_by    = request.args.get('filter_by', '', type=str)
     filter_val   = request.args.get('filter_val', '', type=str)
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Historical Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Time Machine: Historical Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
         
@@ -13324,7 +13674,7 @@ def manage_students():
             current_filter_val=filter_val
         )
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Live Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Live Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     query = Student.query.filter_by(is_archived=False)
 
     if search_query:
@@ -13629,7 +13979,7 @@ def download_student_template():
     # Notes row
     note_row = len(samples) + 2
     note_cell = ws.cell(row=note_row, column=1,
-        value='NOTES: Year Level must be 1--œ4. Section Name must exactly match an existing section. Email is optional. Duplicate Student IDs will be skipped.')
+        value='NOTES: Year Level must be 1----4. Section Name must exactly match an existing section. Email is optional. Duplicate Student IDs will be skipped.')
     note_cell.font = Font(italic=True, color='AA0000', size=9)
     ws.merge_cells(start_row=note_row, start_column=1, end_row=note_row, end_column=5)
 
@@ -13661,12 +14011,12 @@ def download_faculty_loading_template():
     ws = wb.active
     ws.title = 'Faculty Loading'
 
-    # Header block (rows 1-14) -- parser reads rows 1-15 for dept detection
-    ws['A1'] = 'CAVITE STATE UNIVERSITY --œ CCAT'
+    # Header block (rows 1-14) ---- parser reads rows 1-15 for dept detection
+    ws['A1'] = 'CAVITE STATE UNIVERSITY ---- CCAT'
     ws['A1'].font = Font(bold=True, size=13)
     ws['A2'] = 'COLLEGE OF COMPUTER STUDIES'  # "COMPUTER STUDIES" triggers dept detection
     ws['A2'].font = Font(bold=True, size=11)
-    ws['A3'] = 'Faculty Loading -- Academic Year'
+    ws['A3'] = 'Faculty Loading ---- Academic Year'
     ws['A3'].font = Font(italic=True, size=10, color='555555')
 
     # Column headers at row 15
@@ -13696,7 +14046,7 @@ def download_faculty_loading_template():
                 cell.font = spl_font
                 cell.fill = spl_fill
 
-    # "Prepared by" marker -- parser stops here
+    # "Prepared by" marker ---- parser stops here
     ws.cell(row=22, column=1, value='Prepared by:').font = Font(italic=True, color='888888', size=9)
 
     # Notes row
@@ -13731,7 +14081,7 @@ def download_curriculum_template():
     from docx.enum.text import WD_ALIGN_PARAGRAPH
 
     doc = DocxDocument()
-    title_p = doc.add_heading('BS Computer Science -- Curriculum Import Template', 0)
+    title_p = doc.add_heading('BS Computer Science ---- Curriculum Import Template', 0)
     title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     prog_p = doc.add_paragraph()
@@ -13807,7 +14157,7 @@ def download_curriculum_template():
 
     note_p = doc.add_paragraph()
     note_run = note_p.add_run(
-        'NOTES: Do NOT change heading text (FIRST YEAR, SECOND SEMESTER, etc.) -- '
+        'NOTES: Do NOT change heading text (FIRST YEAR, SECOND SEMESTER, etc.) ---- '
         'they are used for automatic detection. Table column order must be: '
         'Course Code | Course Title | Lec Units | Lab Units. '
         'Change "BSCoS" to "BSInfoTech" in the Program line for Information Technology. '
@@ -13905,7 +14255,7 @@ def import_students_xlsx():
     return redirect(url_for('manage_students'))
 
 
-# Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ STUDENT PORTAL (PUBLIC -- no login required) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# ------------------------------------------------------ STUDENT PORTAL (PUBLIC ---- no login required) ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 @app.route('/student-portal', methods=['GET', 'POST'])
 def student_portal():
@@ -13952,15 +14302,15 @@ def student_portal():
             _portal_attempts.pop(ip, None)
             return redirect(url_for('student_schedule', student_id=sid, term_id=archive_entry.term_archive_id))
 
-        # Successful live lookup -- reset counter for this IP
+        # Successful live lookup ---- reset counter for this IP
         _portal_attempts.pop(ip, None)
         return redirect(url_for('student_schedule', student_id=sid))
     return render_template('student_portal.html')
 
 
-# Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-# IRREGULAR STUDENT PATHFINDER -- helpers & routes
-# Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# IRREGULAR STUDENT PATHFINDER ---- helpers & routes
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def _t2m(t):
     """'HH:MM' -> minutes from midnight."""
@@ -14029,7 +14379,7 @@ def _irregular_solver(course_ids, semester):
     Main algorithm for the Irregular Pathfinder.
     Returns dict with keys: anchor, full_cover, combinations, deadlock_courses.
     """
-    # Step 1 -- gather offerings per course
+    # Step 1 ---- gather offerings per course
     offerings = {}  # course_id -> [(section_id, [ScheduledClass, ...])]
     all_section_ids = set()
     for cid in course_ids:
@@ -14044,10 +14394,10 @@ def _irregular_solver(course_ids, semester):
             all_section_ids.add(sc.section_id)
         offerings[cid] = list(by_sec.items())  # [(section_id, [slots]), ...]
 
-    # Step 2 -- immediate deadlock: courses with no offerings at all
+    # Step 2 ---- immediate deadlock: courses with no offerings at all
     deadlock_courses = [cid for cid in course_ids if not offerings[cid]]
 
-    # Step 3 -- section coverage count
+    # Step 3 ---- section coverage count
     # coverage[section_id] = set of course_ids that section offers
     coverage = {}
     for cid, sec_slots in offerings.items():
@@ -14087,17 +14437,17 @@ def _irregular_solver(course_ids, semester):
             'total_requested':   len(course_ids),
         }
 
-    # Step 4 -- uncovered courses (need backtracking)
+    # Step 4 ---- uncovered courses (need backtracking)
     uncovered = [cid for cid in course_ids if cid not in anchor_course_ids]
 
-    # Step 5 -- collect options per uncovered course (exclude anchor section)
+    # Step 5 ---- collect options per uncovered course (exclude anchor section)
     uncovered_options = {}  # cid -> [(section_id, [slots])]
     for cid in uncovered:
         opts = [(sec_id, slots) for sec_id, slots in offerings[cid]
                 if sec_id != best_sec_id]
         uncovered_options[cid] = opts
 
-    # Step 6 -- backtracking over uncovered courses
+    # Step 6 ---- backtracking over uncovered courses
     MAX_SOLUTIONS = 20
     solutions_raw = []  # list of [(cid, section_id, [slots]), ...]
 
@@ -14116,7 +14466,7 @@ def _irregular_solver(course_ids, semester):
 
     backtrack(0, [], [])
 
-    # Step 7 -- score and serialize
+    # Step 7 ---- score and serialize
     def serialize_slots(slots):
         out = []
         for sc in slots:
@@ -14230,7 +14580,7 @@ def manage_irregular():
     filter_by    = request.args.get('filter_by', '', type=str)
     filter_val   = request.args.get('filter_val', '', type=str)
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Time Machine: Historical Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Time Machine: Historical Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
         all_objs = get_archive_entities(archive_id, 'IrregularStudent')
@@ -14296,7 +14646,7 @@ def manage_irregular():
             current_filter_val=filter_val
         )
 
-    # Ã¢â€â‚¬Ã¢â€â‚¬ Live Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    # ------------------------------------ Live Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     query = Student.query.filter_by(is_irregular=True, is_archived=False)
 
     if search_query:
@@ -14413,7 +14763,7 @@ def api_irregular_pathfinder(student_id):
     if len(course_ids) > 20:
         return jsonify({'error': 'Maximum 20 courses per search.'}), 400
 
-    # Save/update profile (requested courses only -- confirmed later)
+    # Save/update profile (requested courses only ---- confirmed later)
     profile = IrregularAssignment.query.filter_by(student_id_fk=student_id).first()
     if not profile:
         profile = IrregularAssignment(student_id_fk=student_id)
@@ -14567,7 +14917,7 @@ def student_schedule(student_id):
             section = SimpleNamespace(section_name=student.section_name)
 
     else:
-        # Ã¢â€â‚¬Ã¢â€â‚¬ Live Mode Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        # ------------------------------------ Live Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         student = Student.query.filter_by(student_id=student_id, is_archived=False).first_or_404()
         if student.is_irregular:
             assignment = IrregularAssignment.query.filter_by(student_id_fk=student.id)\
@@ -14619,9 +14969,9 @@ def student_schedule(student_id):
         term_id=term_id
     )
 
-# Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ARCHIVED STUDENT TIMETABLE (Excel Drawing)
-# Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @app.route('/public/archived-timetable-html/<int:archive_id>/<string:student_id>')
 def public_archived_timetable_html(archive_id, student_id):
     """Specialized renderer for historical student schedules from snapshots."""
@@ -14690,7 +15040,7 @@ def public_archived_timetable_html(archive_id, student_id):
 
 
 with app.app_context():
-    db.create_all()  # Creates any missing tables (safe -- never drops existing data)
+    db.create_all()  # Creates any missing tables (safe ---- never drops existing data)
     # Safe migrations: add missing columns to existing tables
     import sqlite3 as _sqlite3
     _db_path = app.config.get('SQLALCHEMY_DATABASE_URI', '').replace('sqlite:///', '')
@@ -14742,7 +15092,7 @@ with app.app_context():
                 'margin_left':        "REAL DEFAULT 1.0",
                 'margin_right':       "REAL DEFAULT 1.0",
                 'paper_size':         "VARCHAR(30) DEFAULT 'A4'",
-                # Faculty-specific columns (independent -- Card 1: Header)
+                # Faculty-specific columns (independent ---- Card 1: Header)
                 'fac_republic_text':    "VARCHAR(255) DEFAULT 'Republic of the Philippines'",
                 'fac_univ_name':        "VARCHAR(255) DEFAULT 'CAVITE STATE UNIVERSITY'",
                 'fac_campus_name':      "VARCHAR(255) DEFAULT 'CCAT Campus'",
@@ -14798,7 +15148,7 @@ with app.app_context():
                 if _col not in _ss_cols:
                     _conn.execute(f'ALTER TABLE system_settings ADD COLUMN {_col} {_col_def}')
                     _conn.commit()
-            # FacultyAssignment table migration -- split-hour columns
+            # FacultyAssignment table migration ---- split-hour columns
             _fa_cols_needed = {
                 'split_day_1':       'VARCHAR(20)',
                 'split_hours_1':     'FLOAT',
@@ -14821,12 +15171,12 @@ with app.app_context():
                 if _col not in _fac_cols:
                     _conn.execute(f'ALTER TABLE faculty ADD COLUMN {_col} {_col_def}')
                     _conn.commit()
-            # Student table migration -- is_irregular flag
+            # Student table migration ---- is_irregular flag
             _stu_cols = [row[1] for row in _conn.execute('PRAGMA table_info(student)').fetchall()]
             if 'is_irregular' not in _stu_cols:
                 _conn.execute('ALTER TABLE student ADD COLUMN is_irregular BOOLEAN NOT NULL DEFAULT 0')
                 _conn.commit()
-            # Module 3: ScheduledClass -- source, is_draft, draft_version_id
+            # Module 3: ScheduledClass ---- source, is_draft, draft_version_id
             _sc_cols2 = [row[1] for row in _conn.execute('PRAGMA table_info(scheduled_class)').fetchall()]
             if 'source' not in _sc_cols2:
                 _conn.execute("ALTER TABLE scheduled_class ADD COLUMN source VARCHAR(10) NOT NULL DEFAULT 'ga'")
@@ -14837,7 +15187,7 @@ with app.app_context():
             if 'draft_version_id' not in _sc_cols2:
                 _conn.execute('ALTER TABLE scheduled_class ADD COLUMN draft_version_id INTEGER')
                 _conn.commit()
-            # Module 3: SystemSettings -- schedule_lock
+            # Module 3: SystemSettings ---- schedule_lock
             _ss_cols2 = [row[1] for row in _conn.execute('PRAGMA table_info(system_settings)').fetchall()]
             if 'schedule_lock' not in _ss_cols2:
                 _conn.execute('ALTER TABLE system_settings ADD COLUMN schedule_lock BOOLEAN NOT NULL DEFAULT 0')
@@ -15184,7 +15534,7 @@ def run_pending_rooms():
                         datetime.strptime(ex.end_time,   fmt).time()):
                 ex_course = ex.course.course_code if ex.course else '?'
                 conflicts.append(
-                    f"{sc.course.course_code if sc.course else '?'} ({sc.day} {sc.start_time}--œ{sc.end_time}) "
+                    f"{sc.course.course_code if sc.course else '?'} ({sc.day} {sc.start_time}----{sc.end_time}) "
                     f"conflicts with {ex_course} already booked in {room.room_name}."
                 )
                 break
@@ -15199,7 +15549,7 @@ def run_pending_rooms():
                 conflicts.append(
                     f"{sc.course.course_code if sc.course else '?'} and "
                     f"{other_sc.course.course_code if other_sc.course else '?'} "
-                    f"both assigned to {room.room_name} on {sc.day} -- time overlap."
+                    f"both assigned to {room.room_name} on {sc.day} ---- time overlap."
                 )
                 break
 
@@ -15208,7 +15558,7 @@ def run_pending_rooms():
             flash(f'Room conflict: {msg}', 'danger')
         return redirect(url_for('pending_room'))
 
-    # No conflicts -- save
+    # No conflicts ---- save
     for sc, room in assignments:
         sc.room_id = room.id
     db.session.commit()

@@ -23,20 +23,7 @@
 
     #canvas-viewport {
         position: fixed;
-
-        top: {
-            % if is_hist %
-        }
-
-        92px {
-            % else %
-        }
-
-        48px {
-            % endif %
-        }
-
-        ;
+        top: {% if is_hist %}92px{% else %}48px{% endif %};
         /* Below navbar */
         left: 0;
         right: 0;
@@ -76,38 +63,52 @@
         border: none;
         overflow: visible;
         transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
+        position: absolute; /* Positioned by JS */
         padding: 0;
+        width: auto !important; /* Wrapper grows to fit inner wrap */
+        height: auto !important;
     }
 
     .sticker-card:hover {
-        transform: translateY(-5px) scale(1.02);
+        transform: translateY(-50px) scale(1.02);
         z-index: 20;
     }
 
+    .sticker-card {
+        background-color: transparent; /* No double background */
+        border: none;
+    }
+
     .sticker-card::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background-image: url('https://www.transparenttextures.com/patterns/paper.png');
-        opacity: 0.1;
-        pointer-events: none;
-        z-index: 1;
+        display: none; /* Removed redundant layer */
     }
 
     .card-iframe-wrap {
-        width: 800px;
-        height: 1130px;
+        width: var(--pw); /* Sized by JS inline style */
+        height: var(--ph);
         background: white;
         border: 1px solid #ddd;
         position: relative;
+        margin-top: 34px; /* Move paper down below header */
         overflow: hidden;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 12px 45px rgba(0, 0, 0, 0.08); /* Smoother shadow */
+        border-radius: 4px;
+    }
+
+    .iframe-loading {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff;
+        z-index: 10;
+        transition: opacity 0.5s ease;
     }
 
     .card-iframe-wrap iframe {
-        width: 800px;
-        height: 1130px;
+        width: 100%;
+        height: 100%;
         border: none;
         pointer-events: none;
         transform: scale(1.0);
@@ -305,20 +306,7 @@
     /* ── FLOATING HUD (PILL DESIGN) ────────────────────────── */
     .hud-controls {
         position: fixed;
-
-        top: {
-            % if is_hist %
-        }
-
-        110px {
-            % else %
-        }
-
-        66px {
-            % endif %
-        }
-
-        ;
+        top: {% if is_hist %}110px{% else %}66px{% endif %};
         left: 50%;
         transform: translateX(-50%);
         background: #fff;
@@ -747,6 +735,8 @@
     }};
     const _fac = {{ faculty_json  | tojson | safe }};
     const _rom = {{ rooms_json    | tojson | safe }};
+    const activeDraftId = {{ active_draft_id | tojson | safe }};
+    const layoutConfigs = {{ layout_configs | tojson | safe }};
     const listMap = { section: [..._sec], faculty: [..._fac], room: [..._rom] };
 
     window.applySort = function (dir, el) {
@@ -798,17 +788,26 @@
         const zoomText = `${Math.round(scale * 100)}%`;
         zoomBadge.textContent = `Zoom: ${zoomText}`;
         if (hudZoom) hudZoom.textContent = zoomText;
-        updateMinimapViewport();
+
+        // Safety Guard: Don't let minimap errors break the main card rendering
+        try {
+            updateMinimapViewport();
+        } catch (e) {
+            console.warn("Minimap update failed, but cards will still render.", e);
+        }
+
         renderVisibleCards();
         saveViewState();
     }
 
     // ── VIEW PERSISTENCE LOGIC ──────────────────────────────────
+    let isInitializing = true;
+
     function saveViewState() {
-        if (!window.allCardData || !window.allCardData.length) return;
+        if (isInitializing || !window.allCardData || !window.allCardData.length) return;
         const state = { translateX, translateY, scale, focusedIndex };
         localStorage.setItem('vt_view_state_' + currentType, JSON.stringify(state));
-        localStorage.setItem('vt_last_active_type', currentType); // Save the active module too
+        localStorage.setItem('vt_last_active_type', currentType);
     }
 
     function loadViewState() {
@@ -832,35 +831,29 @@
 
     function initViewState() {
         const sessionKey = 'vt_session_active_' + currentType;
-        const resetKey = 'vt_coordinate_reset_v4'; // Update this to force a reset for everyone
+        const resetKey = 'vt_coordinate_reset_v5';
         const isNewSession = !sessionStorage.getItem(sessionKey);
         const needsReset = !localStorage.getItem(resetKey);
 
         if (needsReset) {
-            // PHASE 3: COORDINATE HARD-RESET (ONE-TIME)
-            // Clear stale coordinate data once for each category to center the new canvas
             localStorage.removeItem('vt_view_state_section');
             localStorage.removeItem('vt_view_state_faculty');
             localStorage.removeItem('vt_view_state_room');
             localStorage.setItem(resetKey, 'true');
         }
 
-        if (isNewSession) {
-            sessionStorage.setItem(sessionKey, 'true');
-            // Fresh entry for this category: Always start with the first schedule
-            setTimeout(() => { goToFirst(); }, 300);
+        isInitializing = true;
+        
+        // Priority 1: Restore saved state for this specific module
+        if (loadViewState()) {
+            isInitializing = false;
         } else {
-            // Returning user: Check if they were on a different module last
-            const savedType = localStorage.getItem('vt_last_active_type');
-            if (savedType && savedType !== currentType) {
-                // Redirect to their last used module (Section, Faculty, or Room)
-                window.location.href = `{{ url_for('view_timetable') }}?type=${savedType}&semester={{ current_semester }}`;
-            } else {
-                // Same module: restore the exact panning coordinates
-                if (!loadViewState()) {
-                    setTimeout(() => { goToFirst(); }, 300);
-                }
-            }
+            // Priority 2: If fresh session or no saved state, go to first
+            sessionStorage.setItem(sessionKey, 'true');
+            setTimeout(() => { 
+                goToFirst(); 
+                isInitializing = false;
+            }, 400);
         }
     }
 
@@ -909,20 +902,31 @@
 
     window.allCardData = [];
     const urlMap = {
-        section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`,
-        faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`,
-        room: id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`
+        section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`,
+        faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`,
+        room: id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`
     };
 
     window.loadCanvas = function () {
         const list = listMap[currentType] || [];
         canvas.innerHTML = '';
+        
+        // Dynamic Paper Size lookup from Manifest
+        const cfg = layoutConfigs[currentType] || { w: 8.27, h: 11.69 };
+        const paperW = cfg.w * 96;
+        const paperH = cfg.h * 96;
+
         const columns = 5;
+        const spacingX = paperW + 150;
+        const spacingY = paperH + 150;
+
         window.allCardData = list.map((item, index) => ({
             id: item.id, label: item.label, lowerLabel: item.label.toLowerCase(),
             url: urlMap[currentType](item.id),
-            x: (index % columns) * 950 + 500, y: Math.floor(index / columns) * 1230 + 500,
-            width: 800, height: 1130, index: index, isMounted: false, element: null
+            x: (index % columns) * spacingX + 500, y: Math.floor(index / columns) * spacingY + 500,
+            width: paperW, height: paperH + 34, 
+            paperW_raw: paperW, paperH_raw: paperH,
+            index: index, isMounted: false, element: null
         }));
         renderVisibleCards();
         initMinimap();
@@ -944,7 +948,8 @@
     function mountCard(data) {
         const card = document.createElement('div');
         card.className = 'canvas-card sticker-card';
-        card.style.cssText = `position:absolute;left:${data.x}px;top:${data.y}px;width:${data.width}px;height:${data.height}px;`;
+        // Only position and layout metadata on the outer card
+        card.style.cssText = `left:${data.x}px;top:${data.y}px;`;
         if (window.lastSearchQuery && !data.lowerLabel.includes(window.lastSearchQuery)) card.classList.add('canvas-dimmed');
         const pdfUrlMap = {
             section: id => `/section-timetable-pdf/${id}?semester=${encodeURIComponent(currentSemester)}`,
@@ -965,7 +970,12 @@
                     </button>
                 </div>
             </div>
-            <div class="card-iframe-wrap"><iframe src="${data.url}" loading="lazy"></iframe></div>`;
+            <div class="card-iframe-wrap" style="width:${data.paperW_raw}px; height:${data.paperH_raw}px;">
+                <div class="iframe-loading">
+                    <div class="spinner-border text-success" role="status"><span class="visually-hidden">Loading...</span></div>
+                </div>
+                <iframe src="${data.url}" onload="this.previousElementSibling.style.display='none'"></iframe>
+            </div>`;
         card.addEventListener('dblclick', () => openPresentation(data.index));
         canvas.appendChild(card);
         data.element = card;
@@ -1110,16 +1120,27 @@
 
     document.getElementById('minimap-container')?.addEventListener('click', (e) => {
         const rect = e.currentTarget.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width;
-        const y = (e.clientY - rect.top) / rect.height;
+        const xPercent = (e.clientX - rect.left) / rect.width;
+        const yPercent = (e.clientY - rect.top) / rect.height;
 
         if (!window.miniBounds) return;
         const { totalW, totalH, startX, startY } = window.miniBounds;
 
-        const targetX = startX + x * totalW;
-        const targetY = startY + y * totalH;
+        const canvasX = startX + xPercent * totalW;
+        const canvasY = startY + yPercent * totalH;
 
-        setTimeout(() => canvas.style.transition = 'transform 0.05s linear', 600);
+        const vWidth = viewport.clientWidth;
+        const vHeight = viewport.clientHeight;
+
+        translateX = (vWidth / 2) - (canvasX * scale);
+        translateY = (vHeight / 2) - (canvasY * scale);
+
+        const cvs = document.getElementById('infinite-canvas');
+        if (cvs) {
+            cvs.style.transition = 'transform 0.8s cubic-bezier(0.19, 1, 0.22, 1)';
+            updateTransform();
+            setTimeout(() => { cvs.style.transition = 'transform 0.05s linear'; }, 850);
+        }
     });
 
     function updateMinimapViewport() {
@@ -1172,7 +1193,9 @@
         if (index < 0 || index >= list.length) return;
 
         // Reset Transform for New Slide
-        const baseScale = Math.min(1.0, (window.innerHeight * 0.9) / 1130);
+        const cfg = layoutConfigs[currentType] || { w: 8.27, h: 11.69 };
+        const paperH = cfg.h * 96;
+        const baseScale = Math.min(1.0, (window.innerHeight * 0.9) / paperH);
         presScale = baseScale;
         presX = 0;
         presY = 0;
@@ -1180,9 +1203,9 @@
 
         const item = list[index];
         const urlMap = {
-            section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`,
-            faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`,
-            room: id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true`
+            section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`,
+            faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`,
+            room: id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`
         };
 
         presIframe.src = urlMap[currentType](item.id);

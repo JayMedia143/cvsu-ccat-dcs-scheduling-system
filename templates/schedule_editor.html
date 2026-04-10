@@ -772,21 +772,27 @@
         border: none;
         overflow: visible;
         transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
+        position: absolute; /* Positioned by JS */
         padding: 0;
+        width: auto !important;
+        height: auto !important;
     }
-    .pv-card:hover { transform: translateY(-5px) scale(1.02); z-index: 20; }
+    .pv-card:hover { transform: translateY(-30px) scale(1.02); z-index: 20; }
     .pv-card::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background-image: url('https://www.transparenttextures.com/patterns/paper.png');
-        opacity: 0.1;
-        pointer-events: none;
-        z-index: 1;
+        display: none; /* Removed external paper image */
     }
-    .pv-card .card-iframe-wrap { width: 800px; height: 1130px; background: white; border: 1px solid #ddd; position: relative; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
-    .pv-card .card-iframe-wrap iframe { width: 800px; height: 1130px; border: none; pointer-events: none; transform: scale(1.0); transform-origin: top left; transition: opacity 0.3s ease; overflow: hidden; }
+    .pv-card .card-iframe-wrap { 
+        width: 100%;
+        height: 100%; 
+        background: white; 
+        border: 1px solid #ddd; 
+        position: relative; 
+        margin-top: 34px; /* Move below header bar */
+        overflow: hidden; 
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1); 
+        border-radius: 4px;
+    }
+    .pv-card .card-iframe-wrap iframe { width: 100%; height: 100%; border: none; pointer-events: none; transform: scale(1.0); transform-origin: top left; transition: opacity 0.3s ease; overflow: hidden; }
     .pv-card .card-header-bar {
         position: absolute;
         top: 0;
@@ -3579,6 +3585,7 @@
     let pvTranslateX = 0, pvTranslateY = 0, pvScale = 1.0;
     let pvIsDragging = false, pvStartX = 0, pvStartY = 0;
     let pvCurrentType = 'section';
+    const layoutConfigs = {{ layout_configs | tojson | safe }};
     let pvListMap = { section: [..._pvSec], faculty: [..._pvFac], room: [..._pvRom] };
 
     // Cinema state
@@ -3602,7 +3609,11 @@
             faculty: id => `/faculty-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
             room:    id => `/room-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
         };
-        pvPresScale = Math.min(1.0, (window.innerHeight * 0.9) / 1130);
+        // Reset Transform for New Slide
+        const cfg = layoutConfigs[pvCurrentType] || { w: 8.27, h: 11.69 };
+        const paperH = cfg.h * 96;
+        const baseScale = Math.min(1.0, (window.innerHeight * 0.9) / paperH);
+        pvPresScale = baseScale;
         pvPresX = 0; pvPresY = 0;
         pvUpdatePresTransform();
         const iframe = document.getElementById('pvPresIframe');
@@ -3730,6 +3741,15 @@
         const cols = 5;
         const sem = encodeURIComponent(currentSemester);
         const draftId = currentDraftId;
+
+        // Dynamic Paper Size lookup from Manifest
+        const cfg = layoutConfigs[pvCurrentType] || { w: 8.27, h: 11.69 };
+        const paperW = cfg.w * 96;
+        const paperH = cfg.h * 96;
+
+        const spacingX = paperW + 150;
+        const spacingY = paperH + 170;
+
         const urlMap = {
             section: id => `/section-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
             faculty: id => `/faculty-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
@@ -3745,10 +3765,12 @@
                 label: item.label,
                 lowerLabel: item.label.toLowerCase(),
                 url: urlMap[pvCurrentType](item.id),
-                x: col * 950 + 500,
-                y: row * 1300 + 500,
-                width: 850,
-                height: 1200,
+                x: col * spacingX + 500,
+                y: row * spacingY + 500,
+                width: paperW,
+                height: paperH + 34,
+                paperW_raw: paperW,
+                paperH_raw: paperH,
                 index: index,
                 isMounted: false,
                 element: null
@@ -3812,7 +3834,7 @@
                     <i class="bi bi-fullscreen"></i>
                 </button>
             </div>
-            <div class="card-iframe-wrap">
+            <div class="card-iframe-wrap" style="width:${data.paperW_raw}px; height:${data.paperH_raw}px;">
                 <iframe src="${data.url}"></iframe>
             </div>
         `;
