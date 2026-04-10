@@ -46,6 +46,10 @@
             <div>
                 <span class="fw-bold text-uppercase" style="letter-spacing: 0.5px;">VIEW MODE</span>
                 <span class="ms-2 opacity-75">| Viewing Archive: {{ active_archive_display }}</span>
+                <button class="btn btn-link link-light p-0 ms-1" data-bs-toggle="modal"
+                    data-bs-target="#archiveViewInfoModal" title="Archive Guide">
+                    <i class="bi bi-info-circle fs-6 info-icon-hover text-white-50"></i>
+                </button>
             </div>
         </div>
         <div class="d-flex align-items-center gap-3">
@@ -494,7 +498,7 @@
                     <li class="d-flex align-items-center justify-content-between pe-3">
                         <h6 class="dropdown-header text-uppercase text-muted fw-bold mb-0">Role: {{ session.get('role',
                             'User') | capitalize }}</h6>
-                        <i class="bi bi-info-circle text-muted info-icon-hover fs-6" data-bs-toggle="modal"
+                        <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover" data-bs-toggle="modal"
                             data-bs-target="#profileInfoModal" title="Profile Guide"></i>
                     </li>
                     <li>
@@ -887,7 +891,7 @@
     <!-- PROFILE INFO GUIDE MODAL (Identical to Dashboard UI) -->
     <div class="modal fade" id="profileInfoModal" tabindex="-1" aria-labelledby="profileInfoModalLabel"
         aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-lg">
                 <div class="modal-header">
                     <h5 class="modal-title fw-bold text-dark" id="profileInfoModalLabel">
@@ -1203,6 +1207,61 @@
             }).catch(function () { cb.checked = !locked; });
         };
     </script>
+
+    <!-- ARCHIVE VIEW INFO MODAL -->
+    <div class="modal fade" id="archiveViewInfoModal" tabindex="-1" aria-labelledby="archiveInfoLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-dark" id="archiveInfoLabel">
+                        Archive View Guide
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-warning small mb-1">1. READ-ONLY ACCESS</h6>
+                        <p class="small text-muted mb-0">You are currently in <strong>"Archive Mode."</strong> All data
+                            is <strong>Read-Only</strong> to preserve the integrity of historical records. Adding,
+                            editing, or deleting entries is strictly disabled.</p>
+                    </div>
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-success small mb-1">2. ARCHIVE IDENTIFICATION</h6>
+                        <p class="small text-muted mb-0">The gold banner at the top indicates which specific Academic Year
+                            and Semester you are currently exploring. Your view is locked to this historical session.</p>
+                    </div>
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary small mb-1">3. DATA EXPLORATION</h6>
+                        <p class="small text-muted mb-0">You can still use the <strong>'Data' menu</strong> to browse
+                            archived lists of Courses, Faculty, and Rooms from that period. Search bars remain
+                            functional for quick data retrieval.</p>
+                    </div>
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-info small mb-1">4. TIMETABLE & SCHEDULES</h6>
+                        <p class="small text-muted mb-0">Access the <strong>'View' menu</strong> to see the final plotted
+                            schedules for this semester. The infinite canvas remains accessible to review class
+                            distributions and layouts.</p>
+                    </div>
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-secondary small mb-1">5. REPORTS GENERATION</h6>
+                        <p class="small text-muted mb-0">You may still generate and print <strong>PDF or Excel
+                                reports</strong> based on this archived data through the <strong>'Reports'
+                                menu.</strong></p>
+                    </div>
+                    <div class="mb-0">
+                        <h6 class="fw-bold text-danger small mb-1">6. EXITING ARCHIVE</h6>
+                        <p class="small text-muted mb-0">To return to the current active semester, simply click the
+                            <strong>'EXIT ARCHIVE'</strong> button on the right side of the gold banner.</p>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-warning text-white px-4 fw-bold" data-bs-dismiss="modal">I
+                        Understand</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Schedule Editor — CvSU Scheduling System{% endblock %}
 
+
+
 {% block content %}
 <input type="hidden" id="csrfToken" value="{{ csrf_token() }}">
 <style>
@@ -1216,14 +1218,18 @@
 <div class="modal fade" id="editorModeModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-light border-0 pb-0">
-                <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-sm btn-light" id="mpStep2BackBtn" onclick="showModeStep1()"
-                        style="display: none;">
-                        <i class="bi bi-arrow-left"></i>
+            <div class="modal-header d-flex align-items-center py-3">
+                <div class="d-flex align-items-center w-100">
+                    <button class="btn btn-link link-secondary p-0 me-3 shadow-none" id="mpStep2BackBtn" onclick="showModeStep1()"
+                        style="display: none;" title="Go back">
+                        <i class="bi bi-arrow-left fs-5"></i>
                     </button>
-                    <h5 class="modal-title fw-bold mb-0">
-                        <i class="bi bi-diagram-3-fill me-2 text-primary"></i>Schedule Editor Mode
+                    <h5 class="modal-title fw-bold mb-0 d-flex align-items-center text-dark">
+                        <i class="bi bi-diagram-3-fill me-2 text-success fs-5"></i>Schedule Editor Mode
+                        <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal"
+                            data-bs-target="#editorInfoModal" title="How to use this page">
+                            <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+                        </button>
                     </h5>
                 </div>
             </div>
@@ -1326,18 +1332,19 @@
 <div class="modal fade" id="allDraftsModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header border-0 pb-1">
-                <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-sm btn-light" onclick="backToStep2()">
-                        <i class="bi bi-arrow-left"></i>
+            <div class="modal-header d-flex align-items-center py-3">
+                <div class="d-flex align-items-center w-100">
+                    <button class="btn btn-link link-secondary p-0 me-3 shadow-none" onclick="backToStep2()" title="Go back">
+                        <i class="bi bi-arrow-left fs-5"></i>
                     </button>
-                    <h5 class="modal-title fw-bold mb-0"><i class="bi bi-layers me-2 text-success"></i>All Drafts</h5>
-                </div>
-                <div class="ms-auto d-flex gap-2 align-items-center">
-                    <button class="btn-google-action" onclick="backToStep2()">
-                        <i class="bi bi-plus-lg"></i><span>New Draft</span>
-                    </button>
-                    <button type="button" class="btn-close" onclick="backToStep2()"></button>
+                    <h5 class="modal-title fw-bold mb-0 d-flex align-items-center text-dark">
+                        <i class="bi bi-layers me-2 text-success fs-5"></i>All Drafts
+                    </h5>
+                    <div class="ms-auto d-flex gap-2 align-items-center">
+                        <button class="btn-google-action" onclick="backToStep2()">
+                            <i class="bi bi-plus-lg"></i><span>New Draft</span>
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="modal-body pt-2">
@@ -1456,33 +1463,39 @@
 <div class="modal fade" id="manageDraftsModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content">
-            <div class="modal-header border-0 pb-1">
+            <div class="modal-header d-flex align-items-center py-3">
                 <div class="d-flex align-items-center gap-2 w-100">
-                <!-- Sync Button -->
-                <button class="btn btn-sync d-flex align-items-center gap-2" id="syncGridBtn" onclick="syncGrid()" title="Sync and Resolve">
-                    <i class="bi bi-arrow-repeat fs-5"></i>
-                    <span class="d-none d-xl-inline fw-semibold">Sync Grid</span>
-                </button>
-
-                <button class="btn btn-primary d-flex align-items-center gap-2 px-3 d-none" id="publishDraftBtn" onclick="initiateSubmission()">
-                    <i class="bi bi-send-check-fill fs-5"></i>
-                    <span id="publishBtnLabel" class="fw-semibold">{% if session.role == 'user' %}Submit for Approval{% else %}Publish Draft{% endif %}</span>
-                </button>
-
-                <button class="btn btn-outline-info d-flex align-items-center gap-2 px-3 d-none" id="previewDraftBtn" onclick="previewDraft()">
-                    <i class="bi bi-eye fs-5"></i>
-                </button>      <button id="mdBackBtn" class="btn btn-sm btn-light d-none" type="button" onclick="closeMdfForm()">
-                        <i class="bi bi-arrow-left"></i>
+                    <!-- Sync Button -->
+                    <button class="btn btn-sync d-flex align-items-center gap-2" id="syncGridBtn" onclick="syncGrid()" title="Sync and Resolve">
+                        <i class="bi bi-arrow-repeat fs-5"></i>
+                        <span class="d-none d-xl-inline fw-semibold">Sync Grid</span>
                     </button>
-                    <h5 class="modal-title fw-bold mb-0">
-                        <i id="mdHeaderIcon" class="bi bi-layers me-2 text-success"></i>
+
+                    <button class="btn btn-primary d-flex align-items-center gap-2 px-3 d-none" id="publishDraftBtn" onclick="initiateSubmission()">
+                        <i class="bi bi-send-check-fill fs-5"></i>
+                        <span id="publishBtnLabel" class="fw-semibold">{% if session.role == 'user' %}Submit for Approval{% else %}Publish Draft{% endif %}</span>
+                    </button>
+
+                    <button class="btn btn-outline-info d-flex align-items-center gap-2 px-3 d-none" id="previewDraftBtn" onclick="previewDraft()">
+                        <i class="bi bi-eye fs-5"></i>
+                    </button>
+
+                    <div class="vr mx-2"></div>
+
+                    <button id="mdBackBtn" class="btn btn-link link-secondary p-0 me-3 d-none shadow-none" type="button" onclick="closeMdfForm()" title="Go back">
+                        <i class="bi bi-arrow-left fs-5"></i>
+                    </button>
+
+                    <h5 class="modal-title fw-bold mb-0 d-flex align-items-center text-dark">
+                        <i id="mdHeaderIcon" class="bi bi-layers me-2 text-success fs-5"></i>
                         <span id="mdHeaderTitle">Manage Drafts</span>
                     </h5>
 
                     <div class="ms-auto d-flex gap-2 align-items-center">
-                        <button id="mdNewDraftBtn" class="btn-google-action" type="button" onclick="openMdfCreate()"><i
-                                class="bi bi-plus-lg"></i><span>New Draft</span></button>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        <button id="mdNewDraftBtn" class="btn-google-action" type="button" onclick="openMdfCreate()">
+                            <i class="bi bi-plus-lg"></i><span>New Draft</span>
+                        </button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                 </div>
             </div>
@@ -1612,16 +1625,14 @@
                                     class="text-muted fw-normal">(optional)</span></label>
                             <textarea class="form-control" id="mdfNotes" rows="2"></textarea>
                         </div>
-                        <div id="mdfError" class="alert alert-danger py-1 px-2 mb-0 mt-2"
-                            style="display:none;font-size:.82rem"></div>
-                        <div class="d-flex justify-content-end gap-2 mt-4">
-                            <button type="button" class="btn btn-light px-4" id="mdCancelFormBtn" onclick="closeMdfForm()">Cancel</button>
-                            <button type="submit" class="btn btn-success px-4" id="mdfSubmitBtn">
-                                <i class="bi bi-check-lg me-1"></i><span id="mdfSubmitLabel">Create Draft</span>
-                            </button>
-                        </div>
-                    </form>
                 </div>
+            </div>
+            <!-- Standard Footer (Shown only in Form View) -->
+            <div id="mdfModalFooter" class="modal-footer d-none align-items-center justify-content-end gap-2 py-3 bg-light border-top shadow-sm">
+                <button type="button" class="btn btn-light px-4" onclick="closeMdfForm()">Cancel</button>
+                <button type="submit" form="mdfForm" class="btn btn-success px-4" id="mdfSubmitBtn">
+                    <i class="bi bi-check-lg me-1"></i><span id="mdfFooterLabel">Create Draft</span>
+                </button>
             </div>
         </div>
     </div>
@@ -2697,12 +2708,16 @@
         // Check if we are in a modal and hide it
         const modeModal = document.getElementById('editorModeModal');
         const allModal = document.getElementById('allDraftsModal');
-
+        const mdModal = document.getElementById('manageDraftsModal');
+        
         if (bootstrap.Modal.getInstance(allModal)) {
             bootstrap.Modal.getInstance(allModal).hide();
         }
         if (bootstrap.Modal.getInstance(modeModal)) {
             bootstrap.Modal.getInstance(modeModal).hide();
+        }
+        if (bootstrap.Modal.getInstance(mdModal)) {
+            bootstrap.Modal.getInstance(mdModal).hide();
         }
 
         onDraftChange();
@@ -3057,8 +3072,12 @@
         if (els.form) els.form.style.display = '';
         if (els.newBtn) els.newBtn.classList.add('d-none');
         if (els.backBtn) els.backBtn.classList.remove('d-none');
-        if (els.hIcon) els.hIcon.className = 'bi bi-plus-circle me-2 text-primary';
+        if (els.hIcon) els.hIcon.className = 'bi bi-plus-circle me-2 text-success fs-5';
         if (els.hTitle) els.hTitle.textContent = 'New Draft';
+        const modalFooter = document.getElementById('mdfModalFooter');
+        const footerLabel = document.getElementById('mdfFooterLabel');
+        if (modalFooter) modalFooter.classList.remove('d-none');
+        if (footerLabel) footerLabel.textContent = 'Create Draft';
         if (els.name) els.name.focus();
     }
 
@@ -3091,8 +3110,12 @@
         if (els.form) els.form.style.display = '';
         if (els.newBtn) els.newBtn.classList.add('d-none');
         if (els.backBtn) els.backBtn.classList.remove('d-none');
-        if (els.hIcon) els.hIcon.className = 'bi bi-pencil-square me-2 text-primary';
+        if (els.hIcon) els.hIcon.className = 'bi bi-pencil-square me-2 text-success fs-5';
         if (els.hTitle) els.hTitle.textContent = 'Edit Draft';
+        const modalFooter = document.getElementById('mdfModalFooter');
+        const footerLabel = document.getElementById('mdfFooterLabel');
+        if (modalFooter) modalFooter.classList.remove('d-none');
+        if (footerLabel) footerLabel.textContent = 'Save Changes';
         if (els.name) els.name.focus();
     }
 
@@ -3103,13 +3126,15 @@
             newBtn: document.getElementById('mdNewDraftBtn'),
             backBtn: document.getElementById('mdBackBtn'),
             hIcon: document.getElementById('mdHeaderIcon'),
-            hTitle: document.getElementById('mdHeaderTitle')
+            hTitle: document.getElementById('mdHeaderTitle'),
+            footer: document.getElementById('mdfModalFooter')
         };
         if (els.form) els.form.style.display = 'none';
         if (els.list) els.list.style.display = '';
         if (els.newBtn) els.newBtn.classList.remove('d-none');
         if (els.backBtn) els.backBtn.classList.add('d-none');
-        if (els.hIcon) els.hIcon.className = 'bi bi-layers me-2 text-success';
+        if (els.footer) els.footer.classList.add('d-none');
+        if (els.hIcon) els.hIcon.className = 'bi bi-layers me-2 text-success fs-5';
         if (els.hTitle) els.hTitle.textContent = 'Manage Drafts';
     }
 
@@ -3268,6 +3293,9 @@
                 <td class="small text-muted text-truncate" style="max-width:150px">${d.notes || '—'}</td>
                 <td class="text-center">
                     <div class="d-flex justify-content-center">
+                        <div class="btn-icon add me-2" onclick="chooseDraft(${d.id}, '${d.name.replace(/'/g, "\\'")}')" title="Select Draft" style="cursor:pointer">
+                            <i class="bi bi-check2 text-secondary fs-5"></i>
+                        </div>
                         <div class="btn-icon edit me-2" onclick="openMdfEdit(${d.id})" title="Edit" style="cursor:pointer">
                             <i class="bi bi-pencil"></i>
                         </div>
@@ -4113,6 +4141,17 @@
 
         // Search
         document.getElementById('pvSearch')?.addEventListener('keyup', function() { pvSearchCanvas(this.value.toLowerCase()); });
+
+        // Re-open Mode Picker when Info Modal is closed
+        const editorInfoModal = document.getElementById('editorInfoModal');
+        if (editorInfoModal) {
+            editorInfoModal.addEventListener('hidden.bs.modal', function () {
+                const modeModal = document.getElementById('editorModeModal');
+                if (modeModal) {
+                    bootstrap.Modal.getOrCreateInstance(modeModal).show();
+                }
+            });
+        }
     });
 </script>
 
@@ -4217,6 +4256,119 @@
                         Drag to Pan &nbsp;|&nbsp; Scroll to Zoom
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-muted-v2 {
+        color: #adb5bd;
+    }
+
+    .info-icon-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .info-icon-hover:hover {
+        color: #198754 !important;
+        transform: scale(1.2);
+    }
+</style>
+
+<!-- Master Info Modal (Final Version) -->
+<div class="modal fade" id="editorInfoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark">
+                    Schedule Editor Guide
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                
+                <!-- 1. The Two Modes -->
+                <section class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1">1. HOW TO EDIT</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-white shadow-sm border-start border-4 border-danger h-100">
+                                <h6 class="fw-bold text-danger mb-2">Direct Mode</h6>
+                                <p class="small text-muted mb-0">Use this to change the schedule right away. The <b>Official Schedule</b> will update for <b>all users</b> to see immediately.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-white shadow-sm border-start border-4 border-success h-100">
+                                <h6 class="fw-bold text-success mb-2">Draft Mode</h6>
+                                <p class="small text-muted mb-0">Use this to plan privately. No one sees your work until you click the Publish button. This is safe for making big changes.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. Adding Schedules -->
+                <section class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1">2. HOW TO ADD A SCHEDULE</h6>
+                    <div class="ms-2">
+                        <p class="small text-muted mb-2">There are two ways to add a schedule:</p>
+                        <div class="p-3 bg-light rounded-3 border mb-3">
+                            <p class="small mb-1"><strong>A. Click the Line:</strong></p>
+                            <p class="small text-muted mb-0"><b>Click any blank line</b> in the schedule grid. This will automatically set the <b>Day</b> and <b>Time</b> for you in the form.</p>
+                        </div>
+                        <div class="p-3 bg-light rounded-3 border">
+                            <p class="small mb-1"><strong>B. Manual Entry:</strong></p>
+                            <p class="small text-muted mb-0">Pick the Course, Section, and Teacher from the <b>dropdown lists</b>. Then, click the <b>Add Schedule</b> button to save.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Buttons -->
+                <section class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1">3. BUTTONS</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-white shadow-sm h-100">
+                                <h6 class="fw-bold small mb-2"><i class="bi bi-eye text-primary me-2"></i>Preview Mode</h6>
+                                <p class="small text-muted mb-0">Click the Eye icon to see the <b>final look</b> of your schedule. Use this to check for errors before you finish.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-white shadow-sm h-100">
+                                <h6 class="fw-bold small mb-2"><i class="bi bi-arrow-repeat text-success me-2"></i>Sync Grid</h6>
+                                <p class="small text-muted mb-0">Click this to keep your work updated with any new changes from the main system.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 p-2 bg-white border rounded shadow-sm d-flex align-items-center">
+                        <i class="bi bi-arrow-counterclockwise text-info fs-5 me-3"></i>
+                        <span class="small text-muted"><strong>Back and Forward Arrows:</strong> Use these arrows to go back or fix a mistake quickly.</span>
+                    </div>
+                </section>
+
+                <!-- 4. Manage Your Drafts -->
+                <section class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1">4. MANAGE YOUR DRAFTS</h6>
+                    <div class="ms-2">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-check2 text-secondary me-3 fs-5"></i>
+                            <span class="small text-muted"><strong>Gray Check Icon:</strong> Use this to pick a draft and start working on it.</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-pencil-square text-success me-3 fs-5"></i>
+                            <span class="small text-muted"><strong>Green Pencil Icon:</strong> Use this to change the <b>draft info</b> or name.</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-trash text-danger me-3 fs-5"></i>
+                            <span class="small text-muted"><strong>Trash Icon:</strong> Use this to remove <b>old drafts</b> that you do not need anymore.</span>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
             </div>
         </div>
     </div>
