@@ -5302,20 +5302,91 @@ def _apply_style_from_template(target_cell, source_cell):
         target_cell.alignment = copy(source_cell.alignment)
         target_cell.number_format = copy(source_cell.number_format)
 
-def _inject_layout_images(ws, settings, layout_type):
-    """Reposition and scale template images based on layout settings."""
+def _process_images(source_ws, target_ws, settings, layout_type):
+    """
+    Consolidated helper to copy images, apply scale, offsets, and layering in one pass.
+    Fixes duplication and over-scaling bugs.
+    """
+    from openpyxl.drawing.image import Image
+    from openpyxl.drawing.spreadsheet_drawing import OneCellAnchor
+    from openpyxl.utils.units import pixels_to_EMU
+    import copy
+    import io
     import json
-    img_settings_raw = getattr(settings, f"{layout_type}_img_settings", None)
-    if not img_settings_raw or not hasattr(ws, '_images'): return
+
+    # 1. CLEANUP: Clear any images that copy_worksheet might have partially/brokenly copied
+    if hasattr(target_ws, '_images'):
+        target_ws._images = []
+
+    if not hasattr(source_ws, '_images'): return
+
+    # 2. LOAD SETTINGS
+    img_slots = []
     try:
-        img_slots = json.loads(img_settings_raw)
-        for i, img in enumerate(ws._images):
-            if i < len(img_slots):
-                slot = img_slots[i]
-                if 'scale' in slot:
-                    img.width = float(img.width) * float(slot['scale'])
-                    img.height = float(img.height) * float(slot['scale'])
+        raw = getattr(settings, f"{layout_type}_img_settings", None)
+        if raw: img_slots = json.loads(raw)
     except: pass
+
+    # 3. CLONE AND APPLY TRANSFORMATIONS
+    cloned_images = []
+    for i, original_img in enumerate(source_ws._images):
+        try:
+            from openpyxl.drawing.spreadsheet_drawing import AnchorMarker
+            
+            # Create fresh independent image object from raw data
+            new_img = Image(io.BytesIO(original_img._data()))
+            
+            # Transfer Anchor from template (Careful deep cloning of Markers)
+            old_from = original_img.anchor._from
+            new_from = AnchorMarker(col=old_from.col, colOff=old_from.colOff, row=old_from.row, rowOff=old_from.rowOff)
+            
+            if isinstance(original_img.anchor, OneCellAnchor):
+                new_img.anchor = OneCellAnchor(_from=new_from, ext=copy.copy(original_img.anchor.ext))
+            else:
+                # For TwoCellAnchor, we clone both markers
+                old_to = original_img.anchor.to
+                new_to = AnchorMarker(col=old_to.col, colOff=old_to.colOff, row=old_to.row, rowOff=old_to.rowOff)
+                from openpyxl.drawing.spreadsheet_drawing import TwoCellAnchor
+                new_img.anchor = TwoCellAnchor(_from=new_from, to=new_to)
+
+            # A. STANDARDIZED BASELINE
+            aspect_ratio = float(original_img.height) / float(original_img.width) if original_img.width > 0 else 1.0
+            slot = img_slots[i] if i < len(img_slots) else {}
+            base_w = 110.0
+            scale = float(slot.get('scale', 1.0))
+            w = base_w * scale
+            h = w * aspect_ratio
+            
+            # B. ANCHOR TYPE HANDLING (Force OneCellAnchor if scaling is changed)
+            if scale != 1.0 and not isinstance(new_img.anchor, OneCellAnchor):
+                new_anchor = OneCellAnchor(_from=new_from)
+                new_img.anchor = new_anchor
+
+            # C. POSITION OFFSETS (Pixels -> EMUs)
+            dx = pixels_to_EMU(float(slot.get('x', 0.0)))
+            dy = pixels_to_EMU(float(slot.get('y', 0.0)))
+            
+            # Apply offsets to our FRESH markers (prevent accumulation)
+            new_img.anchor._from.colOff = (new_img.anchor._from.colOff or 0) + dx
+            new_img.anchor._from.rowOff = (new_img.anchor._from.rowOff or 0) + dy
+
+            # D. HARD-LOCK DIMENSIONS (Pixels -> EMUs)
+            new_img.width = w
+            new_img.height = h
+            if hasattr(new_img.anchor, 'ext') and new_img.anchor.ext:
+                new_img.anchor.ext.cx = pixels_to_EMU(w)
+                new_img.anchor.ext.cy = pixels_to_EMU(h)
+
+            cloned_images.append({'img': new_img, 'z_above': slot.get('z_above', True)})
+        except Exception as e:
+            print(f"Image processing error at index {i}: {e}")
+
+    # 4. LAYER (Z-INDEX) AND ADD TO SHEET
+    below = [item['img'] for item in cloned_images if not item['z_above']]
+    above = [item['img'] for item in cloned_images if item['z_above']]
+    
+    for img in (below + above):
+        target_ws.add_image(img)
 
 @app.route('/export/excel_bulk')
 @login_required
@@ -5416,6 +5487,21 @@ def export_excel_bulk():
     row_map = {} 
     _t_occurrences = {}
     
+    def fuzzy_clean(s):
+        if not s or not isinstance(s, str): return ""
+        for char in " :/-.,'":
+            s = s.replace(char, "")
+        return s.strip().upper()
+
+    def _safe_write_to_cell(ws, target_row, target_col, value):
+        target_cell = ws.cell(row=target_row, column=target_col)
+        target_coord = target_cell.coordinate
+        for merged_range in ws.merged_cells.ranges:
+            if target_coord in merged_range:
+                ws.cell(row=merged_range.min_row, column=merged_range.min_col).value = value
+                return
+        target_cell.value = value
+
     for row in template_sheet.iter_rows(min_row=1, max_row=60, max_col=26):
         for cell in row:
             val = str(cell.value).strip().upper() if cell.value else ""
@@ -5438,6 +5524,61 @@ def export_excel_bulk():
 
     for item in items:
         target_ws = wb.copy_worksheet(template_sheet)
+        
+        if report_type == 'section': 
+            display_name = item.section_name
+            dept_name = "N/A"
+            item_schedules = ScheduledClass.query.filter_by(section_id=item.id, semester=export_semester).all()
+        elif report_type == 'faculty':
+            display_name = item.full_name
+            dept_name = item.department if hasattr(item, 'department') else "N/A"
+            item_schedules = ScheduledClass.query.filter_by(faculty_id=item.id, semester=export_semester).all()
+        elif report_type == 'room':
+            display_name = item.room_name
+            dept_name = item.building if hasattr(item, 'building') else "N/A"
+            item_schedules = ScheduledClass.query.filter_by(room_id=item.id, semester=export_semester).all()
+
+        vmap = build_variable_map(report_type, settings, entity_name=display_name, sem_ay=export_semester)
+
+        val_map = {
+            'section': {
+                "CLASS":                      display_name,
+                "ROOM":                       display_name,
+                "COURSE":                     display_name,
+                "Semester / Academic Year":   vmap.get('{{sem_ay_value}}', export_semester),
+            }
+        }
+        instructor_marker = "Instructor I"
+        val_map['section'][instructor_marker] = vmap.get('{{fac_instructor_rank}}', display_name) or display_name
+        registrar_marker = "OIC, Registrar"
+        val_map['section'][registrar_marker] = vmap.get('{{fac_registrar_name}}', "MARLYN A. QUINEZ")
+
+        offsets = {
+            'section': {
+                "CLASS":                      (-1, 0),
+                "ROOM":                       (-1, 0),
+                "COURSE":                     (-1, 0),
+                "Semester / Academic Year":   (-1, 0),
+                registrar_marker:             (-1, 0),
+                instructor_marker:            (-1, 0),
+            }
+        }
+
+        m_map = val_map.get(report_type, {})
+        o_map = offsets.get(report_type, {})
+        for r_idx, row in enumerate(template_sheet.iter_rows()):
+            for c_idx, cell in enumerate(row):
+                if cell.value and isinstance(cell.value, str):
+                    clean_val = fuzzy_clean(cell.value)
+                    if clean_val in m_map:
+                        target_val = m_map[clean_val]
+                        dr, dc = o_map.get(clean_val, (0, 0))
+                        # Removal of hashes logic for key dynamic values
+                        _safe_write_to_cell(target_ws, r_idx + dr + 1, c_idx + dc + 1, str(target_val))
+
+        # D. PROCESS IMAGES (Cloning, Scaling, Offsets, Layering)
+        _process_images(template_sheet, target_ws, settings, report_type)
+        
         if report_type == 'section': 
             display_name = item.section_name
             dept_name = "N/A"
@@ -5607,23 +5748,6 @@ def export_excel_bulk():
             "Name:":                      "{{fac_name_label}}" if report_type == 'faculty' else "{{name}}",
         }
 
-        def fuzzy_clean(s):
-            if not s or not isinstance(s, str): return ""
-            # Normalized search key: No spaces, no specific marks
-            for char in " :/-.,'":
-                s = s.replace(char, "")
-            return s.strip().upper()
-
-        def _safe_write_to_cell(ws, target_row, target_col, value):
-            """Writes to the provided coordinate, ensuring it hits the origin of a merged range."""
-            target_cell = ws.cell(row=target_row, column=target_col)
-            target_coord = target_cell.coordinate
-            for merged_range in ws.merged_cells.ranges:
-                if target_coord in merged_range:
-                    # Write to the top-left (origin) of the merge
-                    ws.cell(row=merged_range.min_row, column=merged_range.min_col).value = value
-                    return
-            target_cell.value = value
 
         # CONSOLIDATED SCANNER: One loop for all replacements
         for r_idx in range(1, target_ws.max_row + 1):
@@ -5680,7 +5804,6 @@ def export_excel_bulk():
                             # User only wants to remove hashes from dynamic VALUES, keeping them for labels.
                             _safe_write_to_cell(target_ws, r_idx + dr, c_idx + dc, str(target_val))
 
-        _inject_layout_images(target_ws, template_sheet, report_type)
 
         # B. PLOT SCHEDULES WITH STYLE INHERITANCE
         # Use first grid cell as style reference for all schedule blocks
