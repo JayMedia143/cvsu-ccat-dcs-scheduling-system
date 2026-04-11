@@ -5531,23 +5531,47 @@ def export_excel_bulk():
 
     for row in template_sheet.iter_rows(min_row=1, max_row=60, max_col=26):
         for cell in row:
-            val = str(cell.value).strip().upper() if cell.value else ""
+            val = ""
+            if cell.value:
+                if hasattr(cell.value, 'strftime'):
+                    val = cell.value.strftime('%H:%M')
+                else:
+                    val = str(cell.value).strip().upper()
             if not val: continue
             for db_day, keywords in day_headers.items():
                 if val in keywords: col_map[db_day] = cell.column
-            for h in range(1, 13):
-                for m in [0, 30]:
-                    t_str = f"{h}:{m:02d}"
-                    if val.startswith(t_str):
-                        if t_str not in _t_occurrences: _t_occurrences[t_str] = []
-                        if len(_t_occurrences[t_str]) < 2: _t_occurrences[t_str].append(cell.row)
+            
+            # BRANCHED ROW MAPPING: Separate logic for Faculty vs Others
+            if report_type == 'faculty':
+                # EXACT SCANNER for Faculty: Only look at Column 1, strictly split labels
+                if cell.column == 1:
+                    time_parts = val.replace('-', ' ').replace('–', ' ').split()
+                    if time_parts:
+                        t_start = time_parts[0].lstrip('0').upper()
+                        if ':' in t_start:
+                            if t_start not in _t_occurrences: _t_occurrences[t_start] = []
+                            if len(_t_occurrences[t_start]) < 2:
+                                _t_occurrences[t_start].append(cell.row)
+            else:
+                # ORIGINAL BROAD SCANNER for Section/Room/Course (Universal compatibility)
+                clean_time_val = val.lstrip('0') if ':' in val else val
+                for h in range(1, 13):
+                    for m in [0, 30]:
+                        t_str = f"{h}:{m:02d}"
+                        if clean_time_val.startswith(t_str):
+                            if t_str not in _t_occurrences: _t_occurrences[t_str] = []
+                            if len(_t_occurrences[t_str]) < 2:
+                                _t_occurrences[t_str].append(cell.row)
 
-    for h in range(7, 21):
+    # Build the final row_map with AM/PM sensitivity (occ[0] is AM, occ[1] is PM)
+    for h in range(7, 22): # Scan 7 AM to 9 PM
         for m in [0, 30]:
+            t_key = f"{h}:{m:02d}"
             t_12 = f"{h if h <= 12 else h - 12}:{m:02d}"
             if t_12 in _t_occurrences:
                 occ = _t_occurrences[t_12]
-                row_map[f"{h}:{m:02d}"] = occ[0] if (h <= 12 or len(occ) == 1) else occ[1]
+                # If it's afternoon (h >= 13) and there's a second occurrence, use it.
+                row_map[t_key] = occ[0] if (h < 13 or len(occ) == 1) else (occ[1] if len(occ) > 1 else occ[0])
 
     for item in items:
         target_ws = wb.copy_worksheet(template_sheet)
@@ -5585,24 +5609,31 @@ def export_excel_bulk():
         safe_title = "".join([c for c in display_name if c.isalnum() or c in " -_"])[:30]
         target_ws.title = safe_title
 
+        # ROOM LAYOUT SAFETY: Direct injection for Room Name (Room Only)
+        if report_type == 'room':
+            _safe_write_to_cell(target_ws, 10, 2, display_name)
+
         # A. SMART HEADER INJECTION & LOGO POSITIONING
         f_hours = "0"
         f_prep = "0"
         f_educ = ""
         
         if report_type == 'section':
-             item_schedules = ScheduledClass.query.filter_by(section_id=item.id, semester=export_semester).all()
+             item_schedules = ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section)).filter_by(section_id=item.id, semester=export_semester).all()
         elif report_type == 'faculty':
-             item_schedules = ScheduledClass.query.filter_by(faculty_id=item.id, semester=export_semester).all()
+             item_schedules = ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section)).filter_by(faculty_id=item.id, semester=export_semester).all()
              f_educ = item.highest_educational_attainment or ""
-             item_schedules = ScheduledClass.query.filter_by(faculty_id=item.id, semester=export_semester).all()
              total_mins = 0
+             daily_mins = {"Monday": 0, "Tuesday": 0, "Wednesday": 0, "Thursday": 0, "Friday": 0, "Saturday": 0}
              unique_subs = set()
              for s in item_schedules:
                  try:
                      sh_str, sm_str = s.start_time.split(':')
                      eh_str, em_str = s.end_time.split(':')
-                     total_mins += (int(eh_str) * 60 + int(em_str)) - (int(sh_str) * 60 + int(sm_str))
+                     duration = (int(eh_str) * 60 + int(em_str)) - (int(sh_str) * 60 + int(sm_str))
+                     total_mins += duration
+                     if s.day in daily_mins:
+                         daily_mins[s.day] += duration
                  except: pass
                  if s.course: unique_subs.add(s.course.course_code)
              f_hours = str(round(total_mins / 60, 2))
@@ -5654,12 +5685,24 @@ def export_excel_bulk():
                 "ROOM":                       (-1, 0),
                 "COURSE":                     (-1, 0),
                 "Semester / Academic Year":   (-1, 0),  
+                "Prepared by:":               (3, 1),   # Anchor A43 -> Target B46:C47
+                "Recommending Approval:":     (3, 1),   
+                "APPROVED:":                  (3, 1),   
             },
             'course': {
                 "CLASS":                      (-1, 0),  
                 "ROOM":                       (-1, 0),
                 "COURSE":                     (-1, 0),
                 "Semester / Academic Year":   (-1, 0),  
+                "Prepared by:":               (3, 1),   
+                "Recommending Approval:":     (3, 1),   
+                "APPROVED:":                  (3, 1),   
+            },
+            'room': {
+                "ROOM":                       (-1, 0),  # Anchor B11 -> Target B10
+                "Prepared by:":               (3, 1),   # Anchor A43 -> Target B46:C47
+                "Recommending Approval:":     (3, 1),   
+                "APPROVED:":                  (3, 1),   
             }
         }
         
@@ -5689,6 +5732,9 @@ def export_excel_bulk():
                 "Semester / Academic Year":   vmap.get('{{sem_ay_value}}', export_semester),
                 "Section name":               dept_name,
                 "course name":                dept_name,
+                "Prepared by:":               vmap.get('{{sig1}}', 'SCHEDULE COMMITTEE'),
+                "Recommending Approval:":     vmap.get('{{sig2}}', 'ARIEL G. SANTOS, EdD'),
+                "APPROVED:":                  vmap.get('{{sig3}}', 'LAURO B. PASCUA, EdD'),
             }
         }
         # Dynamic Rank: Handle whatever is in the Instructor I cell
@@ -5760,7 +5806,11 @@ def export_excel_bulk():
                 val = cell.value
                 if not val or not isinstance(val, str): continue
                 
+                val = cell.value
+                if not val or not isinstance(val, str): continue
+                
                 original_val = val
+                clean_original_val = fuzzy_clean(val) # <--- STORE ORIGINAL FOR ANCHORS
                 clean_val = fuzzy_clean(val)
                 
                 # 1. MARKER SWAP (Literals -> Tokens)
@@ -5795,8 +5845,9 @@ def export_excel_bulk():
                     v_target = val_map.get(report_type, {})
                     
                     label_found = None
+                    # FIX: Use clean_original_val to find anchors even if Step 1 replaced them
                     for log_label, (dr, dc) in l_target.items():
-                        if log_label and fuzzy_clean(log_label) == clean_val:
+                        if log_label and fuzzy_clean(log_label) == clean_original_val:
                             label_found = log_label
                             break
                     
@@ -5816,114 +5867,168 @@ def export_excel_bulk():
             first_day = list(col_map.keys())[0] if col_map else 'Monday'
             ref_cell = template_sheet.cell(row=row_map.get("7:00", 20), column=col_map.get(first_day, 2))
         except: pass
+        # STABILITY OVERHAUL: Phase 1 - Clear existing template merges in the grid area
+        # This prevents the "Repaired" error caused by collisions between template merges and code merges.
+        grid_min_r, grid_max_r = 20, 41
+        grid_min_c, grid_max_c = 2, 8   # Col B to H
+        
+        existing_merged_ranges = list(target_ws.merged_cells.ranges)
+        for mrange in existing_merged_ranges:
+            # INTERSECTION CHECK: If the template merge touches our grid area at all, unmerge it
+            overlap_r = not (mrange.max_row < grid_min_r or mrange.min_row > grid_max_r)
+            overlap_c = not (mrange.max_col < grid_min_c or mrange.min_col > grid_max_c)
+            if overlap_r and overlap_c:
+                try: target_ws.unmerge_cells(str(mrange))
+                except: pass
 
+        # Phase 2: Map grid content for unique merges
+        grid_slots = {}
         for sc in item_schedules:
             if sc.day not in col_map: continue
             try:
                 sh_s, sm_s = map(int, sc.start_time.split(':'))
                 eh_e, em_e = map(int, sc.end_time.split(':'))
             except: continue
-            key = f"{sh_s}:{sm_s:02d}"
             
-            if key in row_map:
-                start_r = row_map[key]
-                t_col = col_map[sc.day]
+            start_key = f"{sh_s}:{sm_s:02d}"
+            if start_key in row_map:
+                s_r = row_map[start_key]
                 slots = int(((eh_e * 60 + em_e) - (sh_s * 60 + sm_s)) / 30)
-                end_r = start_r + slots - 1
+                e_r = s_r + slots - 1
                 
-                if end_r > start_r:
-                    try: target_ws.merge_cells(start_row=start_r, start_column=t_col, end_row=end_r, end_column=t_col)
-                    except: pass
+                plot_key = (sc.day, s_r, e_r)
+                if plot_key not in grid_slots:
+                    grid_slots[plot_key] = []
                 
-                # B. DYNAMIC GRID CONTENT (Matches Browser format)
-                # Format: [CODE] [TYPE] \n [ROOM/FACULTY/SECTION]
                 ctype = f"({sc.session_type})" if sc.session_type else ""
-                txt = f"{sc.course.course_code} {ctype}\n"
-                
-                if report_type == 'section':
-                    # Section Grid: Show Faculty & Room
-                    f_name = sc.faculty.full_name if sc.faculty else "T.B.A."
-                    # Shorten Faculty Name (e.g. Juan Luna -> MR. LUNA)
-                    p = f_name.split()
-                    short_f = f"MR. {p[-1].upper()}" if (len(p) > 1 and not f_name.startswith('T.B.A.')) else f_name.upper()
-                    txt += f"{short_f}\n"
-                    if sc.room: txt += f"{sc.room.room_name}"
-                elif report_type == 'faculty':
-                    # Faculty Grid: Show Section & Room
+                txt = ""
+                if report_type == 'faculty':
+                    if sc.course: txt += f"{sc.course.course_code} {ctype}\n"
                     if sc.section: txt += f"{sc.section.section_name}\n"
                     if sc.room: txt += f"{sc.room.room_name}"
+                elif report_type == 'section':
+                    txt = f"{sc.course.course_code} {ctype}\n"
+                    fn = sc.faculty.full_name if sc.faculty else "T.B.A."
+                    p = fn.split()
+                    short_f = f"MR. {p[-1].upper()}" if (len(p) > 1 and not fn.startswith('T.B.A.')) else fn.upper()
+                    txt += f"{short_f}\n{sc.room.room_name if sc.room else ''}"
                 elif report_type == 'room':
-                    # Room Grid: Show Section & Faculty
-                    if sc.section: txt += f"{sc.section.section_name}\n"
-                    f_name = sc.faculty.full_name if sc.faculty else "T.B.A."
-                    p = f_name.split()
-                    short_f = f"MR. {p[-1].upper()}" if (len(p) > 1 and not f_name.startswith('T.B.A.')) else f_name.upper()
+                    txt = f"{sc.course.course_code} {ctype}\n{sc.section.section_name if sc.section else ''}\n"
+                    fn = sc.faculty.full_name if sc.faculty else "T.B.A."
+                    p = fn.split()
+                    short_f = f"MR. {p[-1].upper()}" if (len(p) > 1 and not fn.startswith('T.B.A.')) else fn.upper()
                     txt += f"{short_f}"
+                else: 
+                    txt = f"{sc.course.course_code} {ctype}\n{sc.section.section_name if sc.section else ''}\n{sc.room.room_name if sc.room else ''}"
                 
-                cell = target_ws.cell(row=start_r, column=t_col)
-                if isinstance(cell, MergedCell): continue 
-                if cell.value: cell.value = str(cell.value).rstrip('\n') + '\n---------------\n' + txt.strip()
-                else: cell.value = txt.strip()
-                
-                # Alignment & Styles
-                if ref_cell:
-                    _apply_style_from_template(cell, ref_cell)
-                    # Force center alignment regardless of template
-                    new_alignment = copy.copy(cell.alignment)
-                    new_alignment.horizontal = 'center'
-                    new_alignment.vertical = 'center'
-                    new_alignment.wrap_text = True
-                    cell.alignment = new_alignment
-                else:
-                    cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-                    cell.font = Font(name='Arial Narrow', size=8, bold=True)
-                
-                # Apply Border to the entire range (vital for merged cells)
-                from openpyxl.styles import Border, Side
-                thin = Side(border_style="thin", color="000000")
-                full_border = Border(top=thin, left=thin, right=thin, bottom=thin)
-                
-                for r in range(start_r, end_r + 1):
-                    target_ws.cell(row=r, column=t_col).border = full_border
+                grid_slots[plot_key].append(txt)
+
+        # Phase 3: Plot aggregated slots
+        thin = Side(border_style="thin", color="000000")
+        full_border = Border(top=thin, left=thin, right=thin, bottom=thin)
+        for (day, s_r, e_r), texts in grid_slots.items():
+            t_col = col_map[day]
+            if e_r > s_r:
+                try: target_ws.merge_cells(start_row=s_r, start_column=t_col, end_row=e_r, end_column=t_col)
+                except: pass
+            
+            cell = target_ws.cell(row=s_r, column=t_col)
+            cell.value = "\n---\n".join(texts)
+            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            cell.font = Font(name='Arial Narrow', size=9)
+            
+            for r in range(s_r, e_r + 1):
+                target_ws.cell(row=r, column=t_col).border = full_border
+
 
         # C. POPULATE FACULTY SUMMARY TABLE (Bottom List)
         if report_type == 'faculty':
-            # Search for the summary header (Subject, Course/Yr/Sec, etc.)
-            summary_start_row = 0
-            for r_idx in range(start_r + 2 if 'start_r' in locals() else 40, 100):
-                row_vals = [str(target_ws.cell(row=r_idx, column=c).value).upper() for c in range(1, 10)]
-                if any("SUBJECT" in v for v in row_vals if v):
-                    summary_start_row = r_idx + 1
+            # 1. Inject DAILY CONTACT HOURS totals (Row above header)
+            daily_hours_row = 0
+            for r_idx in range(1, 100):
+                l_val = str(target_ws.cell(row=r_idx, column=1).value or "").strip().upper()
+                if "DAILY CONTACT HOURS" in l_val:
+                    daily_hours_row = r_idx
                     break
             
-            if summary_start_row:
-                # Group schedules by course+section
-                summary_data = {}
-                for sc in item_schedules:
-                    key = (sc.course_id, sc.section_id)
-                    if key not in summary_data:
-                        summary_data[key] = {
-                            'code': sc.course.course_code if sc.course else "",
-                            'name': sc.course.course_name if sc.course else "",
-                            'section': sc.section.section_name if sc.section else "",
-                            'lec': sc.course.lec_units if sc.course else 0,
-                            'lab': sc.course.lab_units if sc.course else 0,
-                            'students': sc.section.number_of_students if sc.section else 0,
-                            'room': sc.room.room_name if sc.room else "T.B.A."
-                        }
+            if daily_hours_row:
+                for day, d_mins in daily_mins.items():
+                    if day in col_map:
+                        d_col = col_map[day]
+                        d_hours = round(d_mins / 60, 2)
+                        target_ws.cell(row=daily_hours_row, column=d_col).value = d_hours
+
+            # 2. Populate data starting exactly at Row 51 (per Image)
+            summary_start_row = 51
+            summary_max_data_row = 60 # Data container ends here
+            summary_data = {}
+            for sc in item_schedules:
+                key = (sc.course_id, sc.section_id)
+                # Calculate Duration Fallback (Contact Hours) based on schedule (matches Browser View)
+                c_dur = 0.0
+                try:
+                    sh, sm = map(int, sc.start_time.split(':'))
+                    eh, em = map(int, sc.end_time.split(':'))
+                    c_dur = (eh * 60 + em - sh * 60 - sm) / 60.0
+                except: pass
+
+                if key not in summary_data:
+                    c_obj = sc.course
+                    summary_data[key] = {
+                        'code': c_obj.course_code if c_obj else "",
+                        'name': c_obj.course_name if c_obj else "",
+                        'section': sc.section.section_name if sc.section else "",
+                        'lec_h': 0.0,
+                        'lab_h': 0.0,
+                        'lec_units': float(c_obj.lec_units or 0) if c_obj else 0.0,
+                        'lab_units': float(c_obj.lab_units or 0) if c_obj else 0.0,
+                        'students': sc.section.number_of_students if sc.section else 0,
+                        'rooms_set': set()
+                    }
+                if sc.session_type == 'Lab': summary_data[key]['lab_h'] += c_dur
+                else: summary_data[key]['lec_h'] += c_dur
+                if sc.room: summary_data[key]['rooms_set'].add(sc.room.room_name)
+            
+            curr_row = summary_start_row
+            total_lec = 0.0
+            total_lab = 0.0
+            total_students = 0
+            
+            for data in summary_data.values():
+                if curr_row > summary_max_data_row: break
                 
-                curr_row = summary_start_row
-                for data in summary_data.values():
-                    # Map to columns: B=Subject, C=Section, D=Lec, E=Lab, F=Total, G=Room, H=# of Students
-                    # (Adjust based on Image 5)
-                    target_ws.cell(row=curr_row, column=2).value = f"{data['code']} - {data['name']}"
-                    target_ws.cell(row=curr_row, column=3).value = data['section']
-                    target_ws.cell(row=curr_row, column=4).value = data['lec']
-                    target_ws.cell(row=curr_row, column=5).value = data['lab']
-                    target_ws.cell(row=curr_row, column=6).value = float(data['lec']) + float(data['lab'])
-                    target_ws.cell(row=curr_row, column=7).value = data['room']
-                    target_ws.cell(row=curr_row, column=8).value = data['students']
-                    curr_row += 1
+                # TRIPLE-SAFE DATA: Use Course units if > 0, fallback to Calculated Hours (matches System View Image 3)
+                final_lec = data['lec_units'] if data['lec_units'] > 0 else data['lec_h']
+                final_lab = data['lab_units'] if data['lab_units'] > 0 else data['lab_h']
+
+                # Col A(1): Subject Code, Col C(3): Section, Col D(4): Lec, Col E(5): Lab, Col F(6): Total, Col G(7): Room(s), Col H(8): Students
+                target_ws.cell(row=curr_row, column=1).value = data['code']
+                target_ws.cell(row=curr_row, column=3).value = data['section']
+                target_ws.cell(row=curr_row, column=4).value = final_lec
+                target_ws.cell(row=curr_row, column=5).value = final_lab
+                total_row_val = final_lec + final_lab
+                target_ws.cell(row=curr_row, column=6).value = total_row_val
+                target_ws.cell(row=curr_row, column=7).value = ", ".join(sorted(list(data['rooms_set']))) if data['rooms_set'] else "T.B.A."
+                target_ws.cell(row=curr_row, column=8).value = data['students']
+                
+                total_lec += final_lec
+                total_lab += final_lab
+                total_students += data['students']
+                curr_row += 1
+
+            # 3. Ensure full borders and footer totals (Row 51 to 61)
+            thin_side = Side(border_style="thin", color="000000")
+            table_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+            for r in range(summary_start_row, 62): 
+                for c in range(1, 9): 
+                    target_ws.cell(row=r, column=c).border = table_border
+
+            # 4. Footer Totals exactly on Row 61
+            footer_row = 61
+            target_ws.cell(row=footer_row, column=4).value = total_lec
+            target_ws.cell(row=footer_row, column=5).value = total_lab
+            target_ws.cell(row=footer_row, column=6).value = total_lec + total_lab
+            target_ws.cell(row=footer_row, column=8).value = total_students
         # D. PROCESS IMAGES (Cloning, Scaling, Offsets, Layering)
         _process_images(template_sheet, target_ws, settings, report_type)
 
