@@ -5638,8 +5638,10 @@ def export_excel_bulk():
                  if s.course: unique_subs.add(s.course.course_code)
              f_hours = str(round(total_mins / 60, 2))
              f_prep = str(len(unique_subs))
-        else: # room
-             item_schedules = ScheduledClass.query.filter_by(room_id=item.id, semester=export_semester).all()
+        elif report_type == 'room':
+             item_schedules = ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section), joinedload(ScheduledClass.faculty)).filter_by(room_id=item.id, semester=export_semester).all()
+        else: # course
+             item_schedules = ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section), joinedload(ScheduledClass.faculty), joinedload(ScheduledClass.room)).filter_by(course_id=item.id, semester=export_semester).all()
 
         # A. BUILD VARIABLE MAP & DYNAMIC INJECTION
         # ----------------------------------------------------------------------------------------------------------
@@ -5918,8 +5920,12 @@ def export_excel_bulk():
                     p = fn.split()
                     short_f = f"MR. {p[-1].upper()}" if (len(p) > 1 and not fn.startswith('T.B.A.')) else fn.upper()
                     txt += f"{short_f}"
-                else: 
-                    txt = f"{sc.course.course_code} {ctype}\n{sc.section.section_name if sc.section else ''}\n{sc.room.room_name if sc.room else ''}"
+                else: # course
+                    # Show Section, Room, and Faculty (Course Code is redundant in a Course report)
+                    fn = sc.faculty.full_name if sc.faculty else "T.B.A."
+                    p = fn.split()
+                    short_f = f"MR. {p[-1].upper()}" if (len(p) > 1 and not fn.startswith('T.B.A.')) else fn.upper()
+                    txt = f"{sc.section.section_name if sc.section else ''}\n{sc.room.room_name if sc.room else ''}\n{short_f}"
                 
                 grid_slots[plot_key].append(txt)
 
