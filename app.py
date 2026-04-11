@@ -5541,6 +5541,9 @@ def export_excel_bulk():
             "(046) 437-9505 / (046) 437-6659": "{{contact}}" if report_type != 'faculty' else "{{fac_contact_details}}",
             "cvsurosario@cvsu.edu.ph":    "{{email}}" if report_type != 'faculty' else "{{fac_email}}",
             "www.cvsu-rosario.edu.ph":    "{{website}}" if report_type != 'faculty' else "{{fac_website}}",
+            # Contact variant with ' and 7
+            "' (046) 437-9505 / 7 (046) 437-6659": "{{contact}}" if report_type != 'faculty' else "{{fac_contact_details}}",
+            
             "Prepared by:":               "{{prepared_by_label}}",
             "Recommending Approval:":     "{{rec_approval_label}}" if report_type != 'faculty' else "{{fac_rec_approval_label}}",
             "APPROVED:":                  "{{approved_label}}" if report_type != 'faculty' else "{{fac_approved_label}}",
@@ -5548,6 +5551,28 @@ def export_excel_bulk():
             "ROOM":                       "{{room_label}}",
             "COURSE":                     "{{course_label}}",
             "Semester / Academic Year":   "{{sem_ay_label}}",
+            
+            # Placeholders
+            "Section name":               "{{name}}",
+            "room name":                  "{{name}}",
+            "course name":                "{{name}}",
+            "faculty name":               "{{fac_name}}",
+            "Second / 2023-2024":         "{{sem_ay_value}}",
+            
+            # Signatories (Literal Names Mapping)
+            "SCHEDULE COMMITTEE":         "{{sig1}}",
+            "MARLYN A. QUINEZ":           "{{fac_registrar_name}}",
+            "ARIES M. GELERA":            "{{fac_chair_name}}",
+            "ARIEL G. SANTOS, EdD":       "{{sig2}}" if report_type != 'faculty' else "{{fac_director_name}}",
+            "LAURO B. PASCUA, EdD":       "{{sig3}}" if report_type != 'faculty' else "{{fac_admin_name}}",
+            "Instructor I":               "{{fac_rank}}",
+            
+            # Signatory Titles
+            "Director, Instruction":      "{{sig2_title}}" if report_type != 'faculty' else "{{fac_director_title}}",
+            "Campus Administrator":       "{{sig3_title}}" if report_type != 'faculty' else "{{fac_admin_title}}",
+            "Department Chairperson":     "{{fac_chair_title}}",
+            "OIC, Registrar":             "{{fac_registrar_label}}",
+
             "DEPARTMENT OF COMPUTER STUDIES": "{{fac_dept_label}}",
             "FACULTY CLASS SCHEDULE":      "{{fac_sched_title}}",
             "SECOND SEMESTER SY 2023 - 2024": "{{fac_sem_ay_label}}",
@@ -5561,10 +5586,6 @@ def export_excel_bulk():
             "Conforme:":                  "{{fac_conforme_label}}",
             "Reviewed by:":               "{{fac_reviewed_label}}",
             "Approved:":                  "{{fac_approved_label}}",
-            "OIC, Registrar":             "{{fac_registrar_label}}",
-            "Director, Instruction":      "{{sig2_title}}" if report_type != 'faculty' else "{{fac_director_title}}",
-            "Campus Administrator":       "{{sig3_title}}" if report_type != 'faculty' else "{{fac_admin_title}}",
-            "Department Chairperson":     "{{fac_chair_title}}",
             "V01-2018-07-24":             "{{fac_form_num_bottom}}",
             "VPAA-QF-11":                 "{{fac_form_num_top}}",
             "Name:":                      "{{fac_name_label}}" if report_type == 'faculty' else "{{name}}",
@@ -5573,7 +5594,7 @@ def export_excel_bulk():
         def fuzzy_clean(s):
             if not s or not isinstance(s, str): return ""
             # Normalized search key: No spaces, no specific marks
-            for char in " :/-.,":
+            for char in " :/-.,'":
                 s = s.replace(char, "")
             return s.strip().upper()
 
@@ -5588,66 +5609,63 @@ def export_excel_bulk():
                     return
             target_cell.value = value
 
-        # SCAN THE ENTIRE SHEET (No row limits)
-        scan_ranges = [range(1, target_ws.max_row + 1)]
-
-        for r_range in scan_ranges:
-            for r_idx in r_range:
-                for c_idx in range(1, 26):
-                    cell = target_ws.cell(row=r_idx, column=c_idx)
-                    val = cell.value
-                    if not val or not isinstance(val, str): continue
+        # CONSOLIDATED SCANNER: One loop for all replacements
+        for r_idx in range(1, target_ws.max_row + 1):
+            for c_idx in range(1, 26):
+                cell = target_ws.cell(row=r_idx, column=c_idx)
+                val = cell.value
+                if not val or not isinstance(val, str): continue
+                
+                original_val = val
+                clean_val = fuzzy_clean(val)
+                
+                # 1. MARKER SWAP (Literals -> Tokens)
+                for m_text, t_token in m_map.items():
+                    if fuzzy_clean(m_text) == clean_val:
+                        if t_token in vmap:
+                            val = str(vmap[t_token])
+                            cell.value = val
+                            original_val = val 
+                            break
+                
+                # 2. TOKEN INTERPOLATION ({{braces}})
+                match_replaced = False
+                for t_key, t_val in vmap.items():
+                    if t_key in val:
+                        val = val.replace(t_key, str(t_val))
+                        match_replaced = True
+                
+                if match_replaced or cell.value != original_val:
+                    if match_replaced: cell.value = val
+                    # Signatory styling (Bold + Underline)
+                    is_sig_field = any(f"{{sig{i}}}" in str(original_val) for i in range(1, 10)) or \
+                                 any(f"{{fac_chair_name}}" in str(original_val) for i in range(1, 10)) or \
+                                 any(x in str(original_val) for x in ["SANTOS", "PASCUA", "GELERA", "QUINEZ"])
+                    if is_sig_field:
+                        cell.font = Font(name='Arial Narrow', size=11, bold=True, underline='single')
+                        cell.alignment = Alignment(horizontal='center')
+                
+                # 3. COORDINATE OVERRIDES (Offsets)
+                if settings:
+                    l_target = offsets.get(report_type, {})
+                    v_target = val_map.get(report_type, {})
                     
-                    original_val = val
-                    clean_val = fuzzy_clean(val)
+                    label_found = None
+                    for log_label, (dr, dc) in l_target.items():
+                        if log_label and fuzzy_clean(log_label) == clean_val:
+                            label_found = log_label
+                            break
                     
-                    # 1. LITERAL MARKER SWAP (Detect default text in Template)
-                    for m_text, t_token in m_map.items():
-                        if fuzzy_clean(m_text) == clean_val:
-                            # Use the real setting value (with spaces/colons) from vmap
-                            if t_token in vmap:
-                                val = str(vmap[t_token])
-                                cell.value = val
-                                # Since we replaced it, skip token interpolate for this cell
-                                original_val = val 
-                                break
-                    
-                    # 2. TOKEN INTERPOLATION ({{token}})
-                    match_replaced = False
-                    for t_key, t_val in vmap.items():
-                        if t_key in val:
-                            val = val.replace(t_key, str(t_val))
-                            match_replaced = True
-                    
-                    if match_replaced or cell.value != original_val:
-                        if match_replaced: cell.value = val
-                        
-                        # Signatory styling (Bold + Underline)
-                        # We only auto-style signatories, let other tokens use template font
-                        is_sig_field = any(f"{{sig{i}}}" in str(original_val) for i in range(1, 10)) or \
-                                     any(f"{{fac_chair_name}}" in str(original_val) for i in range(1, 10))
-                        
-                        if is_sig_field:
-                            cell.font = Font(name='Arial Narrow', size=11, bold=True, underline='single')
-                            cell.alignment = Alignment(horizontal='center')
-                    
-                    # 3. LABEL-BASED OVERRIDES (Coordinate Offsets)
-                    if settings:
-                        l_target = offsets.get(report_type, {})
-                        v_target = val_map.get(report_type, {})
-                        
-                        label_found = None
-                        for log_label, (dr, dc) in l_target.items():
-                            if log_label and fuzzy_clean(log_label) == clean_val:
-                                label_found = log_label
-                                break
-                        
-                        if label_found:
-                            dr, dc = l_target[label_found]
-                            target_val = v_target.get(label_found)
-                            if target_val:
-                                # Write value while PRESERVING the target cell's template style
-                                _safe_write_to_cell(target_ws, r_idx + dr, c_idx + dc, target_val)
+                    if label_found:
+                        dr, dc = l_target[label_found]
+                        target_val = v_target.get(label_found)
+                        if target_val:
+                            # Add debug symbols so user can track the injection
+                            debug_val = str(target_val)
+                            if report_type == 'section' and label_found == settings.class_label: debug_val += " 14"
+                            if report_type == 'section' and label_found == settings.sem_ay_label: debug_val += " 15"
+                            
+                            _safe_write_to_cell(target_ws, r_idx + dr, c_idx + dc, debug_val)
 
         _inject_layout_images(target_ws, template_sheet, report_type)
 
