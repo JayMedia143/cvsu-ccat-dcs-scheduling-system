@@ -10003,7 +10003,7 @@ def build_variable_map(layout_type, settings, section_name=None, entity_name=Non
         '{{room_label}}':        getattr(s, 'room_label',   'ROOM')   or 'ROOM',
         '{{course_label}}':      getattr(s, 'course_label', 'COURSE') or 'COURSE',
         '{{sem_ay_label}}':      getattr(s, 'sem_ay_label', 'Semester / Academic Year') or 'Semester / Academic Year',
-        '{{sem_ay_value}}':      sem_ay or getattr(s, 'sem_ay_value', '') or '',
+        '{{sem_ay_value}}':      (f"{sem_ay} / {s.sem_ay_value.split('/')[-1].strip()}" if (sem_ay and '/' not in sem_ay and s.sem_ay_value and '/' in s.sem_ay_value) else (sem_ay or s.sem_ay_value or '')),
         '{{prepared_by_label}}': getattr(s, 'prepared_by_label', 'Prepared by:') or 'Prepared by:',
         '{{rec_approval_label}}':getattr(s, 'rec_approval_label', 'Recommending Approval:') or 'Recommending Approval:',
         '{{approved_label}}':    getattr(s, 'approved_label', 'APPROVED:') or 'APPROVED:',
