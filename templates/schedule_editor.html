@@ -997,6 +997,7 @@
                 <option value="section">Section</option>
                 <option value="faculty">Faculty</option>
                 <option value="room">Room</option>
+                <option value="course">Course</option>
             </select>
             <select id="entitySel" class="form-select form-select-sm" style="width:auto;max-width:200px"
                 onchange="loadGrid()">
@@ -1680,6 +1681,8 @@
     const FAC_NAMES = {{ faculties  | map(attribute = 'full_name') | list | tojson }};
     const ROOM_IDS = {{ rooms      | map(attribute = 'id') | list | tojson }};
     const ROOM_NAMES = {{ rooms      | map(attribute = 'room_name') | list | tojson }};
+    const CRS_IDS = {{ courses    | map(attribute = 'id') | list | tojson }};
+    const CRS_NAMES = {{ courses    | map(attribute = 'course_code') | list | tojson }};
 
     // ════════════════════════════════════════
     //  STATE
@@ -1761,7 +1764,10 @@
         const vt = document.getElementById('viewTypeSel').value;
         const sel = document.getElementById('entitySel');
         sel.innerHTML = '';
-        const [ids, names] = vt === 'section' ? [SECTIONS, SEC_NAMES] : vt === 'faculty' ? [FAC_IDS, FAC_NAMES] : [ROOM_IDS, ROOM_NAMES];
+        const [ids, names] = vt === 'section' ? [SECTIONS, SEC_NAMES] : 
+                          vt === 'faculty' ? [FAC_IDS, FAC_NAMES] :
+                          vt === 'room'    ? [ROOM_IDS, ROOM_NAMES] :
+                          [CRS_IDS, CRS_NAMES];
         ids.forEach((id, i) => sel.add(new Option(names[i], id)));
         currentViewType = vt;
         loadGrid();
@@ -1806,6 +1812,7 @@
         if (vt === 'section') document.getElementById('addSection').value = entityId;
         else if (vt === 'faculty') document.getElementById('addFaculty').value = entityId;
         else if (vt === 'room') document.getElementById('addRoom').value = entityId;
+        else if (vt === 'course') document.getElementById('addCourse').value = entityId;
 
         document.getElementById('gridPrompt').style.display = 'none';
         document.getElementById('calGrid').style.display = 'none';
@@ -1828,6 +1835,7 @@
                 if (vt === 'section') return Number(e.section_id) === entityId;
                 if (vt === 'faculty') return Number(e.faculty_id) === entityId;
                 if (vt === 'room')    return Number(e.room_id)    === entityId;
+                if (vt === 'course')  return Number(e.course_id)  === entityId;
                 return false; // Strictly isolate: don't show if view type is unknown or mismatched
             });
 
@@ -3581,12 +3589,13 @@
     const _pvSec = SECTIONS.map((id, i) => ({ id, label: SEC_NAMES[i] || String(id) }));
     const _pvFac = FAC_IDS.map((id, i) => ({ id, label: FAC_NAMES[i] || String(id) }));
     const _pvRom = ROOM_IDS.map((id, i) => ({ id, label: ROOM_NAMES[i] || String(id) }));
+    const _pvCrs = CRS_IDS.map((id, i) => ({ id, label: CRS_NAMES[i] || String(id) }));
 
     let pvTranslateX = 0, pvTranslateY = 0, pvScale = 1.0;
     let pvIsDragging = false, pvStartX = 0, pvStartY = 0;
     let pvCurrentType = 'section';
     const layoutConfigs = {{ layout_configs | tojson | safe }};
-    let pvListMap = { section: [..._pvSec], faculty: [..._pvFac], room: [..._pvRom] };
+    let pvListMap = { section: [..._pvSec], faculty: [..._pvFac], room: [..._pvRom], course: [..._pvCrs] };
 
     // Cinema state
     let pvPresIndex = -1, pvPresScale = 1.0, pvPresX = 0, pvPresY = 0;
@@ -3608,6 +3617,7 @@
             section: id => `/section-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
             faculty: id => `/faculty-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
             room:    id => `/room-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
+            course:  id => `/course-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
         };
         // Reset Transform for New Slide
         const cfg = layoutConfigs[pvCurrentType] || { w: 8.27, h: 11.69 };
@@ -3656,7 +3666,7 @@
     window.openDraftPreview = function() {
         if (!currentDraftId) { showToast('Select a draft first.', 'error'); return; }
         pvCurrentType = document.getElementById('viewTypeSel').value || 'section';
-        pvListMap = { section: [..._pvSec], faculty: [..._pvFac], room: [..._pvRom] };
+        pvListMap = { section: [..._pvSec], faculty: [..._pvFac], room: [..._pvRom], course: [..._pvCrs] };
         pvTranslateX = 0; pvTranslateY = 0; pvScale = 1.0;
         const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('draftPreviewModal'));
         modal.show();
@@ -3754,6 +3764,7 @@
             section: id => `/section-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
             faculty: id => `/faculty-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
             room:    id => `/room-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
+            course:  id => `/course-timetable-html/${id}?semester=${sem}&canvas=true&draft_id=${draftId}`,
         };
 
         // 1. Memory Layout (Virtualization)
@@ -3868,7 +3879,7 @@
             }
         }
 
-        [['section', _pvSec], ['faculty', _pvFac], ['room', _pvRom]].forEach(([type, orig]) => {
+        [['section', _pvSec], ['faculty', _pvFac], ['room', _pvRom], ['course', _pvCrs]].forEach(([type, orig]) => {
             const nonTba = orig.filter(x => !x.label.startsWith('T.B.A.'));
             const tba    = orig.filter(x =>  x.label.startsWith('T.B.A.'));
             nonTba.sort((a, b) => dir === 'asc' ? a.label.localeCompare(b.label) : b.label.localeCompare(a.label));
@@ -4195,6 +4206,7 @@
                         <option value="section">Sections</option>
                         <option value="faculty">Faculty</option>
                         <option value="room">Rooms</option>
+                        <option value="course">Course</option>
                     </select>
                 </div>
 

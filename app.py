@@ -4658,6 +4658,8 @@ def view_timetable():
         _sec_raw = get_archive_entities(archive_id, 'Section')
         _fac_raw = get_archive_entities(archive_id, 'Faculty')
         _rom_raw = get_archive_entities(archive_id, 'Room')
+        _crs_raw = get_archive_entities(archive_id, 'Course')
+        
         all_sections = sorted(_sec_raw, key=lambda s: s.section_name)
         _fac_sorted  = sorted(_fac_raw, key=lambda f: f.full_name)
         all_faculty  = [f for f in _fac_sorted if not f.full_name.startswith('T.B.A.')] + \
@@ -4665,6 +4667,7 @@ def view_timetable():
         _rom_sorted  = sorted(_rom_raw, key=lambda r: r.room_name)
         all_rooms    = [r for r in _rom_sorted if r.room_name != 'T.B.A.'] + \
                        [r for r in _rom_sorted if r.room_name == 'T.B.A.']
+        all_courses  = sorted(_crs_raw, key=lambda c: c.course_code)
         
         # 2. Get target name for filtering
         selected_name = "Historical Schedule"
@@ -4692,6 +4695,12 @@ def view_timetable():
                     target_field = 'room_name'
                     target_name = match.room_name
                     selected_name = f"Schedule for {match.room_name}"
+            elif filter_type == 'course':
+                match = next((c for c in all_courses if c.id == filter_id), None)
+                if match:
+                    target_field = 'course_code'
+                    target_name = match.course_code
+                    selected_name = f"Schedule for {match.course_code}"
         else:
             if all_sections:
                 match = all_sections[0]
@@ -4749,6 +4758,8 @@ def view_timetable():
 
         all_rooms    = [r for r in _rom_live if r.room_name != 'T.B.A.'] + \
                        [r for r in _rom_live if r.room_name == 'T.B.A.']
+        
+        all_courses = Course.query.filter_by(is_archived=False).order_by(Course.course_code).all()
 
         query = ScheduledClass.query.filter_by(semester=current_semester)
         selected_name = "Master Schedule"
@@ -4879,6 +4890,7 @@ def view_timetable():
     sections_json = [{'id': s.id, 'label': f"{s.section_name} ({s.year_level}Yr)"} for s in all_sections]
     faculty_json  = [{'id': f.id, 'label': f.full_name}                            for f in all_faculty]
     rooms_json    = [{'id': r.id, 'label': f"{r.room_name} ({r.building})"}        for r in all_rooms]
+    courses_json  = [{'id': c.id, 'label': f"{c.course_code} - {c.course_name}"}    for c in all_courses]
 
     is_hist = session.get('historical_mode_active', False)
     active_draft_id = session.get('active_editor_draft_id') or request.args.get('draft_id', type=int)
@@ -4900,8 +4912,8 @@ def view_timetable():
     }
 
     return render_template('view_timetable.html',
-                           all_sections=all_sections, all_faculty=all_faculty, all_rooms=all_rooms,
-                           sections_json=sections_json, faculty_json=faculty_json, rooms_json=rooms_json,
+                           all_sections=all_sections, all_faculty=all_faculty, all_rooms=all_rooms, all_courses=all_courses,
+                           sections_json=sections_json, faculty_json=faculty_json, rooms_json=rooms_json, courses_json=courses_json,
                            current_type=filter_type, current_id=filter_id,
                            current_semester=current_semester,
                            available_semesters=available_semesters,
@@ -5401,8 +5413,16 @@ def export_excel_bulk():
     template_path = os.path.join(basedir, 'static', 'assets', template_filename)
     
     if not os.path.exists(template_path):
-        flash(f'No template found for {report_type}. Please upload a {report_type} template in "Layouts" first.', 'danger')
-        return redirect(url_for('reports_page'))
+        if report_type == 'course':
+            # Auto-fallback to section template for courses if specific one is missing
+            template_filename = "section_template.xlsx"
+            template_path = os.path.join(basedir, 'static', 'assets', template_filename)
+            if not os.path.exists(template_path):
+                flash(f'No template found for Course (and no section fallback).', 'danger')
+                return redirect(url_for('reports_page'))
+        else:
+            flash(f'No template found for {report_type}. Please upload a {report_type} template in "Layouts" first.', 'danger')
+            return redirect(url_for('reports_page'))
 
     # Load Workbook
     wb = load_workbook(template_path)
@@ -5433,6 +5453,9 @@ def export_excel_bulk():
                  .order_by(Room.room_name).all()
                  if r.id in scheduled_ids]
         out_filename = f"All_Rooms_Utilization_{sem_label}.xlsx"
+    elif report_type == 'course':
+        items = Course.query.filter_by(is_archived=False).order_by(Course.course_code).all()
+        out_filename = f"All_Course_Schedules_{sem_label}.xlsx"
     else:
         flash("Invalid report type.", "danger")
         return redirect(url_for('reports_page'))
@@ -5460,8 +5483,10 @@ def export_excel_bulk():
             schedules = ScheduledClass.query.filter_by(section_id=item.id, semester=export_semester).all()
         elif report_type == 'faculty':
             schedules = ScheduledClass.query.filter_by(faculty_id=item.id, semester=export_semester).all()
-        else:
+        elif report_type == 'room':
             schedules = ScheduledClass.query.filter_by(room_id=item.id, semester=export_semester).all()
+        else: # course
+            schedules = ScheduledClass.query.filter_by(course_id=item.id, semester=export_semester).all()
         
         for sc in schedules:
             master_ws.append([
@@ -5537,6 +5562,10 @@ def export_excel_bulk():
             display_name = item.room_name
             dept_name = item.building if hasattr(item, 'building') else "N/A"
             item_schedules = ScheduledClass.query.filter_by(room_id=item.id, semester=export_semester).all()
+        else: # course
+            display_name = item.course_code
+            dept_name = item.course_name # fallback to subject title
+            item_schedules = ScheduledClass.query.filter_by(course_id=item.id, semester=export_semester).all()
 
         vmap = build_variable_map(report_type, settings, entity_name=display_name, sem_ay=export_semester)
 
@@ -5585,9 +5614,12 @@ def export_excel_bulk():
         elif report_type == 'faculty': 
             display_name = item.full_name
             dept_name = item.department
-        else: # room
+        elif report_type == 'room':
             display_name = item.room_name
             dept_name = item.building
+        else: # course
+            display_name = item.course_code
+            dept_name = item.course_name
             
         safe_title = "".join([c for c in display_name if c.isalnum() or c in " -_"])[:30]
         target_ws.title = safe_title
@@ -5861,17 +5893,26 @@ def export_excel_bulk():
                 if cell.value: cell.value = str(cell.value).rstrip('\n') + '\n---------------\n' + txt.strip()
                 else: cell.value = txt.strip()
                 
-                # Style Inheritance
+                # Alignment & Styles
                 if ref_cell:
                     _apply_style_from_template(cell, ref_cell)
+                    # Force center alignment regardless of template
+                    new_alignment = copy.copy(cell.alignment)
+                    new_alignment.horizontal = 'center'
+                    new_alignment.vertical = 'center'
+                    new_alignment.wrap_text = True
+                    cell.alignment = new_alignment
                 else:
                     cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
                     cell.font = Font(name='Arial Narrow', size=8, bold=True)
                 
-                # Border Fix
+                # Apply Border to the entire range (vital for merged cells)
                 from openpyxl.styles import Border, Side
                 thin = Side(border_style="thin", color="000000")
-                cell.border = Border(top=thin, left=thin, right=thin, bottom=thin)
+                full_border = Border(top=thin, left=thin, right=thin, bottom=thin)
+                
+                for r in range(start_r, end_r + 1):
+                    target_ws.cell(row=r, column=t_col).border = full_border
 
         # C. POPULATE FACULTY SUMMARY TABLE (Bottom List)
         if report_type == 'faculty':
@@ -7619,6 +7660,7 @@ def api_schedule_entries():
     section_id = request.args.get('section_id', type=int)
     faculty_id = request.args.get('faculty_id', type=int)
     room_id    = request.args.get('room_id', type=int)
+    course_id  = request.args.get('course_id', type=int)
 
     # ------------------------------------ Time Machine: Historical Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if session.get('historical_mode_active', False):
@@ -7645,6 +7687,12 @@ def api_schedule_entries():
             if match:
                 target_field = 'room_name'
                 target_name = match.room_name
+        elif course_id:
+            all_courses = get_archive_entities(archive_id, 'Course')
+            match = next((c for c in all_courses if c.id == course_id), None)
+            if match:
+                target_field = 'course_code'
+                target_name = match.course_code
 
         if not target_field or not target_name:
             return jsonify([])
@@ -7690,6 +7738,8 @@ def api_schedule_entries():
         q = q.filter_by(faculty_id=faculty_id)
     elif room_id:
         q = q.filter_by(room_id=room_id)
+    elif course_id:
+        q = q.filter_by(course_id=course_id)
     else:
         return jsonify([])
 
@@ -13513,8 +13563,10 @@ def course_timetable_html(course_id):
     # Define path to course template
     path = os.path.join(basedir, 'static', 'assets', 'course_template.xlsx')
     if not os.path.exists(path):
-        flash('No course template uploaded.', 'danger')
-        return redirect(url_for('manage_layouts'))
+        # Fallback to section template
+        path = os.path.join(basedir, 'static', 'assets', 'section_template.xlsx')
+        if not os.path.exists(path):
+            return "No template found for Course (and no section fallback).", 404
 
     ws, grid_info, bounds = _get_cached_template(path)
     if grid_info:
@@ -13555,8 +13607,11 @@ def course_timetable_pdf(course_id):
 
     path = os.path.join(basedir, 'static', 'assets', 'course_template.xlsx')
     if not os.path.exists(path):
-        flash('No course template uploaded.', 'danger')
-        return redirect(url_for('manage_layouts'))
+        # Fallback to section template
+        path = os.path.join(basedir, 'static', 'assets', 'section_template.xlsx')
+        if not os.path.exists(path):
+            flash('No template found for Course (and no section fallback).', 'danger')
+            return redirect(url_for('view_timetable'))
 
     schedules = ScheduledClass.query.options(
         joinedload(ScheduledClass.course),

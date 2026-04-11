@@ -641,6 +641,7 @@
             <option value="section" {% if current_type=='section' %}selected{% endif %}>Sections</option>
             <option value="faculty" {% if current_type=='faculty' %}selected{% endif %}>Faculty</option>
             <option value="room" {% if current_type=='room' %}selected{% endif %}>Rooms</option>
+            <option value="course" {% if current_type=='course' %}selected{% endif %}>Courses</option>
         </select>
     </div>
 
@@ -731,13 +732,13 @@
 <script>
     (function () {
         // ── Data from Flask ──────────────────────────────────────────
-        const _sec = {{ sections_json | tojson | safe
-    }};
+    const _sec = {{ sections_json | tojson | safe }};
     const _fac = {{ faculty_json  | tojson | safe }};
     const _rom = {{ rooms_json    | tojson | safe }};
+    const _crs = {{ courses_json  | tojson | safe }};
     const activeDraftId = {{ active_draft_id | tojson | safe }};
     const layoutConfigs = {{ layout_configs | tojson | safe }};
-    const listMap = { section: [..._sec], faculty: [..._fac], room: [..._rom] };
+    const listMap = { section: [..._sec], faculty: [..._fac], room: [..._rom], course: [..._crs] };
 
     window.applySort = function (dir, el) {
         if (!dir) {
@@ -757,7 +758,7 @@
             }
         }
 
-        [['section', _sec], ['faculty', _fac], ['room', _rom]].forEach(([type, orig]) => {
+        [['section', _sec], ['faculty', _fac], ['room', _rom], ['course', _crs]].forEach(([type, orig]) => {
             const nonTba = orig.filter(x => !x.label.startsWith('T.B.A.'));
             const tba = orig.filter(x => x.label.startsWith('T.B.A.'));
             nonTba.sort((a, b) => dir === 'asc'
@@ -904,7 +905,8 @@
     const urlMap = {
         section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`,
         faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`,
-        room: id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`
+        room: id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`,
+        course: id => `/course-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`
     };
 
     window.loadCanvas = function () {
@@ -954,7 +956,8 @@
         const pdfUrlMap = {
             section: id => `/section-timetable-pdf/${id}?semester=${encodeURIComponent(currentSemester)}`,
             faculty: id => `/faculty-timetable-pdf/${id}?semester=${encodeURIComponent(currentSemester)}`,
-            room: id => `/room-timetable-pdf/${id}?semester=${encodeURIComponent(currentSemester)}`
+            room: id => `/room-timetable-pdf/${id}?semester=${encodeURIComponent(currentSemester)}`,
+            course: id => `/course-timetable-pdf/${id}?semester=${encodeURIComponent(currentSemester)}`
         };
         const pdfUrl = pdfUrlMap[currentType](data.id);
 
@@ -1205,7 +1208,8 @@
         const urlMap = {
             section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`,
             faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`,
-            room: id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`
+            room: id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`,
+            course: id => `/course-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`
         };
 
         presIframe.src = urlMap[currentType](item.id);

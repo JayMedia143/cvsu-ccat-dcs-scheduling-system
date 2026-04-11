@@ -62,6 +62,7 @@
                         <option value="section">All Section Schedules (By Block)</option>
                         <option value="faculty">All Faculty Loads (By Instructor)</option>
                         <option value="room">All Room Utilizations (By Room)</option>
+                        <option value="course">All Course Schedules (By Subject)</option>
                     </select>
                     <div class="d-flex gap-2">
                         <button type="submit" form="bulkExportForm" onclick="this.form.action='{{ url_for('export_excel_bulk') }}'" class="btn btn-sm btn-success px-3 text-nowrap">
