@@ -5341,12 +5341,28 @@ def _process_images(source_ws, target_ws, settings, layout_type):
 
     # 3. CLONE AND APPLY TRANSFORMATIONS
     cloned_images = []
+    
+    # PERFORMANCE OPTIMIZATION: Extract raw bytes once to avoid "I/O on closed file" during bulk loops
+    if not hasattr(source_ws, '_cached_images_data'):
+        source_ws._cached_images_data = []
+        for img in source_ws._images:
+            try:
+                source_ws._cached_images_data.append(img._data())
+            except:
+                source_ws._cached_images_data.append(None)
+
     for i, original_img in enumerate(source_ws._images):
         try:
             from openpyxl.drawing.spreadsheet_drawing import AnchorMarker
             
+            # Use cached data if available to prevent multiple stream access
+            raw_data = source_ws._cached_images_data[i] if i < len(source_ws._cached_images_data) else None
+            if not raw_data:
+                try: raw_data = original_img._data()
+                except: continue
+                
             # Create fresh independent image object from raw data
-            new_img = Image(io.BytesIO(original_img._data()))
+            new_img = Image(io.BytesIO(raw_data))
             
             # Transfer Anchor from template (Careful deep cloning of Markers)
             old_from = original_img.anchor._from
@@ -5428,30 +5444,16 @@ def export_excel_bulk():
     wb = load_workbook(template_path)
     template_sheet = wb.active
     
-    # 2. GET ITEMS TO PRINT (Active schedules for this semester)
+    # 2. GET ITEMS TO PRINT (All non-archived items)
     sem_label = export_semester.replace(' ', '_')
     if report_type == 'section':
-        scheduled_ids = {r[0] for r in db.session.query(ScheduledClass.section_id)
-                         .filter(ScheduledClass.semester == export_semester).distinct().all()}
-        items = [s for s in Section.query.filter_by(is_archived=False)
-                 .order_by(Section.year_level, Section.section_name).all()
-                 if s.id in scheduled_ids]
+        items = Section.query.filter_by(is_archived=False).order_by(Section.year_level, Section.section_name).all()
         out_filename = f"All_Sections_Schedule_{sem_label}.xlsx"
     elif report_type == 'faculty':
-        scheduled_ids = {r[0] for r in db.session.query(ScheduledClass.faculty_id)
-                         .filter(ScheduledClass.semester == export_semester,
-                                 ScheduledClass.faculty_id.isnot(None)).distinct().all()}
-        items = [f for f in Faculty.query.filter_by(is_archived=False)
-                 .order_by(Faculty.full_name).all()
-                 if f.id in scheduled_ids]
+        items = Faculty.query.filter_by(is_archived=False).order_by(Faculty.full_name).all()
         out_filename = f"All_Faculty_Load_{sem_label}.xlsx"
     elif report_type == 'room':
-        scheduled_ids = {r[0] for r in db.session.query(ScheduledClass.room_id)
-                         .filter(ScheduledClass.semester == export_semester,
-                                 ScheduledClass.room_id.isnot(None)).distinct().all()}
-        items = [r for r in Room.query.filter_by(is_archived=False)
-                 .order_by(Room.room_name).all()
-                 if r.id in scheduled_ids]
+        items = Room.query.filter_by(is_archived=False).order_by(Room.room_name).all()
         out_filename = f"All_Rooms_Utilization_{sem_label}.xlsx"
     elif report_type == 'course':
         items = Course.query.filter_by(is_archived=False).order_by(Course.course_code).all()
@@ -5567,47 +5569,6 @@ def export_excel_bulk():
             dept_name = item.course_name # fallback to subject title
             item_schedules = ScheduledClass.query.filter_by(course_id=item.id, semester=export_semester).all()
 
-        vmap = build_variable_map(report_type, settings, entity_name=display_name, sem_ay=export_semester)
-
-        val_map = {
-            'section': {
-                "CLASS":                      display_name,
-                "ROOM":                       display_name,
-                "COURSE":                     display_name,
-                "Semester / Academic Year":   vmap.get('{{sem_ay_value}}', export_semester),
-            }
-        }
-        instructor_marker = "Instructor I"
-        val_map['section'][instructor_marker] = vmap.get('{{fac_instructor_rank}}', display_name) or display_name
-        registrar_marker = "OIC, Registrar"
-        val_map['section'][registrar_marker] = vmap.get('{{fac_registrar_name}}', "MARLYN A. QUINEZ")
-
-        offsets = {
-            'section': {
-                "CLASS":                      (-1, 0),
-                "ROOM":                       (-1, 0),
-                "COURSE":                     (-1, 0),
-                "Semester / Academic Year":   (-1, 0),
-                registrar_marker:             (-1, 0),
-                instructor_marker:            (-1, 0),
-            }
-        }
-
-        m_map = val_map.get(report_type, {})
-        o_map = offsets.get(report_type, {})
-        for r_idx, row in enumerate(template_sheet.iter_rows()):
-            for c_idx, cell in enumerate(row):
-                if cell.value and isinstance(cell.value, str):
-                    clean_val = fuzzy_clean(cell.value)
-                    if clean_val in m_map:
-                        target_val = m_map[clean_val]
-                        dr, dc = o_map.get(clean_val, (0, 0))
-                        # Removal of hashes logic for key dynamic values
-                        _safe_write_to_cell(target_ws, r_idx + dr + 1, c_idx + dc + 1, str(target_val))
-
-        # D. PROCESS IMAGES (Cloning, Scaling, Offsets, Layering)
-        _process_images(template_sheet, target_ws, settings, report_type)
-        
         if report_type == 'section': 
             display_name = item.section_name
             dept_name = "N/A"
@@ -5625,9 +5586,6 @@ def export_excel_bulk():
         target_ws.title = safe_title
 
         # A. SMART HEADER INJECTION & LOGO POSITIONING
-        f_hours = "0"
-        f_prep = "0"
-        item_schedules = []
         f_hours = "0"
         f_prep = "0"
         f_educ = ""
@@ -5692,10 +5650,16 @@ def export_excel_bulk():
                 "Instructor I":               (-1, 0),  # Anchor for dynamic Rank & Name Above
             },
             'section': {
-                "CLASS":                      (-1, 0),  # B11 -> B10
+                "CLASS":                      (-1, 0),  
                 "ROOM":                       (-1, 0),
                 "COURSE":                     (-1, 0),
-                "Semester / Academic Year":   (-1, 0),  # G11 -> G10
+                "Semester / Academic Year":   (-1, 0),  
+            },
+            'course': {
+                "CLASS":                      (-1, 0),  
+                "ROOM":                       (-1, 0),
+                "COURSE":                     (-1, 0),
+                "Semester / Academic Year":   (-1, 0),  
             }
         }
         
@@ -5717,6 +5681,14 @@ def export_excel_bulk():
                 "ROOM":                       display_name,
                 "COURSE":                     display_name,
                 "Semester / Academic Year":   vmap.get('{{sem_ay_value}}', export_semester),
+            },
+            'course': {
+                "CLASS":                      display_name,
+                "ROOM":                       display_name,
+                "COURSE":                     display_name,
+                "Semester / Academic Year":   vmap.get('{{sem_ay_value}}', export_semester),
+                "Section name":               dept_name,
+                "course name":                dept_name,
             }
         }
         # Dynamic Rank: Handle whatever is in the Instructor I cell
@@ -5952,8 +5924,10 @@ def export_excel_bulk():
                     target_ws.cell(row=curr_row, column=7).value = data['room']
                     target_ws.cell(row=curr_row, column=8).value = data['students']
                     curr_row += 1
+        # D. PROCESS IMAGES (Cloning, Scaling, Offsets, Layering)
+        _process_images(template_sheet, target_ws, settings, report_type)
 
-        # D. PAGE SETUP
+        # E. PAGE SETUP
         if settings:
             p_map = {'A4': 9, 'Letter': 1, 'Legal': 5}
             target_ws.page_setup.paperSize = p_map.get(settings.paper_size, 9)
