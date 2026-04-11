@@ -5501,38 +5501,55 @@ def export_excel_bulk():
         max_r = target_ws.max_row
         scan_ranges = [range(1, 41), range(max(1, max_r - 30), max_r + 1)]
         
-        # Label-to-Value Offset Registry (Based on Master List)
-        # If we find the 'label' from settings, look to inject data at the 'offset'
+        # Label-to-Value Offset Registry (BASED ON FINAL COORDINATE TABLE)
+        # Section: B11(CLASS)->B10 is (-1,0), G11(Sem)->G10 is (-1,0)
+        # Faculty: A15(Name:)->C15 is (0,2), A70(Instructor I)->A69 is (-1,0)
         offsets = {
             'faculty': {
-                settings.fac_name_label:  (0, 2),  # A15 -> C15
-                settings.fac_educ_label:  (0, 2),  # A16 -> C16
-                settings.fac_prep_label:  (0, 2),  # A17 -> C17
-                settings.fac_hours_label: (0, 2),  # F17 -> H17
+                "Name:":                      (0, 2),   # A15 -> C15
+                "Highest Educ. Attainment:":  (0, 2),   # A16 -> C16
+                "No. of Preparation/s:":      (0, 2),   # A17 -> C17
+                "Total no. of contact hours per week:": (0, 2), # F17 -> H17
+                "OIC, Registrar":             (-1, 0),  # A75 -> A74
+                "OIC-Registrar":              (-1, 0),
+                "Registrar":                  (-1, 0),
+                "Department Chairperson":     (-1, 0),
+                "Director, Instruction":      (-1, 0),
+                "Campus Administrator":       (-1, 0),
+                "Instructor I":               (-1, 0),  # Anchor for dynamic Rank & Name Above
             },
             'section': {
-                settings.class_label:     (0, 1),  # B11 -> C11 (standard)
-                settings.sem_ay_label:    (-1, 0), # Value is above label in G10/G11
+                "CLASS":                      (-1, 0),  # B11 -> B10
+                "ROOM":                       (-1, 0),
+                "COURSE":                     (-1, 0),
+                "Semester / Academic Year":   (-1, 0),  # G11 -> G10
             }
         }
         
         # Mapping for actual data injection
         val_map = {
             'faculty': {
-                settings.fac_name_label:  display_name,
-                settings.fac_educ_label:  f_educ,
-                settings.fac_prep_label:  str(f_prep),
-                settings.fac_hours_label: str(f_hours),
-                settings.fac_dept_label:  dept_name,
+                "Name:":                      display_name,
+                "Highest Educ. Attainment:":  f_educ,
+                "No. of Preparation/s:":      str(f_prep),
+                "Total no. of contact hours per week:": str(f_hours),
+                "OIC, Registrar":             vmap.get('{{fac_registrar_name}}', 'MARLYN A. QUINEZ'),
+                "Department Chairperson":     vmap.get('{{fac_chair_name}}', 'ARIES M. GELERA'),
+                "Director, Instruction":      vmap.get('{{fac_director_name}}', 'ARIEL G. SANTOS, EdD'),
+                "Campus Administrator":       vmap.get('{{fac_admin_name}}', 'LAURO B. PASCUA, EdD'),
+                "Instructor I":               display_name, # Name above Rank (Row 69)
             },
             'section': {
-                settings.class_label:     display_name,
-                settings.sem_ay_label:    export_semester,
+                "CLASS":                      display_name,
+                "ROOM":                       display_name,
+                "COURSE":                     display_name,
+                "Semester / Academic Year":   vmap.get('{{sem_ay_value}}', export_semester),
             }
         }
+        # Dynamic Rank: Handle whatever is in the Instructor I cell
+        vmap["Instructor I"] = vmap.get("{{fac_rank}}", "Instructor I")
 
         # Marker Map: Default Template Text -> Variable Token
-        # This handles templates without {{braces}} by swapping literal strings
         m_map = {
             "Republic of the Philippines": "{{republic_text}}" if report_type != 'faculty' else "{{fac_republic_text}}",
             "CAVITE STATE UNIVERSITY":    "{{school}}" if report_type != 'faculty' else "{{fac_univ_name}}",
@@ -5541,7 +5558,6 @@ def export_excel_bulk():
             "(046) 437-9505 / (046) 437-6659": "{{contact}}" if report_type != 'faculty' else "{{fac_contact_details}}",
             "cvsurosario@cvsu.edu.ph":    "{{email}}" if report_type != 'faculty' else "{{fac_email}}",
             "www.cvsu-rosario.edu.ph":    "{{website}}" if report_type != 'faculty' else "{{fac_website}}",
-            # Contact variant with ' and 7
             "' (046) 437-9505 / 7 (046) 437-6659": "{{contact}}" if report_type != 'faculty' else "{{fac_contact_details}}",
             
             "Prepared by:":               "{{prepared_by_label}}",
@@ -5552,22 +5568,22 @@ def export_excel_bulk():
             "COURSE":                     "{{course_label}}",
             "Semester / Academic Year":   "{{sem_ay_label}}",
             
-            # Placeholders
             "Section name":               "{{name}}",
             "room name":                  "{{name}}",
             "course name":                "{{name}}",
             "faculty name":               "{{fac_name}}",
             "Second / 2023-2024":         "{{sem_ay_value}}",
             
-            # Signatories (Literal Names Mapping)
             "SCHEDULE COMMITTEE":         "{{sig1}}",
             "MARLYN A. QUINEZ":           "{{fac_registrar_name}}",
+            "MARLYN A. QUIÑEZ":           "{{fac_registrar_name}}",
             "ARIES M. GELERA":            "{{fac_chair_name}}",
             "ARIEL G. SANTOS, EdD":       "{{sig2}}" if report_type != 'faculty' else "{{fac_director_name}}",
             "LAURO B. PASCUA, EdD":       "{{sig3}}" if report_type != 'faculty' else "{{fac_admin_name}}",
+            
+            # Use fixed template placeholder as dynamic anchor for rank replacement
             "Instructor I":               "{{fac_rank}}",
             
-            # Signatory Titles
             "Director, Instruction":      "{{sig2_title}}" if report_type != 'faculty' else "{{fac_director_title}}",
             "Campus Administrator":       "{{sig3_title}}" if report_type != 'faculty' else "{{fac_admin_title}}",
             "Department Chairperson":     "{{fac_chair_title}}",
@@ -5660,12 +5676,9 @@ def export_excel_bulk():
                         dr, dc = l_target[label_found]
                         target_val = v_target.get(label_found)
                         if target_val:
-                            # Add debug symbols so user can track the injection
-                            debug_val = str(target_val)
-                            if report_type == 'section' and label_found == settings.class_label: debug_val += " 14"
-                            if report_type == 'section' and label_found == settings.sem_ay_label: debug_val += " 15"
-                            
-                            _safe_write_to_cell(target_ws, r_idx + dr, c_idx + dc, debug_val)
+                            # Write raw value (Cleanup for the key 5 dynamic values)
+                            # User only wants to remove hashes from dynamic VALUES, keeping them for labels.
+                            _safe_write_to_cell(target_ws, r_idx + dr, c_idx + dc, str(target_val))
 
         _inject_layout_images(target_ws, template_sheet, report_type)
 
@@ -10062,7 +10075,7 @@ def build_variable_map(layout_type, settings, section_name=None, entity_name=Non
             '{{fac_chair_title}}':    getattr(s, 'fac_chair_title',      'Department Chairperson') or 'Department Chairperson',
             '{{fac_director_name}}':  getattr(s, 'fac_director_name',    'ARIEL G. SANTOS, EdD') or 'ARIEL G. SANTOS, EdD',
             '{{fac_director_title}}': getattr(s, 'fac_director_title',   'Director, Instruction') or 'Director, Instruction',
-            '{{fac_registrar_name}}': getattr(s, 'sig_registrar_name',   'MARLYN A. QUINEZ')     or 'MARLYN A. QUINEZ',
+            '{{fac_registrar_name}}': getattr(s, 'fac_registrar_name',   'MARLYN A. QUINEZ')     or 'MARLYN A. QUINEZ',
             '{{fac_admin_name}}':     getattr(s, 'fac_admin_name',       'LAURO B. PASCUA, EdD') or 'LAURO B. PASCUA, EdD',
             '{{fac_admin_title}}':    getattr(s, 'fac_admin_title',      'Campus Administrator') or 'Campus Administrator',
             '{{fac_consultation}}':   getattr(s, 'fac_consultation',     'Consultation:')        or 'Consultation:',
