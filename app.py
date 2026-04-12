@@ -5257,9 +5257,103 @@ def export_pdf_bulk():
             entity_name = item.room_name
 
         cell_overrides, extra_merge_map, extra_skip_cells = build_schedule_overlays(schedules, grid_info, report_type)
-        var_map = build_variable_map(report_type, settings, entity_name=entity_name, sem_ay=export_semester)
+        
+        # Calculate Faculty Totals for PDF Overrides
+        f_hours, f_prep = "0", "0"
+        daily_mins = {"Monday":0, "Tuesday":0, "Wednesday":0, "Thursday":0, "Friday":0, "Saturday":0}
+        summary_data = {}
+        if report_type == 'faculty':
+            total_mins = 0
+            unique_subs = set()
+            for sc in schedules:
+                try:
+                    sh, sm = map(int, sc.start_time.split(':'))
+                    eh, em = map(int, sc.end_time.split(':'))
+                    duration = (eh * 60 + em) - (sh * 60 + sm)
+                    total_mins += duration
+                    if sc.day in daily_mins: daily_mins[sc.day] += duration
+                except: pass
+                if sc.course: unique_subs.add(sc.course.course_code)
+                
+                # Summary Prep
+                key = (sc.course_id, sc.section_id)
+                c_dur = 0.0
+                try:
+                    sh, sm = map(int, sc.start_time.split(':'))
+                    eh, em = map(int, sc.end_time.split(':'))
+                    c_dur = (eh * 60 + em - sh * 60 - sm) / 60.0
+                except: pass
+                if key not in summary_data:
+                    c_obj = sc.course
+                    summary_data[key] = {
+                        'code': c_obj.course_code if c_obj else "",
+                        'section': sc.section.section_name if sc.section else "",
+                        'lec_h': 0.0, 'lab_h': 0.0,
+                        'lec_units': float(c_obj.lec_units or 0) if c_obj else 0.0,
+                        'lab_units': float(c_obj.lab_units or 0) if c_obj else 0.0,
+                        'students': sc.section.number_of_students if sc.section else 0,
+                        'rooms_set': set()
+                    }
+                if sc.session_type == 'Lab': summary_data[key]['lab_h'] += c_dur
+                else: summary_data[key]['lec_h'] += c_dur
+                if sc.room: summary_data[key]['rooms_set'].add(sc.room.room_name)
+
+            f_hours = str(round(total_mins / 60, 2))
+            f_prep = str(len(unique_subs))
+
+        var_map = build_variable_map(report_type, settings, entity_name=entity_name, sem_ay=export_semester, prep_count=f_prep, total_hours=f_hours)
         static_overrides = build_static_cell_overrides(ws, report_type, settings, entity_name=entity_name, sem_ay='')
         all_overrides = {**static_overrides, **cell_overrides}
+
+        # PDF COORDINATE ALIGNMENT (Strictly within export_pdf_bulk)
+        if report_type == 'room':
+            all_overrides[(10, 2)] = entity_name
+            
+        if report_type == 'faculty':
+            # Row 48 Daily Hours scanner
+            daily_hours_row = 0
+            for r_idx in range(1, 100):
+                l_val = str(ws.cell(row=r_idx, column=1).value or "").strip().upper()
+                if "DAILY CONTACT HOURS" in l_val:
+                    daily_hours_row = r_idx
+                    break
+            if daily_hours_row:
+                for day, d_mins in daily_mins.items():
+                    # We reuse grid_info's day_to_col if available, or just use standard Mon=3...
+                    # But for PDF overrides, we'll manually check the template scan results
+                    from collections import defaultdict
+                    # We'll use a hardcoded fallback if grid_info is complex
+                    d_map = {"Monday":3, "Tuesday":4, "Wednesday":5, "Thursday":6, "Friday":7, "Saturday":8}
+                    all_overrides[(daily_hours_row, d_map[day])] = round(d_mins/60, 2)
+            
+            # Rows 51-60 Course List
+            curr_row = 51
+            total_lec_sum, total_lab_sum, total_students_sum = 0.0, 0.0, 0
+            for k in sorted(summary_data.keys()):
+                if curr_row > 60: break
+                d = summary_data[k]
+                final_lec = d['lec_units'] if d['lec_units'] > 0 else d['lec_h']
+                final_lab = d['lab_units'] if d['lab_units'] > 0 else d['lab_h']
+                row_total = final_lec + final_lab
+                
+                all_overrides[(curr_row, 1)] = d['code']
+                all_overrides[(curr_row, 3)] = d['section']
+                all_overrides[(curr_row, 4)] = final_lec
+                all_overrides[(curr_row, 5)] = final_lab
+                all_overrides[(curr_row, 6)] = row_total
+                all_overrides[(curr_row, 7)] = ", ".join(sorted(list(d['rooms_set']))) if d['rooms_set'] else "T.B.A."
+                all_overrides[(curr_row, 8)] = d['students']
+                
+                total_lec_sum += final_lec
+                total_lab_sum += final_lab
+                total_students_sum += d['students']
+                curr_row += 1
+            
+            # Row 61 Totals
+            all_overrides[(61, 4)] = total_lec_sum
+            all_overrides[(61, 5)] = total_lab_sum
+            all_overrides[(61, 6)] = total_lec_sum + total_lab_sum
+            all_overrides[(61, 8)] = total_students_sum
 
         html, _, scale_v, total_h_px = render_excel_to_html_pdf(
             ws, cell_overrides=all_overrides, variable_map=var_map,
