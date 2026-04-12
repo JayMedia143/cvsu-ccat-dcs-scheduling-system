@@ -5516,7 +5516,7 @@ def export_excel_bulk():
     
     def fuzzy_clean(s):
         if not s or not isinstance(s, str): return ""
-        for char in " :/-.,'":
+        for char in " :/-.,'0123456789":
             s = s.replace(char, "")
         return s.strip().upper()
 
@@ -5687,9 +5687,9 @@ def export_excel_bulk():
                 "ROOM":                       (-1, 0),
                 "COURSE":                     (-1, 0),
                 "Semester / Academic Year":   (-1, 0),  
-                "Prepared by:":               (3, 1),   # Anchor A43 -> Target B46:C47
+                "Prepared by:":               (3, 0),  
                 "Recommending Approval:":     (3, 1),   
-                "APPROVED:":                  (3, 1),   
+                "APPROVED:":                  (3, 0),   
             },
             'course': {
                 "CLASS":                      (-1, 0),  
@@ -15972,6 +15972,466 @@ def public_student_schedule_pdf(student_id):
         print(f"PDF Error: {e}")
         flash('Failed to generate PDF document.', 'danger')
         return redirect(url_for('student_schedule', student_id=student.student_id))
+
+
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# MODULE: INDIVIDUAL EXCEL EXPORTS (STANDALONE LOGIC)
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def _safe_write_to_cell_indiv(ws, target_row, target_col, value):
+    """Internal helper for individual excel generation."""
+    target_cell = ws.cell(row=target_row, column=target_col)
+    target_coord = target_cell.coordinate
+    for merged_range in ws.merged_cells.ranges:
+        if target_coord in merged_range:
+            ws.cell(row=merged_range.min_row, column=merged_range.min_col).value = value
+            return
+    target_cell.value = value
+
+def _generate_individual_excel_internal(item, schedules, report_type, semester):
+    """
+    Core Logic for Single-Entity Excel Export.
+    CARBON COPY of export_excel_bulk logic, adapted for a single entity.
+    """
+    settings = get_settings()
+    template_filename = f"{report_type}_template.xlsx"
+    if report_type in ('course', 'student', 'irregular'):
+        # Force/fallback to section template for courses and students
+        template_filename = "section_template.xlsx"
+    
+    template_path = os.path.join(basedir, 'static', 'assets', template_filename)
+    if not os.path.exists(template_path):
+        return None, f"Template {template_filename} not found."
+
+    wb = load_workbook(template_path)
+    template_sheet = wb.active
+    target_ws = wb.copy_worksheet(template_sheet)
+    
+    # Metadata for labels
+    if report_type == 'section':
+        display_name = item.section_name
+        dept_name = "N/A"
+    elif report_type == 'faculty':
+        display_name = item.full_name
+        dept_name = item.department
+    elif report_type == 'room':
+        display_name = item.room_name
+        dept_name = item.building
+    elif report_type == 'course':
+        display_name = item.course_code
+        dept_name = item.course_name
+    elif report_type in ('student', 'irregular'):
+        display_name = item.full_name
+        dept_name = "N/A"
+    else:
+        display_name = "Schedule"
+        dept_name = "N/A"
+
+    # 1. Grid Mapping logic (DUPLICATED FROM BULK)
+    day_headers = {'Monday':['MON','MONDAY'],'Tuesday':['TUE','TUESDAY'],'Wednesday':['WED','WEDNESDAY'],'Thursday':['THU','THURS','THURSDAY'],'Friday':['FRI','FRIDAY'],'Saturday':['SAT','SATURDAY']}
+    col_map = {} 
+    row_map = {} 
+    _t_occurrences = {}
+    
+    def fuzzy_clean(s):
+        if not s or not isinstance(s, str): return ""
+        for char in " :/-.,'0123456789": s = s.replace(char, "")
+        return s.strip().upper()
+
+    for row in template_sheet.iter_rows(min_row=1, max_row=60, max_col=26):
+        for cell in row:
+            val = ""
+            if cell.value:
+                if hasattr(cell.value, 'strftime'): val = cell.value.strftime('%H:%M')
+                else: val = str(cell.value).strip().upper()
+            if not val: continue
+            for db_day, keywords in day_headers.items():
+                if val in keywords: col_map[db_day] = cell.column
+            
+            if report_type == 'faculty':
+                if cell.column == 1:
+                    time_parts = val.replace('-', ' ').replace('–', ' ').split()
+                    if time_parts:
+                        t_start = time_parts[0].lstrip('0').upper()
+                        if ':' in t_start:
+                            if t_start not in _t_occurrences: _t_occurrences[t_start] = []
+                            if len(_t_occurrences[t_start]) < 2:
+                                _t_occurrences[t_start].append(cell.row)
+            else:
+                clean_time_val = val.lstrip('0') if ':' in val else val
+                for h in range(1, 13):
+                    for m in [0, 30]:
+                        t_str = f"{h}:{m:02d}"
+                        if clean_time_val.startswith(t_str):
+                            if t_str not in _t_occurrences: _t_occurrences[t_str] = []
+                            if len(_t_occurrences[t_str]) < 2:
+                                _t_occurrences[t_str].append(cell.row)
+
+    for h in range(7, 22): 
+        for m in [0, 30]:
+            t_key = f"{h}:{m:02d}"
+            t_12 = f"{h if h <= 12 else h - 12}:{m:02d}"
+            if t_12 in _t_occurrences:
+                occ = _t_occurrences[t_12]
+                row_map[t_key] = occ[0] if (h < 13 or len(occ) == 1) else (occ[1] if len(occ) > 1 else occ[0])
+
+    # 2. Variable Mapping (DUPLICATED FROM BULK)
+    f_hours = "0"
+    f_prep = "0"
+    f_educ = ""
+    if report_type == 'faculty':
+        f_educ = item.highest_educational_attainment or ""
+        total_mins = 0
+        daily_mins = {"Monday": 0, "Tuesday": 0, "Wednesday": 0, "Thursday": 0, "Friday": 0, "Saturday": 0}
+        unique_subs = set()
+        for s in schedules:
+            try:
+                sh_str, sm_str = s.start_time.split(':')
+                eh_str, em_str = s.end_time.split(':')
+                duration = (int(eh_str) * 60 + int(em_str)) - (int(sh_str) * 60 + int(sm_str))
+                total_mins += duration
+                if s.day in daily_mins:
+                    daily_mins[s.day] += duration
+            except: pass
+            if s.course: unique_subs.add(s.course.course_code)
+        f_hours = str(round(total_mins / 60, 2))
+        f_prep = str(len(unique_subs))
+
+    vmap = build_variable_map(
+        report_type if report_type not in ('student', 'irregular') else 'section', 
+        settings, 
+        entity_name=display_name,
+        faculty=(item if report_type == 'faculty' else None),
+        prep_count=f_prep, 
+        total_hours=f_hours, 
+        sem_ay=semester
+    )
+
+    offsets = {
+        'faculty': { "Name:": (0, 2), "Highest Educ. Attainment:": (0, 2), "No. of Preparation/s:": (0, 2), "Total no. of contact hours per week:": (0, 2), "OIC, Registrar": (-1, 0), "OIC-Registrar": (-1, 0), "Registrar": (-1, 0), "Department Chairperson": (-1, 0), "Director, Instruction": (-1, 0), "Campus Administrator": (-1, 0), "Instructor I": (-1, 0) },
+        'section': { "CLASS": (-1, 0), "ROOM": (-1, 0), "COURSE": (-1, 0), "Semester / Academic Year": (-1, 0), "Prepared by:": (3, 0), "Recommending Approval:": (3, 1), "APPROVED:": (3, 0) },
+        'course': { "CLASS": (-1, 0), "ROOM": (-1, 0), "COURSE": (-1, 0), "Semester / Academic Year": (-1, 0), "Prepared by:": (3, 0), "Recommending Approval:": (3, 1), "APPROVED:": (3, 0) },
+        'room': { "ROOM": (-1, 0), "Prepared by:": (3, 0), "Recommending Approval:": (3, 1), "APPROVED:": (3, 0) }
+    }
+    
+    val_map = {
+        'faculty': { "Name:": display_name, "Highest Educ. Attainment:": f_educ, "No. of Preparation/s:": str(f_prep), "Total no. of contact hours per week:": str(f_hours), "OIC, Registrar": vmap.get('{{fac_registrar_name}}', 'MARLYN A. QUINEZ'), "Department Chairperson": vmap.get('{{fac_chair_name}}', 'ARIES M. GELERA'), "Director, Instruction": vmap.get('{{fac_director_name}}', 'ARIEL G. SANTOS, EdD'), "Campus Administrator": vmap.get('{{fac_admin_name}}', 'LAURO B. PASCUA, EdD'), "Instructor I": display_name },
+        'section': { "CLASS": display_name, "ROOM": display_name, "COURSE": display_name, "Semester / Academic Year": vmap.get('{{sem_ay_value}}', semester) },
+        'course': { "CLASS": display_name, "ROOM": display_name, "COURSE": display_name, "Semester / Academic Year": vmap.get('{{sem_ay_value}}', semester), "Section name": dept_name, "course name": dept_name, "Prepared by:": vmap.get('{{sig1}}', 'SCHEDULE COMMITTEE'), "Recommending Approval:": vmap.get('{{sig2}}', 'ARIEL G. SANTOS, EdD'), "APPROVED:": vmap.get('{{sig3}}', 'LAURO B. PASCUA, EdD') }
+    }
+    # For students, use section mappings
+    if report_type in ('student', 'irregular'):
+        val_map[report_type] = val_map['section']
+        offsets[report_type] = offsets['section']
+
+    m_map = {
+        "Republic of the Philippines": "{{republic_text}}" if report_type != 'faculty' else "{{fac_republic_text}}",
+        "CAVITE STATE UNIVERSITY":    "{{school}}" if report_type != 'faculty' else "{{fac_univ_name}}",
+        "CCAT Campus":                "{{campus}}" if report_type != 'faculty' else "{{fac_campus_name}}",
+        "Rosario, Cavite":            "{{address}}" if report_type != 'faculty' else "{{fac_address}}",
+        "(046) 437-9505 / (046) 437-6659": "{{contact}}" if report_type != 'faculty' else "{{fac_contact_details}}",
+        "cvsurosario@cvsu.edu.ph":    "{{email}}" if report_type != 'faculty' else "{{fac_email}}",
+        "www.cvsu-rosario.edu.ph":    "{{website}}" if report_type != 'faculty' else "{{fac_website}}",
+        "' (046) 437-9505 / 7 (046) 437-6659": "{{contact}}" if report_type != 'faculty' else "{{fac_contact_details}}",
+        "Prepared by:": "{{prepared_by_label}}", "Recommending Approval:": "{{rec_approval_label}}" if report_type != 'faculty' else "{{fac_rec_approval_label}}", "APPROVED:": "{{approved_label}}" if report_type != 'faculty' else "{{fac_approved_label}}", "CLASS": "{{class_label}}", "ROOM": "{{room_label}}", "COURSE": "{{course_label}}", "Semester / Academic Year": "{{sem_ay_label}}", "Section name": "{{name}}", "room name": "{{name}}", "course name": "{{name}}", "faculty name": "{{fac_name}}", "Second / 2023-2024": "{{sem_ay_value}}", "SCHEDULE COMMITTEE": "{{sig1}}", "MARLYN A. QUINEZ": "{{fac_registrar_name}}", "MARLYN A. QUIÑEZ": "{{fac_registrar_name}}", "ARIES M. GELERA": "{{fac_chair_name}}", "ARIEL G. SANTOS, EdD": "{{sig2}}" if report_type != 'faculty' else "{{fac_director_name}}", "LAURO B. PASCUA, EdD": "{{sig3}}" if report_type != 'faculty' else "{{fac_admin_name}}", "Instructor I": "{{fac_rank}}", "Director, Instruction": "{{sig2_title}}" if report_type != 'faculty' else "{{fac_director_title}}", "Campus Administrator": "{{sig3_title}}" if report_type != 'faculty' else "{{fac_admin_title}}", "Department Chairperson": "{{fac_chair_title}}", "OIC, Registrar": "{{fac_registrar_label}}"
+    }
+
+    # ROOM LAYOUT SAFETY: Direct injection for Room Name (Room Only)
+    if report_type == 'room':
+        _safe_write_to_cell_indiv(target_ws, 10, 2, display_name)
+
+    # Consolidated Scanner (DUPLICATED FROM BULK)
+    for r_idx in range(1, target_ws.max_row + 1):
+        for c_idx in range(1, 26):
+            cell = target_ws.cell(row=r_idx, column=c_idx)
+            val = cell.value
+            if not val or not isinstance(val, str): continue
+            
+            original_val = val
+            clean_original_val = fuzzy_clean(val)
+            clean_val = fuzzy_clean(val)
+            
+            for m_text, t_token in m_map.items():
+                if fuzzy_clean(m_text) == clean_val:
+                    if t_token in vmap:
+                        val = str(vmap[t_token])
+                        cell.value = val
+                        original_val = val 
+                        break
+            
+            match_replaced = False
+            for t_key, t_val in vmap.items():
+                if t_key in val:
+                    val = val.replace(t_key, str(t_val))
+                    match_replaced = True
+            
+            if match_replaced or cell.value != original_val:
+                if match_replaced: cell.value = val
+                is_sig_field = any(f"{{sig{i}}}" in str(original_val) for i in range(1, 10)) or \
+                             any(f"{{fac_chair_name}}" in str(original_val) for i in range(1, 10)) or \
+                             any(x in str(original_val) for x in ["SANTOS", "PASCUA", "GELERA", "QUINEZ"])
+                if is_sig_field:
+                    cell.font = Font(name='Arial Narrow', size=11, bold=True, underline='single')
+                    cell.alignment = Alignment(horizontal='center')
+            
+            # Coordinate Overrides
+            l_target = offsets.get(report_type if report_type not in ('student', 'irregular') else 'section', {})
+            v_target = val_map.get(report_type, {})
+            label_found = None
+            for log_label, (dr, dc) in l_target.items():
+                if log_label and fuzzy_clean(log_label) == clean_original_val:
+                    label_found = log_label
+                    break
+            if label_found:
+                dr, dc = l_target[label_found]
+                target_val = v_target.get(label_found)
+                if target_val:
+                    _safe_write_to_cell_indiv(target_ws, r_idx + dr, c_idx + dc, str(target_val))
+
+    # 3. Grid Plotting (DUPLICATED FROM BULK)
+    grid_min_r, grid_max_r = 20, 41
+    grid_min_c, grid_max_c = 2, 8
+    existing_merged_ranges = list(target_ws.merged_cells.ranges)
+    for mrange in existing_merged_ranges:
+        overlap_r = not (mrange.max_row < grid_min_r or mrange.min_row > grid_max_r)
+        overlap_c = not (mrange.max_col < grid_min_c or mrange.min_col > grid_max_c)
+        if overlap_r and overlap_c:
+            try: target_ws.unmerge_cells(str(mrange))
+            except: pass
+
+    grid_slots = {}
+    for sc in schedules:
+        if sc.day not in col_map: continue
+        try:
+            sh_s, sm_s = map(int, sc.start_time.split(':'))
+            eh_e, em_e = map(int, sc.end_time.split(':'))
+        except: continue
+        
+        start_key = f"{sh_s}:{sm_s:02d}"
+        if start_key in row_map:
+            s_r = row_map[start_key]
+            slots = int(((eh_e * 60 + em_e) - (sh_s * 60 + sm_s)) / 30)
+            e_r = s_r + slots - 1
+            
+            plot_key = (sc.day, s_r, e_r)
+            if plot_key not in grid_slots: grid_slots[plot_key] = []
+            
+            ctype = f"({sc.session_type})" if sc.session_type else ""
+            txt = ""
+            if report_type == 'faculty':
+                if sc.course: txt += f"{sc.course.course_code} {ctype}\n"
+                if sc.section: txt += f"{sc.section.section_name}\n"
+                if sc.room: txt += f"{sc.room.room_name}"
+            elif report_type in ('section', 'student', 'irregular'):
+                txt = f"{sc.course.course_code} {ctype}\n"
+                fn = sc.faculty.full_name if sc.faculty else "T.B.A."
+                p = fn.split()
+                short_f = f"MR. {p[-1].upper()}" if (len(p) > 1 and not fn.startswith('T.B.A.')) else fn.upper()
+                txt += f"{short_f}\n{sc.room.room_name if sc.room else ''}"
+            elif report_type == 'room':
+                txt = f"{sc.course.course_code} {ctype}\n{sc.section.section_name if sc.section else ''}\n"
+                fn = sc.faculty.full_name if sc.faculty else "T.B.A."
+                p = fn.split()
+                short_f = f"MR. {p[-1].upper()}" if (len(p) > 1 and not fn.startswith('T.B.A.')) else fn.upper()
+                txt += f"{short_f}"
+            else: # course
+                fn = sc.faculty.full_name if sc.faculty else "T.B.A."
+                p = fn.split()
+                short_f = f"MR. {p[-1].upper()}" if (len(p) > 1 and not fn.startswith('T.B.A.')) else fn.upper()
+                txt = f"{sc.section.section_name if sc.section else ''}\n{sc.room.room_name if sc.room else ''}\n{short_f}"
+            grid_slots[plot_key].append(txt)
+
+    thin = Side(border_style="thin", color="000000")
+    full_border = Border(top=thin, left=thin, right=thin, bottom=thin)
+    for (day, s_r, e_r), texts in grid_slots.items():
+        t_col = col_map[day]
+        if e_r > s_r:
+            try: target_ws.merge_cells(start_row=s_r, start_column=t_col, end_row=e_r, end_column=t_col)
+            except: pass
+        
+        cell = target_ws.cell(row=s_r, column=t_col)
+        cell.value = "\n---\n".join(texts)
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.font = Font(name='Arial Narrow', size=9)
+        for r in range(s_r, e_r + 1):
+            target_ws.cell(row=r, column=t_col).border = full_border
+
+    # 4. Faculty Summary Table (DUPLICATED FROM BULK)
+    if report_type == 'faculty':
+        # DAILY CONTACT HOURS (Row 48 Scanner)
+        daily_hours_row = 0
+        for r_idx in range(1, 100):
+            l_val = str(target_ws.cell(row=r_idx, column=1).value or "").strip().upper()
+            if "DAILY CONTACT HOURS" in l_val:
+                daily_hours_row = r_idx
+                break
+        if daily_hours_row:
+            for day, d_mins in daily_mins.items():
+                if day in col_map:
+                    d_col = col_map[day]
+                    d_hours = round(d_mins / 60, 2)
+                    target_ws.cell(row=daily_hours_row, column=d_col).value = d_hours
+
+        # Summary Data Preparation
+        summary_start_row = 51
+        summary_max_data_row = 60
+        summary_data = {}
+        for sc in schedules:
+            key = (sc.course_id, sc.section_id)
+            c_dur = 0.0
+            try:
+                sh, sm = map(int, sc.start_time.split(':'))
+                eh, em = map(int, sc.end_time.split(':'))
+                c_dur = (eh * 60 + em - sh * 60 - sm) / 60.0
+            except: pass
+            if key not in summary_data:
+                c_obj = sc.course
+                summary_data[key] = {
+                    'code': c_obj.course_code if c_obj else "",
+                    'name': c_obj.course_name if c_obj else "",
+                    'section': sc.section.section_name if sc.section else "",
+                    'lec_h': 0.0, 'lab_h': 0.0,
+                    'lec_units': float(c_obj.lec_units or 0) if c_obj else 0.0,
+                    'lab_units': float(c_obj.lab_units or 0) if c_obj else 0.0,
+                    'students': sc.section.number_of_students if sc.section else 0,
+                    'rooms_set': set()
+                }
+            if sc.session_type == 'Lab': summary_data[key]['lab_h'] += c_dur
+            else: summary_data[key]['lec_h'] += c_dur
+            if sc.room: summary_data[key]['rooms_set'].add(sc.room.room_name)
+        
+        # Populate List (Row 51-60)
+        curr_row = summary_start_row
+        total_lec_sum = 0.0
+        total_lab_sum = 0.0
+        total_students_sum = 0
+        
+        for key in sorted(summary_data.keys()):
+            if curr_row > summary_max_data_row: break
+            d = summary_data[key]
+            
+            # Use Units if available, fallback to calculated hours
+            final_lec = d['lec_units'] if d['lec_units'] > 0 else d['lec_h']
+            final_lab = d['lab_units'] if d['lab_units'] > 0 else d['lab_h']
+            row_total = final_lec + final_lab
+            
+            # Alignment with Screenshot: A:Code, B:Section, D:Lec, E:Lab, F:Total, G:Room, H:Students
+            target_ws.cell(row=curr_row, column=1).value = d['code']
+            # Col 2 (B) stays empty
+            target_ws.cell(row=curr_row, column=3).value = d['section']
+            target_ws.cell(row=curr_row, column=4).value = final_lec
+            target_ws.cell(row=curr_row, column=5).value = final_lab
+            target_ws.cell(row=curr_row, column=6).value = row_total
+            target_ws.cell(row=curr_row, column=7).value = ", ".join(sorted(list(d['rooms_set']))) if d['rooms_set'] else "T.B.A."
+            target_ws.cell(row=curr_row, column=8).value = d['students']
+            
+            total_lec_sum += final_lec
+            total_lab_sum += final_lab
+            total_students_sum += d['students']
+            curr_row += 1
+
+        # Totals (Row 61) - Exactly as per Screenshot: D, E, F, H
+        total_row = 61
+        target_ws.cell(row=total_row, column=4).value = total_lec_sum
+        target_ws.cell(row=total_row, column=5).value = total_lab_sum
+        target_ws.cell(row=total_row, column=6).value = total_lec_sum + total_lab_sum
+        target_ws.cell(row=total_row, column=8).value = total_students_sum
+
+    # 5. Images & Page Setup
+    _process_images(template_sheet, target_ws, settings, report_type if report_type not in ('student', 'irregular') else 'section')
+    if settings:
+        p_map = {'A4': 9, 'Letter': 1, 'Legal': 5}
+        target_ws.page_setup.paperSize = p_map.get(settings.paper_size, 9)
+        target_ws.page_margins.top, target_ws.page_margins.bottom = settings.margin_top, settings.margin_bottom
+        target_ws.page_margins.left, target_ws.page_margins.right = settings.margin_left, settings.margin_right
+        target_ws.page_setup.orientation = target_ws.ORIENTATION_LANDSCAPE
+
+    wb.remove(template_sheet)
+    # Output
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output, display_name
+
+@app.route('/section-timetable-excel/<int:section_id>')
+@login_required
+def section_timetable_excel(section_id):
+    section = Section.query.get_or_404(section_id)
+    semester = request.args.get('semester', '1st Semester')
+    schedules = ScheduledClass.query.filter_by(section_id=section_id, semester=semester).all()
+    stream, name = _generate_individual_excel_internal(section, schedules, 'section', semester)
+    if not stream:
+        flash(name, "danger")
+        return redirect(url_for('view_timetable'))
+    filename = f"{name.replace(' ','_')}_Schedule_{semester.replace(' ','_')}.xlsx"
+    return send_file(stream, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/faculty-timetable-excel/<int:faculty_id>')
+@login_required
+def faculty_timetable_excel(faculty_id):
+    faculty = Faculty.query.get_or_404(faculty_id)
+    semester = request.args.get('semester', '1st Semester')
+    schedules = ScheduledClass.query.filter_by(faculty_id=faculty_id, semester=semester).all()
+    stream, name = _generate_individual_excel_internal(faculty, schedules, 'faculty', semester)
+    if not stream:
+        flash(name, "danger")
+        return redirect(url_for('view_timetable'))
+    filename = f"{name.replace(' ','_')}_Load_{semester.replace(' ','_')}.xlsx"
+    return send_file(stream, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/room-timetable-excel/<int:room_id>')
+@login_required
+def room_timetable_excel(room_id):
+    room = Room.query.get_or_404(room_id)
+    semester = request.args.get('semester', '1st Semester')
+    schedules = ScheduledClass.query.filter_by(room_id=room_id, semester=semester).all()
+    stream, name = _generate_individual_excel_internal(room, schedules, 'room', semester)
+    if not stream:
+        flash(name, "danger")
+        return redirect(url_for('view_timetable'))
+    filename = f"{name.replace(' ','_')}_Utilization_{semester.replace(' ','_')}.xlsx"
+    return send_file(stream, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/course-timetable-excel/<int:course_id>')
+@login_required
+def course_timetable_excel(course_id):
+    course = Course.query.get_or_404(course_id)
+    semester = request.args.get('semester', '1st Semester')
+    schedules = ScheduledClass.query.filter_by(course_id=course_id, semester=semester).all()
+    stream, name = _generate_individual_excel_internal(course, schedules, 'course', semester)
+    if not stream:
+        flash(name, "danger")
+        return redirect(url_for('view_timetable'))
+    filename = f"{name.replace(' ','_')}_Schedule_{semester.replace(' ','_')}.xlsx"
+    return send_file(stream, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+@app.route('/public-student-schedule-excel/<string:student_id>')
+def public_student_schedule_excel(student_id):
+    student = Student.query.filter_by(student_id=student_id, is_archived=False).first_or_404()
+    _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
+    semester = request.args.get('semester', (_all_sems[0] if _all_sems else '1st Semester'))
+    schedules = []
+    if student.is_irregular:
+        assignment = IrregularAssignment.query.filter_by(student_id_fk=student.id).order_by(IrregularAssignment.updated_at.desc()).first()
+        if assignment and assignment.assignments_json:
+            pairs = json.loads(assignment.assignments_json)
+            for pair in pairs:
+                slots = ScheduledClass.query.filter_by(course_id=pair['course_id'], section_id=pair['section_id'], semester=assignment.semester).all()
+                schedules.extend(slots)
+            semester = assignment.semester
+    else:
+        if student.section_id:
+            schedules = ScheduledClass.query.filter_by(section_id=student.section_id, semester=semester, is_draft=False).all()
+    if not schedules:
+        flash('No schedule found to export.', 'warning')
+        return redirect(url_for('student_schedule', student_id=student.student_id))
+    stream, name = _generate_individual_excel_internal(student, schedules, 'student', semester)
+    if not stream:
+        flash(name, "danger")
+        return redirect(url_for('student_schedule', student_id=student.student_id))
+    filename = f"Schedule_{name.replace(' ','_')}_{semester.replace(' ','_')}.xlsx"
+    return send_file(stream, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
 if __name__ == '__main__':

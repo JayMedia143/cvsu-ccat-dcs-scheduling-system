@@ -959,7 +959,14 @@
             room: id => `/room-timetable-pdf/${id}?semester=${encodeURIComponent(currentSemester)}`,
             course: id => `/course-timetable-pdf/${id}?semester=${encodeURIComponent(currentSemester)}`
         };
+        const excelUrlMap = {
+            section: id => `/section-timetable-excel/${id}?semester=${encodeURIComponent(currentSemester)}`,
+            faculty: id => `/faculty-timetable-excel/${id}?semester=${encodeURIComponent(currentSemester)}`,
+            room: id => `/room-timetable-excel/${id}?semester=${encodeURIComponent(currentSemester)}`,
+            course: id => `/course-timetable-excel/${id}?semester=${encodeURIComponent(currentSemester)}`
+        };
         const pdfUrl = pdfUrlMap[currentType](data.id);
+        const excelUrl = excelUrlMap[currentType](data.id);
 
         card.innerHTML = `
             <div class="card-header-bar">
@@ -967,6 +974,9 @@
                 <div class="d-flex align-items-center gap-2">
                     <a href="${pdfUrl}" class="card-maximize-btn text-decoration-none" title="Download PDF">
                         <i class="bi bi-file-earmark-pdf"></i>
+                    </a>
+                    <a href="${excelUrl}" class="card-maximize-btn text-decoration-none" title="Download Excel">
+                        <i class="bi bi-file-earmark-excel"></i>
                     </a>
                     <button class="card-maximize-btn" onclick="openPresentation(${data.index})" title="Maximize">
                         <i class="bi bi-fullscreen"></i>
