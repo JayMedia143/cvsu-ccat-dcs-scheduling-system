@@ -16,3 +16,7 @@ click
 six
 python-dateutil
 pytz
+python-docx
+pdfplumber
+psutil
+numba
