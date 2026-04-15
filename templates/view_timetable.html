@@ -953,29 +953,19 @@
         // Only position and layout metadata on the outer card
         card.style.cssText = `left:${data.x}px;top:${data.y}px;`;
         if (window.lastSearchQuery && !data.lowerLabel.includes(window.lastSearchQuery)) card.classList.add('canvas-dimmed');
-        const pdfUrlMap = {
-            section: id => `/section-timetable-pdf/${id}?semester=${encodeURIComponent(currentSemester)}`,
-            faculty: id => `/faculty-timetable-pdf/${id}?semester=${encodeURIComponent(currentSemester)}`,
-            room: id => `/room-timetable-pdf/${id}?semester=${encodeURIComponent(currentSemester)}`,
-            course: id => `/course-timetable-pdf/${id}?semester=${encodeURIComponent(currentSemester)}`
-        };
-        const excelUrlMap = {
+const excelUrlMap = {
             section: id => `/section-timetable-excel/${id}?semester=${encodeURIComponent(currentSemester)}`,
             faculty: id => `/faculty-timetable-excel/${id}?semester=${encodeURIComponent(currentSemester)}`,
             room: id => `/room-timetable-excel/${id}?semester=${encodeURIComponent(currentSemester)}`,
             course: id => `/course-timetable-excel/${id}?semester=${encodeURIComponent(currentSemester)}`
         };
-        const pdfUrl = pdfUrlMap[currentType](data.id);
-        const excelUrl = excelUrlMap[currentType](data.id);
+const excelUrl = excelUrlMap[currentType](data.id);
 
         card.innerHTML = `
             <div class="card-header-bar">
                 <span>${data.label}</span>
                 <div class="d-flex align-items-center gap-2">
-                    <a href="${pdfUrl}" class="card-maximize-btn text-decoration-none" title="Download PDF">
-                        <i class="bi bi-file-earmark-pdf"></i>
-                    </a>
-                    <a href="${excelUrl}" class="card-maximize-btn text-decoration-none" title="Download Excel">
+<a href="${excelUrl}" class="card-maximize-btn text-decoration-none" title="Download Excel">
                         <i class="bi bi-file-earmark-excel"></i>
                     </a>
                     <button class="card-maximize-btn" onclick="openPresentation(${data.index})" title="Maximize">
@@ -1319,11 +1309,6 @@
         if (e.key === 'ArrowLeft') showPrev();
         if (e.key === 'Escape') closePresentation();
     });
-
-    window.exportAllPDF = function () {
-        const url = `/export/pdf_bulk?type=${currentType}&semester=${encodeURIComponent(currentSemester)}`;
-        window.location.href = url;
-    };
 
 }) ();
 </script>

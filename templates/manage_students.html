@@ -5,7 +5,7 @@
 {% block content %}
 
 <!-- 1. HEADER -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="manage-header-wrap">
     <div>
         <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
             Student Masterlist
@@ -16,21 +16,21 @@
         <p class="text-muted small mb-0">Manage enrolled students and their block section assignments.</p>
     </div>
     {% if not is_hist %}
-    <div class="d-flex align-items-center gap-3">
-        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importStudentsModal">
+    <div class="d-flex align-items-center gap-2 gap-md-3">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importStudentsModal" title="Import from Excel">
             <i class="bi bi-file-earmark-spreadsheet-fill"></i>
-            <span>Import Excel</span>
+            <span class="d-none d-md-inline">Import Excel</span>
         </button>
-        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addStudentModal">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addStudentModal" title="Add New Student">
             <i class="bi bi-plus-lg"></i>
-            <span>New Student</span>
+            <span class="d-none d-md-inline">New Student</span>
         </button>
     </div>
     {% endif %}
 </div>
 
 <!-- 2. SEARCH & FILTER TOOLBAR -->
-<div class="row mb-4 position-relative align-items-center" style="height: 50px;">
+<div class="manage-search-wrapper position-relative">
 
     {% if not is_hist %}
     <!-- A. BULK ACTION BAR (Overlay) -->
@@ -74,11 +74,13 @@
         <!-- Filter Dropdown -->
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown"
-                data-bs-auto-close="outside" aria-expanded="false">
-                <i class="bi bi-funnel me-2"></i>
-                {% if current_filter_by == 'year' %}Year: {{ current_filter_val }}
-                {% elif current_filter_by == 'section' %}Section Filter
-                {% else %}Filter{% endif %}
+                data-bs-auto-close="outside" aria-expanded="false" data-bs-toggle="tooltip" title="Filter Results">
+                <i class="bi bi-funnel me-md-2"></i>
+                <span class="d-none d-md-inline">
+                    {% if current_filter_by == 'year' %}Year: {{ current_filter_val }}
+                    {% elif current_filter_by == 'section' %}Section Filter
+                    {% else %}Filter{% endif %}
+                </span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
                 <li>
@@ -128,13 +130,16 @@
         <!-- Sort Dropdown -->
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown"
-                aria-expanded="false">
-                Sort by: {% if current_sort == 'name-asc' %}Name (A-Z)
-                {% elif current_sort == 'name-desc' %}Name (Z-A)
-                {% elif current_sort == 'id-asc' %}ID (Asc)
-                {% elif current_sort == 'id-desc' %}ID (Desc)
-                {% elif current_sort == 'section' %}Section
-                {% else %}Newest{% endif %}
+                aria-expanded="false" data-bs-toggle="tooltip" title="Sort Results">
+                <i class="bi bi-sort-alpha-down me-md-2"></i>
+                <span class="d-none d-md-inline">
+                    Sort by: {% if current_sort == 'name-asc' %}Name (A-Z)
+                    {% elif current_sort == 'name-desc' %}Name (Z-A)
+                    {% elif current_sort == 'id-asc' %}ID (Asc)
+                    {% elif current_sort == 'id-desc' %}ID (Desc)
+                    {% elif current_sort == 'section' %}Section
+                    {% else %}Newest{% endif %}
+                </span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
                 <li><a class="dropdown-item google-sort-item {% if current_sort == 'default' or not current_sort %}active{% endif %}"

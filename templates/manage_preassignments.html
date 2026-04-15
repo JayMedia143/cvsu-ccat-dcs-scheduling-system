@@ -4,7 +4,7 @@
 {% block content %}
 
 <!-- 1. HEADER -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="manage-header-wrap">
     <div>
         <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
             Locked Schedules
@@ -16,18 +16,18 @@
     </div>
 
     {% if not is_hist %}
-    <div class="d-flex align-items-center gap-3">
+    <div class="d-flex align-items-center gap-2 gap-md-3">
         <!-- New Locked Schedule (Clean Style) -->
-        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addPreAssignmentModal">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addPreAssignmentModal" title="Add Locked Schedule">
             <i class="bi bi-plus-lg"></i>
-            <span>Add Locked Schedule</span>
+            <span class="d-none d-md-inline">Add Locked Schedule</span>
         </button>
     </div>
     {% endif %}
 </div>
 
 <!-- 2. SEARCH & FILTER TOOLBAR -->
-<div class="row mb-4 position-relative align-items-center" style="height: 50px;">
+<div class="manage-search-wrapper position-relative">
 
     {% if not is_hist %}
     <!-- A. BULK ACTION BAR -->
@@ -62,10 +62,13 @@
 
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown"
-                data-bs-toggle="dropdown" aria-expanded="false">
-                Sort by: {% if current_sort == 'course-asc' %} Course (A-Z)
-                {% elif current_sort == 'section-asc' %} Section (A-Z)
-                {% else %} Newest {% endif %}
+                data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" title="Sort Results">
+                <i class="bi bi-sort-alpha-down me-md-2"></i>
+                <span class="d-none d-md-inline">
+                    Sort by: {% if current_sort == 'course-asc' %} Course (A-Z)
+                    {% elif current_sort == 'section-asc' %} Section (A-Z)
+                    {% else %} Newest {% endif %}
+                </span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
                 <li>

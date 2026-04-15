@@ -5,33 +5,31 @@
 {% block content %}
 
 <!-- 1. HEADER -->
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div class="d-flex align-items-center">
-        <div>
-            <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
-                Sections
-                <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#sectionInfoModal" title="How to use this page">
-                    <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
-                </button>
-            </h1>
-            <p class="text-muted small mb-0">Manage student blocks and curriculum assignments.</p>
-        </div>
+<div class="manage-header-wrap">
+    <div>
+        <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
+            Sections
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#sectionInfoModal" title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
+            </button>
+        </h1>
+        <p class="text-muted small mb-0">Manage student blocks and curriculum assignments.</p>
     </div>
 
     <!-- Updated Buttons: Clean Style -->
     {% if not is_hist and session.get('role') != 'user' %}
-    <div class="d-flex align-items-center gap-3">
+    <div class="d-flex align-items-center gap-2 gap-md-3">
         <!-- New Section (Clean Style like Manage Courses) -->
-        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addSectionModal">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addSectionModal" title="Add New Section">
             <i class="bi bi-plus-lg"></i>
-            <span>New Section</span>
+            <span class="d-none d-md-inline">New Section</span>
         </button>
     </div>
     {% endif %}
 </div>
 
 <!-- 2. SEARCH & FILTER TOOLBAR -->
-<div class="row mb-4 position-relative align-items-center" style="height: 50px;">
+<div class="manage-search-wrapper position-relative">
 
     {% if not is_hist and session.get('role') != 'user' %}
     <!-- A. BULK ACTION BAR (Overlay) -->
@@ -89,13 +87,15 @@
         <!-- 1. FILTER DROPDOWN (New) -->
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="filterDropdown"
-                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                <i class="bi bi-funnel me-2"></i>
-                {% if current_filter_by == 'year' %}
-                Year: {{ current_filter_val }}
-                {% else %}
-                Filter
-                {% endif %}
+                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" data-bs-toggle="tooltip" title="Filter Results">
+                <i class="bi bi-funnel me-md-2"></i>
+                <span class="d-none d-md-inline">
+                    {% if current_filter_by == 'year' %}
+                    Year: {{ current_filter_val }}
+                    {% else %}
+                    Filter
+                    {% endif %}
+                </span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="filterDropdown">
                 <!-- Clear Filter -->
@@ -133,12 +133,15 @@
         <!-- 2. SORT DROPDOWN -->
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown"
-                data-bs-toggle="dropdown" aria-expanded="false">
-                Sort by: {% if current_sort == 'name-asc' %} Name (A-Z)
-                {% elif current_sort == 'name-desc' %} Name (Z-A)
-                {% elif current_sort == 'year-asc' %} Year (1-4)
-                {% elif current_sort == 'year-desc' %} Year (4-1)
-                {% else %} Newest {% endif %}
+                data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" title="Sort Results">
+                <i class="bi bi-sort-alpha-down me-md-2"></i>
+                <span class="d-none d-md-inline">
+                    Sort by: {% if current_sort == 'name-asc' %} Name (A-Z)
+                    {% elif current_sort == 'name-desc' %} Name (Z-A)
+                    {% elif current_sort == 'year-asc' %} Year (1-4)
+                    {% elif current_sort == 'year-desc' %} Year (4-1)
+                    {% else %} Newest {% endif %}
+                </span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
                 <li>

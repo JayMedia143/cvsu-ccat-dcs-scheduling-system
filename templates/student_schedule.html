@@ -231,10 +231,8 @@
 
                     {% if schedules %}
                     <div class="d-flex gap-2">
-                        <a href="{{ url_for('public_student_schedule_pdf', student_id=student.student_id) }}{% if term_id != 'live' %}?term_id={{ term_id }}{% endif %}" 
                            class="btn btn-sm btn-outline-success rounded-pill px-3 print-btn"
                             style="font-size:0.78rem;">
-                            <i class="bi bi-file-earmark-pdf me-1"></i> PDF
                         </a>
                         <a href="{{ url_for('public_student_schedule_excel', student_id=student.student_id) }}{% if term_id != 'live' %}?term_id={{ term_id }}{% endif %}" 
                            class="btn btn-sm btn-success rounded-pill px-3 print-btn"

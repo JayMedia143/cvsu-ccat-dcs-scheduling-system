@@ -890,13 +890,17 @@ html.login-loading #page-loader { display: flex !important; }
     }
 
     .auth-left {
+        display: none !important;
+    }
+
+    .auth-right {
         width: 100%;
-        padding: 2.5rem 2rem 3rem;
-        min-height: auto;
-        align-items: center;
-        text-align: center;
-        justify-content: flex-start;
-        gap: 0;
+        padding: 2rem 1.25rem;
+        background: #ffffff !important;
+    }
+
+    .auth-right::before {
+        display: none !important;
     }
 
     .auth-card-zone {
@@ -913,11 +917,6 @@ html.login-loading #page-loader { display: flex !important; }
 
     .auth-brand-footer {
         display: none;
-    }
-
-    .auth-right {
-        width: 100%;
-        padding: 2rem 1.25rem;
     }
 
     .auth-form-box {
@@ -2550,4 +2549,202 @@ table.table tbody tr.irreg-row.selected:hover td {
 /* DYNAMIC WIDTH OVERRIDE FOR SORT AND FILTER toggles */
 .google-sort-toggle { width: auto !important; min-width: 0 !important; white-space: nowrap !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; justify-content: center !important; }
 .google-sort-menu { width: max-content !important; min-width: 180px !important; box-sizing: border-box; }
+
+
+/* =================================================================== */
+/*             12. RESPONSIVE UI OVERRIDES (Mobile/Tablet)             */
+/* =================================================================== */
+
+@media (max-width: 991.98px) {
+    body {
+        padding-top: 60px !important; /* Adjusted for smaller navbar */
+    }
+
+    .main-content {
+        padding: 1rem 1rem !important;
+    }
+
+    /* Navbar Contextual Adjustments */
+    .sheets-menubar {
+        height: auto !important;
+        padding: 8px 10px !important;
+    }
+
+    /* Force all tables to be scrollable context on small screens */
+    .table-responsive {
+        border: 0;
+        margin-bottom: 1rem;
+    }
+
+    .table {
+        min-width: 650px !important; /* Force scrollable context */
+    }
+
+    /* Utility: Stack groups on mobile */
+    .mobile-stack {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+
+    /* Buttons: Side-by-side on very small screens unless explicitly stacked */
+    @media (max-width: 575.98px) {
+        .btn-google-action, .btn-primary:not(.btn-sm), .btn-secondary:not(.btn-sm), .btn-success:not(.btn-sm) {
+            width: auto;
+            justify-content: center;
+        }
+    }
+}
+
+/* Offcanvas Navigation Styles */
+.offcanvas-navigation .nav-link, .offcanvas-navigation .menu-item {
+    font-weight: 500;
+    color: #3c4043;
+    padding: 10px 15px !important;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    display: block !important;
+    width: 100%;
+}
+
+.offcanvas-navigation .menu-item.active {
+    background-color: #e6f4ea !important;
+    color: #188038 !important;
+}
+
+.offcanvas-navigation .dropdown-menu {
+    border: none !important;
+    box-shadow: none !important;
+    background: #f8f9fa !important;
+    padding-left: 15px !important;
+    margin: 0 !important;
+}
+
+
+/* =================================================================== */
+/*             13. PHASE 2: MANAGE PAGE UTILITIES                      */
+/* =================================================================== */
+
+/* Manage Page Headers: Auto-stack Title and Action Buttons */
+.manage-header-wrap {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 1.5rem;
+}
+
+/* Manage Search Bars: Auto-stack Search and Filters */
+.manage-search-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 991.98px) {
+    .manage-header-wrap {
+        /* Keep horizontal if possible, or wrap naturally */
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .manage-header-wrap > div:last-child {
+        display: flex;
+        flex-wrap: wrap;
+        width: auto;
+        gap: 10px;
+    }
+
+    .manage-search-wrapper {
+        flex-direction: row !important;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 8px;
+    }
+
+    .manage-search-wrapper .col {
+        flex: 1 1 auto !important;
+        width: auto !important;
+    }
+    
+    .manage-search-wrapper .col-auto {
+        flex: 0 0 auto !important;
+        width: auto !important;
+    }
+
+    .google-search-bar {
+        height: 48px !important;
+    }
+
+    /* DROPDOWN ALIGNMENT FIX FOR MOBILE: Open to the left */
+    .dropdown-menu-end {
+        right: 0 !important;
+        left: auto !important;
+        transform: none !important;
+        margin-top: 5px !important;
+    }
+}
+
+/* Modal Improvements for Mobile */
+@media (max-width: 575.98px) {
+    .modal-dialog-below-nav {
+        margin: 0.5rem !important;
+        max-width: calc(100% - 1rem) !important;
+    }
+    
+    .modal-content {
+        border-radius: 12px !important;
+    }
+}
+
+/* ------------------------------------------------------------------- */
+/*  MOBILE ACCORDION FOR DROPDOWN SUBMENUS                             */
+/* ------------------------------------------------------------------- */
+@media (max-width: 991.98px) {
+    /* Prevent main dropdown from exceeding screen bounds */
+    .dropdown-menu {
+        max-width: 90vw !important;
+        overflow-x: hidden;
+    }
+    
+    /* Allow long labels to wrap instead of pushing width outward */
+    .dropdown-item {
+        white-space: normal !important;
+        font-size: 0.85rem !important; 
+    }
+
+    .dropdown-submenu .dropdown-menu {
+        /* Make it flow naturally within the parent menu */
+        position: static !important;
+        display: block !important;
+        border: none !important;
+        box-shadow: none !important;
+        background-color: #f8f9fa !important;
+        margin: 4px 5px !important;
+        border-radius: 8px !important;
+        padding: 5px 0 !important;
+    }
+    
+    .dropdown-submenu > .dropdown-item {
+        /* Mute the category header to look like a label */
+        pointer-events: none;
+        color: #5f6368 !important;
+        font-weight: 700 !important;
+        font-size: 0.70rem !important;
+        text-transform: uppercase;
+        background: transparent !important;
+        letter-spacing: 0.5px;
+        padding-top: 8px;
+        padding-bottom: 2px;
+    }
+    
+    .dropdown-submenu .dropdown-menu .dropdown-item {
+        padding-left: 15px !important;
+        font-size: 0.80rem !important;
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
+    }
+}
 

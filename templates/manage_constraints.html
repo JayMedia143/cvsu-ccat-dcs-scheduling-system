@@ -12,7 +12,7 @@
 </style>
 
 <!-- 1. HEADER -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="manage-header-wrap mb-4">
     <div>
         <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
             Constraints
@@ -27,9 +27,9 @@
         <form method="POST" action="{{ url_for('sync_constraints') }}"
               onsubmit="return confirm('Sync the master constraint list?\n\nThis will add any missing constraints and update names/descriptions.\nYour current type and weight settings will NOT be changed.');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2">
+            <button type="submit" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-2" data-bs-toggle="tooltip" title="Sync Constraint List">
                 <i class="bi bi-arrow-repeat"></i>
-                <span>Sync Constraints</span>
+                <span class="d-none d-md-inline">Sync Constraints</span>
             </button>
         </form>
     </div>
@@ -97,7 +97,7 @@
 </div>
 
 <!-- 3. SEARCH & FILTER TOOLBAR -->
-<div class="row mb-4 position-relative align-items-center" style="height: 50px;"> 
+<div class="manage-search-wrapper position-relative"> 
     
     <!-- Search Input (Fluid) -->
     <div class="col h-100">
@@ -112,14 +112,17 @@
         
         <!-- Filter Dropdown -->
         <div class="dropdown">
-            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                Filter: 
-                {% if current_filter == 'all' %}All
-                {% elif current_filter == 'HC' %}Hard
-                {% elif current_filter == 'SC1' %}Soft I
-                {% elif current_filter == 'SC2' %}Soft II
-                {% elif current_filter == 'NC' %}Disabled
-                {% endif %}
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" title="Filter by Priority">
+                <i class="bi bi-funnel me-md-2"></i>
+                <span class="d-none d-md-inline">
+                    Filter: 
+                    {% if current_filter == 'all' %}All
+                    {% elif current_filter == 'HC' %}Hard
+                    {% elif current_filter == 'SC1' %}Soft I
+                    {% elif current_filter == 'SC2' %}Soft II
+                    {% elif current_filter == 'NC' %}Disabled
+                    {% endif %}
+                </span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="filterDropdown">
                 <li><a class="dropdown-item text-danger" href="{{ url_for('manage_constraints', filter='all', sort=current_sort, search=search_query) }}">
@@ -136,11 +139,14 @@
 
         <!-- Sort Dropdown -->
         <div class="dropdown">
-            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                Sort by: {% if current_sort == 'name-asc' %}Name (A-Z)
-                {% elif current_sort == 'name-desc' %}Name (Z-A)
-                {% elif current_sort == 'category' %}Category
-                {% else %}Sort Order{% endif %}
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" title="Sort Results">
+                <i class="bi bi-sort-alpha-down me-md-2"></i>
+                <span class="d-none d-md-inline">
+                    Sort by: {% if current_sort == 'name-asc' %}Name (A-Z)
+                    {% elif current_sort == 'name-desc' %}Name (Z-A)
+                    {% elif current_sort == 'category' %}Category
+                    {% else %}Sort Order{% endif %}
+                </span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
                 <li><a class="dropdown-item google-sort-item {% if current_sort == 'name-asc' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='name-asc', filter=current_filter) }}">Sort by: Name (A-Z)</a></li>
@@ -240,8 +246,8 @@
     {% if not is_hist %}
     <!-- FLOATING SAVE BUTTON -->
     <div class="position-fixed bottom-0 end-0 p-4" style="z-index: 1050">
-        <button type="submit" class="btn btn-success btn-lg shadow-lg rounded-pill px-4 py-3 d-flex align-items-center">
-            <i class="bi bi-save-fill me-2"></i> Save Changes
+        <button type="submit" class="btn btn-success btn-lg shadow-lg rounded-pill px-4 py-3 d-flex align-items-center" data-bs-toggle="tooltip" title="Save All Constraint Changes">
+            <i class="bi bi-save-fill me-md-2"></i><span class="d-none d-md-inline">Save Changes</span>
         </button>
     </div>
     {% endif %}

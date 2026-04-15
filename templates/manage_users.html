@@ -10,7 +10,7 @@
     </form>
     
     <!-- 1. HEADER -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="manage-header-wrap">
     <div>
         <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
             Users
@@ -23,18 +23,18 @@
         </p>
     </div>
 
-    <div class="d-flex align-items-center gap-3">
+    <div class="d-flex align-items-center gap-2 gap-md-3">
         {% if not is_hist %}
-        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addUserModal">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addUserModal" title="Add New User">
             <i class="bi bi-person-plus"></i>
-            <span>New User</span>
+            <span class="d-none d-md-inline">New User</span>
         </button>
         {% endif %}
     </div>
 </div>
 
 <!-- 2. SEARCH & FILTER WRAPPER -->
-<div class="row mb-4 position-relative align-items-center" style="height: 50px;">
+<div class="manage-search-wrapper position-relative">
     {% if not is_hist %}
     <!-- BULK ACTION BAR (Overlay) -->
     <div class="bulk-action-bar" id="bulkActionBar">
@@ -69,9 +69,11 @@
     <div class="col-auto h-100 d-flex align-items-center gap-2">
         <!-- Role Filter -->
         <div class="dropdown">
-            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="roleFilterBtn" data-bs-toggle="dropdown">
-                <i class="bi bi-funnel me-2"></i>
-                {{ role_filter.title() if role_filter else 'All Roles' }}
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="roleFilterBtn" data-bs-toggle="dropdown" data-bs-toggle="tooltip" title="Filter by Role">
+                <i class="bi bi-funnel me-md-2"></i>
+                <span class="d-none d-md-inline">
+                    {{ role_filter.title() if role_filter else 'All Roles' }}
+                </span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" id="roleFilterMenu">
                 <li>
@@ -88,11 +90,14 @@
 
         <!-- Sort -->
         <div class="dropdown">
-            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortBtn" data-bs-toggle="dropdown">
-                Sort by: {% if current_sort == 'username_asc' %}Username (A-Z)
-                {% elif current_sort == 'username_desc' %}Username (Z-A)
-                {% elif current_sort == 'newest' %}Newest First
-                {% else %}Sort By{% endif %}
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortBtn" data-bs-toggle="dropdown" data-bs-toggle="tooltip" title="Sort Results">
+                <i class="bi bi-sort-alpha-down me-md-2"></i>
+                <span class="d-none d-md-inline">
+                    Sort by: {% if current_sort == 'username_asc' %}Username (A-Z)
+                    {% elif current_sort == 'username_desc' %}Username (Z-A)
+                    {% elif current_sort == 'newest' %}Newest First
+                    {% else %}Sort By{% endif %}
+                </span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" id="sortDropdownMenu">
                 <li><a class="dropdown-item google-sort-item {{ 'active' if current_sort == 'newest' or not current_sort }}" href="#" data-val="newest">Sort by: Newest First</a></li>

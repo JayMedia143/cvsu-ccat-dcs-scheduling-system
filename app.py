@@ -12,7 +12,6 @@ from flask import Response
 import traceback
 
 from flask import send_file
-from weasyprint import HTML 
 from genetic_algorithm import GeneticScheduler
 import csv
 import io
@@ -20,8 +19,8 @@ import base64
 import pandas as pd
 from openpyxl import load_workbook, Workbook
 from sqlalchemy import inspect
-import pdfplumber
 import re
+import pdfplumber
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font
 from openpyxl.utils import get_column_letter
 from openpyxl.cell import MergedCell
@@ -5170,232 +5169,7 @@ def clean_archives_page():
     
     return render_template('clean_archives.html', history=history)
 
-@app.route('/export/pdf/<string:view_type>/<int:entity_id>')
-@login_required
-@role_required('admin', 'superadmin')
-def export_pdf(view_type, entity_id):
-    """Legacy PDF export -------- now delegates to the new per-type PDF routes."""
-    semester = request.args.get('semester', '')
-    route_map = {
-        'section': ('section_timetable_pdf', 'section_id'),
-        'faculty': ('faculty_timetable_pdf', 'faculty_id'),
-        'room':    ('room_timetable_pdf',    'room_id'),
-    }
-    if view_type in route_map:
-        route_name, id_kwarg = route_map[view_type]
-        return redirect(url_for(route_name, **{id_kwarg: entity_id},
-                                semester=semester))
-    flash('Unknown view type for PDF export.', 'danger')
-    return redirect(url_for('reports_page'))
 
-@app.route('/export/pdf_bulk')
-@login_required
-@role_required('admin', 'superadmin')
-def export_pdf_bulk():
-    """Generates a single multi-page PDF document containing all schedules for a specific category."""
-    report_type = request.args.get('type', 'section') # section, faculty, room
-    export_semester = request.args.get('semester', '1st Semester')
-    orientation = request.args.get('orientation', 'landscape')
-
-    # 1. GET ITEMS (Mirroring Excel bulk export logic)
-    if report_type == 'section':
-        scheduled_ids = {r[0] for r in db.session.query(ScheduledClass.section_id)
-                         .filter(ScheduledClass.semester == export_semester).distinct().all()}
-        items = [s for s in Section.query.filter_by(is_archived=False)
-                 .order_by(Section.year_level, Section.section_name).all()
-                 if s.id in scheduled_ids]
-    elif report_type == 'faculty':
-        scheduled_ids = {r[0] for r in db.session.query(ScheduledClass.faculty_id)
-                         .filter(ScheduledClass.semester == export_semester,
-                                 ScheduledClass.faculty_id.isnot(None)).distinct().all()}
-        items = [f for f in Faculty.query.filter_by(is_archived=False)
-                 .order_by(Faculty.full_name).all()
-                 if f.id in scheduled_ids]
-    elif report_type == 'room':
-        scheduled_ids = {r[0] for r in db.session.query(ScheduledClass.room_id)
-                         .filter(ScheduledClass.semester == export_semester,
-                                 ScheduledClass.room_id.isnot(None)).distinct().all()}
-        items = [r for r in Room.query.filter_by(is_archived=False)
-                 .order_by(Room.room_name).all()
-                 if r.id in scheduled_ids]
-    else:
-        return "Invalid report type", 400
-
-    if not items:
-        flash(f'No schedules found for {report_type} in {export_semester}.', 'warning')
-        return redirect(url_for('reports_page'))
-
-    # 2. RENDER ALL ITEMS TO HTML
-    template_filename = f"{report_type}_template.xlsx"
-    template_path = os.path.join(basedir, 'static', 'assets', template_filename)
-    if not os.path.exists(template_path):
-        flash(f'No template found for {report_type}.', 'danger')
-        return redirect(url_for('reports_page'))
-
-    ws, grid_info, bounds = _get_cached_template(template_path)
-    settings = get_settings()
-    
-    # Use faculty-specific margins if type is faculty, otherwise use shared margins
-    if report_type == 'faculty':
-        _margins = _get_faculty_margins(settings)
-    else:
-        _margins = _get_margins(settings)
-        
-    _img_settings = _get_img_settings(settings, report_type)
-    
-    all_html_chunks = []
-    for item in items:
-        # Get schedules for this item
-        if report_type == 'section':
-            schedules = ScheduledClass.query.filter_by(section_id=item.id, semester=export_semester).all()
-            entity_name = item.section_name
-        elif report_type == 'faculty':
-            schedules = ScheduledClass.query.filter_by(faculty_id=item.id, semester=export_semester).all()
-            entity_name = item.full_name
-        else:
-            schedules = ScheduledClass.query.filter_by(room_id=item.id, semester=export_semester).all()
-            entity_name = item.room_name
-
-        cell_overrides, extra_merge_map, extra_skip_cells = build_schedule_overlays(schedules, grid_info, report_type)
-        
-        # Calculate Faculty Totals for PDF Overrides
-        f_hours, f_prep = "0", "0"
-        daily_mins = {"Monday":0, "Tuesday":0, "Wednesday":0, "Thursday":0, "Friday":0, "Saturday":0}
-        summary_data = {}
-        if report_type == 'faculty':
-            total_mins = 0
-            unique_subs = set()
-            for sc in schedules:
-                try:
-                    sh, sm = map(int, sc.start_time.split(':'))
-                    eh, em = map(int, sc.end_time.split(':'))
-                    duration = (eh * 60 + em) - (sh * 60 + sm)
-                    total_mins += duration
-                    if sc.day in daily_mins: daily_mins[sc.day] += duration
-                except: pass
-                if sc.course: unique_subs.add(sc.course.course_code)
-                
-                # Summary Prep
-                key = (sc.course_id, sc.section_id)
-                c_dur = 0.0
-                try:
-                    sh, sm = map(int, sc.start_time.split(':'))
-                    eh, em = map(int, sc.end_time.split(':'))
-                    c_dur = (eh * 60 + em - sh * 60 - sm) / 60.0
-                except: pass
-                if key not in summary_data:
-                    c_obj = sc.course
-                    summary_data[key] = {
-                        'code': c_obj.course_code if c_obj else "",
-                        'section': sc.section.section_name if sc.section else "",
-                        'lec_h': 0.0, 'lab_h': 0.0,
-                        'lec_units': float(c_obj.lec_units or 0) if c_obj else 0.0,
-                        'lab_units': float(c_obj.lab_units or 0) if c_obj else 0.0,
-                        'students': sc.section.number_of_students if sc.section else 0,
-                        'rooms_set': set()
-                    }
-                if sc.session_type == 'Lab': summary_data[key]['lab_h'] += c_dur
-                else: summary_data[key]['lec_h'] += c_dur
-                if sc.room: summary_data[key]['rooms_set'].add(sc.room.room_name)
-
-            f_hours = str(round(total_mins / 60, 2))
-            f_prep = str(len(unique_subs))
-
-        var_map = build_variable_map(report_type, settings, entity_name=entity_name, sem_ay=export_semester, prep_count=f_prep, total_hours=f_hours)
-        static_overrides = build_static_cell_overrides(ws, report_type, settings, entity_name=entity_name, sem_ay='')
-        all_overrides = {**static_overrides, **cell_overrides}
-
-        # PDF COORDINATE ALIGNMENT (Strictly within export_pdf_bulk)
-        if report_type == 'room':
-            all_overrides[(10, 2)] = entity_name
-            
-        if report_type == 'faculty':
-            # Row 48 Daily Hours scanner
-            daily_hours_row = 0
-            for r_idx in range(1, 100):
-                l_val = str(ws.cell(row=r_idx, column=1).value or "").strip().upper()
-                if "DAILY CONTACT HOURS" in l_val:
-                    daily_hours_row = r_idx
-                    break
-            if daily_hours_row:
-                for day, d_mins in daily_mins.items():
-                    # We reuse grid_info's day_to_col if available, or just use standard Mon=3...
-                    # But for PDF overrides, we'll manually check the template scan results
-                    from collections import defaultdict
-                    # We'll use a hardcoded fallback if grid_info is complex
-                    d_map = {"Monday":3, "Tuesday":4, "Wednesday":5, "Thursday":6, "Friday":7, "Saturday":8}
-                    all_overrides[(daily_hours_row, d_map[day])] = round(d_mins/60, 2)
-            
-            # Rows 51-60 Course List
-            curr_row = 51
-            total_lec_sum, total_lab_sum, total_students_sum = 0.0, 0.0, 0
-            for k in sorted(summary_data.keys()):
-                if curr_row > 60: break
-                d = summary_data[k]
-                final_lec = d['lec_units'] if d['lec_units'] > 0 else d['lec_h']
-                final_lab = d['lab_units'] if d['lab_units'] > 0 else d['lab_h']
-                row_total = final_lec + final_lab
-                
-                all_overrides[(curr_row, 1)] = d['code']
-                all_overrides[(curr_row, 3)] = d['section']
-                all_overrides[(curr_row, 4)] = final_lec
-                all_overrides[(curr_row, 5)] = final_lab
-                all_overrides[(curr_row, 6)] = row_total
-                all_overrides[(curr_row, 7)] = ", ".join(sorted(list(d['rooms_set']))) if d['rooms_set'] else "T.B.A."
-                all_overrides[(curr_row, 8)] = d['students']
-                
-                total_lec_sum += final_lec
-                total_lab_sum += final_lab
-                total_students_sum += d['students']
-                curr_row += 1
-            
-            # Row 61 Totals
-            all_overrides[(61, 4)] = total_lec_sum
-            all_overrides[(61, 5)] = total_lab_sum
-            all_overrides[(61, 6)] = total_lec_sum + total_lab_sum
-            all_overrides[(61, 8)] = total_students_sum
-
-        html, _, scale_v, total_h_px = render_excel_to_html_pdf(
-            ws, cell_overrides=all_overrides, variable_map=var_map,
-            extra_merge_map=extra_merge_map, extra_skip_cells=extra_skip_cells,
-            bounds=bounds, layout_type=report_type, margins=_margins,
-            img_settings=_img_settings)
-
-        # Apply CSS transform for PDF scaling -------- done HERE (not inside render_excel_to_html)
-        # so the View Page JS can still do its own scaling independently.
-        if scale_v < 1.0:
-            _scaled_h_px = total_h_px * scale_v
-            html = (
-                f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:visible;">'
-                f'<div style="position:relative;width:100%;transform:scale(1,{scale_v:.6f});transform-origin:top left;">'
-                + html
-                + '</div></div>'
-            )
-
-        # Wrap each schedule in the .a4 structure ---- one schedule per paper page.
-        all_html_chunks.append(f'<div class="a4">{html}</div>')
-
-    # 3. MERGE & RENDER PDF
-    combined_html = "\n".join(all_html_chunks)
-    
-    # Force orientation to Portrait as per user request
-    orientation = 'portrait'
-    
-    pdf_html = render_pdf_page(combined_html, orientation=orientation, margins=_margins)
-    
-    try:
-        pdf_bytes = HTML(string=pdf_html).write_pdf()
-    except Exception as e:
-        print("PDF GENERATION ERROR:")
-        print(traceback.format_exc())
-        flash(f"Failed to generate PDF: {str(e)}", "danger")
-        return redirect(url_for('reports_page'))
-
-    sem_label = export_semester.replace(' ', '_')
-    filename = f"Bulk_{report_type.capitalize()}_Schedules_{sem_label}.pdf"
-    
-    return Response(pdf_bytes, mimetype='application/pdf',
-                    headers={'Content-Disposition': f'attachment; filename="{filename}"'})
 
 
 def _apply_style_from_template(target_cell, source_cell):
@@ -7507,7 +7281,7 @@ def view_schedule_modal(view_type, entity_id):
             return '<div class="alert alert-warning m-3">Student not found.</div>'
         if student.is_irregular:
             iframe_src = url_for('irregular_timetable_html', student_id=student.student_id)
-            return f'<div style="height:76vh;"><iframe src="{iframe_src}" style="width:100%;height:100%;border:none;display:block;"></iframe></div>'
+            return f'<div style="width:100%; aspect-ratio: 1 / 1.414; max-height:76vh;"><iframe src="{iframe_src}" style="width:100%;height:100%;border:none;display:block;"></iframe></div>'
         if not student.section_id:
             return '<div class="alert alert-warning m-3">This student has no section assigned yet.</div>'
         view_type = 'section'
@@ -7528,7 +7302,7 @@ def view_schedule_modal(view_type, entity_id):
     if os.path.isfile(template_path):
         func_name, param_name = _timetable_routes[view_type]
         iframe_src = url_for(func_name, **{param_name: entity_id})
-        return f'<div style="height:76vh;"><iframe src="{iframe_src}" style="width:100%;height:100%;border:none;display:block;"></iframe></div>'
+        return f'<div style="width:100%; aspect-ratio: 1 / 1.414; max-height:76vh;"><iframe src="{iframe_src}" style="width:100%;height:100%;border:none;display:block;"></iframe></div>'
     else:
         return get_schedule_grid(view_type, entity_id)
 
@@ -9916,17 +9690,17 @@ def import_faculty_loading():
             
     return redirect(url_for('manage_faculty'))
 
-@app.route('/import_courses_pdf', methods=['POST'])
+@app.route('/import-courses-pdf', methods=['POST'])
 @login_required
 @role_required('admin', 'superadmin')
 def import_courses_pdf():
     if 'file' not in request.files:
         flash('No file uploaded.', 'danger')
         return redirect(url_for('manage_courses'))
-    
+
     file = request.files['file']
-    target_program = request.form.get('target_program') 
-    auto_assign = request.form.get('auto_assign') == 'on'
+    target_program = request.form.get('target_program')
+    auto_assign    = request.form.get('auto_assign') == 'on'
     assign_semester = request.form.get('assign_semester')
 
     if file and file.filename.endswith('.pdf'):
@@ -9950,159 +9724,125 @@ def import_courses_pdf():
                 is_bsit = "INFORMATION TECHNOLOGY" in validation_text
 
                 # Check for conflicts and abort if wrong PDF is uploaded
-                if target_program == "BSCoS" and is_bsit and not is_bscs:
-                    flash('Program Mismatch Error! You selected BS Computer Science but uploaded a BS Information Technology curriculum. Import cancelled.', 'danger')
+                if target_program == 'BSCoS' and is_bsit and not is_bscs:
+                    flash('Program Mismatch Error! You selected BS Computer Science but the file appears to be BS Information Technology. Import cancelled.', 'danger')
+                    return redirect(url_for('manage_courses'))
+                
+                if target_program == 'BSInfoTech' and is_bscs and not is_bsit:
+                    flash('Program Mismatch Error! You selected BS Information Technology but the file appears to be BS Computer Science. Import cancelled.', 'danger')
                     return redirect(url_for('manage_courses'))
 
-                if target_program == "BSInfoTech" and is_bscs and not is_bsit:
-                    flash('Program Mismatch Error! You selected BS Information Technology but uploaded a BS Computer Science curriculum. Import cancelled.', 'danger')
-                    return redirect(url_for('manage_courses'))
-
-                # --- 2. EXTRACT COURSES ---
+                # --- 2. WALK ALL PAGES ---
                 for page in pdf.pages:
                     text = page.extract_text()
                     if not text: continue
+                    
+                    # Detect Year Level and Semester change from text headers
+                    lines = text.split('\n')
+                    for line in lines:
+                        l_up = line.upper()
+                        if "FIRST YEAR" in l_up:    current_year_level = 1
+                        elif "SECOND YEAR" in l_up: current_year_level = 2
+                        elif "THIRD YEAR" in l_up:  current_year_level = 3
+                        elif "FOURTH YEAR" in l_up: current_year_level = 4
+                        
+                        if "FIRST SEMESTER" in l_up:     current_semester = '1st Semester'
+                        elif "SECOND SEMESTER" in l_up:    current_semester = '2nd Semester'
+                        elif "MIDYEAR" in l_up or "SUMMER" in l_up: current_semester = 'Midyear'
 
-                    for line in text.split('\n'):
-                        line = line.strip()
-                        line_upper = line.upper()
+                    # Extract Tables
+                    tables = page.extract_tables()
+                    for table in tables:
+                        for row in table:
+                            if not row or len(row) < 3: continue
+                            
+                            code = str(row[0]).strip() if row[0] else ""
+                            # Skip headers or empty code rows (e.g., "COURSE CODE", "CODE")
+                            if not code or len(code.replace(' ','')) < 3 or code.upper() in ["CODE", "COURSE CODE", "COURSE\nCODE", "COURSE"]:
+                                continue
+                            
+                            title = str(row[1]).strip() if row[1] else ""
+                            # Some PDFs have title and units merged in title list
+                            try:
+                                lec = int(row[2]) if row[2] and str(row[2]).isdigit() else 0
+                                lab = int(row[3]) if len(row) > 3 and row[3] and str(row[3]).isdigit() else 0
+                            except:
+                                lec = 0
+                                lab = 0
 
-                        # --- 1. HEADER DETECTION ---
-                        if "FIRST YEAR" in line_upper: current_year_level = 1; continue
-                        elif "SECOND YEAR" in line_upper: current_year_level = 2; continue
-                        elif "THIRD YEAR" in line_upper: current_year_level = 3; continue
-                        elif "FOURTH YEAR" in line_upper: current_year_level = 4; continue
-
-                        if "FIRST SEMESTER" in line_upper: current_semester = "1st Semester"; continue
-                        elif "SECOND SEMESTER" in line_upper: current_semester = "2nd Semester"; continue
-                        elif "SUMMER" in line_upper or "MIDYEAR" in line_upper: current_semester = "Midyear"; continue
-
-                        # --- 2. SPECIAL HANDLING: OJT / PRACTICUM ---
-                        if line_upper.startswith("OJT") or "COSC 199" in line_upper or "ITEC 199" in line_upper:
-                            code = "COSC 199" if "COSC 199" in line_upper else ("ITEC 199" if "ITEC 199" in line_upper else "OJT")
-                            title = "Internship / OJT / Practicum"
-                            sem_to_save = "Midyear" if "SUMMER" in line_upper or current_semester == "Midyear" else current_semester
-
-                            existing = Course.query.filter_by(course_code=code).first()
-                            if existing:
-                                existing.year_level = current_year_level
-                                existing.semester_offered = sem_to_save
-                                updated += 1
-                            else:
-                                db.session.add(Course(
-                                    course_code=code, course_name=title, program=target_program,
-                                    department=_dept_for_code(code, auto_add=True),
-                                    year_level=current_year_level, lec_units=3, lab_units=0,
-                                    synchronous_lec_hours=0, synchronous_lab_hours=0,
-                                    asynchronous_lec_hours=0, asynchronous_lab_hours=0,
-                                    semester_offered=sem_to_save
-                                ))
-                                added += 1
-                            continue
-
-                        # --- 3. SPECIAL HANDLING: NSTP ---
-                        if line_upper.startswith("NSTP"):
-                            parts = line.split()
-                            if len(parts) >= 2:
-                                num = parts[1]
+                            # Normalize NSTP
+                            if code.upper().startswith('NSTP'):
+                                parts = code.split()
+                                num = parts[1] if len(parts) > 1 else '1'
                                 code = f"NSTP {num}"
-                                title = f"National Service Training Program {num}"
+                                title = title or f"National Service Training Program {num}"
 
-                                existing = Course.query.filter_by(course_code=code).first()
-                                if existing:
-                                    if existing.program != target_program: existing.program = 'Both'
-                                    existing.year_level = current_year_level
-                                    updated += 1
-                                else:
-                                    db.session.add(Course(
-                                        course_code=code, course_name=title, program=target_program,
-                                        department=_dept_for_code(code, auto_add=True),
-                                        year_level=current_year_level, lec_units=3, lab_units=0,
-                                        synchronous_lec_hours=3, synchronous_lab_hours=0,
-                                        asynchronous_lec_hours=0, asynchronous_lab_hours=0,
-                                        semester_offered=current_semester
-                                    ))
-                                    added += 1
-                            continue
+                            # OJT / Practicum special handling
+                            if "COSC 199" in code.upper() or "ITEC 199" in code.upper() or code.upper().startswith("OJT"):
+                                title = "Internship / OJT / Practicum"
 
-                        # --- 4. UNIVERSAL REGEX ---
-                        match = re.search(r'^([A-Z]{3,4}\s+(?:\d+[A-Za-z]?|[IV]+))\s+(.+?)\s+(\(?\d\)?)(?:\s+(\d|-))?.*', line)
-
-                        if match:
-                            code = match.group(1).strip()
-                            title = match.group(2).strip().split('  ')[0]
-                            lec = int(match.group(3).replace('(', '').replace(')', ''))
-                            lab = 0
-                            if match.group(4) and match.group(4) != '-':
-                                try: lab = int(match.group(4))
-                                except: lab = 0
-
+                            # Upsert Course
                             existing = Course.query.filter_by(course_code=code).first()
                             if existing:
                                 existing.year_level = current_year_level
-                                existing.semester_offered = current_semester
+                                existing.semester_offered = current_semester # Update based on PDF context
                                 if existing.program != target_program and existing.program != 'Both':
                                     existing.program = 'Both'
                                 updated += 1
                             else:
-                                db.session.add(Course(
-                                    course_code=code, course_name=title, program=target_program,
+                                new_course = Course(
+                                    course_code=code,
+                                    course_name=title,
+                                    program=target_program,
                                     department=_dept_for_code(code, auto_add=True),
                                     year_level=current_year_level,
-                                    lec_units=lec, lab_units=lab,
+                                    lec_units=lec,
+                                    lab_units=lab,
                                     synchronous_lec_hours=(2 if lec > 0 else 0),
                                     synchronous_lab_hours=(3 if lab > 0 else 0),
-                                    asynchronous_lec_hours=0, asynchronous_lab_hours=0,
+                                    asynchronous_lec_hours=0,
+                                    asynchronous_lab_hours=0,
                                     semester_offered=current_semester
-                                ))
+                                )
+                                db.session.add(new_course)
                                 added += 1
-
-            # Commit changes bago mag-assign sa sections
+            
             db.session.commit()
 
-            # =========================================================
-            # FIXED: AUTO-LOCK NSTP LOGIC (1st Year Only & Program Specific)
-            # =========================================================
-            if auto_assign:
+            # --- 3. AUTO-LOCK NSTP LOGIC (1st Year Only & Program Specific) ---
+            nstp_to_lock = Course.query.filter(Course.course_code.ilike('NSTP%'), Course.year_level == 1).first()
+            if nstp_to_lock:
                 court = Room.query.filter_by(room_name="University Field").first()
                 tba_faculty = Faculty.query.filter_by(full_name="T.B.A.").first()
-                
-                # 1. Alamin kung anong program ang target (BSCoS o BSIT)
-                prog_identifier = "BSCoS" if target_program == "BSCoS" else "BSIT"
-                
-                # 2. FILTER: Kunin lang ang sections na:
-                #    - Tugma sa Program (BSCoS o BSIT)
-                #    - AT Year Level 1 lang (Dahil ang NSTP ay 1st Year subject)
-                target_sections = Section.query.filter(
-                    Section.section_name.ilike(f"%{prog_identifier}%"),
-                    Section.year_level == 1, # <--- ETO ANG FIX PARA SA YEAR LEVEL
-                    Section.is_archived == False
-                ).all()
-                
-                # 3. Hanapin ang NSTP course (NSTP 1 o 2)
-                nstp_to_lock = Course.query.filter(
-                    Course.course_code.ilike('NSTP%'),
-                    Course.semester_offered == assign_semester
-                ).first()
 
-                if nstp_to_lock and court and tba_faculty:
+                if court and tba_faculty:
+                    prog_identifier = "BSCoS" if target_program == "BSCoS" else "BSIT"
+                    target_sections = Section.query.filter(
+                        Section.section_name.ilike(f"%{prog_identifier}%"),
+                        Section.year_level == 1,
+                        Section.is_archived == False
+                    ).all()
+                    
                     locked_count = 0
-                    for section in target_sections:
-                        # Check muna kung naka-lock na para iwas duplicate
-                        exists = PreAssignment.query.filter_by(
-                            course_id=nstp_to_lock.id, 
-                            section_id=section.id
+                    for sec in target_sections:
+                        # Check kung meron na
+                        existing_slot = ScheduledClass.query.filter_by(
+                            course_id=nstp_to_lock.id,
+                            section_id=sec.id,
+                            semester='1st Semester'
                         ).first()
                         
-                        if not exists:
-                            db.session.add(PreAssignment(
+                        if not existing_slot:
+                            db.session.add(ScheduledClass(
                                 course_id=nstp_to_lock.id,
-                                section_id=section.id,
-                                faculty_id=tba_faculty.id,
+                                section_id=sec.id,
                                 room_id=court.id,
-                                day="Friday",
-                                start_time="07:00",
-                                end_time="11:00",
+                                faculty_id=tba_faculty.id,
+                                day='Sunday',
+                                start_time='08:00',
+                                end_time='11:00',
+                                semester='1st Semester',
+                                is_draft=False,
                                 is_archived=False
                             ))
                             locked_count += 1
@@ -10110,7 +9850,7 @@ def import_courses_pdf():
                     db.session.commit()
                     print(f"Auto-locked {nstp_to_lock.course_code} for {locked_count} 1st Year {target_program} sections.")
 
-            # --- 5. AUTO ASSIGN LOGIC ---
+            # --- 4. AUTO ASSIGN LOGIC ---
             if auto_assign:
                 prog_identifier = "BSCoS" if target_program == "BSCoS" else "BSIT"
                 sections = Section.query.filter(Section.section_name.ilike(f"%{prog_identifier}%")).all()
@@ -10120,24 +9860,30 @@ def import_courses_pdf():
                     matching_courses = Course.query.filter(
                         or_(Course.program == target_program, Course.program == 'Both'),
                         Course.year_level == section.year_level,
-                        Course.semester_offered == assign_semester,
-                        Course.is_archived == False
+                        Course.semester_offered == assign_semester
                     ).all()
-                    section.courses = matching_courses
+                    
+                    for course in matching_courses:
+                        existing = SectionAssignment.query.filter_by(section_id=section.id, course_id=course.id).first()
+                        if not existing:
+                            db.session.add(SectionAssignment(section_id=section.id, course_id=course.id))
                 db.session.commit()
 
-            # --- DETAILED NOTIFICATION ---
-            notif_msg = f"Import Success! Added: {added} new, Updated: {updated} existing."
+            msg = f"Imported from PDF: {added} new courses, {updated} updated."
             if auto_assign:
-                notif_msg += f" Auto-assigned {assign_semester} subjects to {assigned_sections_count} sections."
-            
-            flash(notif_msg, 'success')
+                msg += f" Automatically assigned to {assigned_sections_count} {target_program} sections for {assign_semester}."
+            flash(msg, 'success')
 
         except Exception as e:
             db.session.rollback()
-            flash(f'Error parsing PDF: {str(e)}', 'danger')
-
+            print(f"PDF Import Error: {e}")
+            flash(f"Error processing PDF: {str(e)}", 'danger')
+            
     return redirect(url_for('manage_courses'))
+
+
+
+
 
 
 @app.route('/import_courses_docx', methods=['POST'])
@@ -11121,514 +10867,6 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
     return html_out, table_px, 1.0, 0
 
 
-def render_excel_to_html_pdf(ws, variable_map=None, cell_overrides=None,
-                         extra_merge_map=None, extra_skip_cells=None,
-                         bounds=None, layout_type=None, margins=None,
-                         img_settings=None):
-    """
-    DEDICATED PDF CLONE of render_excel_to_html.
-    Optimized for WeasyPrint rendering by avoiding height-clumping on rowspans
-    and enforcing tight line-heights to prevent auto-row-stretching.
-    """
-    variable_map    = variable_map    or {}
-    cell_overrides  = cell_overrides  or {}
-    extra_merge_map = extra_merge_map or {}
-    skip_cells      = set(extra_skip_cells or set())
-
-    MDW   = 7          # avg char width px (Excel default)
-    PT_PX = 96 / 72    # 1pt -> px
-
-    # Apply content bounds (smart crop)
-    if bounds:
-        row_start, col_start, max_row, max_col = bounds
-    else:
-        row_start, col_start = 1, 1
-        max_col = ws.max_column or 1
-        max_row = ws.max_row    or 1
-
-    # Column widths (only for visible range)
-    # Reference px widths (from Excel chars -> px) used for proportional sizing only.
-    col_widths = []
-    col_hidden = []
-    for c in range(col_start, max_col + 1):
-        cd = ws.column_dimensions.get(get_column_letter(c))
-        hidden = bool(cd and cd.hidden)
-        col_hidden.append(hidden)
-        if hidden:
-            col_widths.append(0)
-        else:
-            chars = (cd.width if cd and cd.width else 8.43)
-            col_widths.append(max(4, round(chars * MDW)))
-    # -- Step A: Snapshot ORIGINAL col_offsets for pixel-perfect image placement --
-    # Must be done BEFORE any equalization or tightening so that image anchor
-    # positions map correctly to the original Excel column layout.
-    _orig_col_offsets = {}
-    _acc = 0
-    for _i, _w in enumerate(col_widths):
-        _orig_col_offsets[_i] = _acc
-        _acc += _w
-    _orig_total_w_px = sum(w for w, h in zip(col_widths, col_hidden) if not h) or 1
-
-    # Extend _orig_col_offsets to include pre-start columns with negative keys.
-    # Image anchors can start in columns before col_start (e.g. logo in col A when
-    # table starts at col B). Without this, _col_ref falls back to 0, shifting
-    # images right by exactly the width of those pre-start columns.
-    if col_start > 1:
-        _pre_acc = 0
-        for _c in range(col_start - 1, 0, -1):
-            _cd = ws.column_dimensions.get(get_column_letter(_c))
-            _hidden = bool(_cd and _cd.hidden)
-            _cw = 0 if _hidden else max(4, round((_cd.width if _cd and _cd.width else 8.43) * MDW))
-            _pre_acc += _cw
-            # rel_idx = (_c - 1) - (col_start - 1) = _c - col_start  (always < 0)
-            _orig_col_offsets[_c - col_start] = -_pre_acc
-
-    # -- Step B: Detect day-header row and collect day/time column indices --
-    _DAY_KW = {
-        'MON', 'TUE', 'WED', 'THU', 'THURS', 'FRI', 'SAT', 'SUN',
-        'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY',
-    }
-    _best_row_hits = 0
-    _day_col_indices = []   # 0-based indices into col_widths
-    for _r in range(row_start, max_row + 1):
-        _hits = []
-        for _ci, _c in enumerate(range(col_start, max_col + 1)):
-            _v = ws.cell(row=_r, column=_c).value
-            if _v and str(_v).strip().upper() in _DAY_KW:
-                _hits.append(_ci)
-        if len(_hits) >= 3 and len(_hits) > _best_row_hits:
-            _best_row_hits = len(_hits)
-            _day_col_indices = _hits
-
-    # Time columns = only columns that ACTUALLY contain time values, found by
-    # scanning BACKWARDS from the first day column and stopping at the first
-    # column whose cells contain no time values.
-    # This prevents header/info columns (e.g. "DEPARTMENT OF COMPUTER STUDIES")
-    # from being incorrectly included and inflating the time-column width.
-    _TIME_VAL_PAT = re.compile(r'^\d{1,2}:\d{2}')  # matches "HH:MM" or "HH:MM:SS"
-
-    def _col_has_time_values(ci_0based):
-        """Return True if any cell in this column holds a time value."""
-        _ce = col_start + ci_0based
-        for _r in range(row_start, max_row + 1):
-            _v = ws.cell(row=_r, column=_ce).value
-            if _v is None:
-                continue
-            # datetime.time: has strftime but no .year attribute
-            if hasattr(_v, 'strftime') and not hasattr(_v, 'year'):
-                return True
-            # String that starts with "HH:MM"
-            if isinstance(_v, str) and _TIME_VAL_PAT.match(_v.strip()):
-                return True
-        return False
-
-    _time_col_indices = []
-    if _day_col_indices:
-        _first_day_idx = min(_day_col_indices)
-        for _ti in range(_first_day_idx - 1, -1, -1):
-            if col_hidden[_ti]:
-                continue          # skip hidden cols, don't stop scanning
-            if _col_has_time_values(_ti):
-                _time_col_indices.insert(0, _ti)
-            else:
-                # Check if this column is completely empty (e.g. non-anchor of a
-                # merged "TIME/DAYS" cell whose anchor is further left).
-                # If fully empty -> skip it and keep scanning left.
-                # If it has non-time content -> stop (real content boundary).
-                _ce = col_start + _ti
-                _col_empty = all(
-                    ws.cell(row=_r, column=_ce).value is None
-                    for _r in range(row_start, max_row + 1)
-                )
-                if _col_empty:
-                    continue      # empty placeholder --  keep scanning left
-                break             # non-empty non-time col -> stop
-
-    # -- Step C: Auto-fit each time column to its own content width --
-    # Only measure cells that contain ACTUAL TIME VALUES --  datetime.time objects
-    # or strings matching the HH:MM pattern.  All other cells (headers, labels,
-    # "DAILY CONTACT HOURS", "Prepared by:", etc.) are skipped.  This restricts
-    # measurement to the schedule data rows only, regardless of template layout.
-    for _ti in _time_col_indices:
-        _col_excel = col_start + _ti   # 1-based Excel column number
-        _max_len = 0
-        _col_has_time_obj = False
-        for _r in range(row_start, max_row + 1):
-            _val = ws.cell(row=_r, column=_col_excel).value
-            if _val is None:
-                continue
-            # --------- ---------------- ------- Identify time values only --------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- -------# ---
-            _is_time_obj = hasattr(_val, 'strftime') and not hasattr(_val, 'year')
-            _is_time_str = isinstance(_val, str) and _TIME_VAL_PAT.match(_val.strip())
-            if not (_is_time_obj or _is_time_str):
-                continue    # skip non-time cells (headers, labels, totals, etc.)
-            # --------- ---------------- ------- Measure display string --------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- ---------------- -------# ---
-            # datetime.time -> strftime('%H:%M') = "07:00" (matches Excel display)
-            # strings -> unchanged
-            if _is_time_obj:
-                _s = f"{_val.hour}:{_val.minute:02d}"   # "7:00" --  no leading zero
-                _col_has_time_obj = True
-            else:
-                _s = str(_val).strip()
-            _max_len = max(_max_len, len(_s))
-        # datetime.time cols (Faculty): +20px padding
-        # string time cols (Section): no extra padding
-        _pad = 20 if _col_has_time_obj else 0
-        _tight_w = max(MDW * 3, _max_len * MDW + _pad)
-        col_widths[_ti] = _tight_w
-
-    # -- Step D: Day columns fill the space freed by time-col tightening --
-    # remaining = original_total ----------------- new_tight_time ----------------- other_non-day_non-time cols
-    # Each day col gets an equal share of remaining, guaranteeing symmetry AND
-    # that they are as wide as possible given the tightened time columns.
-    if _day_col_indices:
-        _tight_time_total = sum(col_widths[_i] for _i in _time_col_indices)
-        _other_indices    = [_i for _i in range(len(col_widths))
-                             if not col_hidden[_i]
-                             and _i not in _day_col_indices
-                             and _i not in _time_col_indices]
-        _other_total      = sum(col_widths[_i] for _i in _other_indices)
-        _remaining        = _orig_total_w_px - _tight_time_total - _other_total
-        _day_col_w        = max(MDW * 5, round(_remaining / len(_day_col_indices)))
-        for _di in _day_col_indices:
-            col_widths[_di] = _day_col_w
-
-    # total_w_px = reference pixel sum of ALL visible columns (used for % and image coords)
-    total_w_px = sum(w for w, h in zip(col_widths, col_hidden) if not h) or 1
-    num_visible = sum(1 for h in col_hidden if not h)
-    table_px = total_w_px  # kept for API compatibility; actual table uses width:100%
-
-    # Row heights (only for visible range)
-    row_heights = []
-    for r in range(row_start, max_row + 1):
-        rd = ws.row_dimensions.get(r)
-        pts = (rd.height if rd and rd.height else 13.5)
-        row_heights.append(max(8, round(pts * PT_PX)))
-
-    # Merged cell spans (full sheet --  clip rendering handles out-of-range)
-    merged_spans = {}
-    for merge in ws.merged_cells.ranges:
-        r1, c1, r2, c2 = merge.min_row, merge.min_col, merge.max_row, merge.max_col
-        merged_spans.setdefault(r1, {})[c1] = (r2 - r1 + 1, c2 - c1 + 1)
-        for r in range(r1, r2 + 1):
-            for c in range(c1, c2 + 1):
-                if r != r1 or c != c1:
-                    skip_cells.add((r, c))
-
-    for (r, c), (rs, cs) in extra_merge_map.items():
-        merged_spans.setdefault(r, {})[c] = (rs, cs)
-        for dr in range(r, r + rs):
-            for dc in range(c, c + cs):
-                if dr != r or dc != c:
-                    skip_cells.add((dr, dc))
-
-    def subst(text):
-        if not text or not variable_map:
-            return text
-        for tok, val in variable_map.items():
-            text = text.replace(tok, str(val) if val is not None else '')
-        return text
-
-    def esc(t):
-        return str(t).replace('&','&amp;').replace('<','&lt;').replace('>','&gt;')
-
-    # FIX #1: Calculate Absolute Math Scale Factor covering ALL rows (header + data + footer).
-    # Previously only time-slot rows were considered, causing underestimation of total height.
-    scale_v = 1.0
-    if margins:
-        paper_key = margins.get('paper', 'A4')
-        mt = float(margins.get('top', 1.0))
-        mb = float(margins.get('bottom', 1.0))
-        _, ph, _ = PAPER_SIZES.get(paper_key, PAPER_SIZES['A4'])
-        # sum ALL rows in rendered range --- includes title rows, header rows, footer/signatory rows
-        available_h_px = (ph - mt - mb) * 96
-        total_th_px = sum(row_heights)
-        if total_th_px > available_h_px and available_h_px > 0:
-            # Surgical Slimming: Use a tighter buffer to force more vertical compression
-            scale_v = (available_h_px / total_th_px) * 0.975
-
-    # PRE-SCALE all row heights for global consistency
-    scaled_row_heights = [round(h * scale_v, 1) for h in row_heights]
-
-    # SMART GRID DETECTION: Identify the timetable area to separate Grid Styles from Header/Footer Styles
-    grid_start_r = row_start
-    grid_end_r   = max_row
-    if layout_type != 'faculty':
-        _found_start = False
-        for _r in range(row_start, max_row + 1):
-            for _c in range(col_start, max_col + 1):
-                _val = str(ws.cell(row=_r, column=_c).value or '').strip().upper()
-                if "TIME/DAYS" in _val:
-                    grid_start_r = _r
-                    _found_start = True
-                    break
-            if _found_start: break
-        
-        _found_end = False
-        for _r in range(grid_start_r + 1, max_row + 1):
-            for _c in range(col_start, max_col + 1):
-                _val = str(ws.cell(row=_r, column=_c).value or '').strip().upper()
-                if any(k in _val for k in ["PREPARED BY:", "RECOMMENDING APPROVAL:", "APPROVED:"]):
-                    grid_end_r = _r - 1
-                    _found_end = True
-                    break
-            if _found_end: break
-
-    lines = [
-        '<table style="border-collapse:collapse;table-layout:fixed;width:100%;">',
-        '<colgroup>',
-    ]
-    _time_col_set = set(_time_col_indices)
-    _day_col_set  = set(_day_col_indices)
-    for i, w in enumerate(col_widths):
-        if col_hidden[i]:
-            lines.append(f'  <col style="width:0;visibility:collapse;">')
-        elif i in _time_col_set:
-            _tcw = w + 20 if layout_type == 'faculty' else w
-            lines.append(f'  <col style="width:{_tcw}px;">')
-        elif layout_type in ('section', 'room', 'course', 'faculty') and i in _day_col_set:
-            lines.append(f'  <col style="width:auto;">')
-        else:
-            pct = w / total_w_px * 100
-            lines.append(f'  <col style="width:{pct:.4f}%;">')
-    lines.append('</colgroup><tbody>')
-
-    for r in range(row_start, max_row + 1):
-        # SKIP HIDDEN ROWS: Mirrors browser preview behavior to avoid "ghost" yellow rows in footer.
-        rd = ws.row_dimensions.get(r)
-        if rd and rd.hidden:
-            continue
-
-        rh = scaled_row_heights[r - row_start]
-        lines.append(f'<tr style="height:{rh}px;">')
-        is_grid_row = (grid_start_r <= r <= grid_end_r)
-
-        for c in range(col_start, max_col + 1):
-            if (r, c) in skip_cells:
-                continue
-
-            cell = ws.cell(row=r, column=c)
-
-            # Cell value
-            if (r, c) in cell_overrides:
-                raw = cell_overrides[(r, c)]
-                is_override = True
-            else:
-                v = cell.value
-                if v is None:
-                    raw = ''
-                elif hasattr(v, 'strftime') and not hasattr(v, 'year'):
-                    raw = f"{v.hour}:{v.minute:02d}"
-                else:
-                    raw = str(v)
-                is_override = False
-
-            cell_text = subst(raw) if not is_override else raw
-
-            # Span attrs
-            span_info = merged_spans.get(r, {}).get(c)
-            rs_val = 1
-            cs_span = 1
-            if span_info:
-                rs_val, cs_span = span_info
-                # FULL MERGED HEIGHT: Calculate the sum of scaled row heights for this span
-            _sum_h = sum(
-                scaled_row_heights[_r - row_start]
-                for _r in range(r, r + rs_val)
-                if 0 <= (_r - row_start) < len(scaled_row_heights)
-            )
-
-            span_attrs = ''
-            total_rh = rh  # default
-            if rs_val > 1:
-                span_attrs += f' rowspan="{rs_val}"'
-                # WEASYPRINT FIX: For the Grid, we must only assign a single row-height to avoid clumping.
-                # BUT for Headers/Footers, we MUST assign the full _sum_h to allow centering to work.
-                total_rh = rh if is_grid_row else _sum_h
-            if cs_span > 1:
-                span_attrs += f' colspan="{cs_span}"'
-
-            # HARD HEIGHT CONSTRAINT: max-height and overflow:visible prevent auto-stretching
-            sp = [f'height:{total_rh}px', f'max-height:{total_rh}px', 'overflow:visible']
-
-            # Fill --- solid fgColor; fall back to bgColor for pattern fills
-            fill = cell.fill
-            if fill and fill.fill_type not in (None, 'none'):
-                fg = _argb_to_css(fill.fgColor) if fill.fgColor else None
-                if not fg and fill.bgColor:
-                    fg = _argb_to_css(fill.bgColor)
-                if fg:
-                    sp.append(f'background-color:{fg}')
-
-            # Font / Spacing --- CONDITIONALLY apply slimming or restoration
-            font = cell.font
-            if is_grid_row:
-                # ULTRA-TIGHT SPACING for the Grid
-                sp.append('padding:0 !important;line-height:0.7 !important')
-            else:
-                # COMFORTABLE SPACING for Header/Footer (Mirroring Grid Tightness for Centering)
-                sp.append('line-height:0.7 !important')
-
-            if font:
-                sz = font.size or 11
-                fs = round(sz * PT_PX * scale_v, 1)
-                # Cap minimum font size for readability
-                fs = max(fs, 7.5)
-                if c in _time_col_set and is_grid_row:
-                    fs = min(fs, 8.5)
-                sp.append(f'font-size:{fs}px')
-                fname = font.name or 'Calibri'
-                sp.append(f"font-family:'{fname}',sans-serif")
-                if font.bold:   sp.append('font-weight:bold')
-                if font.italic: sp.append('font-style:italic')
-                td_deco = []
-                if font.underline: td_deco.append('underline')
-                if font.strike:    td_deco.append('line-through')
-                if td_deco: sp.append(f'text-decoration:{" ".join(td_deco)}')
-                fc = _argb_to_css(font.color) if font.color else None
-                if fc: sp.append(f'color:{fc}')
-
-            al = cell.alignment
-            _indent_px = int(al.indent) * MDW if al and al.indent else 0
-            _pad_left  = _indent_px + 4
-            if is_override:
-                sp.append('padding:0 !important')
-            else:
-                sp.append(f'padding:0 4px 0 {_pad_left}px !important')
-
-            _valign = 'middle'
-            _halign = 'left'
-            if al:
-                h_map = {'center':'center','right':'right','left':'left',
-                         'justify':'justify','general':'left'}
-                v_map = {'center':'middle','top':'top','bottom':'bottom'}
-                _halign = h_map.get(al.horizontal or "left","left")
-                _valign = v_map.get(al.vertical or "center","middle")
-                sp.append(f'text-align:{_halign}')
-                
-                # STRICT VERTICAL MIRRORING (from preview)
-                _valign = v_map.get(al.vertical or 'bottom', 'bottom')
-                
-                # BREATHABLE SPACE: Add padding-bottom if vertical align is bottom
-                if _valign == 'bottom':
-                    sp.append('padding-bottom:4px !important')
-
-                # Standardize to top !important so internal flexbox controls centering 100%
-                sp.append('vertical-align:top !important')
-                sp.append('white-space:pre-wrap;word-break:break-all' if al.wrap_text else 'white-space:pre')
-            else:
-                sp += ['text-align:left', 'vertical-align:top !important', 'white-space:pre']
-
-            # Borders --- per-side explicit control.
-            bd = cell.border
-            for _s in ('top', 'right', 'bottom', 'left'):
-                _real = _border_side_css(getattr(bd, _s, None) if bd else None)
-                sp.append(f'border-{_s}:{_real if _real else "none"}')
-
-            style_str = ';'.join(sp)
-
-            if is_override:
-                # -- DIAGNOSTIC: Force yellow if it's a Header/Footer override --
-                if not is_grid_row:
-                    style_str += ';background-color:yellow !important'
-
-                # WEASYPRINT FIX #4: Flush Top Alignment
-                # Force the cell to align to the top to eliminate gaps outside the subject box.
-                style_str += ';vertical-align:top !important'
-
-                # WEASYPRINT FIX #3: Flexbox Conversion
-                html_text = cell_text
-                html_text = html_text.replace('display:table;', f'display:flex;flex-direction:column;justify-content:center;align-items:stretch;height:{_sum_h}px;box-sizing:border-box;overflow:visible !important;')
-                html_text = html_text.replace('display:table-cell;', 'display:block;width:100%;overflow:visible !important;')
-                html_text = html_text.replace('height:100%;', f'height:{_sum_h}px;')
-                _inner_fs = max(8.0, round(10 * scale_v, 1))
-                html_text = html_text.replace('padding:3px;', 'padding:0px !important;')
-                html_text = html_text.replace('font-size:11px;', f'font-size:{_inner_fs}px;')
-                html_text = html_text.replace('line-height:1.3;', 'line-height:1.1 !important;')
-                if not is_grid_row:
-                    # 1. HEADER/FOOTER CENTERING (Isolated)
-                    _v_flex = {'top':'flex-start','middle':'center','bottom':'flex-end'}.get(_valign, 'center')
-                    _h_flex = {'left':'flex-start','center':'center','right':'flex-end'}.get(_halign, 'center')
-                    _inner_pad = 'padding-bottom:4px;' if _valign == 'bottom' else ''
-
-                    html_text = (
-                        f'<div style="height:{_sum_h}px;width:100%;display:flex;flex-direction:column;justify-content:{_v_flex};align-items:{_h_flex};background-color:yellow !important;box-sizing:border-box;{_inner_pad}">'
-                        f'<span style="line-height:0.7 !important;display:block;width:100%;">{cell_text}</span>'
-                        f'</div>'
-                    )
-                else:
-                    # 2. CLASS/SUBJECTS (Original Logic Restored)
-                    _inner_fs = max(8.5, round(11 * 0.8 * scale_v, 1))
-                    html_text = html_text.replace('display:table;', f'display:flex;flex-direction:column;justify-content:center;align-items:stretch;height:{_sum_h}px;box-sizing:border-box;')
-                    html_text = html_text.replace('padding:3px;', 'padding:0px !important;')
-                    html_text = html_text.replace('font-size:11px;', f'font-size:{_inner_fs}px;')
-                    html_text = html_text.replace('line-height:1.3;', 'line-height:1.1 !important;')
-                    # Clipping wrapper div
-                    html_text = f'<div style="height:{_sum_h}px;max-height:{_sum_h}px;width:100%;overflow:visible;position:relative;display:block;">{html_text}</div>'
-            else:
-                # -- TRUE GRID-STYLE MIRRORING (Restored Flexbox Engine) --
-                _v_flex = {'top':'flex-start','middle':'center','bottom':'flex-end'}.get(_valign, 'center')
-                _h_flex = {'left':'flex-start','center':'center','right':'flex-end'}.get(_halign, 'center')
-                _clip_h = rh if not span_info else total_rh
-                _inner_pad = 'padding-bottom:4px;' if _valign == 'bottom' else ''
-
-                html_text = esc(cell_text).replace('\n', '<br>') if cell_text else ''
-
-                # Double-Wrapper: Restored Flexbox centering
-                style_str += ';background-color:yellow !important'
-                html_text = (
-                    f'<div style="height:{_clip_h}px;max-height:{_clip_h}px;overflow:visible;position:relative;display:block;background-color:yellow !important;">'
-                    f'<div style="height:{_clip_h}px;width:100%;display:flex;flex-direction:column;justify-content:{_v_flex};align-items:{_h_flex};box-sizing:border-box;{_inner_pad}">'
-                    f'<span style="line-height:0.7 !important;display:block;width:100%;">{html_text}</span>'
-                    f'</div></div>'
-                )
-            lines.append(f'  <td{span_attrs} style="{style_str}">{html_text}</td>')
-
-        lines.append('</tr>')
-
-    lines += ['</tbody>', '</table>']
-
-    # Build cumulative pixel offsets for image placement
-    col_offsets = {}  # 0-based col index -> left px
-    acc = 0
-    for i, w in enumerate(col_widths):
-        col_offsets[i] = acc
-        acc += w
-    row_offsets = {}  # 0-based row index -> top px
-    acc = 0
-    for i, h in enumerate(row_heights):
-        row_offsets[i] = acc
-        acc += h
-
-    if layout_type in ('section', 'room', 'course') and margins:
-        _m  = margins
-        _ml = float(_m.get('left',  1.0))
-        _mr = float(_m.get('right', 1.0))
-        _pk = _m.get('paper', 'A4')
-        _pw, _, _ = PAPER_SIZES.get(_pk, PAPER_SIZES['A4'])
-        _paper_content_px = (_pw - _ml - _mr) * 96
-        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _paper_content_px, left_offset_px=-30, img_settings_list=img_settings)
-    elif layout_type == 'faculty' and margins:
-        _m  = margins
-        _ml = float(_m.get('left',  1.0))
-        _mr = float(_m.get('right', 1.0))
-        _pk = _m.get('paper', 'A4')
-        _pw, _, _ = PAPER_SIZES.get(_pk, PAPER_SIZES['A4'])
-        _paper_content_px = (_pw - _ml - _mr) * 96
-        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _paper_content_px, left_offset_px=20, img_settings_list=img_settings, scale_v=scale_v)
-    else:
-        imgs_below, imgs_above = _extract_ws_images_html(ws, _orig_col_offsets, row_offsets, col_start, row_start, _orig_total_w_px, img_settings_list=img_settings, scale_v=scale_v)
-
-    html_out = (
-        '<div style="position:relative;width:100%;isolation:isolate;">\n'
-        + imgs_below + '\n'
-        + '<div style="position:relative;z-index:1;">'
-        + '\n'.join(lines)
-        + '</div>\n'
-        + imgs_above + '\n'
-        + '</div>'
-    )
-    return html_out, table_px, scale_v, total_th_px
 
 
 def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
@@ -11652,7 +10890,7 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
 
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
   body {{
@@ -11661,9 +10899,16 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
     {body_padding}
     {body_overflow}
     min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
+    touch-action: pan-x pan-y;
+  }}
+  
+  /* On larger screens, center the paper. On mobile, keep it left-aligned so it scales cleanly */
+  @media (min-width: 850px) {{
+    body {{
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }}
   }}
   .a4 {{
     background: #ffffff;
@@ -11745,6 +10990,45 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
           paper.style.minHeight = 'unset';
           paper.style.overflow  = 'hidden';
       }}
+      // --- Custom Mobile Pinch-to-Zoom (Isolated) ---
+      var currentZoom = 1.0;
+      var lastDist = 0;
+      
+      // Auto-fit initial zoom so it looks like a PDF viewer starting point
+      if (window.innerWidth > 0 && window.innerWidth < ({pw} * DPI + 40)) {{
+          currentZoom = window.innerWidth / ({pw} * DPI + 40);
+          document.body.style.zoom = currentZoom;
+      }}
+      
+      var initialFitZoom = currentZoom;
+
+      document.documentElement.addEventListener('touchstart', function(e) {{
+          if (e.touches.length === 2 && currentZoom > 0) {{
+              e.preventDefault(); // Stop any browser-level interference
+              lastDist = Math.hypot(
+                  e.touches[0].clientX - e.touches[1].clientX,
+                  e.touches[0].clientY - e.touches[1].clientY
+              );
+          }}
+      }}, {{passive: false}});
+
+      document.documentElement.addEventListener('touchmove', function(e) {{
+          if (e.touches.length === 2 && currentZoom > 0) {{
+              e.preventDefault(); // Lock the parent modal from zooming!
+              var dist = Math.hypot(
+                  e.touches[0].clientX - e.touches[1].clientX,
+                  e.touches[0].clientY - e.touches[1].clientY
+              );
+              if (lastDist > 0) {{
+                  var ratio = dist / lastDist;
+                  // Allow up to 4x zoom from initial size
+                  var nextZoom = currentZoom * ratio;
+                  currentZoom = Math.min(Math.max(initialFitZoom, nextZoom), 4.0);
+                  document.body.style.zoom = currentZoom;
+              }}
+              lastDist = dist;
+          }}
+      }}, {{passive: false}});
     }})();
   </script>
 
@@ -11815,88 +11099,6 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
 </body></html>"""
 
 
-def render_pdf_page(html_content, orientation='landscape', margins=None):
-    """Wrap HTML content in a 'Clean Paper' structure for WeasyPrint.
-    Mirrors the A4 preview logic to ensure absolute positioning and margins match.
-    """
-    m = margins or {}
-    mt = float(m.get('top',    1.0))
-    mb = float(m.get('bottom', 1.0))
-    ml = float(m.get('left',   1.0))
-    mr = float(m.get('right',  1.0))
-    paper_key = m.get('paper', 'A4')
-    pw, ph, _ = PAPER_SIZES.get(paper_key, PAPER_SIZES['A4'])
-    
-    if orientation == 'landscape':
-        page_size = f'{ph}in {pw}in'
-        # In landscape, we swap dimensions
-        paper_w, paper_h = ph, pw
-    else:
-        page_size = f'{pw}in {ph}in'
-        paper_w, paper_h = pw, ph
-
-    return f"""<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8">
-<style>
-  @page {{ 
-    size: {page_size}; 
-    margin: {mt}in {mr}in {mb}in {ml}in;
-  }}
-  /* margin: 0/padding: 0 reset. @page handles all physical page gutters. */
-  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-  body {{ 
-    font-family: Calibri, Arial, sans-serif; 
-    background: white;
-  }}
-  /* .a4 = one physical page. NO padding here ---- @page already sets the gutters.
-     overflow:hidden clips anything that exceeds one page height. */
-  .a4 {{
-    width: 100%;
-    height: 100%;
-    position: relative;
-    overflow: hidden;
-    page-break-after: always;
-    page-break-inside: avoid;
-  }}
-  /* FIX #10: No trailing blank page after the last schedule. */
-  .a4:last-child {{
-    page-break-after: auto;
-  }}
-  .table-wrap {{
-    width: 100%;
-    position: relative;
-  }}
-  table {{
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-  }}
-  /* Faint outline grid for PDF layout verification and precise cell rendering */
-  table td, table th {{
-    outline: 1px solid rgba(0,0,0,0.2);
-    /* Enforce strict row heights - NO expansion allowed */
-    overflow: hidden;
-    text-overflow: clip;
-    white-space: nowrap;
-    line-height: 1.0;
-  }}
-  /* WEASYPRINT REPAIR: Tell Weasyprint to ignore the explicit height passed from python so it doesn't clump it in one row. */
-  table td[rowspan] {{
-    height: auto !important;
-  }}
-  /* WEASYPRINT REPAIR: Force a tight text bounding box purely inside the PDF engine so it doesn't request row-stretching. */
-  table td {{
-    padding: 0;
-    line-height: 0.8;
-  }}
-  /* Images must not be clipped by default max-width */
-  .a4 img {{
-    max-width: none;
-    display: block;
-  }}
-</style></head><body>
-  {html_content}
-</body></html>"""
 
 
 def detect_schedule_grid(ws):
@@ -12437,7 +11639,7 @@ def _get_cached_template(path):
 @login_required
 def section_timetable_html(section_id):
     """Render a section's scheduled classes into the uploaded Excel template.
-    Returns a standalone A4-paper HTML page (used by Phase 5 PDF export).
+    Returns a standalone A4-paper HTML page.
 
     Query params:
       ?semester=1st Semester   (default: most recent in DB)
@@ -12690,98 +11892,6 @@ def irregular_timetable_html(student_id):
     return render_a4_page(html_content, table_px, margins=_margins)
 
 
-@app.route('/section-timetable-pdf/<int:section_id>')
-@login_required
-def section_timetable_pdf(section_id):
-    """Generate a PDF of the section's schedule using the uploaded Excel template.
-    Query params:
-      ?semester=1st Semester
-      ?sem_ay=Second / 2023-2024
-      ?orientation=portrait  (default: portrait ---- matches preview)
-    """
-    section = Section.query.get_or_404(section_id)
-
-    _req_sem  = request.args.get('semester', '')
-    _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
-    semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
-    sem_ay    = request.args.get('sem_ay', '')
-    orientation = request.args.get('orientation', 'portrait')
-    if orientation not in ('landscape', 'portrait'):
-        orientation = 'portrait'
-
-    path = os.path.join(basedir, 'static', 'assets', 'section_template.xlsx')
-    if not os.path.exists(path):
-        flash('No section template uploaded. Go to Layout Settings to upload one.', 'danger')
-        return redirect(url_for('manage_layouts'))
-
-    schedules = ScheduledClass.query.options(
-        joinedload(ScheduledClass.course),
-        joinedload(ScheduledClass.section),
-        joinedload(ScheduledClass.faculty),
-        joinedload(ScheduledClass.room),
-    ).filter_by(section_id=section_id, semester=semester).all()
-
-    ws, grid_info, bounds = _get_cached_template(path)
-
-    if grid_info:
-        cell_overrides, extra_merge_map, extra_skip_cells = build_schedule_overlays(
-            schedules, grid_info, 'section'
-        )
-    else:
-        cell_overrides, extra_merge_map, extra_skip_cells = {}, {}, set()
-
-    settings = get_settings()
-    var_map  = build_variable_map(
-        'section', settings,
-        section_name=section.section_name,
-        sem_ay=sem_ay,
-    )
-    static_overrides = build_static_cell_overrides(
-        ws, 'section', settings,
-        entity_name=section.section_name,
-        sem_ay=sem_ay,
-    )
-    all_overrides = {**static_overrides, **cell_overrides}
-
-    _margins = _get_margins(settings)
-    _img_settings = _get_img_settings(settings, 'section')
-    html_content, _, scale_v, total_h_px = render_excel_to_html_pdf(
-        ws,
-        cell_overrides=all_overrides,
-        variable_map=var_map,
-        extra_merge_map=extra_merge_map,
-        extra_skip_cells=extra_skip_cells,
-        layout_type='section',
-        margins=_margins,
-        img_settings=_img_settings,
-    )
-
-    if scale_v < 1.0:
-        _scaled_h_px = total_h_px * scale_v
-        html_content = (
-            f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:visible;">'
-            f'<div style="position:relative;width:100%;transform:scale(1,{scale_v:.6f});transform-origin:top left;">'
-            + html_content
-            + '</div></div>'
-        )
-
-    # Wrap in .a4 structure for correct orientation/margins and image placement
-    pdf_html = render_pdf_page(f'<div class="a4">{html_content}</div>', 
-                               orientation=orientation, margins=_margins)
-
-    try:
-        pdf_bytes = HTML(string=pdf_html).write_pdf()
-        safe_name  = section.section_name.replace('/', '-').replace(' ', '_')
-        safe_sem   = semester.replace(' ', '_')
-        filename   = f"{safe_name}_Schedule_{safe_sem}.pdf"
-        return Response(
-            pdf_bytes,
-            mimetype='application/pdf',
-            headers={'Content-Disposition': f'attachment; filename="{filename}"'},
-        )
-    except Exception as e:
-        flash(f'PDF generation failed: {e}', 'danger')
-        return redirect(url_for('view_timetable'))
 
 
 def build_static_cell_overrides(ws, layout_type, settings, entity_name=None, sem_ay=None):
@@ -13482,84 +12592,6 @@ def faculty_timetable_html(faculty_id):
     return render_a4_page(html_content, table_px, margins=_margins, for_canvas=for_canvas)
 
 
-@app.route('/faculty-timetable-pdf/<int:faculty_id>')
-@login_required
-def faculty_timetable_pdf(faculty_id):
-    faculty  = Faculty.query.get_or_404(faculty_id)
-    _req_sem = request.args.get('semester', '')
-    _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
-    semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
-    # Default to 'portrait' as per user request
-    orientation = request.args.get('orientation', 'portrait')
-    if orientation not in ('landscape', 'portrait'):
-        orientation = 'portrait'
-
-    path = os.path.join(basedir, 'static', 'assets', 'faculty_template.xlsx')
-    if not os.path.exists(path):
-        flash('No faculty template uploaded.', 'danger')
-        return redirect(url_for('manage_layouts'))
-
-    schedules = ScheduledClass.query.options(
-        joinedload(ScheduledClass.course),
-        joinedload(ScheduledClass.section),
-        joinedload(ScheduledClass.faculty),
-        joinedload(ScheduledClass.room),
-    ).filter_by(faculty_id=faculty_id, semester=semester).all()
-
-    prep_count  = db.session.query(ScheduledClass.course_id).filter_by(
-                      faculty_id=faculty_id, semester=semester).distinct().count()
-    total_hours = 0.0
-    for sc in schedules:
-        try:
-            sh, sm = map(int, sc.start_time.split(':'))
-            eh, em = map(int, sc.end_time.split(':'))
-            total_hours += ((eh * 60 + em) - (sh * 60 + sm)) / 60.0
-        except Exception:
-            pass
-
-    ws, grid_info, bounds = _get_cached_template(path)
-
-    if grid_info:
-        cell_overrides, extra_merge_map, extra_skip_cells = build_schedule_overlays(
-            schedules, grid_info, 'faculty')
-    else:
-        cell_overrides, extra_merge_map, extra_skip_cells = {}, {}, set()
-
-    settings = get_settings()
-    fac_overrides  = build_faculty_cell_overrides(ws, settings, faculty,
-                                                   prep_count, total_hours)
-    subj_overrides = build_subject_table_overlays(ws, schedules)
-    all_overrides  = {**fac_overrides, **cell_overrides, **subj_overrides}
-
-    _margins = _get_faculty_margins(settings)
-    _img_settings = _get_img_settings(settings, 'faculty')
-    html_content, _, scale_v, total_h_px = render_excel_to_html_pdf(
-        ws, cell_overrides=all_overrides, variable_map=None,
-        extra_merge_map=extra_merge_map, extra_skip_cells=extra_skip_cells,
-        bounds=bounds, layout_type='faculty', margins=_margins,
-        img_settings=_img_settings)
-
-    if scale_v < 1.0:
-        _scaled_h_px = total_h_px * scale_v
-        html_content = (
-            f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:visible;">'
-            f'<div style="position:relative;width:100%;transform:scale(1,{scale_v:.6f});transform-origin:top left;">'
-            + html_content
-            + '</div></div>'
-        )
-
-    # Wrap in .a4 structure for correct orientation/margins and image placement
-    pdf_html = render_pdf_page(f'<div class="a4">{html_content}</div>', 
-                               orientation=orientation, margins=_margins)
-    try:
-        pdf_bytes = HTML(string=pdf_html).write_pdf()
-        safe_name = faculty.full_name.replace('/', '-').replace(' ', '_')
-        filename  = f"{safe_name}_Load_{semester.replace(' ','_')}.pdf"
-        return Response(pdf_bytes, mimetype='application/pdf',
-                        headers={'Content-Disposition': f'attachment; filename="{filename}"'})
-    except Exception as e:
-        flash(f'PDF generation failed: {e}', 'danger')
-        return redirect(url_for('view_timetable'))
 
 
 # ------------------------------------ Room timetable HTML ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -13642,70 +12674,6 @@ def room_timetable_html(room_id):
     return render_a4_page(html_content, table_px, margins=_margins, for_canvas=for_canvas)
 
 
-@app.route('/room-timetable-pdf/<int:room_id>')
-@login_required
-def room_timetable_pdf(room_id):
-    room     = Room.query.get_or_404(room_id)
-    _req_sem = request.args.get('semester', '')
-    _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
-    semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
-    orientation = request.args.get('orientation', 'portrait')
-    if orientation not in ('landscape', 'portrait'):
-        orientation = 'portrait'
-
-    path = os.path.join(basedir, 'static', 'assets', 'room_template.xlsx')
-    if not os.path.exists(path):
-        flash('No room template uploaded.', 'danger')
-        return redirect(url_for('manage_layouts'))
-
-    sem_ay    = request.args.get('sem_ay', '')
-    schedules = ScheduledClass.query.options(
-        joinedload(ScheduledClass.course),
-        joinedload(ScheduledClass.section),
-        joinedload(ScheduledClass.faculty),
-        joinedload(ScheduledClass.room),
-    ).filter_by(room_id=room_id, semester=semester, is_draft=False).all()
-    ws, grid_info, bounds = _get_cached_template(path)
-    if grid_info:
-        cell_overrides, extra_merge_map, extra_skip_cells = build_schedule_overlays(
-            schedules, grid_info, 'room')
-    else:
-        cell_overrides, extra_merge_map, extra_skip_cells = {}, {}, set()
-
-    settings = get_settings()
-    var_map  = build_variable_map('room', settings, entity_name=room.room_name, sem_ay=sem_ay)
-    static_overrides = build_static_cell_overrides(
-        ws, 'room', settings, entity_name=room.room_name, sem_ay=sem_ay)
-    all_overrides = {**static_overrides, **cell_overrides}
-    _margins = _get_margins(settings)
-    _img_settings = _get_img_settings(settings, 'room')
-    html_content, _, scale_v, total_h_px = render_excel_to_html_pdf(
-        ws, cell_overrides=all_overrides, variable_map=var_map,
-        extra_merge_map=extra_merge_map, extra_skip_cells=extra_skip_cells,
-        bounds=bounds, layout_type='room', margins=_margins,
-        img_settings=_img_settings)
-
-    if scale_v < 1.0:
-        _scaled_h_px = total_h_px * scale_v
-        html_content = (
-            f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:visible;">'
-            f'<div style="position:relative;width:100%;transform:scale(1,{scale_v:.6f});transform-origin:top left;">'
-            + html_content
-            + '</div></div>'
-        )
-
-    # Wrap in .a4 structure for correct orientation/margins and image placement
-    pdf_html = render_pdf_page(f'<div class="a4">{html_content}</div>', 
-                               orientation=orientation, margins=_margins)
-    try:
-        pdf_bytes = HTML(string=pdf_html).write_pdf()
-        safe_name = room.room_name.replace('/', '-').replace(' ', '_')
-        filename  = f"{safe_name}_Schedule_{semester.replace(' ','_')}.pdf"
-        return Response(pdf_bytes, mimetype='application/pdf',
-                        headers={'Content-Disposition': f'attachment; filename="{filename}"'})
-    except Exception as e:
-        flash(f'PDF generation failed: {e}', 'danger')
-        return redirect(url_for('view_timetable'))
 
 
 @app.route('/course-timetable-html/<int:course_id>')
@@ -13772,73 +12740,6 @@ def course_timetable_html(course_id):
     return render_a4_page(html_content, table_px, margins=_margins, for_canvas=for_canvas)
 
 
-@app.route('/course-timetable-pdf/<int:course_id>')
-@login_required
-def course_timetable_pdf(course_id):
-    course    = Course.query.get_or_404(course_id)
-    _req_sem  = request.args.get('semester', '')
-    _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
-    semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
-    sem_ay    = request.args.get('sem_ay', '')
-    orientation = request.args.get('orientation', 'portrait')
-    if orientation not in ('landscape', 'portrait'):
-        orientation = 'portrait'
-
-    path = os.path.join(basedir, 'static', 'assets', 'course_template.xlsx')
-    if not os.path.exists(path):
-        # Fallback to section template
-        path = os.path.join(basedir, 'static', 'assets', 'section_template.xlsx')
-        if not os.path.exists(path):
-            flash('No template found for Course (and no section fallback).', 'danger')
-            return redirect(url_for('view_timetable'))
-
-    schedules = ScheduledClass.query.options(
-        joinedload(ScheduledClass.course),
-        joinedload(ScheduledClass.section),
-        joinedload(ScheduledClass.faculty),
-        joinedload(ScheduledClass.room),
-    ).filter_by(course_id=course_id, semester=semester, is_draft=False).all()
-    ws, grid_info, bounds = _get_cached_template(path)
-    if grid_info:
-        cell_overrides, extra_merge_map, extra_skip_cells = build_schedule_overlays(
-            schedules, grid_info, 'course')
-    else:
-        cell_overrides, extra_merge_map, extra_skip_cells = {}, {}, set()
-
-    settings = get_settings()
-    var_map  = build_variable_map('course', settings, entity_name=course.course_code, sem_ay=sem_ay)
-    static_overrides = build_static_cell_overrides(
-        ws, 'course', settings, entity_name=course.course_code, sem_ay=sem_ay)
-    all_overrides = {**static_overrides, **cell_overrides}
-    _margins = _get_margins(settings)
-    _img_settings = _get_img_settings(settings, 'course')
-    html_content, _, scale_v, total_h_px = render_excel_to_html_pdf(
-        ws, cell_overrides=all_overrides, variable_map=var_map,
-        extra_merge_map=extra_merge_map, extra_skip_cells=extra_skip_cells,
-        bounds=bounds, layout_type='course', margins=_margins,
-        img_settings=_img_settings)
-
-    if scale_v < 1.0:
-        _scaled_h_px = total_h_px * scale_v
-        html_content = (
-            f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:visible;">'
-            f'<div style="position:relative;width:100%;transform:scale(1,{scale_v:.6f});transform-origin:top left;">'
-            + html_content
-            + '</div></div>'
-        )
-
-    # Wrap in .a4 structure for correct orientation/margins and image placement
-    pdf_html = render_pdf_page(f'<div class="a4">{html_content}</div>', 
-                               orientation=orientation, margins=_margins)
-    try:
-        pdf_bytes = HTML(string=pdf_html).write_pdf()
-        safe_name = course.course_code.replace('/', '-').replace(' ', '_')
-        filename  = f"{safe_name}_Schedule_{semester.replace(' ','_')}.pdf"
-        return Response(pdf_bytes, mimetype='application/pdf',
-                        headers={'Content-Disposition': f'attachment; filename="{filename}"'})
-    except Exception as e:
-        flash(f'PDF generation failed: {e}', 'danger')
-        return redirect(url_for('view_timetable'))
 
 
 @app.route('/api/sections-with-schedules')
@@ -15980,92 +14881,6 @@ def system_tester():
     total_phases = 12
     return render_template('system_tester.html', total_phases=total_phases)
 
-@app.route('/public-student-schedule-pdf/<string:student_id>')
-def public_student_schedule_pdf(student_id):
-    """Public PDF export for students (Regular or Irregular).
-    Generates a clean, university-branded PDF document.
-    """
-    student = Student.query.filter_by(student_id=student_id, is_archived=False).first_or_404()
-    
-    # Get Academic Semester Details
-    _req_sem = request.args.get('semester', '')
-    _all_sems = [r[0] for r in db.session.query(ScheduledClass.semester).distinct().all() if r[0]]
-    semester = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
-    
-    schedules = []
-    
-    if student.is_irregular:
-        # Irregular Logic: Get mixed assignments
-        assignment = IrregularAssignment.query.filter_by(student_id_fk=student.id)\
-                         .order_by(IrregularAssignment.updated_at.desc()).first()
-        if assignment and assignment.assignments_json:
-            pairs = json.loads(assignment.assignments_json)
-            for pair in pairs:
-                slots = ScheduledClass.query.filter_by(
-                    course_id=pair['course_id'],
-                    section_id=pair['section_id'],
-                    semester=assignment.semester,
-                ).all()
-                schedules.extend(slots)
-            semester = assignment.semester
-    else:
-        # Regular Logic: Get their section's schedule
-        if student.section_id:
-            schedules = ScheduledClass.query.filter_by(section_id=student.section_id, semester=semester, is_draft=False).all()
-
-    if not schedules:
-        flash('No schedule found to export.', 'warning')
-        return redirect(url_for('student_schedule', student_id=student.student_id))
-
-    # Load Section Template (Formal Form) for high-fidelity output
-    path = os.path.join(basedir, 'static', 'assets', 'section_template.xlsx')
-    if not os.path.exists(path):
-        flash('PDF Generation Error: No template found.', 'danger')
-        return redirect(url_for('student_schedule', student_id=student.student_id))
-
-    ws, grid_info, bounds = _get_cached_template(path)
-    if grid_info:
-        cell_overrides, extra_merge_map, extra_skip_cells = build_schedule_overlays(schedules, grid_info, 'section')
-    else:
-        cell_overrides, extra_merge_map, extra_skip_cells = {}, {}, set()
-
-    settings = get_settings()
-    var_map  = build_variable_map('section', settings, section_name=student.full_name, sem_ay=f"AY {semester}")
-    static_overrides = build_static_cell_overrides(ws, 'section', settings, entity_name=student.full_name, sem_ay='')
-    all_overrides = {**static_overrides, **cell_overrides}
-    _margins = _get_margins(settings)
-    _img_settings = _get_img_settings(settings, 'section')
-
-    html_content, _, scale_v, total_h_px = render_excel_to_html_pdf(
-        ws, cell_overrides=all_overrides, variable_map=var_map,
-        extra_merge_map=extra_merge_map, extra_skip_cells=extra_skip_cells,
-        bounds=bounds, layout_type='section', margins=_margins,
-        img_settings=_img_settings)
-
-    if scale_v < 1.0:
-        _scaled_h_px = total_h_px * scale_v
-        html_content = (
-            f'<div style="position:relative;width:100%;height:{_scaled_h_px:.1f}px;overflow:visible;">'
-            f'<div style="position:relative;width:100%;transform:scale(1,{scale_v:.6f});transform-origin:top left;">'
-            + html_content
-            + '</div></div>'
-        )
-
-    # Force orientation to Portrait as per user request
-    # Wrap in .a4 structure for correct orientation/margins and image placement
-    pdf_html = render_pdf_page(f'<div class="a4">{html_content}</div>', 
-                               orientation='portrait', margins=_margins)
-    
-    try:
-        pdf_bytes = HTML(string=pdf_html).write_pdf()
-        safe_name = student.full_name.replace(' ', '_')
-        filename  = f"Schedule_{safe_name}_{semester.replace(' ','_')}.pdf"
-        return Response(pdf_bytes, mimetype='application/pdf',
-                        headers={'Content-Disposition': f'attachment; filename="{filename}"'})
-    except Exception as e:
-        print(f"PDF Error: {e}")
-        flash('Failed to generate PDF document.', 'danger')
-        return redirect(url_for('student_schedule', student_id=student.student_id))
 
 
 
@@ -16531,5 +15346,5 @@ def public_student_schedule_excel(student_id):
 if __name__ == '__main__':
 
 
-    socketio.run(app, host='0.0.0.0', port=5000, debug=os.environ.get('FLASK_DEBUG', 'False') == 'True')
+    socketio.run(app, host='0.0.0.0', port=5000, debug=os.environ.get('FLASK_DEBUG', 'False') == 'True', allow_unsafe_werkzeug=True)
 

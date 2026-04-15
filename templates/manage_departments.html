@@ -5,7 +5,7 @@
 {% block content %}
 
 <!-- 1. HEADER (Static) -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="manage-header-wrap mb-4">
     <div>
         <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
             Departments
@@ -15,20 +15,20 @@
         </h1>
         <p class="text-muted small mb-0">Manage the organizational departments of the university.</p>
     </div>
-    <div class="d-flex align-items-center gap-3">
-        <a href="{{ url_for('departments_archive') }}" class="btn-google-action" style="text-decoration:none;">
+    <div class="d-flex align-items-center gap-2 gap-md-3">
+        <a href="{{ url_for('departments_archive') }}" class="btn-google-action" style="text-decoration:none;" data-bs-toggle="tooltip" title="View Recycle Bin">
             <i class="bi bi-recycle"></i>
-            <span>Recycle Bin</span>
+            <span class="d-none d-md-inline">Recycle Bin</span>
         </a>
-        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addDepartmentModal">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addDepartmentModal" data-bs-toggle="tooltip" title="Add New Department">
             <i class="bi bi-plus-lg"></i>
-            <span>New Department</span>
+            <span class="d-none d-md-inline">New Department</span>
         </button>
     </div>
 </div>
 
 <!-- 2. SEARCH & FILTER WRAPPER (With Bulk Action Overlay) -->
-<div class="row mb-4 position-relative align-items-center" style="height: 50px;">
+<div class="manage-search-wrapper position-relative">
 
     <!-- A. BULK ACTION BAR (Overlay - Green Background) -->
     <div class="bulk-action-bar" id="bulkActionBar">
@@ -65,13 +65,16 @@
     <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end gap-2">
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown"
-                data-bs-toggle="dropdown" aria-expanded="false">
-                Sort by: {% if current_sort == 'name-asc' %} Name (A-Z)
-                {% elif current_sort == 'name-desc' %} Name (Z-A)
-                {% elif current_sort == 'code-asc' %} Code (A-Z)
-                {% elif current_sort == 'code-desc' %} Code (Z-A)
-                {% else %} Newest
-                {% endif %}
+                data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" title="Sort Results">
+                <i class="bi bi-sort-alpha-down me-md-2"></i>
+                <span class="d-none d-md-inline">
+                    Sort by: {% if current_sort == 'name-asc' %} Name (A-Z)
+                    {% elif current_sort == 'name-desc' %} Name (Z-A)
+                    {% elif current_sort == 'code-asc' %} Code (A-Z)
+                    {% elif current_sort == 'code-desc' %} Code (Z-A)
+                    {% else %} Newest
+                    {% endif %}
+                </span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
                 <li>

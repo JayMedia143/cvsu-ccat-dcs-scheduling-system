@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{% block title %}{% endblock %} - CvSU Scheduling System</title>
     <!-- Dependencies -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -160,432 +160,302 @@
     {% endif %}
 
     <!-- MENU BAR (Unified) -->
-    <nav class="sheets-menubar">
-        <div class="menu-links d-flex gap-1 align-items-center">
 
-            <!-- A. SUPERADMIN & ADMIN ONLY -->
-            {% if session.get('role') in ['admin', 'superadmin'] %}
-
-            {% if not is_hist %}
-            <!-- FULL ADMIN NAVBAR (ACTIVE TERM) -->
-            <a class="menu-item {% if 'dashboard' in request.endpoint %}active{% endif %}"
-                href="{{ url_for('dashboard') }}">
-                Dashboard
+    <!-- MENU BAR (Unified & Responsive) -->
+    <nav class="navbar navbar-expand-lg sheets-menubar sticky-top shadow-sm py-1 pt-lg-0 pb-lg-0">
+        <div class="container-fluid px-3">
+            
+            <!-- Mobile Brand/Logo (Visible only on < lg) -->
+            <a class="navbar-brand d-lg-none fw-bold text-success fs-6" href="{{ url_for('dashboard') }}">
+                 <i class="bi bi-calendar3 me-1"></i> CvSU Schedule
             </a>
 
-            <a class="menu-item {% if 'proposal_hub' in request.endpoint %}active{% endif %}"
-                href="{{ url_for('proposal_hub') }}">
-                Decision Hub
-            </a>
+            <!-- Hamburger Toggle (Visible only on < lg) -->
+            <button class="navbar-toggler border-0 p-1 ms-auto me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
+                <i class="bi bi-list fs-3"></i>
+            </button>
 
+            <!-- Offcanvas / Sidebar Navigation (Mobile) & Main Nav (Desktop) -->
+            <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
+                <div class="offcanvas-header border-bottom">
+                    <h5 class="offcanvas-title fw-bold text-success" id="offcanvasNavbarLabel">
+                        <i class="bi bi-grid-fill me-2"></i> Menu
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                </div>
+                <div class="offcanvas-body offcanvas-navigation p-lg-0">
+                    <ul class="navbar-nav justify-content-start flex-grow-1 pe-lg-3 gap-lg-1 align-items-lg-center">
 
-            <!-- Moved Users to the end -->
-            <div class="dropdown">
-                <a class="menu-item dropdown-toggle {% if 'manage' in request.endpoint and 'layouts' not in request.endpoint and 'users' not in request.endpoint and 'assignments' not in request.endpoint and 'constraints' not in request.endpoint %}active{% endif %}"
-                    href="#" role="button" data-bs-toggle="dropdown">
-                    Data
-                </a>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ url_for('manage_courses') }}"><i class="bi bi-book me-2"></i>
-                            Courses</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_sections') }}"><i
-                                class="bi bi-people-fill me-2"></i> Sections</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_students') }}"><i
-                                class="bi bi-person-lines-fill me-2"></i> Students</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_irregular') }}"><i
-                                class="bi bi-person-exclamation me-2"></i> Irregular Students</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_faculty') }}"><i
-                                class="bi bi-person-badge me-2"></i> Faculty</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_rooms') }}"><i
-                                class="bi bi-door-open me-2"></i> Rooms</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_departments') }}"><i
-                                class="bi bi-building-fill me-2"></i>
-                            Departments</a></li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_preassignments') }}"><i
-                                class="bi bi-pin-angle-fill me-2"></i> Pre-assignments</a></li>
-                </ul>
-            </div>
+                        <!-- A. SUPERADMIN & ADMIN ONLY -->
+                        {% if session.get('role') in ['admin', 'superadmin'] %}
 
-            <!-- Scheduling -->
-            <div class="dropdown">
-                <a class="menu-item dropdown-toggle {% if 'generate' in request.endpoint or 'resolve' in request.endpoint or 'check_constraints' in request.endpoint %}active{% endif %}"
-                    href="#" role="button" data-bs-toggle="dropdown">
-                    Scheduling
-                </a>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ url_for('manage_constraints') }}"><i
-                                class="bi bi-sliders me-2"></i> Constraints</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('generate_page') }}"><i class="bi bi-cpu me-2"></i>
-                            Auto-Schedule Generator</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('check_constraints') }}"><i
-                                class="bi bi-shield-check me-2"></i> Check Conflicts</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('pending_sections') }}"><i
-                                class="bi bi-people-fill me-2"></i> Pending Sections</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('pending_faculty') }}"><i
-                                class="bi bi-person-fill-exclamation me-2"></i> Pending Faculty</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('pending_room') }}"><i
-                                class="bi bi-door-closed me-2"></i> Pending Room</a></li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li><a class="dropdown-item" href="{{ url_for('schedule_editor') }}"><i
-                                class="bi bi-pencil-square me-2"></i> Schedule Editor</a></li>
-                </ul>
-
-            </div>
-
-            <!-- Layouts -->
-            <a class="menu-item {% if 'layouts' in request.endpoint %}active{% endif %}"
-                href="{{ url_for('manage_layouts') }}">
-                Layouts
-            </a>
-
-            <!-- View -->
-            <a class="menu-item {% if 'view_timetable' in request.endpoint %}active{% endif %}"
-                href="{{ url_for('view_timetable') }}">
-                View
-            </a>
-
-            <!-- Reports -->
-            <a class="menu-item {% if 'reports' in request.endpoint %}active{% endif %}"
-                href="{{ url_for('reports_page') }}">
-                Reports
-            </a>
-
-            <!-- C. STUDENT PORTAL (Admin + Superadmin) -->
-            <div class="dropdown">
-                <a class="menu-item dropdown-toggle {% if request.endpoint in ['student_portal', 'student_schedule'] %}active{% endif %}"
-                    href="#" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
-                    Portal
-                </a>
-                <ul class="dropdown-menu">
-                    <li>
-                        <a class="dropdown-item" href="{{ url_for('student_portal') }}">
-                            <i class="bi bi-box-arrow-up-right me-2"></i> Open Student Portal
-                        </a>
-                    </li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li class="px-3 py-2">
-                        <span class="text-muted small d-block mb-1">Share with students:</span>
-                        <div class="d-flex gap-2">
-                            <input type="text" class="form-control form-control-sm font-monospace" id="portalUrlInput"
-                                value="{{ request.host_url }}student-portal" readonly
-                                style="font-size:0.72rem; min-width:0;">
-                            <button class="btn btn-sm btn-outline-secondary flex-shrink-0"
-                                onclick="navigator.clipboard.writeText(document.getElementById('portalUrlInput').value); this.innerHTML='<i class=&quot;bi bi-check-lg&quot;></i>'; setTimeout(()=>this.innerHTML='<i class=&quot;bi bi-clipboard&quot;></i>',1500);"
-                                title="Copy URL">
-                                <i class="bi bi-clipboard"></i>
-                            </button>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-
-            <!-- B. SUPERADMIN ONLY (Users Dropdown) -->
-            {% if session.get('role') == 'superadmin' %}
-            <div class="dropdown">
-                <a class="menu-item dropdown-toggle {% if 'manage_users' in request.endpoint or 'monitoring' in request.endpoint or 'signup' in request.endpoint %}active{% endif %}"
-                    href="#" role="button" data-bs-toggle="dropdown">
-                    Users
-                </a>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ url_for('manage_users') }}"><i class="bi bi-people me-2"></i>
-                            User Management</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('monitoring') }}"><i class="bi bi-display me-2"></i>
-                            User Monitoring</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('signup') }}"><i class="bi bi-person-plus me-2"></i>
-                            User Registration</a></li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li><a class="dropdown-item text-primary fw-bold" href="{{ url_for('system_tester') }}"><i
-                                class="bi bi-shield-check me-2"></i> SYSTEM TESTER</a></li>
-                </ul>
-            </div>
-            {% endif %}
-
-            {% else %}
-            <!-- ARCHIVE ACCESS NAVBAR (VIEW MODE ACTIVE) -->
-            <a class="menu-item {% if 'dashboard' in request.endpoint %}active{% endif %}"
-                href="{{ url_for('dashboard') }}">
-                Dashboard
-            </a>
-
-            <div class="dropdown">
-                <a class="menu-item dropdown-toggle {% if 'manage' in request.endpoint %}active{% endif %}" href="#"
-                    role="button" data-bs-toggle="dropdown">
-                    Data
-                </a>
-                <ul class="dropdown-menu shadow-sm">
-                    <li><a class="dropdown-item" href="{{ url_for('manage_courses') }}"><i class="bi bi-book me-2"></i>
-                            Courses</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_sections') }}"><i
-                                class="bi bi-people-fill me-2"></i> Sections</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_students') }}"><i
-                                class="bi bi-person-lines-fill me-2"></i> Students</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_irregular') }}"><i
-                                class="bi bi-person-exclamation me-2"></i> Irregular Students</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_faculty') }}"><i
-                                class="bi bi-person-badge me-2"></i> Faculty</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_rooms') }}"><i
-                                class="bi bi-door-open me-2"></i> Rooms</a></li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_preassignments') }}"><i
-                                class="bi bi-pin-angle-fill me-2"></i> Pre-assignments</a></li>
-                </ul>
-            </div>
-
-            <a class="menu-item {% if 'view_timetable' in request.endpoint %}active{% endif %}"
-                href="{{ url_for('view_timetable') }}">
-                View
-            </a>
-
-            <a class="menu-item {% if 'reports' in request.endpoint %}active{% endif %}"
-                href="{{ url_for('reports_page') }}">
-                Reports
-            </a>
-
-            <!-- C. STUDENT PORTAL — also shown in archive mode -->
-            <div class="dropdown">
-                <a class="menu-item dropdown-toggle {% if request.endpoint in ['student_portal', 'student_schedule'] %}active{% endif %}"
-                    href="#" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
-                    <i class="bi bi-people me-1"></i> Portal
-                </a>
-                <ul class="dropdown-menu">
-                    <li>
-                        <a class="dropdown-item" href="{{ url_for('student_portal') }}">
-                            <i class="bi bi-box-arrow-up-right me-2"></i> Open Student Portal
-                        </a>
-                    </li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li class="px-3 py-2">
-                        <span class="text-muted small d-block mb-1">Share with students:</span>
-                        <div class="d-flex gap-2">
-                            <input type="text" class="form-control form-control-sm font-monospace"
-                                id="portalUrlInputArchive" value="{{ request.host_url }}student-portal" readonly
-                                style="font-size:0.72rem; min-width:0;">
-                            <button class="btn btn-sm btn-outline-secondary flex-shrink-0"
-                                onclick="navigator.clipboard.writeText(document.getElementById('portalUrlInputArchive').value); this.innerHTML='<i class=&quot;bi bi-check-lg&quot;></i>'; setTimeout(()=>this.innerHTML='<i class=&quot;bi bi-clipboard&quot;></i>',1500);"
-                                title="Copy URL">
-                                <i class="bi bi-clipboard"></i>
-                            </button>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-            {% endif %}
-
-            {% else %}
-
-            <div class="dropdown">
-                <a class="menu-item dropdown-toggle {% if 'manage_courses' in request.endpoint or 'manage_sections' in request.endpoint or 'manage_faculty' in request.endpoint or 'manage_rooms' in request.endpoint %}active{% endif %}"
-                    href="#" role="button" data-bs-toggle="dropdown">
-                    Data
-                </a>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ url_for('manage_courses') }}"><i class="bi bi-book me-2"></i>
-                            Courses</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_sections') }}"><i
-                                class="bi bi-people-fill me-2"></i> Sections</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_faculty') }}"><i
-                                class="bi bi-person-badge me-2"></i> Faculty</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_rooms') }}"><i
-                                class="bi bi-door-open me-2"></i> Rooms</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_departments') }}"><i
-                                class="bi bi-building-fill me-2"></i> Departments</a></li>
-                </ul>
-            </div>
-            <a class="menu-item {% if 'proposal_hub' in request.endpoint %}active{% endif %}"
-                href="{{ url_for('proposal_hub') }}">
-                <i class="bi bi-terminal me-1"></i> Proposal Terminal
-            </a>
-            <a class="menu-item {% if 'schedule_editor' in request.endpoint %}active{% endif %}"
-                href="{{ url_for('schedule_editor') }}">
-                <i class="bi bi-pencil-square me-1"></i> Schedule Editor
-            </a>
-            <a class="menu-item {% if 'view_timetable' in request.endpoint %}active{% endif %}"
-                href="{{ url_for('view_timetable') }}">
-                View Current Schedules <i class="bi bi-calendar3 ms-1"></i>
-            </a>
-
-            {% endif %}
-
-        </div>
-
-        <!-- Right Side of Menubar: Filter and Profile -->
-        <div class="d-flex align-items-center gap-3">
-            <!-- Module 3: Global AI-Lock badge — visible to all when lock is ON -->
-            {% if lock_status %}
-            <span class="lock-badge-nav" title="Global AI-Lock is ON — GA entries are protected">
-                <i class="bi bi-lock-fill me-1"></i>Locked
-            </span>
-            {% endif %}
-            <!-- Semester Filter Pill — admin/superadmin only -->
-            {% if session.get('role') in ['admin', 'superadmin'] %}
-            <div class="sem-toolbar">
-                <span class="sem-label"><i class="bi bi-funnel-fill"></i> SEMESTER:</span>
-                <a href="{{ url_for('set_semester_filter', semester_name='All') }}"
-                    class="sem-btn-tool {% if session.get('selected_semester', 'All') == 'All' %}active{% endif %}">All</a>
-                <a href="{{ url_for('set_semester_filter', semester_name='1st Semester') }}"
-                    class="sem-btn-tool {% if session.get('selected_semester') == '1st Semester' %}active{% endif %}">1st</a>
-                <a href="{{ url_for('set_semester_filter', semester_name='2nd Semester') }}"
-                    class="sem-btn-tool {% if session.get('selected_semester') == '2nd Semester' %}active{% endif %}">2nd</a>
-                <a href="{{ url_for('set_semester_filter', semester_name='Midyear') }}"
-                    class="sem-btn-tool {% if session.get('selected_semester') == 'Midyear' %}active{% endif %}">Midyear</a>
-
-                <div class="dropdown d-inline-block border-start ms-1 ps-1">
-                    <button class="sem-btn-tool dropdown-toggle no-caret" type="button" data-bs-toggle="dropdown"
-                        title="Archive History" style="color: #198754;">
-                        <i class="bi bi-clock-history"></i>
-                    </button>
-                    <ul class="dropdown-menu shadow border-0 mt-2"
-                        style="min-width: 280px; border-radius: 12px; max-height: 360px; overflow-y: auto; overflow-x: hidden;">
-                        <li class="dropdown-header text-uppercase fw-bold small mb-2" style="color: #198754;">
-                            <i class="bi bi-calendar-check me-1"></i> Previous Semesters (Read-Only)
+                        {% if not is_hist %}
+                        <!-- FULL ADMIN NAVBAR (ACTIVE TERM) -->
+                        <li class="nav-item">
+                            <a class="menu-item {% if 'dashboard' in request.endpoint %}active{% endif %}"
+                                href="{{ url_for('dashboard') }}">Dashboard</a>
                         </li>
-                        {% if all_archives %}
-                        {% for arc in all_archives %}
-                        <li>
-                            <a class="dropdown-item py-2 px-3 rounded-2 historical-item"
-                                href="{{ url_for('api_archive_enter', archive_id=arc.id) }}">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="d-flex flex-column">
-                                        <span class="fw-bold" style="font-size: 0.85rem; color: #1e293b;">{{
-                                            arc.semester }}</span>
-                                        <span class="text-muted" style="font-size: 0.72rem;">Academic Year {{
-                                            arc.academic_year }}</span>
+                        <li class="nav-item">
+                            <a class="menu-item {% if 'proposal_hub' in request.endpoint %}active{% endif %}"
+                                href="{{ url_for('proposal_hub') }}">Decision Hub</a>
+                        </li>
+
+                        <li class="nav-item dropdown">
+                            <a class="menu-item dropdown-toggle {% if 'manage' in request.endpoint and 'layouts' not in request.endpoint and 'users' not in request.endpoint and 'assignments' not in request.endpoint and 'constraints' not in request.endpoint %}active{% endif %}"
+                                href="#" role="button" data-bs-toggle="dropdown">Data</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('manage_courses') }}"><i class="bi bi-book me-2"></i> Courses</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_sections') }}"><i class="bi bi-people-fill me-2"></i> Sections</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_students') }}"><i class="bi bi-person-lines-fill me-2"></i> Students</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_irregular') }}"><i class="bi bi-person-exclamation me-2"></i> Irregular Students</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_faculty') }}"><i class="bi bi-person-badge me-2"></i> Faculty</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_rooms') }}"><i class="bi bi-door-open me-2"></i> Rooms</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_departments') }}"><i class="bi bi-building-fill me-2"></i> Departments</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_preassignments') }}"><i class="bi bi-pin-angle-fill me-2"></i> Pre-assignments</a></li>
+                            </ul>
+                        </li>
+
+                        <li class="nav-item dropdown">
+                            <a class="menu-item dropdown-toggle {% if 'generate' in request.endpoint or 'resolve' in request.endpoint or 'check_constraints' in request.endpoint %}active{% endif %}"
+                                href="#" role="button" data-bs-toggle="dropdown">Scheduling</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('manage_constraints') }}"><i class="bi bi-sliders me-2"></i> Constraints</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('generate_page') }}"><i class="bi bi-cpu me-2"></i> Auto-Schedule Generator</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('check_constraints') }}"><i class="bi bi-shield-check me-2"></i> Check Conflicts</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('pending_sections') }}"><i class="bi bi-people-fill me-2"></i> Pending Sections</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('pending_faculty') }}"><i class="bi bi-person-fill-exclamation me-2"></i> Pending Faculty</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('pending_room') }}"><i class="bi bi-door-closed me-2"></i> Pending Room</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('schedule_editor') }}"><i class="bi bi-pencil-square me-2"></i> Schedule Editor</a></li>
+                            </ul>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="menu-item {% if 'layouts' in request.endpoint %}active{% endif %}" href="{{ url_for('manage_layouts') }}">Layouts</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="menu-item {% if 'view_timetable' in request.endpoint %}active{% endif %}" href="{{ url_for('view_timetable') }}">View</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="menu-item {% if 'reports' in request.endpoint %}active{% endif %}" href="{{ url_for('reports_page') }}">Reports</a>
+                        </li>
+
+                        <li class="nav-item dropdown">
+                            <a class="menu-item dropdown-toggle {% if request.endpoint in ['student_portal', 'student_schedule'] %}active{% endif %}"
+                                href="#" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">Portal</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('student_portal') }}"><i class="bi bi-box-arrow-up-right me-2"></i> Open Student Portal</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li class="px-3 py-2">
+                                    <span class="text-muted small d-block mb-1">Share URL:</span>
+                                    <div class="d-flex gap-2">
+                                        <input type="text" class="form-control form-control-sm font-monospace" id="portalUrlInput" value="{{ request.host_url }}student-portal" readonly style="font-size:0.72rem;">
+                                        <button class="btn btn-sm btn-outline-secondary flex-shrink-0" onclick="navigator.clipboard.writeText(document.getElementById('portalUrlInput').value); this.innerHTML='<i class=&quot;bi bi-check-lg&quot;></i>';"><i class="bi bi-clipboard"></i></button>
                                     </div>
-                                    <i class="bi bi-chevron-right text-muted small"></i>
-                                </div>
-                            </a>
+                                </li>
+                            </ul>
                         </li>
-                        {% endfor %}
+
+                        {% if session.get('role') == 'superadmin' %}
+                        <li class="nav-item dropdown">
+                            <a class="menu-item dropdown-toggle {% if 'manage_users' in request.endpoint or 'monitoring' in request.endpoint or 'signup' in request.endpoint %}active{% endif %}"
+                                href="#" role="button" data-bs-toggle="dropdown">Users</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('manage_users') }}"><i class="bi bi-people me-2"></i> User Management</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('monitoring') }}"><i class="bi bi-display me-2"></i> User Monitoring</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('signup') }}"><i class="bi bi-person-plus me-2"></i> User Registration</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-primary fw-bold" href="{{ url_for('system_tester') }}"><i class="bi bi-shield-check me-2"></i> SYSTEM TESTER</a></li>
+                            </ul>
+                        </li>
+                        {% endif %}
+
                         {% else %}
-                        <li class="p-4 text-center">
-                            <i class="bi bi-archive text-muted fs-3 mb-2 d-block"></i>
-                            <span class="text-muted small">No archives available yet.</span>
+                        <!-- ARCHIVE ACCESS NAVBAR (VIEW MODE ACTIVE) -->
+                        <li class="nav-item"><a class="menu-item active" href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                        <li class="nav-item dropdown">
+                            <a class="menu-item dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Data</a>
+                            <ul class="dropdown-menu shadow-sm">
+                                <li><a class="dropdown-item" href="{{ url_for('manage_courses') }}"><i class="bi bi-book me-2"></i> Courses</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_sections') }}"><i class="bi bi-people-fill me-2"></i> Sections</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_students') }}"><i class="bi bi-person-lines-fill me-2"></i> Students</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_preassignments') }}"><i class="bi bi-pin-angle-fill me-2"></i> Pre-assignments</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item"><a class="menu-item" href="{{ url_for('view_timetable') }}">View</a></li>
+                        <li class="nav-item"><a class="menu-item" href="{{ url_for('reports_page') }}">Reports</a></li>
+                        {% endif %}
+
+                        {% else %}
+                        <!-- USER ROLE NAV -->
+                        <li class="nav-item dropdown">
+                            <a class="menu-item dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Data</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('manage_courses') }}"><i class="bi bi-book me-2"></i> Courses</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_sections') }}"><i class="bi bi-people-fill me-2"></i> Sections</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_faculty') }}"><i class="bi bi-person-badge me-2"></i> Faculty</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item"><a class="menu-item" href="{{ url_for('proposal_hub') }}">Proposal Terminal</a></li>
+                        <li class="nav-item"><a class="menu-item" href="{{ url_for('schedule_editor') }}">Schedule Editor</a></li>
+                        <li class="nav-item"><a class="menu-item" href="{{ url_for('view_timetable') }}">View Current Schedules</a></li>
+                        {% endif %}
+
+                        <!-- SEMESTER FILTER (MOBILE ONLY - Inside Offcanvas) -->
+                        {% if session.get('role') in ['admin', 'superadmin'] %}
+                        <li class="nav-item d-lg-none mt-3 border-top pt-3 pb-3 bg-light">
+                            <div class="px-3 mb-2 small fw-bold text-muted text-uppercase">Active Semester</div>
+                            <div class="d-flex flex-wrap gap-2 px-3">
+                                <a href="{{ url_for('set_semester_filter', semester_name='All') }}" class="btn btn-sm {% if session.get('selected_semester', 'All') == 'All' %}btn-success{% else %}btn-outline-secondary{% endif %}">All</a>
+                                <a href="{{ url_for('set_semester_filter', semester_name='1st Semester') }}" class="btn btn-sm {% if session.get('selected_semester') == '1st Semester' %}btn-success{% else %}btn-outline-secondary{% endif %}">1st</a>
+                                <a href="{{ url_for('set_semester_filter', semester_name='2nd Semester') }}" class="btn btn-sm {% if session.get('selected_semester') == '2nd Semester' %}btn-success{% else %}btn-outline-secondary{% endif %}">2nd</a>
+                                <a href="{{ url_for('set_semester_filter', semester_name='Midyear') }}" class="btn btn-sm {% if session.get('selected_semester') == 'Midyear' %}btn-success{% else %}btn-outline-secondary{% endif %}">Midyear</a>
+                            </div>
+
+                            <div class="px-3 mt-4 mb-2 small fw-bold text-muted text-uppercase d-flex align-items-center">
+                                <i class="bi bi-clock-history me-2"></i> Archive History (Read-Only)
+                            </div>
+                            <div class="px-3 overflow-auto" style="max-height: 250px;">
+                                <div class="list-group list-group-flush rounded shadow-sm border">
+                                    {% if all_archives %}
+                                    {% for arc in all_archives %}
+                                    <a href="{{ url_for('api_archive_enter', archive_id=arc.id) }}" class="list-group-item list-group-item-action py-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="fw-bold small">{{ arc.semester }}</span>
+                                            <span class="text-muted small" style="font-size:0.65rem;">{{ arc.academic_year }}</span>
+                                        </div>
+                                    </a>
+                                    {% endfor %}
+                                    {% else %}
+                                    <div class="list-group-item text-muted small py-3 text-center">No archives available.</div>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </li>
                         {% endif %}
                     </ul>
                 </div>
             </div>
-            {% endif %}
 
-            <!-- Profile Dropdown -->
-            <div class="dropdown">
-                <button class="btn btn-link p-0 border-0 profile-btn" data-bs-toggle="dropdown" aria-expanded="false"
-                    title="Profile">
-                    <span class="profile-icon-wrap" style="transform: translateY(2px);">
-                        {% if session.get('profile_pic') and session.get('profile_pic') != 'default.png' %}
-                        <img src="{{ url_for('static', filename='profile_pics/' ~ session.get('profile_pic')) }}"
-                            alt="Profile" class="rounded-circle" width="32" height="32" style="object-fit: cover;">
-                        {% else %}
-                        <i class="bi bi-person-circle fs-4 text-secondary"></i>
+            <!-- Right Side Tools: Semester (Desktop) & Profile (Always) -->
+            <div class="d-flex align-items-center gap-2 gap-md-3">
+                
+                <!-- Semester Filter Pill (Desktop Only) -->
+                {% if session.get('role') in ['admin', 'superadmin'] %}
+                <div class="sem-toolbar d-none d-lg-flex">
+                    <span class="sem-label"><i class="bi bi-funnel-fill"></i> SEMESTER:</span>
+                    <a href="{{ url_for('set_semester_filter', semester_name='All') }}" class="sem-btn-tool {% if session.get('selected_semester', 'All') == 'All' %}active{% endif %}">All</a>
+                    <a href="{{ url_for('set_semester_filter', semester_name='1st Semester') }}" class="sem-btn-tool {% if session.get('selected_semester') == '1st Semester' %}active{% endif %}">1st</a>
+                    <a href="{{ url_for('set_semester_filter', semester_name='2nd Semester') }}" class="sem-btn-tool {% if session.get('selected_semester') == '2nd Semester' %}active{% endif %}">2nd</a>
+                    <a href="{{ url_for('set_semester_filter', semester_name='Midyear') }}" class="sem-btn-tool {% if session.get('selected_semester') == 'Midyear' %}active{% endif %}">Midyear</a>
+                    
+                    <div class="dropdown d-inline-block border-start ms-1 ps-1">
+                        <button class="sem-btn-tool dropdown-toggle no-caret" type="button" data-bs-toggle="dropdown" title="Archive History" style="color: #198754;">
+                            <i class="bi bi-clock-history"></i>
+                        </button>
+                        <ul class="dropdown-menu shadow border-0 mt-2" style="min-width: 280px; border-radius: 12px; max-height: 360px; overflow-y: auto; overflow-x: hidden;">
+                            <li class="dropdown-header text-uppercase fw-bold small mb-2" style="color: #198754;">
+                                <i class="bi bi-calendar-check me-1"></i> Previous Semesters (Read-Only)
+                            </li>
+                            {% if all_archives %}
+                            {% for arc in all_archives %}
+                            <li>
+                                <a class="dropdown-item py-2 px-3 rounded-2 historical-item" href="{{ url_for('api_archive_enter', archive_id=arc.id) }}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-bold" style="font-size: 0.85rem; color: #1e293b;">{{ arc.semester }}</span>
+                                            <span class="text-muted" style="font-size: 0.72rem;">Academic Year {{ arc.academic_year }}</span>
+                                        </div>
+                                        <i class="bi bi-chevron-right text-muted small"></i>
+                                    </div>
+                                </a>
+                            </li>
+                            {% endfor %}
+                            {% else %}
+                            <li class="p-4 text-center">
+                                <i class="bi bi-archive text-muted fs-3 mb-2 d-block"></i>
+                                <span class="text-muted small">No archives available yet.</span>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- AI-Lock Badge -->
+                {% if lock_status %}
+                <span class="lock-badge-nav d-none d-sm-inline-flex" title="Sync Locked">
+                    <i class="bi bi-lock-fill me-1"></i>Locked
+                </span>
+                {% endif %}
+
+                <!-- Profile Dropdown -->
+                <div class="dropdown">
+                    <button class="btn btn-link p-0 border-0 profile-btn" data-bs-toggle="dropdown">
+                        <span class="profile-icon-wrap">
+                            {% if session.get('profile_pic') and session.get('profile_pic') != 'default.png' %}
+                            <img src="{{ url_for('static', filename='profile_pics/' ~ session.get('profile_pic')) }}" alt="Profile" class="rounded-circle" width="32" height="32" style="object-fit: cover;">
+                            {% else %}
+                            <i class="bi bi-person-circle fs-4 text-secondary"></i>
+                            {% endif %}
+                            <span class="profile-caret-badge d-none d-md-flex"><i class="bi bi-caret-down-fill"></i></span>
+                        </span>
+                    </button>
+                    <ul class="dropdown-menu profile-dropdown-menu dropdown-menu-end shadow">
+                        <li class="d-flex align-items-center justify-content-between pe-3 bg-light border-bottom">
+                            <h6 class="dropdown-header text-uppercase text-muted fw-bold mb-0">Role: {{ session.get('role', 'User') | capitalize }}</h6>
+                            <i class="bi bi-info-circle fs-6 text-muted info-icon-hover" data-bs-toggle="modal" data-bs-target="#profileInfoModal" title="Profile Guide"></i>
+                        </li>
+                        <li class="px-3 py-2 bg-light border-bottom mb-2">
+                            <div class="small text-muted text-uppercase fw-bold" style="font-size:0.65rem;">Logged as</div>
+                            <div class="fw-bold text-dark">{{ session.get('username', 'User') }}</div>
+                        </li>
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#changeUsernameModal"><i class="bi bi-person-badge me-2"></i> Username</a></li>
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#changePasswordModal"><i class="bi bi-key me-2"></i> Password</a></li>
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#uploadProfilePicModal"><i class="bi bi-camera me-2"></i> Picture</a></li>
+
+                        {% if session.get('role') in ['admin', 'superadmin'] %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#settingsModal"><i class="bi bi-gear me-2"></i> Settings</a></li>
+
+                        {% if not is_hist %}
+                        <li><a class="dropdown-item" href="#" onclick="openArchiveModal()"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i> Finalize & Archive Semester</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('manage_archives') }}"><i class="bi bi-archive-fill text-success me-2"></i> Manage Archives</a></li>
                         {% endif %}
-                        <span class="profile-caret-badge"><i class="bi bi-caret-down-fill"></i></span>
-                    </span>
-                </button>
-                <ul class="dropdown-menu profile-dropdown-menu dropdown-menu-end shadow-sm">
-                    <li class="d-flex align-items-center justify-content-between pe-3">
-                        <h6 class="dropdown-header text-uppercase text-muted fw-bold mb-0">Role: {{ session.get('role',
-                            'User') | capitalize }}</h6>
-                        <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover" data-bs-toggle="modal"
-                            data-bs-target="#profileInfoModal" title="Profile Guide"></i>
-                    </li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <!-- Change Username and Password (All Users) -->
-                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal"
-                            data-bs-target="#changeUsernameModal"><i class="bi bi-person-badge me-2"></i> Change
-                            Username</a>
-                    </li>
-                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal"
-                            data-bs-target="#changePasswordModal"><i class="bi bi-key me-2"></i> Change Password</a>
-                    </li>
-                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal"
-                            data-bs-target="#uploadProfilePicModal"><i class="bi bi-camera me-2"></i> Upload Profile
-                            Picture</a>
-                    </li>
 
-                    {% if session.get('role') in ['admin', 'superadmin'] %}
-                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#settingsModal"><i
-                                class="bi bi-gear me-2"></i> Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        {% if not is_hist %}
+                        <li><h6 class="dropdown-header text-danger"><i class="bi bi-trash-fill me-1"></i> Recycle Bin</h6></li>
+                        <li><a class="dropdown-item" href="{{ url_for('courses_archive') }}"><i class="bi bi-book text-muted me-2"></i> Courses</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sections_archive') }}"><i class="bi bi-people text-muted me-2"></i> Sections</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('students_archive') }}"><i class="bi bi-person-lines-fill text-muted me-2"></i> Students</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('faculty_archive') }}"><i class="bi bi-person-badge text-muted me-2"></i> Faculty</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('rooms_archive') }}"><i class="bi bi-door-open text-muted me-2"></i> Rooms</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('preassignments_archive') }}"><i class="bi bi-calendar-check text-muted me-2"></i> Schedules</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('code_rules_archive') }}"><i class="bi bi-shield-check text-muted me-2"></i> Code Rules</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('departments_archive') }}"><i class="bi bi-building-fill text-muted me-2"></i> Departments</a></li>
+                        {% if session.get('role') == 'superadmin' %}
+                        <li><a class="dropdown-item" href="{{ url_for('users_recycle_bin') }}"><i class="bi bi-people-fill text-muted me-2"></i> Users</a></li>
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
+                        {% endif %}
+                        {% endif %}
 
-                    {% if not is_hist %}
-                    <li><a class="dropdown-item" href="#" onclick="openArchiveModal()"><i
-                                class="bi bi-exclamation-triangle-fill text-warning me-2"></i> Finalize & Archive
-                            Semester</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('manage_archives') }}"><i
-                                class="bi bi-archive-fill text-success me-2"></i> Manage Archives</a></li>
-                    {% endif %}
+                        {% if session.get('role') == 'user' and not is_hist %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><h6 class="dropdown-header text-danger"><i class="bi bi-trash-fill me-1"></i> Recycle Bin</h6></li>
+                        <li><a class="dropdown-item" href="{{ url_for('courses_archive') }}"><i class="bi bi-book text-muted me-2"></i> Courses</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('faculty_archive') }}"><i class="bi bi-person-badge text-muted me-2"></i> Faculty</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('rooms_archive') }}"><i class="bi bi-door-open text-muted me-2"></i> Rooms</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('departments_archive') }}"><i class="bi bi-building-fill text-muted me-2"></i> Departments</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        {% endif %}
 
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-
-                    {% if not is_hist %}
-                    <li>
-                        <h6 class="dropdown-header text-danger"><i class="bi bi-trash-fill me-1"></i> Recycle Bin</h6>
-                    </li>
-                    <li><a class="dropdown-item" href="{{ url_for('courses_archive') }}"><i
-                                class="bi bi-book text-muted me-2"></i> Courses</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('sections_archive') }}"><i
-                                class="bi bi-people text-muted me-2"></i> Sections</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('students_archive') }}"><i
-                                class="bi bi-person-lines-fill text-muted me-2"></i> Students</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('faculty_archive') }}"><i
-                                class="bi bi-person-badge text-muted me-2"></i> Faculty</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('rooms_archive') }}"><i
-                                class="bi bi-door-open text-muted me-2"></i> Rooms</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('preassignments_archive') }}"><i
-                                class="bi bi-calendar-check text-muted me-2"></i> Schedules</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('code_rules_archive') }}"><i
-                                class="bi bi-shield-check text-muted me-2"></i> Code Rules</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('departments_archive') }}"><i
-                                class="bi bi-building-fill text-muted me-2"></i> Departments</a></li>
-                    {% if session.get('role') == 'superadmin' %}
-                    <li><a class="dropdown-item" href="{{ url_for('users_recycle_bin') }}"><i
-                                class="bi bi-people-fill text-muted me-2"></i> Users</a></li>
-                    {% endif %}
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    {% endif %}
-                    {% endif %}
-
-                    {% if session.get('role') == 'user' and not is_hist %}
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li>
-                        <h6 class="dropdown-header text-danger"><i class="bi bi-trash-fill me-1"></i> Recycle Bin</h6>
-                    </li>
-                    <li><a class="dropdown-item" href="{{ url_for('courses_archive') }}"><i
-                                class="bi bi-book text-muted me-2"></i> Courses</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('faculty_archive') }}"><i
-                                class="bi bi-person-badge text-muted me-2"></i> Faculty</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('rooms_archive') }}"><i
-                                class="bi bi-door-open text-muted me-2"></i> Rooms</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('departments_archive') }}"><i
-                                class="bi bi-building-fill text-muted me-2"></i> Departments</a></li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    {% endif %}
-
-                    <li><a class="dropdown-item text-danger fw-bold" href="{{ url_for('logout') }}"><i
-                                class="bi bi-box-arrow-right me-2"></i> Sign out</a></li>
-                </ul>
+                        <li><a class="dropdown-item text-danger fw-bold" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right me-2"></i> Sign out</a></li>
+                    </ul>
+                </div>
             </div>
         </div>
     </nav>
@@ -1206,6 +1076,14 @@
                 }
             }).catch(function () { cb.checked = !locked; });
         };
+
+        // GLOBAL: Initialize Bootstrap Tooltips
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            })
+        });
     </script>
 
     <!-- ARCHIVE VIEW INFO MODAL -->
@@ -1245,7 +1123,7 @@
                     </div>
                     <div class="mb-4">
                         <h6 class="fw-bold text-secondary small mb-1">5. REPORTS GENERATION</h6>
-                        <p class="small text-muted mb-0">You may still generate and print <strong>PDF or Excel
+                        <p class="small text-muted mb-0">You may still generate and print <strong>Excel
                                 reports</strong> based on this archived data through the <strong>'Reports'
                                 menu.</strong></p>
                     </div>

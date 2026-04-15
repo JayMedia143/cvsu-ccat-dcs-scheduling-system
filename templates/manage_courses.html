@@ -5,7 +5,7 @@
 {% block content %}
 
 <!-- 1. HEADER (Static) -->
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="manage-header-wrap">
     <div>
         <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
             Courses
@@ -17,34 +17,34 @@
         <p class="text-muted small mb-0">Manage your subject offerings, units, and hours.</p>
     </div>
     {% if not is_hist %}
-    <div class="d-flex align-items-center gap-3">
+    <div class="d-flex align-items-center gap-2 gap-md-3">
         {% if session.get('role') in ['admin', 'superadmin'] %}
-        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importPdfModal">
-            <i class="bi bi-file-earmark-pdf-fill"></i>
-            <span>Import Curriculum (PDF)</span>
-        </button>
-
-        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importWordModal">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importWordModal" title="Import from Word">
             <i class="bi bi-file-earmark-word-fill"></i>
-            <span>Import Curriculum (Word)</span>
+            <span class="d-none d-md-inline">Import Word</span>
         </button>
 
-        <a href="{{ url_for('course_code_assignment') }}" class="btn-google-action" style="text-decoration:none;">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importCoursesPdfModal" title="Import from PDF">
+            <i class="bi bi-file-earmark-pdf-fill"></i>
+            <span class="d-none d-md-inline">Import PDF</span>
+        </button>
+
+        <a href="{{ url_for('course_code_assignment') }}" class="btn-google-action" style="text-decoration:none;" title="Department Assignment">
             <i class="bi bi-diagram-3-fill"></i>
-            <span>Dept. Assignment</span>
+            <span class="d-none d-md-inline">Dept.</span>
         </a>
         {% endif %}
 
-        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addCourseModal">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addCourseModal" title="Add New Course">
             <i class="bi bi-plus-lg"></i>
-            <span>New Course</span>
+            <span class="d-none d-md-inline">New</span>
         </button>
     </div>
     {% endif %}
 </div>
 
 <!-- 2. SEARCH & FILTER WRAPPER (With Bulk Action Overlay) -->
-<div class="row mb-4 position-relative align-items-center" style="height: 50px;">
+<div class="manage-search-wrapper position-relative">
 
     {% if not is_hist %}
     <!-- A. BULK ACTION BAR (Overlay - Green Background) -->
@@ -88,15 +88,17 @@
         <!-- 1. FILTER DROPDOWN (Nested) -->
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="filterDropdown"
-                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                <i class="bi bi-funnel me-2"></i>
-                {% if current_filter_by == 'dept' %}
-                Dept: {{ current_filter_val }}
-                {% elif current_filter_by == 'code' %}
-                Code: {{ current_filter_val }}
-                {% else %}
-                Filter
-                {% endif %}
+                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Filter Results">
+                <i class="bi bi-funnel me-md-2"></i>
+                <span class="d-none d-md-inline">
+                    {% if current_filter_by == 'dept' %}
+                    Dept: {{ current_filter_val }}
+                    {% elif current_filter_by == 'code' %}
+                    Code: {{ current_filter_val }}
+                    {% else %}
+                    Filter
+                    {% endif %}
+                </span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="filterDropdown">
                 <!-- Clear Filter Option -->
@@ -142,16 +144,18 @@
             </ul>
         </div>
 
-        <!-- 2. SORT DROPDOWN (Ito yung nawala sa code mo, ibinalik ko) -->
+        <!-- 2. SORT DROPDOWN -->
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortDropdown"
-                data-bs-toggle="dropdown" aria-expanded="false">
-                Sort by: {% if current_sort == 'a-z' %} Code (A-Z)
-                {% elif current_sort == 'z-a' %} Code (Z-A)
-                {% elif current_sort == 'dept-asc' %} Dept (A-Z)
-                {% elif current_sort == 'dept-desc' %} Dept (Z-A)
-                {% else %} Newest
-                {% endif %}
+                data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" title="Sort Results">
+                <i class="bi bi-sort-alpha-down me-md-2"></i>
+                <span class="d-none d-md-inline">
+                    Sort by: {% if current_sort == 'a-z' %} Code (A-Z)
+                    {% elif current_sort == 'z-a' %} Code (Z-A)
+                    {% elif current_sort == 'dept-asc' %} Dept (A-Z)
+                    {% elif current_sort == 'dept-desc' %} Dept (Z-A)
+                    {% else %} Newest {% endif %}
+                </span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
                 <li>
@@ -590,62 +594,15 @@
 </div>
 {% endfor %}
 
-<!-- PDF IMPORT MODAL -->
-<div class="modal fade" id="importPdfModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Import Curriculum PDF</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ url_for('import_courses_pdf') }}" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small">THIS CHECKLIST BELONGS TO:</label>
-                        <select class="form-select" name="target_program">
-                            <option value="BSCoS">BS Computer Science (BSCoS)</option>
-                            <option value="BSInfoTech">BS Information Technology (BSIT)</option>
-                        </select>
-                    </div>
 
-                    <!-- Eto yung "Matalinong Prompt" -->
-                    <div class="p-3 border rounded bg-light mb-3">
-                        <div class="form-check form-switch mb-2">
-                            <input class="form-check-input" type="checkbox" name="auto_assign" id="autoAssignSwitch"
-                                checked>
-                            <label class="form-check-label fw-bold small" for="autoAssignSwitch">Auto-assign to
-                                Sections?</label>
-                        </div>
-                        <label class="form-label small text-muted">Identify the semester to populate in
-                            sections:</label>
-                        <select class="form-select form-select-sm" name="assign_semester">
-                            <option value="1st Semester">1st Semester</option>
-                            <option value="2nd Semester">2nd Semester</option>
-                            <option value="Midyear">Midyear</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small">SELECT PDF FILE</label>
-                        <input type="file" name="file" class="form-control" accept=".pdf" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">Import & Auto-Assign</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 <!-- WORD IMPORT MODAL -->
+<!-- IMPORT COURSES WORD MODAL -->
 <div class="modal fade" id="importWordModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-below-nav">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Import Curriculum (Word)</h5>
+                <h5 class="modal-title"><i class="bi bi-file-earmark-word-fill text-primary me-2"></i>Import Curriculum (Word)</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('import_courses_docx') }}" method="POST" enctype="multipart/form-data">
@@ -690,6 +647,51 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-success px-4">Import & Auto-Assign</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- IMPORT COURSES PDF MODAL -->
+<div class="modal fade" id="importCoursesPdfModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+        <div class="modal-content text-start">
+            <form action="{{ url_for('import_courses_pdf') }}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>Import Curriculum (PDF)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">SELECT CURRICULUM PDF (.pdf)</label>
+                        <input type="file" name="file" class="form-control" accept=".pdf" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">TARGET PROGRAM</label>
+                        <select name="target_program" class="form-select" required>
+                            <option value="BSCoS">BS Computer Science (BSCS)</option>
+                            <option value="BSInfoTech">BS Information Technology (BSIT)</option>
+                        </select>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="auto_assign" id="autoAssignSwitchPdf" checked>
+                        <label class="form-check-label small" for="autoAssignSwitchPdf">Automatically assign to sections</label>
+                    </div>
+                    <div id="semesterSelectPdf" class="mb-3">
+                        <label class="form-label fw-bold small">ASSIGN TO SEMESTER</label>
+                        <select name="assign_semester" class="form-select">
+                            <option value="1st Semester">1st Semester</option>
+                            <option value="2nd Semester">2nd Semester</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger px-4">
+                        <i class="bi bi-upload me-1"></i> Start Import
+                    </button>
                 </div>
             </form>
         </div>
