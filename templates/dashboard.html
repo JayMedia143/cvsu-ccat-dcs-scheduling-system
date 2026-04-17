@@ -161,20 +161,41 @@
         <div class="d-flex justify-content-between align-items-end mb-2">
             <div>
                 <h5 class="fw-bold text-dark mb-0">Schedule Completion Status</h5>
-                <p class="text-muted small mb-0">{{ stats.scheduled }} out of {{ stats.needed }} classes plotted</p>
-                <p class="text-muted small mb-0">
-                    <i class="bi bi-funnel-fill me-1"></i>
+                <p class="text-muted small mb-0" id="live-stats-text">{{ stats.scheduled }} out of {{ stats.needed }} classes plotted</p>
+                <div class="mt-2 d-flex flex-wrap gap-1 align-items-center">
+                    <span class="text-muted small me-2">Showing auto-generated progress for:</span>
+                    <a href="{{ url_for('set_department_filter', dept_name='All') }}" 
+                       class="btn btn-sm py-0 px-2 rounded-pill {% if stats.current_dept_filter == 'All' %}btn-success{% else %}btn-outline-secondary{% endif %}" 
+                       id="btn-dept-All"
+                       style="font-size: 0.75rem;">
+                        All Departments
+                    </a>
                     {% for dept in stats.selected_depts %}
-                    <span class="badge bg-secondary fw-normal me-1">{{ dept }}</span>
+                    {% set dept_slug = dept|replace(' ', '-')|replace('&', 'n')|replace('(', '')|replace(')', '') %}
+                    <a href="{{ url_for('set_department_filter', dept_name=dept) }}" 
+                       class="btn btn-sm py-0 px-2 rounded-pill {% if stats.current_dept_filter == dept %}btn-success{% else %}btn-outline-secondary{% endif %}" 
+                       id="btn-dept-{{ dept_slug }}"
+                       style="font-size: 0.75rem;">
+                        {{ dept }}
+                    </a>
                     {% endfor %}
-                </p>
+                </div>
             </div>
-            <h3 class="fw-bold text-success mb-0">{{ stats.completion_rate }}%</h3>
+            <div class="text-end">
+                <span id="live-status-badge" class="badge bg-primary mb-1 d-none" style="font-size: 0.65rem;">Optimization Active</span>
+                <h3 class="fw-bold text-success mb-0" id="live-percentage">{{ stats.completion_rate }}%</h3>
+            </div>
         </div>
         <div class="progress" style="height: 20px; border-radius: 10px;">
-            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar"
+            <div id="live-progress-bar" class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar"
                 style="width: {{ stats.completion_rate }}%;" aria-valuenow="{{ stats.completion_rate }}"
                 aria-valuemin="0" aria-valuemax="100">
+            </div>
+        </div>
+        <div id="violation-codes-section" class="mt-3 d-none">
+            <span class="text-muted small d-block mb-1">Active Constraints being resolved:</span>
+            <div id="violation-codes-container" class="d-flex flex-wrap gap-1">
+                <!-- Violation Badges will appear here -->
             </div>
         </div>
         {% if not is_hist %}
@@ -188,4 +209,87 @@
 </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof io !== 'undefined') {
+            const socket = io();
+            const currentFilter = "{{ stats.current_dept_filter }}";
+            let autoFocused = false;
+            
+            socket.on('ga_live_progress', function(data) {
+                if (data.running) {
+                    // 1. Show "Optimization Active" UI
+                    const badge = document.getElementById('live-status-badge');
+                    if (badge) badge.classList.remove('d-none');
+                    
+                    // 2. Auto-Focus Logic: If we are on "All" or if a specific dept is being scheduled, 
+                    // we show its progress live. This fulfills "d na need pindutin".
+                    
+                    // Update Text & Progress Bar
+                    const bar = document.getElementById('live-progress-bar');
+                    const percText = document.getElementById('live-percentage');
+                    const statsText = document.getElementById('live-stats-text');
+                    
+                    if (bar) bar.style.width = data.completion_rate + "%";
+                    if (percText) percText.innerText = data.completion_rate + "%";
+                    
+                    // Update the label to show what we are actually tracking right now
+                    if (statsText) {
+                        let deptLabel = (data.departments && data.departments.length > 0) ? data.departments.join(", ") : "Running";
+                        statsText.innerHTML = `<strong>Generating:</strong> ${data.scheduled} out of ${data.needed} <b>conflict-free</b> classes plotted (${deptLabel})`;
+                    }
+                    
+                    // 3. Highlight the buttons of departments being generated
+                    if (data.departments) {
+                        data.departments.forEach(dept => {
+                            const slug = dept.replace(/ /g, '-').replace(/&/g, 'n').replace(/\(/g, '').replace(/\)/g, '');
+                            const btn = document.getElementById('btn-dept-' + slug);
+                            if (btn) {
+                                btn.classList.add('border-primary', 'border-2', 'shadow-sm');
+                                // If not already selected, add a pulse effect
+                                if (!btn.classList.contains('btn-success')) {
+                                    btn.style.animation = "pulse-blue 2s infinite";
+                                }
+                            }
+                        });
+                    }
+
+                    // 4. Update Violation Codes List
+                    const codesContainer = document.getElementById('violation-codes-container');
+                    const codesSection = document.getElementById('violation-codes-section');
+                    if (codesContainer && data.violation_codes) {
+                        if (data.violation_codes.length > 0) {
+                            codesSection.classList.remove('d-none');
+                            codesContainer.innerHTML = '';
+                            data.violation_codes.forEach(code => {
+                                const isHard = code.startsWith('HC');
+                                const badgeClass = isHard ? 'bg-danger' : 'bg-warning text-dark';
+                                const badge = document.createElement('span');
+                                badge.className = `badge ${badgeClass} fw-normal`;
+                                badge.style.fontSize = '0.7rem';
+                                badge.innerText = code;
+                                codesContainer.appendChild(badge);
+                            });
+                        } else {
+                            codesSection.classList.add('d-none');
+                        }
+                    }
+                } else {
+                    // Hide active badge if stopped
+                    document.getElementById('live-status-badge').classList.add('d-none');
+                }
+            });
+        }
+    });
+</script>
+<style>
+@keyframes pulse-blue {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4); }
+  70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(13, 110, 253, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(13, 110, 253, 0); }
+}
+</style>
 {% endblock %}

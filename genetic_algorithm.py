@@ -121,7 +121,8 @@ class Gene:
 class Chromosome:
     __slots__ = ('genes', 'fitness', 'hard_conflicts', 'soft_score',
                  'conflicting_indices', 'rank', 'crowding_distance',
-                 'sc1_violations', 'sc2_violations')
+                 'sc1_violations', 'sc2_violations', 'violation_codes',
+                 '_violated_indices')
 
     def __init__(self, genes):
         self.genes               = genes
@@ -133,6 +134,8 @@ class Chromosome:
         self.crowding_distance   = 0.0   # NSGA-II crowding distance (higher = more diverse)
         self.sc1_violations      = 0     # Count of SC-I constraint violations
         self.sc2_violations      = 0     # Count of SC-II constraint violations
+        self.violation_codes     = set() # Specific codes like HC-01, SC-02 currently active
+        self._violated_indices   = []
 
 
 def _norm_dept(s):
@@ -496,6 +499,27 @@ class GeneticScheduler:
                     ))
             except Exception:
                 continue
+
+        # ------------------------------------------------------------------ #
+        # CONSTRAINT MAPPING (Internal Key -> Display Code)                  #
+        # ------------------------------------------------------------------ #
+        self.CONSTRAINT_MAP = {
+            'ROOM_AVAILABILITY': 'HC-22', 'ROOM_SUITABILITY': 'HC-21',
+            'OPERATING_HOURS': 'HC-23', 'FACULTY_AVAILABILITY': 'HC-17/18',
+            'LEC_LAB_SEQUENCE': 'HC-04', 'GLOBAL_DAY_RESTRICTION': 'HC-03',
+            'SECTION_DAY_RESTRICTIONS': 'HC-14', 'STRICT_LEC_DURATION': 'HC-08',
+            'STRICT_LAB_DURATION': 'HC-09', 'STRICT_ASYNC_LEC_DUR': 'HC-10',
+            'STRICT_ASYNC_LAB_DUR': 'HC-11', 'LECTURE_SLOT_ALIGNMENT': 'HC-28',
+            'FACULTY_DAY_SPLIT': 'HC-29', 'EVENING_AVOIDANCE': 'SC-II-06',
+            'PE_MORNING_PLACEMENT': 'SC-I-02', 'PE_EARLY_WEEK': 'SC-I-04',
+            'ASYNC_STRATEGIC_PLACEMENT': 'SC-I-05', 'LEC_LAB_WEEKLY_DIST': 'SC-I-01',
+            'LEC_LAB_PROXIMITY': 'SC-I-03', 'MAX_CONSECUTIVE_STUDENT': 'HC-15',
+            'MAX_CONSECUTIVE_FACULTY': 'HC-19', 'LUNCH_BREAK': 'SC-II-04',
+            'NO_ISOLATED_LECTURES': 'SC-II-01', 'NO_ISOLATED_LABS': 'SC-II-02',
+            'MIN_DAILY_SECTION_LOAD': 'SC-II-05', 'EARLY_START_ENFORCEMENT': 'HC-27',
+            'ROOM_OVERLAP': 'HC-12', 'FACULTY_OVERLAP': 'HC-13', 'SECTION_OVERLAP': 'HC-16',
+            'ROOM_CAPACITY_PROPORTIONAL': 'SC-II-03', 'COMPLETE_COURSE_SCHEDULING': 'HC-25'
+        }
 
     # ------------------------------------------------------------------ #
     # CONSTRAINT PENALTY HELPER                                           #
@@ -978,6 +1002,9 @@ class GeneticScheduler:
         sc1_violations = 0
         sc2_violations = 0
         conflicts      = set()
+        violation_codes = set()
+        violation_indices = set() # To count "clean" genes for progress bar
+        cmap = self.CONSTRAINT_MAP
         # include_sc2: True only in full soft mode (Phase 3)
         include_sc2    = not hard_only and not sc1_only
 
@@ -1013,12 +1040,14 @@ class GeneticScheduler:
                     if r['status'] != 'Available':
                         p = pen['ROOM_AVAILABILITY']
                         if p:
-                            penalty += p; hard_conflicts += 1; conflicts.add(i)
+                            penalty += p; hard_conflicts += 1; conflicts.add(i); violation_codes.add(cmap['ROOM_AVAILABILITY'])
+                            violation_indices.add(i)
 
                     if g.gene_type == 'Lab' and 'Computer Lab' not in r.get('capabilities', ''):
                         p = pen['ROOM_SUITABILITY']
                         if p:
-                            penalty += p; hard_conflicts += 1; conflicts.add(i)
+                            penalty += p; hard_conflicts += 1; conflicts.add(i); violation_codes.add(cmap['ROOM_SUITABILITY'])
+                            violation_indices.add(i)
 
                     if include_sc2:
                         students = sec_stu.get(g.section_id, 0)
@@ -1039,7 +1068,7 @@ class GeneticScheduler:
             if g.start_idx < 0 or g.end_idx > total_slots:
                 p = pen['OPERATING_HOURS']
                 if p:
-                    penalty += p; hard_conflicts += 1; conflicts.add(i)
+                    penalty += p; hard_conflicts += 1; conflicts.add(i); violation_codes.add(cmap['OPERATING_HOURS']); violation_indices.add(i)
 
             # ── HC-17/18: Faculty Availability Days ───────────────────────────
             if g.faculty_id and g.faculty_id not in self.multi_assignment_faculty:
@@ -1047,7 +1076,7 @@ class GeneticScheduler:
                 if avail and g.day_idx not in avail:
                     p = pen.get('FACULTY_AVAILABILITY', 0)
                     if p:
-                        penalty += p; hard_conflicts += 1; conflicts.add(i)
+                        penalty += p; hard_conflicts += 1; conflicts.add(i); violation_codes.add(cmap['FACULTY_AVAILABILITY']); violation_indices.add(i)
 
             # ── HC-03 / HC-14: Global & Section Day Restriction ──────────────
             # GA only uses days in self.days (built from allowed_days), so this
@@ -1061,7 +1090,8 @@ class GeneticScheduler:
             if self._blocked_bitmasks:
                 _day_blocked = self._blocked_bitmasks.get(g.day_idx, 0)
                 if _day_blocked and (g.bitmask & _day_blocked):
-                    penalty += HC_PENALTY; hard_conflicts += 1; conflicts.add(i)
+                    penalty += HC_PENALTY; hard_conflicts += 1; conflicts.add(i); violation_indices.add(i)
+                    # No specific code for blocked slots in current map, using a generic one if needed or just skipping
 
             # ── HC-08 / HC-09 / HC-10 / HC-11: Strict Duration ───────────────
             # Skip for split genes (locked_day >= 0): their duration is set by the admin's
@@ -1073,12 +1103,15 @@ class GeneticScheduler:
                 if _exp_dur and g.duration_slots != _exp_dur:
                     if g.gene_type == 'Lec':
                         _p_dur = pen.get('STRICT_LEC_DURATION', 0)
+                        _code = cmap['STRICT_LEC_DURATION']
                     elif g.gene_type == 'Lab':
                         _p_dur = pen.get('STRICT_LAB_DURATION', 0)
-                    else:  # Async covers HC-10 (async lec) + HC-11 (async lab) combined
+                        _code = cmap['STRICT_LAB_DURATION']
+                    else:
                         _p_dur = pen.get('STRICT_ASYNC_LEC_DUR', 0) or pen.get('STRICT_ASYNC_LAB_DUR', 0)
+                        _code = cmap['STRICT_ASYNC_LEC_DUR']
                     if _p_dur:
-                        penalty += _p_dur; hard_conflicts += 1; conflicts.add(i)
+                        penalty += _p_dur; hard_conflicts += 1; conflicts.add(i); violation_codes.add(_code); violation_indices.add(i)
 
             # ── HC-24: Hourly Alignment ───────────────────────────────────────
             # Each slot = 30 min, so every start_idx is always on a half-hour
@@ -1099,7 +1132,7 @@ class GeneticScheduler:
                     and g.start_idx % 4 != 0):
                 p = pen.get('LECTURE_SLOT_ALIGNMENT', 0)
                 if p:
-                    penalty += p; hard_conflicts += 1; conflicts.add(i)
+                    penalty += p; hard_conflicts += 1; conflicts.add(i); violation_codes.add(cmap['LECTURE_SLOT_ALIGNMENT']); violation_indices.add(i)
 
             # ── HC-29: Faculty Day Split ──────────────────────────────────────
             # If gene has a locked_day, it must be placed on that day.
@@ -1107,14 +1140,14 @@ class GeneticScheduler:
             if _ld >= 0 and g.day_idx != _ld and not g.is_fixed:
                 p = pen.get('FACULTY_DAY_SPLIT', 0)
                 if p:
-                    penalty += p; hard_conflicts += 1; conflicts.add(i)
+                    penalty += p; hard_conflicts += 1; conflicts.add(i); violation_codes.add(cmap['FACULTY_DAY_SPLIT']); violation_indices.add(i)
 
             if not hard_only:
                 # ── SC-II-06: Evening Avoidance (SC2 — skip in SC-I phase) ───
                 if include_sc2 and g.start_idx >= self.seven_pm_slot:
                     p = pen['EVENING_AVOIDANCE']
                     if p:
-                        penalty += p; soft_score += p
+                        penalty += p; soft_score += p; violation_codes.add(cmap['EVENING_AVOIDANCE']); violation_indices.add(i)
                         if pen_type.get('EVENING_AVOIDANCE', 'SC2') == 'SC1':
                             sc1_violations += 1
                         else:
@@ -1125,7 +1158,7 @@ class GeneticScheduler:
                     if g.start_idx >= noon_slot:
                         p = pen['PE_MORNING_PLACEMENT']
                         if p:
-                            penalty += p; soft_score += p
+                            penalty += p; soft_score += p; violation_codes.add(cmap['PE_MORNING_PLACEMENT']); violation_indices.add(i)
                             if pen_type.get('PE_MORNING_PLACEMENT', 'SC1') == 'SC1':
                                 sc1_violations += 1
                             else:
@@ -1133,7 +1166,7 @@ class GeneticScheduler:
                     if g.day_idx > 2:
                         p = pen['PE_EARLY_WEEK']
                         if p:
-                            penalty += p; soft_score += p
+                            penalty += p; soft_score += p; violation_codes.add(cmap['PE_EARLY_WEEK']); violation_indices.add(i)
                             if pen_type.get('PE_EARLY_WEEK', 'SC1') == 'SC1':
                                 sc1_violations += 1
                             else:
@@ -1142,7 +1175,7 @@ class GeneticScheduler:
                     if g.day_idx != 0 and g.day_idx != last_day:
                         p = pen['ASYNC_STRATEGIC_PLACEMENT']
                         if p:
-                            penalty += p; soft_score += p
+                            penalty += p; soft_score += p; violation_codes.add(cmap['ASYNC_STRATEGIC_PLACEMENT']); violation_indices.add(i)
                             if pen_type.get('ASYNC_STRATEGIC_PLACEMENT', 'SC1') == 'SC1':
                                 sc1_violations += 1
                             else:
@@ -1165,38 +1198,38 @@ class GeneticScheduler:
             if g.room_id not in self.multi_assignment_rooms:
                 _rkey = (g.room_id, _d)
                 if (room_bits[_rkey] & _mask) != 0:
-                    penalty += HC_PENALTY; hard_conflicts += 1
+                    penalty += HC_PENALTY; hard_conflicts += 1; violation_codes.add(cmap['ROOM_OVERLAP'])
                     if not g.is_fixed:
-                        conflicts.add(i)
+                        conflicts.add(i); violation_indices.add(i)
                     for _ps, _pe, _pi in room_use[_rkey]:
                         if _ps < g.end_idx and _pe > g.start_idx:
                             if not genes[_pi].is_fixed:
-                                conflicts.add(_pi)
+                                conflicts.add(_pi); violation_indices.add(_pi)
                 room_bits[_rkey] |= _mask
 
             # Faculty overlap (HC-13)
             if g.faculty_id and g.faculty_id not in self.multi_assignment_faculty:
                 _fkey = (g.faculty_id, _d)
                 if (fac_bits[_fkey] & _mask) != 0:
-                    penalty += HC_PENALTY; hard_conflicts += 1
+                    penalty += HC_PENALTY; hard_conflicts += 1; violation_codes.add(cmap['FACULTY_OVERLAP'])
                     if not g.is_fixed:
-                        conflicts.add(i)
+                        conflicts.add(i); violation_indices.add(i)
                     for _ps, _pe, _pi in fac_use[_fkey]:
                         if _ps < g.end_idx and _pe > g.start_idx:
                             if not genes[_pi].is_fixed:
-                                conflicts.add(_pi)
+                                conflicts.add(_pi); violation_indices.add(_pi)
                 fac_bits[_fkey] |= _mask
 
             # Section overlap (HC-16)
             _skey = (g.section_id, _d)
             if (sec_bits[_skey] & _mask) != 0:
-                penalty += HC_PENALTY; hard_conflicts += 1
+                penalty += HC_PENALTY; hard_conflicts += 1; violation_codes.add(cmap['SECTION_OVERLAP'])
                 if not g.is_fixed:
-                    conflicts.add(i)
+                    conflicts.add(i); violation_indices.add(i)
                 for _ps, _pe, _pi in sec_use[_skey]:
                     if _ps < g.end_idx and _pe > g.start_idx:
                         if not genes[_pi].is_fixed:
-                            conflicts.add(_pi)
+                            conflicts.add(_pi); violation_indices.add(_pi)
             sec_bits[_skey] |= _mask
 
             # Append to lists for HC-15/19/27 and lunch break
@@ -1207,8 +1240,6 @@ class GeneticScheduler:
 
         if include_sc2:
             # ── SC-II-04: Lunch Break (SC2 — skip in SC-I phase) ─────────────
-            # Each section AND faculty must have ≥1 free hour (2 consecutive
-            # slots) in the 10am–2pm window on each day they have classes.
             p_lb = pen.get('LUNCH_BREAK', 0)
             if p_lb:
                 lb_type_is_sc1 = pen_type.get('LUNCH_BREAK', 'SC2') == 'SC1'
@@ -1219,11 +1250,10 @@ class GeneticScheduler:
                             occ.add(s)
                     if occ and not any(s not in occ and (s + 1) not in occ
                                        for s in range(lws, lwe - 1)):
-                        penalty += p_lb; soft_score += p_lb
-                        if lb_type_is_sc1:
-                            sc1_violations += 1
-                        else:
-                            sc2_violations += 1
+                        penalty += p_lb; soft_score += p_lb; violation_codes.add(cmap['LUNCH_BREAK'])
+                        for _, _, _i in slots: violation_indices.add(_i)
+                        if lb_type_is_sc1: sc1_violations += 1
+                        else: sc2_violations += 1
                 for (_, day_idx), slots in fac_use.items():
                     occ = set()
                     for start, end, _i in slots:
@@ -1231,11 +1261,10 @@ class GeneticScheduler:
                             occ.add(s)
                     if occ and not any(s not in occ and (s + 1) not in occ
                                        for s in range(lws, lwe - 1)):
-                        penalty += p_lb; soft_score += p_lb
-                        if lb_type_is_sc1:
-                            sc1_violations += 1
-                        else:
-                            sc2_violations += 1
+                        penalty += p_lb; soft_score += p_lb; violation_codes.add(cmap['LUNCH_BREAK'])
+                        for _, _, _i in slots: violation_indices.add(_i)
+                        if lb_type_is_sc1: sc1_violations += 1
+                        else: sc2_violations += 1
 
         if not hard_only:
             # ── SC-I-01 & SC-I-03: Lec-Lab weekly distribution & proximity ───
@@ -1244,12 +1273,12 @@ class GeneticScheduler:
                 lab_entry = type_genes.get('Lab')
                 if not (lec_entry and lab_entry):
                     continue
-                lec_g, _ = lec_entry
-                lab_g, _ = lab_entry
+                lec_g, lec_i = lec_entry
+                lab_g, lab_i = lab_entry
                 if lab_g.day_idx < lec_g.day_idx:
                     p = pen['LEC_LAB_WEEKLY_DIST']
                     if p:
-                        penalty += p; soft_score += p
+                        penalty += p; soft_score += p; violation_codes.add(cmap['LEC_LAB_WEEKLY_DIST']); violation_indices.add(lec_i); violation_indices.add(lab_i)
                         if pen_type.get('LEC_LAB_WEEKLY_DIST', 'SC1') == 'SC1':
                             sc1_violations += 1
                         else:
@@ -1257,7 +1286,7 @@ class GeneticScheduler:
                 if abs(lec_g.day_idx - lab_g.day_idx) > 3:
                     p = pen['LEC_LAB_PROXIMITY']
                     if p:
-                        penalty += p; soft_score += p
+                        penalty += p; soft_score += p; violation_codes.add(cmap['LEC_LAB_PROXIMITY']); violation_indices.add(lec_i); violation_indices.add(lab_i)
                         if pen_type.get('LEC_LAB_PROXIMITY', 'SC1') == 'SC1':
                             sc1_violations += 1
                         else:
@@ -1274,7 +1303,7 @@ class GeneticScheduler:
             for (room_id, day_idx), slots in room_use.items():
                 first_start, _, first_idx = min(slots, key=lambda x: x[0])
                 if first_start > mfs and not genes[first_idx].is_fixed:
-                    penalty += p_ese; hard_conflicts += 1; conflicts.add(first_idx)
+                    penalty += p_ese; hard_conflicts += 1; conflicts.add(first_idx); violation_codes.add(cmap['EARLY_START_ENFORCEMENT']); violation_indices.add(first_idx)
 
         # ── HC-25: Complete Course Scheduling ────────────────────────────────
         # NOTE: Excluded from GA fitness — missing pairs have no gene index to add
@@ -1294,8 +1323,8 @@ class GeneticScheduler:
                 if (lab_g.day_idx < lec_g.day_idx or
                         (lab_g.day_idx == lec_g.day_idx and
                          lab_g.start_idx < lec_g.start_idx)):
-                    penalty += p_lls; hard_conflicts += 1
-                    if not lab_g.is_fixed: conflicts.add(lab_i)
+                    penalty += p_lls; hard_conflicts += 1; violation_codes.add(cmap['LEC_LAB_SEQUENCE'])
+                    if not lab_g.is_fixed: conflicts.add(lab_i); violation_indices.add(lab_i)
 
         # ── HC-15: Max Consecutive Student Load ──────────────────────────────
         p_mcs = pen.get('MAX_CONSECUTIVE_STUDENT', 0)
@@ -1313,8 +1342,8 @@ class GeneticScheduler:
                         streak = dur
                     last_end = max(last_end, end)
                     if streak > 12:  # 6 hours = 12 slots (30 min/slot)
-                        penalty += p_mcs; hard_conflicts += 1
-                        if not genes[idx].is_fixed: conflicts.add(idx)
+                        penalty += p_mcs; hard_conflicts += 1; violation_codes.add(cmap['MAX_CONSECUTIVE_STUDENT'])
+                        if not genes[idx].is_fixed: conflicts.add(idx); violation_indices.add(idx)
                         break
 
         # ── HC-19: Max Consecutive Faculty Load ──────────────────────────────
@@ -1335,8 +1364,8 @@ class GeneticScheduler:
                         streak = dur
                     last_end = max(last_end, end)
                     if streak > 12:
-                        penalty += p_mcf; hard_conflicts += 1
-                        if not genes[idx].is_fixed: conflicts.add(idx)
+                        penalty += p_mcf; hard_conflicts += 1; violation_codes.add(cmap['MAX_CONSECUTIVE_FACULTY'])
+                        if not genes[idx].is_fixed: conflicts.add(idx); violation_indices.add(idx)
                         break
 
         if include_sc2:
@@ -1348,7 +1377,8 @@ class GeneticScheduler:
                 for (sec_id, day_idx), slots in sec_use.items():
                     n = len(slots)
                     if n < 2 and p_mdl:
-                        penalty += p_mdl; soft_score += p_mdl
+                        penalty += p_mdl; soft_score += p_mdl; violation_codes.add(cmap['MIN_DAILY_SECTION_LOAD'])
+                        for _, _, _i in slots: violation_indices.add(_i)
                         if pen_type.get('MIN_DAILY_SECTION_LOAD', 'SC2') == 'SC1':
                             sc1_violations += 1
                         else:
@@ -1357,13 +1387,13 @@ class GeneticScheduler:
                         _, _, idx = slots[0]
                         gt = genes[idx].gene_type
                         if gt == 'Lec' and p_nil:
-                            penalty += p_nil; soft_score += p_nil
+                            penalty += p_nil; soft_score += p_nil; violation_codes.add(cmap['NO_ISOLATED_LECTURES']); violation_indices.add(idx)
                             if pen_type.get('NO_ISOLATED_LECTURES', 'SC2') == 'SC1':
                                 sc1_violations += 1
                             else:
                                 sc2_violations += 1
                         elif gt == 'Lab' and p_nib:
-                            penalty += p_nib; soft_score += p_nib
+                            penalty += p_nib; soft_score += p_nib; violation_codes.add(cmap['NO_ISOLATED_LABS']); violation_indices.add(idx)
                             if pen_type.get('NO_ISOLATED_LABS', 'SC2') == 'SC1':
                                 sc1_violations += 1
                             else:
@@ -1375,6 +1405,9 @@ class GeneticScheduler:
         chromosome.sc1_violations      = sc1_violations
         chromosome.sc2_violations      = sc2_violations
         chromosome.conflicting_indices = list(conflicts)
+        chromosome.violation_codes     = sorted(list(violation_codes))
+        # Unique indices of genes that have at least one violation (Hard or Soft)
+        chromosome._violated_indices    = list(violation_indices)
         return penalty
 
     # ------------------------------------------------------------------ #
@@ -2379,7 +2412,6 @@ class GeneticScheduler:
              resource (room / faculty / section) on the same day/time window.
           3. Temporarily remove the blocker from occ.
           4. Try placing the stuck gene in the freed space.
-          5. If stuck placed: try re-placing the blocker anywhere else.
           6. If blocker also re-placed → commit swap (both fit, conflict resolved).
           7. Otherwise → rollback both to original positions and try the next blocker.
 

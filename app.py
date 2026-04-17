@@ -1974,9 +1974,9 @@ def dashboard():
                      'selected_depts': [], 'hist_archive': None}
         return render_template('dashboard.html', stats=stats)
 
-    # --- Live Mode Dashboard ---
-    # Get Current Semester Filter
+    # Get Current Filters
     selected_semester = session.get('selected_semester', 'All')
+    current_dept_filter = session.get('selected_department_filter', 'All')
 
     # 1. Stat Card Counts (Filtered by Semester)
     course_q = Course.query.filter_by(is_archived=False)
@@ -1998,21 +1998,26 @@ def dashboard():
     total_rooms   = Room.query.filter_by(is_archived=False).count()
     
     # 2. COMPLETION RATE (Scoped by Semester)
-    # FOR DASHBOARD OVERVIEW: We want the total completion across ALL departments in that semester.
-    # This provides a true campus-wide accuracy as requested by the user.
     all_depts_q = db.session.query(Course.department).filter(Course.is_archived == False)
     if selected_semester != 'All':
         all_depts_q = all_depts_q.filter(Course.semester_offered == selected_semester)
+    
+    # dept_list is used for the button list (always show all unique depts in that sem)
     dept_list = [d[0] for d in all_depts_q.distinct().all() if d[0]]
+    
+    # Use current_dept_filter to target specific calculations
+    target_depts = dept_list
+    if current_dept_filter != 'All' and current_dept_filter in dept_list:
+        target_depts = [current_dept_filter]
     
     print(f"DEBUG DASHBOARD: semester={selected_semester}, dept_list={dept_list}")
 
     # total_needed calculation
     from sqlalchemy import text as sa_text
     total_needed = 0
-    if dept_list:
-        placeholders = ','.join([f':d{i}' for i in range(len(dept_list))])
-        params = {f'd{i}': v for i, v in enumerate(dept_list)}
+    if target_depts:
+        placeholders = ','.join([f':d{i}' for i in range(len(target_depts))])
+        params = {f'd{i}': v for i, v in enumerate(target_depts)}
 
         sql = f"""
             SELECT SUM(
@@ -2034,10 +2039,10 @@ def dashboard():
 
     # total_scheduled calculation
     total_scheduled = 0
-    if dept_list:
+    if target_depts:
         sched_q = (db.session.query(ScheduledClass)
                    .join(Course, ScheduledClass.course_id == Course.id)
-                   .filter(Course.department.in_(dept_list)))
+                   .filter(Course.department.in_(target_depts)))
         if selected_semester != 'All':
             sched_q = sched_q.filter(ScheduledClass.semester == selected_semester)
         total_scheduled = sched_q.count()
@@ -2058,6 +2063,7 @@ def dashboard():
         'scheduled': total_scheduled,
         'completion_rate': completion_rate,
         'selected_depts': dept_list,
+        'current_dept_filter': current_dept_filter,
     }
     
     return render_template('dashboard.html', stats=stats)
@@ -6387,8 +6393,31 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
             if stats.get('pop_size'):
                 generation_status['pop_size'] = stats['pop_size']
             if stats.get('best_chromosome'):
-                matrix = scheduler.get_visualization_matrix(stats['best_chromosome'])
+                chrom = stats['best_chromosome']
+                matrix = scheduler.get_visualization_matrix(chrom)
                 generation_status['visual_matrix'] = matrix
+                
+                # Accuracy tracking for Progress Bar: Count ONLY Conflict-Free genes
+                # Includes Hard and Soft violations now.
+                total_genes = len(chrom.genes)
+                violated_count = len(getattr(chrom, '_violated_genes', []))
+                genes_clean = max(0, total_genes - violated_count)
+                
+                generation_status['scheduled_count'] = genes_clean
+                generation_status['total_needed'] = total_genes
+                
+                # Emit to Dashboard
+                v_codes = sorted(list(getattr(chrom, 'violation_codes', [])))
+                socketio.emit('ga_live_progress', {
+                    'running': True,
+                    'semester': generation_status.get('target_semester'),
+                    'departments': generation_status.get('selected_depts'),
+                    'scheduled': genes_clean,
+                    'needed': total_genes,
+                    'completion_rate': int((genes_clean / total_genes * 100)) if total_genes > 0 else 0,
+                    'violation_codes': v_codes
+                })
+
             if generation_status['stop_requested']: raise Exception("StoppedByUser")
 
         # ------------------------------------ Warm start: load THIS semester's saved schedule as seed ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -6667,7 +6696,9 @@ def start_generation():
             'pop_size': None,
             'phase': 'init',
             'hardware': None,
-            'gen_per_sec': 0
+            'gen_per_sec': 0,
+            'target_semester': None,
+            'selected_depts': []
         }
     
     # Get Data from Frontend (Semester + Departments)
@@ -6682,6 +6713,10 @@ def start_generation():
 
     # Persist selection in session so generate page remembers it
     session['scheduled_depts'] = selected_depts
+    
+    # Store in status for broad-casting / live focus
+    generation_status['target_semester'] = target_semester
+    generation_status['selected_depts'] = selected_depts
 
     print(f"------------------- Starting Generation for: {target_semester} (Fresh Start: {fresh_start})")
     print(f"------------------- Scheduled Departments: {selected_depts}")
@@ -7280,7 +7315,7 @@ def view_schedule_modal(view_type, entity_id):
         if not student:
             return '<div class="alert alert-warning m-3">Student not found.</div>'
         if student.is_irregular:
-            iframe_src = url_for('irregular_timetable_html', student_id=student.student_id)
+            iframe_src = url_for('irregular_timetable_html', viewer='true', student_id=student.student_id)
             return f'<div style="width:100%; aspect-ratio: 1 / 1.414; max-height:76vh;"><iframe src="{iframe_src}" style="width:100%;height:100%;border:none;display:block;"></iframe></div>'
         if not student.section_id:
             return '<div class="alert alert-warning m-3">This student has no section assigned yet.</div>'
@@ -7301,7 +7336,7 @@ def view_schedule_modal(view_type, entity_id):
 
     if os.path.isfile(template_path):
         func_name, param_name = _timetable_routes[view_type]
-        iframe_src = url_for(func_name, **{param_name: entity_id})
+        iframe_src = url_for(func_name, viewer='true', **{param_name: entity_id})
         return f'<div style="width:100%; aspect-ratio: 1 / 1.414; max-height:76vh;"><iframe src="{iframe_src}" style="width:100%;height:100%;border:none;display:block;"></iframe></div>'
     else:
         return get_schedule_grid(view_type, entity_id)
@@ -10990,6 +11025,708 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
           paper.style.minHeight = 'unset';
           paper.style.overflow  = 'hidden';
       }}
+    }})();
+  </script>
+
+  <!-- Overlap tooltip panel -->
+  <div id="overlapTip" style="display:none;position:fixed;z-index:9999;
+    background:#fff;border:1.5px solid #dc3545;border-radius:7px;
+    padding:9px 12px;font-size:11px;min-width:240px;max-width:340px;
+    box-shadow:0 4px 18px rgba(0,0,0,0.22);
+    font-family:Calibri,Arial,sans-serif;">
+    <div id="overlapTipTitle" style="font-weight:700;margin-bottom:5px;font-size:12px;"></div>
+    <div id="overlapTipBody" style="max-height:260px;overflow-y:auto;"></div>
+  </div>
+  <script>
+  (function() {{
+    var tip  = document.getElementById('overlapTip');
+    var body = document.getElementById('overlapTipBody');
+    var hideTimer = null;
+    document.querySelectorAll('.sched-overlap-badge').forEach(function(badge) {{
+      badge.addEventListener('mouseenter', function(e) {{
+        var entries;
+        try {{ entries = JSON.parse(this.dataset.overlap || '[]'); }} catch(ex) {{ entries = []; }}
+        var vtype = this.dataset.vtype || '';
+        var titleText, titleColor, borderColor;
+        if (vtype === 'course') {{
+          titleText = 'Overlapping Courses';     titleColor = '#333';     borderColor = '#aaa';
+        }} else if (vtype === 'room_neutral') {{
+          titleText = 'Overlapping Rooms';       titleColor = '#333';     borderColor = '#aaa';
+        }} else if (vtype === 'faculty_neutral') {{
+          titleText = 'Overlapping Faculty';     titleColor = '#333';     borderColor = '#aaa';
+        }} else if (vtype === 'section') {{
+          titleText = '\u26a0 Overlapping Sections'; titleColor = '#dc3545'; borderColor = '#dc3545';
+        }} else if (vtype === 'faculty') {{
+          titleText = '\u26a0 Overlapping Faculty';  titleColor = '#dc3545'; borderColor = '#dc3545';
+        }} else if (vtype === 'room') {{
+          titleText = '\u26a0 Overlapping Rooms';    titleColor = '#dc3545'; borderColor = '#dc3545';
+        }} else {{
+          titleText = '\u26a0 Overlapping Classes';  titleColor = '#dc3545'; borderColor = '#dc3545';
+        }}
+        var titleEl = document.getElementById('overlapTipTitle');
+        titleEl.textContent   = titleText;
+        titleEl.style.color   = titleColor;
+        tip.style.borderColor = borderColor;
+        body.innerHTML = entries.map(function(en, i) {{
+          return '<div style="padding:3px 0;'
+            + (i > 0 ? 'border-top:1px solid #f0f0f0;margin-top:3px;' : '') + '">'
+            + (en.t ? '<span style="color:#666;font-size:10px;">' + en.t + '</span><br>' : '')
+            + '<strong style="font-size:12px;">' + (en.c || '') + '</strong>'
+            + (en.s ? ' <span style="color:#555;">---- ' + en.s + '</span>' : '')
+            + (en.f ? '<br><span style="color:#888;font-size:10px;">' + en.f + '</span>' : '')
+            + '</div>';
+        }}).join('');
+        tip.style.display = 'block';
+        tip.style.left = Math.min(e.clientX + 12, window.innerWidth - 360) + 'px';
+        tip.style.top  = Math.min(e.clientY + 12, window.innerHeight - 220) + 'px';
+      }});
+      badge.addEventListener('mouseleave', function() {{
+        hideTimer = setTimeout(function() {{ tip.style.display = 'none'; }}, 150);
+      }});
+    }});
+    tip.addEventListener('mouseenter', function() {{
+      if (hideTimer) {{ clearTimeout(hideTimer); hideTimer = null; }}
+    }});
+    tip.addEventListener('mouseleave', function() {{
+      tip.style.display = 'none';
+    }});
+  }})();
+  </script>
+</body></html>"""
+
+
+
+
+def detect_schedule_grid(ws):
+    """Scan worksheet for timetable grid. Two-pass detection:
+    1) Token-based: looks for {{GRID_TIME}} + {{GRID_MON}} etc.
+    2) Auto-detect fallback: scans for time patterns + day name headers.
+
+    Returns dict with grid geometry, or None if no grid found.
+    """
+    GRID_TOKEN_TO_DAY = {
+        '{{GRID_MON}}': 'Monday',   '{{GRID_TUE}}': 'Tuesday',
+        '{{GRID_WED}}': 'Wednesday','{{GRID_THU}}': 'Thursday',
+        '{{GRID_FRI}}': 'Friday',   '{{GRID_SAT}}': 'Saturday',
+        '{{GRID_SUN}}': 'Sunday',
+    }
+    DAY_KEYWORDS = {
+        'monday': 'Monday',   'mon': 'Monday',
+        'tuesday': 'Tuesday', 'tue': 'Tuesday',
+        'wednesday': 'Wednesday', 'wed': 'Wednesday',
+        'thursday': 'Thursday',   'thu': 'Thursday',
+        'friday': 'Friday',   'fri': 'Friday',
+        'saturday': 'Saturday',   'sat': 'Saturday',
+        'sunday': 'Sunday',   'sun': 'Sunday',
+    }
+    timere        = re.compile(
+        r'(\d{1,2}:\d{2})\s*(AM|PM)?\s*[-----]\s*(\d{1,2}:\d{2})\s*(AM|PM)?',
+        re.IGNORECASE)
+    simple_timere = re.compile(r'\b(\d{1,2}:\d{2})\s*(AM|PM)?\b', re.IGNORECASE)
+
+    def _to24(time_str, period=None):
+        """Convert HH:MM + optional AM/PM to 24-hour HH:MM string."""
+        h, m = map(int, time_str.split(':'))
+        if period:
+            p = period.upper()
+            if p == 'PM' and h != 12:
+                h += 12
+            elif p == 'AM' and h == 12:
+                h = 0
+        return f'{h:02d}:{m:02d}'
+
+    def _build_time_slots(anchor_row, anchor_col):
+        slots = []
+        for r in range(anchor_row + 1, ws.max_row + 1):
+            v = str(ws.cell(row=r, column=anchor_col).value or '').strip()
+            if not v:
+                continue
+            m = timere.search(v)
+            if m:
+                start_t = _to24(m.group(1), m.group(2))
+                end_t   = _to24(m.group(3), m.group(4))
+                slots.append((r, start_t, end_t))
+            else:
+                m2 = simple_timere.search(v)
+                if m2:
+                    start_t = _to24(m2.group(1), m2.group(2))
+                    slots.append((r, start_t, None))
+        return slots
+
+    def _normalize_12h_wrap(slots):
+        """Fix implicit 12-hour time wrapping in templates without AM/PM labels.
+
+        Philippine timetable templates often show "7:00, 7:30, ..., 12:30, 1:00, 1:30, ..."
+        where "1:00" after "12:30" means 1:00 PM = 13:00.  Detect the backwards jump in
+        the time sequence and add +12 h to all slots from that point on, so template times
+        align with the DB's 24-hour start_time / end_time values.
+        """
+        if len(slots) < 2:
+            return slots
+        result  = []
+        offset  = 0
+        prev_sm = None
+        for (r, s, e) in slots:
+            h, m = map(int, s.split(':'))
+            sm   = h * 60 + m + offset
+            if prev_sm is not None and sm < prev_sm:  # backwards jump -> 12h wrap
+                offset += 720
+                sm     += 720
+            new_s = f'{sm // 60:02d}:{sm % 60:02d}'
+            if e:
+                eh, em  = map(int, e.split(':'))
+                em_val  = eh * 60 + em + offset
+                if em_val < sm:       # end also wraps within same slot (e.g. "12:30-1:00")
+                    em_val += 720
+                new_e = f'{em_val // 60:02d}:{em_val % 60:02d}'
+            else:
+                new_e = e
+            result.append((r, new_s, new_e))
+            prev_sm = sm
+        return result
+
+    # ------------------------------------ Pass 1: token-based detection ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    time_anchor_row = time_anchor_col = None
+    for row in ws.iter_rows():
+        for cell in row:
+            if cell.value and '{{GRID_TIME}}' in str(cell.value):
+                time_anchor_row = cell.row
+                time_anchor_col = cell.column
+                break
+        if time_anchor_row:
+            break
+
+    if time_anchor_row:
+        header_row = time_anchor_row
+        day_cols = {}
+        for c in range(time_anchor_col + 1, ws.max_column + 1):
+            v = str(ws.cell(row=header_row, column=c).value or '')
+            if v in GRID_TOKEN_TO_DAY:
+                day_cols[GRID_TOKEN_TO_DAY[v]] = c
+        if day_cols:
+            time_slots = _normalize_12h_wrap(_build_time_slots(time_anchor_row, time_anchor_col))
+            if time_slots:
+                return {'header_row': header_row, 'time_col': time_anchor_col,
+                        'day_cols': day_cols, 'time_slots': time_slots}
+
+    # ------------------------------------ Pass 2: auto-detect ---- find time column + day name headers ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # Score columns: range-format "HH:MM-HH:MM" (strong signal) vs bare "HH:MM" (weak)
+    col_range_counts   = {}
+    col_time_counts    = {}
+    col_first_time_row = {}
+    for row in ws.iter_rows():
+        for cell in row:
+            if not cell.value or isinstance(cell, MergedCell):
+                continue
+            v = str(cell.value).strip()
+            c = cell.column
+            if timere.search(v):
+                col_range_counts[c] = col_range_counts.get(c, 0) + 1
+                col_time_counts[c]  = col_time_counts.get(c, 0) + 1
+                if c not in col_first_time_row:
+                    col_first_time_row[c] = cell.row
+            elif simple_timere.search(v):
+                col_time_counts[c] = col_time_counts.get(c, 0) + 1
+                if c not in col_first_time_row:
+                    col_first_time_row[c] = cell.row
+
+    if not col_time_counts:
+        return None
+
+    # Prefer columns with range-format times; fall back to simple-time count
+    if col_range_counts:
+        best_col = max(col_range_counts, key=lambda c: col_range_counts[c])
+    else:
+        best_col = max(col_time_counts, key=lambda c: col_time_counts[c])
+    if col_time_counts[best_col] < 3:
+        return None  # Too few time values ---- probably not a timetable
+
+    first_time_row = col_first_time_row[best_col]
+
+    def _scan_day_names(hrow):
+        """Scan a candidate header row for day name keywords; return day_cols dict."""
+        found = {}
+        for c in range(1, ws.max_column + 1):
+            if c == best_col:
+                continue
+            v = str(ws.cell(row=hrow, column=c).value or '').strip().lower()
+            if not v:
+                continue
+            for kw, day_name in DAY_KEYWORDS.items():
+                if kw in v and day_name not in found:
+                    found[day_name] = c
+                    break
+        return found
+
+    # Try header rows row-1, row-2, row-3 above the first time slot
+    header_row = None
+    day_cols   = {}
+    for offset in range(1, 4):
+        candidate = first_time_row - offset
+        if candidate < 1:
+            break
+        found = _scan_day_names(candidate)
+        if found:
+            header_row = candidate
+            day_cols   = found
+            break
+
+    if not day_cols:
+        return None
+
+    time_slots = _normalize_12h_wrap(_build_time_slots(header_row, best_col))
+    if not time_slots:
+        return None
+
+    return {'header_row': header_row, 'time_col': best_col,
+            'day_cols': day_cols, 'time_slots': time_slots}
+
+
+    # ------------------------------------ Pass 3: Standard Fallback ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # If no tokens or auto-detection worked, provide a standard Monday to Friday grid
+    # starting from 7:00 AM to 7:00 PM (1-hour slots).
+    fallback_day_cols = {
+        'Monday': 2, 'Tuesday': 3, 'Wednesday': 4, 'Thursday': 5,
+        'Friday': 6, 'Saturday': 7, 'Sunday': 8
+    }
+    fallback_time_slots = []
+    for i, hour in enumerate(range(7, 19)):
+        fallback_time_slots.append((i + 2, f"{hour:02d}:00", f"{hour+1:02d}:00"))
+    
+    return {
+        'header_row': 1,
+        'time_col': 1,
+        'day_cols': fallback_day_cols,
+        'time_slots': fallback_time_slots,
+        'is_fallback': True
+    }
+
+
+def build_schedule_overlays(schedules, grid_info, view_type):
+    """Map ScheduledClass objects onto the detected Excel grid.
+
+    Returns (cell_overrides, extra_merge_map, extra_skip_cells).
+    """
+    cell_overrides   = {}
+    extra_merge_map  = {}
+    extra_skip_cells = set()
+    # cell_data: (start_row, col) -> list of (rowspan, lines, entry_dict)
+    cell_data = {}
+
+    # Badge view-type: some entities are not real conflicts ---- treat as neutral.
+    _vtype_for_badge = view_type
+    if view_type == 'room' and schedules:
+        _first_room = getattr(schedules[0], 'room', None)
+        if _first_room and getattr(_first_room, 'capacity', 0) == 999:
+            _vtype_for_badge = 'room_neutral'  # NSTP universal room ---- not a real conflict
+    if view_type == 'faculty' and schedules:
+        _first_faculty = getattr(schedules[0], 'faculty', None)
+        if _first_faculty:
+            _fname = (getattr(_first_faculty, 'full_name', '') or '').strip().upper()
+            if 'T.B.A' in _fname or _fname == 'TBA':
+                _vtype_for_badge = 'faculty_neutral'  # T.B.A. is not a real teacher ---- not a conflict
+
+    day_cols   = grid_info['day_cols']
+    time_slots = grid_info['time_slots']  # [(row, start_str, end_str|None)]
+
+    def t2m(t):
+        """'HH:MM' -> minutes from midnight."""
+        if not t:
+            return 0
+        try:
+            h, mn = t.strip().split(':')
+            return int(h) * 60 + int(mn)
+        except Exception:
+            return 0
+
+    slot_list = []
+    slot_by_start = {}
+    for (row, s, e) in time_slots:
+        sm = t2m(s)
+        em = t2m(e) if e else sm + 60
+        slot_list.append((row, sm, em))
+        if sm not in slot_by_start:
+            slot_by_start[sm] = row
+    slot_list.sort(key=lambda x: x[0])
+
+    def physical_rows(start_row, start_min, end_min):
+        """Return the physical Excel row span from start_row to the last slot row
+        that falls within [start_min, end_min). Works correctly even when the
+        template has empty/spacer rows between time slots."""
+        last_slot_row = start_row
+        for (srow, smin, emin) in slot_list:
+            if srow < start_row:
+                continue
+            if smin >= end_min:
+                break
+            if smin >= start_min:
+                last_slot_row = srow
+        return max(1, last_slot_row - start_row + 1)
+
+    def _esc(s):
+        return str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+    def fmt_faculty(full_name, sex):
+        parts = (full_name or '').split()
+        surname = parts[-1].upper() if parts else (full_name or '').upper()
+        prefix = 'MR.' if sex == 'M' else 'MS.' if sex == 'F' else 'PROF.'
+        return f'{prefix} {surname}'
+
+    # ------------------------------------ Pass 1: collect all schedule entries per grid cell ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    for sched in schedules:
+        col = day_cols.get(sched.day)
+        if col is None:
+            continue
+        sm  = t2m(sched.start_time)
+        em  = t2m(sched.end_time)
+        start_row = slot_by_start.get(sm)
+        if start_row is None:
+            best = min(slot_list, key=lambda x: abs(x[1] - sm), default=None)
+            if best:
+                start_row = best[0]
+            else:
+                continue
+
+        rowspan = physical_rows(start_row, sm, em)
+
+        course_code  = (sched.course.course_code or sched.course.course_name or '') if sched.course  else ''
+        section_name = sched.section.section_name if sched.section else ''
+        faculty_name = fmt_faculty(sched.faculty.full_name, getattr(sched.faculty, 'sex', None)) if sched.faculty else 'T.B.A.'
+        room_name    = sched.room.room_name        if sched.room    else 'T.B.A.'
+        sess_type    = getattr(sched, 'session_type', '')
+
+        if view_type == 'section':
+            lines = [course_code + (f' ({sess_type})' if sess_type else ''),
+                     faculty_name, room_name]
+        elif view_type == 'faculty':
+            lines = [course_code + (f' ({sess_type})' if sess_type else ''),
+                     section_name, room_name]
+        elif view_type == 'course':
+            lines = [section_name or course_code, faculty_name, room_name]
+        else:  # room
+            lines = [course_code + (f' ({sess_type})' if sess_type else ''),
+                     section_name, faculty_name]
+
+        lines = [l for l in lines if l]
+        start_t = _fmt_time_12h(sched.start_time) if sched.start_time else ''
+        end_t   = _fmt_time_12h(sched.end_time)   if sched.end_time   else ''
+        entry_dict = {'c': course_code, 's': section_name, 'f': faculty_name,
+                      't': f'{start_t}----{end_t}'}
+        cell_data.setdefault((start_row, col), []).append((rowspan, lines, entry_dict))
+
+    # ------------------------------------ Pass 2: build HTML for each cell, stacking all entries ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    for (start_row, col), entries in sorted(cell_data.items()):
+        rowspan = max(e[0] for e in entries)
+        cnt     = len(entries)
+
+        if cnt == 1:
+            # Single schedule ---- centered block
+            _, lines, _ = entries[0]
+            main_line = _esc(lines[0]) if lines else ''
+            sub_html  = ''.join(
+                f'<div>{_esc(l)}</div>'
+                for l in lines[1:] if l
+            )
+            cell_html = (
+                '<div style="display:table;width:100%;height:100%;'
+                'border-top:1px solid #000000;border-right:1px solid #000000;'
+                'border-bottom:1px solid #000000;border-left:1px solid #000000;overflow:hidden;">'
+                '<div style="display:table-cell;vertical-align:middle;text-align:center;'
+                'padding:3px;font-size:11px;line-height:1.3;color:#000;">'
+                f'<div>{main_line}</div>'
+                f'{sub_html}'
+                '</div></div>'
+            )
+        else:
+            # Multiple overlapping schedules ---- show top schedule only, badge reveals all
+            _, lines, _ = entries[0]
+            main_line = _esc(lines[0]) if lines else ''
+            sub_html  = ''.join(f'<div>{_esc(l)}</div>' for l in lines[1:] if l)
+            payload   = json.dumps([e[2] for e in entries]).replace("'", "&#39;")
+            badge     = (
+                f'<span class="sched-overlap-badge" data-overlap=\'{payload}\' data-vtype="{_vtype_for_badge}" '
+                f'style="position:absolute;top:3px;right:3px;background:#dc3545;'
+                f'color:#fff;font-size:9px;font-weight:bold;min-width:16px;height:16px;'
+                f'border-radius:50%;display:inline-flex;align-items:center;'
+                f'justify-content:center;line-height:1;z-index:5;cursor:pointer;">{cnt}</span>'
+            )
+            cell_html = (
+                '<div style="position:relative;display:table;width:100%;height:100%;'
+                'border-top:1px solid #000000;border-right:1px solid #000000;'
+                'border-bottom:1px solid #000000;border-left:1px solid #000000;overflow:hidden;">'
+                f'{badge}'
+                '<div style="display:table-cell;vertical-align:middle;text-align:center;'
+                'padding:3px;font-size:11px;line-height:1.3;color:#000;">'
+                f'<div>{main_line}</div>'
+                f'{sub_html}'
+                '</div></div>'
+            )
+
+        cell_overrides[(start_row, col)] = cell_html
+        if rowspan > 1 and (start_row, col) not in extra_skip_cells:
+            extra_merge_map[(start_row, col)] = (rowspan, 1)
+            for dr in range(1, rowspan):
+                extra_skip_cells.add((start_row + dr, col))
+
+    return cell_overrides, extra_merge_map, extra_skip_cells
+
+
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Paper size catalog ---- (width_in, height_in) in portrait orientation
+PAPER_SIZES = {
+    'A4':        (8.27,  11.69,  'A4 Bond Paper (8.27 in ------------ 11.69 in)'),
+    'Letter':    (8.5,   11.0,   'Short Bond / US Letter (8.5 in ------------ 11 in)'),
+    'Legal':     (8.5,   14.0,   'Long Bond / Legal (8.5 in ------------ 14 in)'),
+    'Folio':     (8.5,   13.0,   'Folio / F4 (8.5 in ------------ 13 in)'),
+    'A3':        (11.69, 16.54,  'A3 (11.69 in ------------ 16.54 in)'),
+    'A5':        (5.83,  8.27,   'A5 (5.83 in ------------ 8.27 in)'),
+    'B4':        (9.84,  13.90,  'B4 (9.84 in ------------ 13.90 in)'),
+    'B5':        (6.93,  9.84,   'B5 (6.93 in ------------ 9.84 in)'),
+    'Executive': (7.25,  10.5,   'Executive (7.25 in ------------ 10.5 in)'),
+    'Tabloid':   (11.0,  17.0,   'Tabloid / Ledger (11 in ------------ 17 in)'),
+    'Statement': (5.5,   8.5,    'Statement / Half Letter (5.5 in ------------ 8.5 in)'),
+}
+
+
+def _get_margins(settings):
+    """Extract shared margin values (Section/Room/Course) from SystemSettings."""
+    return {
+        'top':    getattr(settings, 'margin_top',    1.0) or 1.0,
+        'bottom': getattr(settings, 'margin_bottom', 1.0) or 1.0,
+        'left':   getattr(settings, 'margin_left',   1.0) or 1.0,
+        'right':  getattr(settings, 'margin_right',  1.0) or 1.0,
+        'paper':  getattr(settings, 'paper_size',    'A4') or 'A4',
+    }
+
+
+def _get_faculty_margins(settings):
+    """Extract Faculty-specific margin values (independent from shared margins)."""
+    return {
+        'top':    getattr(settings, 'fac_margin_top',    1.0) or 1.0,
+        'bottom': getattr(settings, 'fac_margin_bottom', 1.0) or 1.0,
+        'left':   getattr(settings, 'fac_margin_left',   1.0) or 1.0,
+        'right':  getattr(settings, 'fac_margin_right',  1.0) or 1.0,
+        'paper':  getattr(settings, 'fac_paper_size',    'A4') or 'A4',
+    }
+
+
+def _get_img_settings(settings, layout_type):
+    """Return parsed per-image settings list for a layout type.
+    Each element: {'x': float, 'y': float, 'scale': float, 'z_above': bool}
+    Returns [] if no settings saved or column missing."""
+    col_map = {
+        'section': 'section_img_settings',
+        'faculty': 'faculty_img_settings',
+        'room':    'room_img_settings',
+        'course':  'course_img_settings',
+    }
+    raw = getattr(settings, col_map.get(layout_type, ''), None)
+    if not raw:
+        return []
+    try:
+        data = json.loads(raw)
+        if isinstance(data, list):
+            return data
+    except (ValueError, TypeError):
+        pass
+    return []
+
+
+def _get_template_img_count(layout_type):
+    """Count images embedded in the layout's Excel template (uses template cache)."""
+    path = os.path.join(basedir, 'static', 'assets', f'{layout_type}_template.xlsx')
+    if not os.path.exists(path):
+        return 0
+    try:
+        ws, _, _ = _get_cached_template(path)
+        return len(getattr(ws, '_images', []))
+    except Exception:
+        return 0
+
+
+def _parse_img_slots(raw_json, n):
+    """Return list of n image setting dicts, padded with defaults."""
+    _default = {'x': 0.0, 'y': 0.0, 'scale': 1.0, 'z_above': True}
+    try:
+        slots = json.loads(raw_json) if raw_json else []
+    except Exception:
+        slots = []
+    while len(slots) < n:
+        slots.append(dict(_default))
+    return slots[:n]
+
+
+def _read_img_slots(form, prefix, n):
+    """Read n image slot fields from POST form and return JSON string."""
+    slots = []
+    for i in range(1, n + 1):
+        try:
+            x       = float(form.get(f'{prefix}_img_{i}_x', 0.0))
+            y       = float(form.get(f'{prefix}_img_{i}_y', 0.0))
+            scale   = max(0.1, min(5.0, float(form.get(f'{prefix}_img_{i}_scale', 1.0))))
+            z_above = form.get(f'{prefix}_img_{i}_z_above', '1') == '1'
+        except (ValueError, TypeError):
+            x, y, scale, z_above = 0.0, 0.0, 1.0, True
+        slots.append({'x': x, 'y': y, 'scale': scale, 'z_above': z_above})
+    return json.dumps(slots)
+
+
+@app.route('/preview-layout/<layout_type>')
+@login_required
+@role_required('admin', 'superadmin')
+def preview_layout(layout_type):
+    """Render the uploaded XLSX template as a standalone A4-paper HTML page.
+    Used by the preview iframe in manage_layouts.html."""
+    path = os.path.join(basedir, 'static', 'assets', f"{layout_type}_template.xlsx")
+    if not os.path.exists(path):
+        return (
+            "<div style='padding:40px;color:#dc3545;font-family:Arial,sans-serif;'>"
+            f"<strong>No template found:</strong> {layout_type}_template.xlsx<br>"
+            "Upload an Excel (.xlsx) file first."
+            "</div>"
+        )
+
+    wb = load_workbook(path, data_only=True)
+    ws = wb.active
+    settings = get_settings()
+    var_map  = build_variable_map(layout_type, settings)   # preview: dynamic fields show [placeholder]
+    bounds   = detect_content_bounds(ws)
+    if layout_type == 'faculty':
+        static_overrides = build_faculty_cell_overrides(ws, settings)
+        _margins = _get_faculty_margins(settings)
+    else:
+        static_overrides = build_static_cell_overrides(ws, layout_type, settings)
+        _margins = _get_margins(settings)
+    _img_settings = _get_img_settings(settings, layout_type)
+    html_content, table_px, _, _ = render_excel_to_html(
+        ws, variable_map=var_map, cell_overrides=static_overrides, bounds=bounds,
+        layout_type=layout_type, margins=_margins, img_settings=_img_settings)
+    return render_a4_page(html_content, table_px, margins=_margins)
+
+
+
+def render_viewer_page(html_content, table_px, margins=None, for_canvas=False):
+    """Wrap HTML table in a paper-sized page for iframe preview.
+
+    margins: dict with keys top/bottom/left/right (float, inches) + paper (str key).
+    for_canvas: if True, sets background to transparent and removes padding for Infinite Canvas.
+    """
+    m = margins or {}
+    mt = float(m.get('top',    1.0))
+    mb = float(m.get('bottom', 1.0))
+    ml = float(m.get('left',   1.0))
+    mr = float(m.get('right',  1.0))
+    paper_key  = m.get('paper', 'A4')
+    pw, ph, _  = PAPER_SIZES.get(paper_key, PAPER_SIZES['A4'])
+
+    # Canvas-specific overrides
+    bg_style = "background: transparent;" if for_canvas else "background: #c8c8c8;"
+    body_padding = "padding: 0;" if for_canvas else "padding: 24px 0;"
+    body_overflow = "overflow: hidden;" if for_canvas else ""
+
+    return f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{
+    {bg_style}
+    font-family: Calibri, Arial, sans-serif;
+    {body_padding}
+    {body_overflow}
+    min-height: 100vh;
+    touch-action: pan-x pan-y;
+  }}
+  
+  /* On larger screens, center the paper. On mobile, keep it left-aligned so it scales cleanly */
+  @media (min-width: 850px) {{
+    body {{
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }}
+  }}
+  .a4 {{
+    background: #ffffff;
+    width: {pw}in;
+    min-height: {ph}in;
+    padding: {mt}in {mr}in {mb}in {ml}in;
+    box-shadow: 0 4px 24px rgba(0,0,0,.28), 0 1px 4px rgba(0,0,0,.14);
+    border-radius: 1px;
+    position: relative;
+    overflow: visible;
+  }}
+  .table-wrap {{
+    width: 100%;
+    overflow: visible;
+    position: relative;
+  }}
+  /* Debug grid ---- faint outline on every cell */
+  table td, table th {{
+    outline: 0.5px solid rgba(0,0,0,0.10);
+  }}
+  /* Overlap badge ---- cursor only, tooltip via JS */
+  .sched-overlap-badge {{ cursor: pointer; }}
+  table {{
+    width: 100%;
+    transform-origin: top left;
+  }}
+</style></head><body>
+  <div class="a4" id="a4Paper">
+    <div class="table-wrap" id="tableWrap">
+      {html_content}
+    </div>
+  </div>
+  <script>
+    (function() {{
+      var wrap  = document.getElementById('tableWrap');
+      var paper = document.getElementById('a4Paper');
+      // Scale the inner position:relative container (holds both table AND images)
+      // so that images auto-resize together with the table.
+      var table = wrap.querySelector('table');
+      if (!table) {{
+          // Fallback for sheets with logos where inner div exists
+          var inner = wrap.querySelector('div');
+          table = inner && inner.querySelector('table');
+      }}
+      if (!table) return;
+
+      // Available content area in px (paper minus CSS padding margins)
+      var DPI = 96;
+      var paperContentW = ({pw} - {ml} - {mr}) * DPI;
+      var paperContentH = ({ph} - {mt} - {mb}) * DPI;
+
+      // Identify the secure content wrapper (the isolation:isolate div)
+      var target = wrap.firstElementChild; 
+      if (!target) return;
+      var table = target.querySelector('table');
+      if (!table) return;
+
+      // Measure unscaled content bounds
+      var contentW = target.scrollWidth || target.offsetWidth;
+      var contentH = table.scrollHeight;
+
+      // Calculate necessary scaling to fit both width and height
+      var scaleW = (contentW > paperContentW && paperContentW > 0) ? paperContentW / contentW : 1.0;
+      var scaleH = (contentH > paperContentH && paperContentH > 0) ? paperContentH / contentH : 1.0;
+
+      // Pick the stricter scale (the smaller one) to ensure no overflow
+      var finalScale = Math.min(scaleW, scaleH, 1.0);
+
+      if (finalScale < 1.0) {{
+          target.style.transform = 'scale(' + finalScale + ')';
+          target.style.transformOrigin = 'top center'; // Centered looks more professional on paper
+          
+          // Fix visual width of wrapper to avoid extra scroll-room
+          target.style.width = (contentW) + 'px'; 
+          wrap.style.overflow = 'hidden';
+
+          // Lock paper to fixed height when shrinking to fit
+          paper.style.height    = '{ph}in';
+          paper.style.minHeight = 'unset';
+          paper.style.overflow  = 'hidden';
+      }}
       // --- Custom Mobile Pinch-to-Zoom (Isolated) ---
       var currentZoom = 1.0;
       var lastDist = 0;
@@ -11574,39 +12311,6 @@ def _read_img_slots(form, prefix, n):
             x, y, scale, z_above = 0.0, 0.0, 1.0, True
         slots.append({'x': x, 'y': y, 'scale': scale, 'z_above': z_above})
     return json.dumps(slots)
-
-
-@app.route('/preview-layout/<layout_type>')
-@login_required
-@role_required('admin', 'superadmin')
-def preview_layout(layout_type):
-    """Render the uploaded XLSX template as a standalone A4-paper HTML page.
-    Used by the preview iframe in manage_layouts.html."""
-    path = os.path.join(basedir, 'static', 'assets', f"{layout_type}_template.xlsx")
-    if not os.path.exists(path):
-        return (
-            "<div style='padding:40px;color:#dc3545;font-family:Arial,sans-serif;'>"
-            f"<strong>No template found:</strong> {layout_type}_template.xlsx<br>"
-            "Upload an Excel (.xlsx) file first."
-            "</div>"
-        )
-
-    wb = load_workbook(path, data_only=True)
-    ws = wb.active
-    settings = get_settings()
-    var_map  = build_variable_map(layout_type, settings)   # preview: dynamic fields show [placeholder]
-    bounds   = detect_content_bounds(ws)
-    if layout_type == 'faculty':
-        static_overrides = build_faculty_cell_overrides(ws, settings)
-        _margins = _get_faculty_margins(settings)
-    else:
-        static_overrides = build_static_cell_overrides(ws, layout_type, settings)
-        _margins = _get_margins(settings)
-    _img_settings = _get_img_settings(settings, layout_type)
-    html_content, table_px, _, _ = render_excel_to_html(
-        ws, variable_map=var_map, cell_overrides=static_overrides, bounds=bounds,
-        layout_type=layout_type, margins=_margins, img_settings=_img_settings)
-    return render_a4_page(html_content, table_px, margins=_margins)
 
 
 # ------------------------------------ Template cache ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

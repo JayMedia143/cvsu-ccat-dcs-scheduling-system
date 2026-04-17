@@ -89,7 +89,7 @@ body {
 
 .sheets-menubar {
     background-color: #ffffff;
-    height: 48px;
+    height: 56px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -195,14 +195,17 @@ body {
 }
 
 /* Menu Items */
+
 .menu-item {
     color: #3c4043;
     font-size: 0.9rem;
     font-weight: 500;
-    padding: 6px 12px;
-    border-radius: 4px;
+    padding: 0 16px;
+    height: 40px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
     text-decoration: none;
-    margin-right: 5px;
     transition: background-color 0.1s;
     cursor: pointer;
     border: none;
@@ -222,7 +225,7 @@ body {
 
 /* Push modals below fixed navbar */
 .modal-dialog-below-nav {
-    margin-top: 70px;
+    margin-top: 80px;
 }
 
 /* Plain checkbox style (neutral dark instead of blue) */
@@ -2597,14 +2600,21 @@ table.table tbody tr.irreg-row.selected:hover td {
 }
 
 /* Offcanvas Navigation Styles */
-.offcanvas-navigation .nav-link, .offcanvas-navigation .menu-item {
-    font-weight: 500;
+.offcanvas-navigation .nav-link, .offcanvas-navigation 
+.menu-item {
     color: #3c4043;
-    padding: 10px 15px !important;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 0 16px;
+    height: 40px;
     border-radius: 8px;
-    margin-bottom: 4px;
-    display: block !important;
-    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    transition: background-color 0.1s;
+    cursor: pointer;
+    border: none;
+    background: transparent;
 }
 
 .offcanvas-navigation .menu-item.active {
