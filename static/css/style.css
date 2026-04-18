@@ -2673,17 +2673,14 @@ table.table tbody tr.irreg-row.selected:hover td {
 
 @media (max-width: 991.98px) {
     body {
-        padding-top: 60px !important;
-        /* Adjusted for smaller navbar */
+        padding-top: 80px !important;
+        /* Equalized with desktop to prevent content shift */
     }
 
-    .main-content {
-        padding: 1rem 1rem !important;
-    }
+
 
     /* Navbar Contextual Adjustments */
     .sheets-menubar {
-        height: auto !important;
         padding: 8px 10px !important;
     }
 

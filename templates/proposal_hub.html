@@ -3,12 +3,14 @@
 {% block title %}CvSU Scheduling System | Decision Hub{% endblock %}
 
 {% block content %}
+
 <div class="messenger-hub-wrapper">
     <!-- 1. CONVO LIST -->
     <div class="messenger-sidebar">
         <div class="sidebar-header-main p-3">
             <h4 class="fw-bold mb-3 d-flex align-items-center">Chats
-                <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#decisionHubInfoModal" title="How to use Decision Hub">
+                <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal"
+                    data-bs-target="#decisionHubInfoModal" title="How to use Decision Hub">
                     <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
                 </button>
             </h4>
@@ -29,6 +31,11 @@
     <div class="messenger-chat-pane">
         <!-- Header -->
         <div class="chat-header-main">
+            <!-- Mobile Back Button -->
+            <button class="btn btn-messenger-icon d-md-none me-2" onclick="backToConvoList()">
+                <i class="bi bi-chevron-left fw-bold"></i>
+            </button>
+
             <div class="d-flex align-items-center gap-2">
                 <div class="avatar-header" id="activeAvatarHeader">E</div>
                 <div>
@@ -37,6 +44,11 @@
                 </div>
             </div>
             <div class="ms-auto d-flex align-items-center gap-2">
+                <!-- Pending Review Button (all screen sizes, hidden at 1100px+ via CSS) -->
+                <button class="btn btn-messenger-icon btn-pending-review" type="button" data-bs-toggle="offcanvas"
+                    data-bs-target="#offcanvasDetails" aria-controls="offcanvasDetails" title="Pending Review">
+                    <i class="bi bi-clock-history text-warning"></i>
+                </button>
             </div>
         </div>
 
@@ -57,6 +69,11 @@
                 </div>
             </div>
 
+            <div id="editModeIndicator" class="d-none">
+                <div class="edit-mode-label"><i class="bi bi-pencil-fill me-1"></i> Editing message...</div>
+                <button type="button" class="btn-cancel-edit" onclick="cancelEditMode()"><i
+                        class="bi bi-x"></i></button>
+            </div>
             <form id="chatForm" class="chat-form-main">
                 <div class="input-tools">
                     <button type="button" class="btn-messenger-icon text-primary" onclick="toggleDraftPicker(true)"><i
@@ -79,7 +96,8 @@
     <!-- 3. RIGHT SIDEBAR (META) -->
     <div class="messenger-details-pane custom-scrollbar" id="detailsPane">
         <div class="p-3">
-            <h6 class="text-uppercase text-muted fw-bold x-small mb-3">Pending Review</h6>
+            <h6 class="text-uppercase text-muted fw-bold x-small mb-3"><i
+                    class="bi bi-clock-history me-1 text-warning"></i>Pending Review</h6>
             <div id="proposalList">
                 <div class="text-center py-3">
                     <div class="spinner-border spinner-border-sm text-secondary"></div>
@@ -144,12 +162,14 @@
                         </button>
                         <ul class="dropdown-menu google-sort-menu" aria-labelledby="pvSortDropdown">
                             <li>
-                                <a class="dropdown-item google-sort-item active" href="javascript:void(0);" onclick="pvApplySort('asc', this)">
+                                <a class="dropdown-item google-sort-item active" href="javascript:void(0);"
+                                    onclick="pvApplySort('asc', this)">
                                     Sort by: A — Z
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item google-sort-item" href="javascript:void(0);" onclick="pvApplySort('desc', this)">
+                                <a class="dropdown-item google-sort-item" href="javascript:void(0);"
+                                    onclick="pvApplySort('desc', this)">
                                     Sort by: Z — A
                                 </a>
                             </li>
@@ -250,7 +270,8 @@
     </div>
 </div>
 <!-- DECISION HUB INFO MODAL -->
-<div class="modal fade" id="decisionHubInfoModal" tabindex="-1" aria-labelledby="decisionHubInfoModalLabel" aria-hidden="true">
+<div class="modal fade" id="decisionHubInfoModal" tabindex="-1" aria-labelledby="decisionHubInfoModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header">
@@ -262,19 +283,34 @@
             <div class="modal-body p-4">
                 <div class="mb-4">
                     <h6 class="fw-bold text-primary small mb-1">1. Starting a Chat</h6>
-                    <p class="small text-muted mb-0">Click any user on the left sidebar to start messaging. Click <strong>'Announcements'</strong> (at the very top) for department-wide broadcasts.</p>
+                    <p class="small text-muted mb-0">Click any user on the left sidebar to start messaging. Click
+                        <strong>'Announcements'</strong> (at the very top) for department-wide broadcasts.
+                    </p>
                 </div>
                 <div class="mb-4">
                     <h6 class="fw-bold text-success small mb-1">2. Sending Schedule Drafts</h6>
-                    <p class="small text-muted mb-0">To share a proposal, look for the <strong>(+) Plus Button</strong> at the bottom-left of the message box. Click it to select and attach your schedule draft to your message.</p>
+                    <p class="small text-muted mb-0">To share a proposal, look for the <strong>(+) Plus Button</strong>
+                        at the bottom-left of the message box. Click it to select and attach your schedule draft to your
+                        message.</p>
                 </div>
                 <div class="mb-4">
                     <h6 class="fw-bold text-warning small mb-1">3. Managing Proposals</h6>
-                    <p class="small text-muted mb-0">The <strong>'Pending Review'</strong> section on the right shows all schedule proposals. There is <strong>no limit</strong> to this list, but it will automatically <strong>scroll internally</strong> if it reaches the bottom of your screen, ensuring the website stays neat. Admins can click the <strong>Green Check (Approve)</strong> or <strong>Red X (Reject)</strong> icons to finalize them.</p>
+                    <p class="small text-muted mb-0">The <strong>'Pending Review'</strong> section on the right shows
+                        all schedule proposals. There is <strong>no limit</strong> to this list, but it will
+                        automatically <strong>scroll internally</strong> if it reaches the bottom of your screen,
+                        ensuring the website stays neat. Admins can click the <strong>Green Check (Approve)</strong> or
+                        <strong>Red X (Reject)</strong> icons to finalize them.
+                    </p>
                 </div>
                 <div class="mb-0">
                     <h6 class="fw-bold text-info small mb-1">4. Visualizing the Plan</h6>
-                    <p class="small text-muted mb-0">Once you send a draft using the <strong>(+) Plus Button</strong>, a <strong>'Schedule Draft Card'</strong> (with a calendar icon) will appear in your chat. Simply <strong>click the card</strong> to open and launch the <strong>Interactive Canvas</strong>. Once the map opens, you can <strong>left-click and hold your mouse</strong> then drag in any direction to move the map. Use your <strong>mouse scroll wheel up to zoom in</strong> (magnify details) or <strong>scroll down to zoom out</strong>.</p>
+                    <p class="small text-muted mb-0">Once you send a draft using the <strong>(+) Plus Button</strong>, a
+                        <strong>'Schedule Draft Card'</strong> (with a calendar icon) will appear in your chat. Simply
+                        <strong>click the card</strong> to open and launch the <strong>Interactive Canvas</strong>. Once
+                        the map opens, you can <strong>left-click and hold your mouse</strong> then drag in any
+                        direction to move the map. Use your <strong>mouse scroll wheel up to zoom in</strong> (magnify
+                        details) or <strong>scroll down to zoom out</strong>.
+                    </p>
                 </div>
             </div>
             <div class="modal-footer bg-light">
@@ -286,6 +322,10 @@
 
 
 <style>
+    .main-content {
+        padding: 0rem 0rem !important;
+    }
+
     /* ──────── MESSENGER UI ENGINE ──────── */
     :root {
         --ms-blue: #0084ff;
@@ -298,11 +338,15 @@
         --ms-border: #f0f0f0;
     }
 
-    .text-muted-v2 { color: #adb5bd; }
+    .text-muted-v2 {
+        color: #adb5bd;
+    }
+
     .info-icon-hover {
         transition: all 0.2s ease;
         cursor: pointer;
     }
+
     .info-icon-hover:hover {
         color: #198754 !important;
         transform: scale(1.2);
@@ -316,11 +360,10 @@
 
     .messenger-hub-wrapper {
         display: flex;
-        height: calc(100vh - 65px);
+        height: calc(100vh - 80px);
         width: 100%;
         overflow: hidden;
-        margin: -1.5rem;
-        /* Cancel typical template padding */
+        position: relative;
     }
 
     /* 1. SIDEBAR */
@@ -489,7 +532,8 @@
 
     .chat-log-main {
         flex-grow: 1;
-        padding: 20px 20px 28px;
+        padding: 20px 24px 28px 20px;
+        /* Added extra 4px right padding for tails */
         overflow-y: auto;
         display: flex;
         flex-direction: column;
@@ -512,13 +556,38 @@
         justify-content: flex-start;
     }
 
+    /* Group for Bubble + Actions Dots */
+    .msg-group {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        width: fit-content !important;
+        max-width: 85% !important;
+        /* GLOBAL LIMIT */
+        flex-grow: 0 !important;
+        flex-shrink: 0 !important;
+    }
+
+    .bubble-wrap.me .msg-group {
+        flex-direction: row-reverse;
+        justify-content: flex-end;
+        margin-left: auto;
+    }
+
     .bubble {
-        max-width: 85%;
         padding: 8px 14px;
         font-size: 0.95rem;
         line-height: 1.4;
         position: relative;
-        word-break: break-word;
+        word-wrap: break-word;
+        /* Traditional break */
+        overflow-wrap: anywhere;
+        /* New break for long strings */
+        word-break: normal;
+        width: fit-content;
+        max-width: 100%;
+        /* Relative to msg-group (85%) */
+        min-width: 40px;
     }
 
     .bubble-wrap.me .bubble {
@@ -670,9 +739,46 @@
         color: rgba(255, 255, 255, 0.8);
     }
 
-    /* 3. INPUT */
+    /* Edit Mode Indicator - Premium Redesign */
+    #editModeIndicator {
+        padding: 8px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+        border-left: 4px solid #0084ff;
+    }
+
+    .edit-mode-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #0084ff;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-cancel-edit {
+        background: rgba(0, 132, 255, 0.1);
+        border: none;
+        color: #0084ff;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        transition: background 0.2s;
+    }
+
+    .btn-cancel-edit:hover {
+        background: rgba(0, 132, 255, 0.2);
+    }
+
     .chat-input-main {
-        padding: 12px 16px 36px;
+        padding: 16px;
         border-top: 1px solid var(--ms-border);
         background: #fff;
     }
@@ -700,6 +806,7 @@
         justify-content: center;
         font-size: 1.2rem;
         transition: background 0.2s;
+        margin-top: 5px;
     }
 
     .btn-messenger-icon:hover {
@@ -781,6 +888,83 @@
         }
     }
 
+    @media (max-width: 767px) {
+        .messenger-sidebar {
+            width: 100% !important;
+            border-right: none;
+            display: flex;
+            transition: transform 0.3s ease;
+        }
+
+        .messenger-chat-pane {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1040;
+            display: flex;
+        }
+
+        .messenger-hub-wrapper.show-chat .messenger-sidebar {
+            transform: translateX(-20%);
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .messenger-hub-wrapper.show-chat .messenger-chat-pane {
+            transform: translateX(0);
+        }
+
+        .chat-header-main {
+            height: 56px;
+            padding: 0 10px;
+        }
+
+        .chat-log-main {
+            padding: 15px 12px;
+        }
+
+        .chat-log-main {
+            padding: 15px 12px;
+        }
+
+        .chat-input-main {
+            padding: 16px;
+        }
+
+        /* MODAL CENTERING (Consolidated) */
+        #deleteMessageModal .modal-dialog {
+            display: flex !important;
+            align-items: center !important;
+            min-height: calc(100% - 1rem) !important;
+            margin: auto !important;
+            pointer-events: none;
+        }
+
+        #deleteMessageModal .modal-content {
+            margin: auto;
+        }
+    }
+
+    /* Hide pending review button on desktop (sidebar is already visible) */
+    @media (min-width: 1100px) {
+        .btn-pending-review {
+            display: none !important;
+        }
+    }
+
+    /* Ensure offcanvas always renders above the chat pane */
+    .offcanvas {
+        z-index: 1060 !important;
+    }
+
+    .offcanvas-backdrop {
+        z-index: 1055 !important;
+    }
+
     .x-small {
         font-size: 0.7rem;
     }
@@ -812,7 +996,8 @@
         width: 320px;
         background: #fff;
         border-radius: 12px;
-        z-index: 1000;
+        z-index: 1060;
+        /* Higher than mobile chat pane (1040) */
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -849,6 +1034,17 @@
     .pv-card.pv-dimmed {
         opacity: 0.15;
         pointer-events: none;
+    }
+
+    /* Mobile adjustments for overlay */
+    @media (max-width: 991.98px) {
+        .messenger-overlay {
+            left: 50% !important;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 340px;
+            bottom: 70px;
+        }
     }
 
     .pv-card {
@@ -1365,38 +1561,121 @@
     }
 
     /* Edit / Delete hover actions */
-    .bubble-wrap.me .bubble-actions {
-        display: none;
+    .bubble-actions {
+        display: flex;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        flex-shrink: 0;
+        margin-bottom: 12px;
+        position: relative;
+        /* ANCHOR FOR DROPDOWN */
     }
 
     .bubble-wrap.me:hover .bubble-actions {
-        display: flex;
+        opacity: 1;
+        pointer-events: auto;
     }
 
-    .bubble-actions {
-        align-items: center;
-        gap: 4px;
-        margin-bottom: 4px;
-        justify-content: flex-end;
-    }
-
-    .bubble-action-btn {
-        width: 26px;
-        height: 26px;
+    /* Messenger style options button */
+    .bubble-options-trigger {
+        width: 30px;
+        height: 30px;
         border-radius: 50%;
         border: none;
-        background: #f0f2f5;
+        background: transparent;
         color: #65676b;
-        font-size: 0.7rem;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: background 0.15s;
+        transition: background 0.2s;
     }
 
-    .bubble-action-btn:hover {
-        background: #dde1e7;
+    .bubble-options-trigger:hover {
+        background: #f0f2f5;
+    }
+
+    /* Messenger style dropdown menu */
+    .bubble-dropdown-menu {
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        border-radius: 12px;
+        padding: 8px;
+        min-width: 140px;
+        z-index: 1100;
+        /* SMART BOUNDARY SAFEGUARD */
+        max-width: 85vw;
+        overflow: hidden;
+    }
+
+    .bubble-dropdown-item {
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 0.88rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        transition: background 0.2s;
+        color: #050505;
+        text-decoration: none !important;
+    }
+
+    .bubble-dropdown-item:hover {
+        background: #f0f2f5;
+    }
+
+    .bubble-dropdown-item.text-danger:hover {
+        background: #fff0f0;
+    }
+
+    /* Inline Editor Styles */
+    .inline-edit-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .inline-edit-textarea {
+        width: 100%;
+        background: #fff !important;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 8px 12px;
+        font-size: 0.95rem;
+        color: #333 !important;
+        resize: none;
+    }
+
+    .inline-edit-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 6px;
+        margin-top: 2px;
+    }
+
+    .btn-inline-save {
+        background: #0084ff;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .btn-inline-cancel {
+        background: #f0f2f5;
+        color: #65676b;
+        border: none;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        font-weight: 600;
     }
 
     /* Scrollbars */
@@ -1404,13 +1683,27 @@
         width: 6px;
     }
 
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #bcc0c4;
-        border-radius: 10px;
+    .custom-scrollbar::-webkit-scrollbar {
+        display: none;
+        /* Hide scrollbar in Chrome/Safari/Brave */
     }
 
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
+    .custom-scrollbar {
+        scrollbar-width: none;
+        /* Hide scrollbar in Firefox */
+        -ms-overflow-style: none;
+        /* Hide scrollbar in IE/Edge */
+    }
+
+    /* Centering and Spacing Refs */
+    .chat-log-main:empty::before {
+        content: 'No messages yet. Say hi!';
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        color: #8e9194;
+        font-size: 0.9rem;
     }
 </style>
 
@@ -1493,21 +1786,29 @@
     }
 
     function renderPendingDrafts(drafts) {
-        const el = document.getElementById('proposalList');
-        if (!drafts.length) {
-            el.innerHTML = '<div class="text-muted text-center py-3 small">All proposals handled.</div>';
-            return;
-        }
-        el.innerHTML = drafts.map(dv => `
-            <div class="proposal-mini-card mb-3" id="proposal-item-${dv.id}">
-                <div class="fw-bold small text-truncate">${dv.name}</div>
-                <div class="small text-muted mb-1">${dv.department} &bull; ${dv.updated}</div>
-                <span class="badge bg-warning text-dark small mb-2">Pending</span>
-                ${_isAdmin ? `<div class="d-flex gap-1 mt-1">
-                    <button class="btn btn-messenger-sm btn-success flex-grow-1" onclick="handleDecision(${dv.id},'approved')">Approve</button>
-                    <button class="btn btn-messenger-sm btn-danger flex-grow-1" onclick="handleDecision(${dv.id},'rejected')">Reject</button>
-                </div>` : ''}
-            </div>`).join('');
+        const desktopEl = document.getElementById('proposalList');
+        const offcanvasEl = document.getElementById('proposalListOffcanvas');
+
+        const render = (el) => {
+            if (!el) return;
+            if (!drafts.length) {
+                el.innerHTML = '<div class="text-center py-4 opacity-50 small">No pending proposals</div>';
+                return;
+            }
+            el.innerHTML = drafts.map(dv => `
+                <div class="proposal-mini-card mb-3" id="proposal-item-${dv.id}">
+                    <div class="fw-bold small text-truncate">${dv.name}</div>
+                    <div class="small text-muted mb-1">${dv.department} &bull; ${dv.updated}</div>
+                    <span class="badge bg-warning text-dark small mb-2">Pending</span>
+                    ${_isAdmin ? `<div class="d-flex gap-1 mt-1">
+                        <button class="btn btn-messenger-sm btn-success flex-grow-1" onclick="handleDecision(${dv.id},'approved')">Approve</button>
+                        <button class="btn btn-messenger-sm btn-danger flex-grow-1" onclick="handleDecision(${dv.id},'rejected')">Reject</button>
+                    </div>` : ''}
+                </div>`).join('');
+        };
+
+        render(desktopEl);
+        render(offcanvasEl);
     }
 
     // ──────────────── AVATAR HELPERS ────────────────
@@ -1602,15 +1903,30 @@
 
         if (partner !== 'Everyone') markRead(partner);
         renderConvoList();
+        const hubWrapper = document.querySelector('.messenger-hub-wrapper');
+        if (hubWrapper) hubWrapper.classList.add('show-chat');
     }
 
-    // ──────────────── MESSAGE HANDLING ────────────────
+    function backToConvoList() {
+        const hubWrapper = document.querySelector('.messenger-hub-wrapper');
+        if (hubWrapper) hubWrapper.classList.remove('show-chat');
+    }
+    // ──────────────── CORE CHAT MASTER LOGIC ────────────────
+
+    let pendingDeleteId = null;
+    let editingMessageId = null;
+
+    /**
+     * Appends a message to the chat log with Messenger-style features.
+     */
     function appendMessage(data) {
+        if (!chatLog) return;
+
         const isMe = data.sender === currentUsername;
         const wrap = document.createElement('div');
         wrap.className = `bubble-wrap ${isMe ? 'me' : 'them'}`;
 
-        // Draft Card markup
+        // Attached Draft UI
         let draftHtml = '';
         if (data.attached_draft) {
             const d = data.attached_draft;
@@ -1625,10 +1941,12 @@
                 </a>`;
         }
 
+        // Avatar UI
         const inlineAvatar = !isMe
             ? getAvatarHtml(data.sender, data.profile_pic, '28px', 'align-self:flex-end;margin-right:6px;', '')
             : '';
 
+        // Status Indicators
         const statusHtml = isMe
             ? `<div class="bubble-status" data-msg-id="${data.id || ''}">
                    ${data.is_read
@@ -1637,96 +1955,188 @@
                </div>`
             : '';
 
-        const actionsHtml = isMe && data.id
-            ? `<div class="bubble-actions">
-                   <button class="bubble-action-btn" title="Edit" onclick="editMessage(${data.id}, this)"><i class="bi bi-pencil-fill"></i></button>
-                   <button class="bubble-action-btn" title="Delete" onclick="deleteMessage(${data.id}, this)" style="color:#d00;"><i class="bi bi-trash-fill"></i></button>
-               </div>`
+        // Dropdown Actions (Edit/Delete)
+        const actionsHtml = (isMe && data.id)
+            ? `<div class="bubble-actions dropdown">
+                    <button class="bubble-options-trigger" data-bs-toggle="dropdown" aria-expanded="false" data-bs-display="dynamic" data-bs-boundary="viewport">
+                        <i class="bi bi-three-dots"></i>
+                    </button>
+                    <ul class="dropdown-menu bubble-dropdown-menu shadow-sm border-0">
+                        <li>
+                            <button class="bubble-dropdown-item w-100 text-start border-0 bg-transparent" onclick="startEditMode(${data.id}, this)">
+                                <i class="bi bi-pencil"></i> Edit
+                            </button>
+                        </li>
+                        <li><hr class="dropdown-divider op-10"></li>
+                        <li>
+                            <button class="bubble-dropdown-item text-danger w-100 text-start border-0 bg-transparent" onclick="confirmDeleteMessage(${data.id})">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </li>
+                    </ul>
+                </div>`
             : '';
 
+        // Assemble Wrap - Simple & Clean
         wrap.innerHTML = `
-            ${inlineAvatar}
-            <div class="d-flex flex-column" style="max-width:85%">
-                ${!isMe && activePartner === 'Everyone' ? `<span class="small text-muted ms-2 mb-1" style="font-size:0.65rem">${data.sender}</span>` : ''}
-                ${actionsHtml}
-                <div class="bubble ${data.message_type || 'chat'}">
-                    <div class="bubble-content-text"></div>
-                    ${draftHtml}
+            ${!isMe ? inlineAvatar : ''}
+            <div class="msg-group">
+                <div class="d-flex flex-column ${isMe ? 'align-items-end' : 'align-items-start'}">
+                    ${(!isMe && activePartner === 'Everyone')
+                ? `<span class="small text-muted ms-2 mb-1" style="font-size:0.65rem">${data.sender}</span>`
+                : ''}
+                    <div class="bubble ${data.message_type || 'chat'}">
+                        <div class="bubble-content-text"></div>
+                        ${draftHtml}
+                    </div>
+                    <div class="bubble-time">${formatTimestamp(data.timestamp)}</div>
+                    ${statusHtml}
                 </div>
-                <div class="bubble-time">${formatTimestamp(data.timestamp)}</div>
-                ${statusHtml}
+                ${isMe ? actionsHtml : ''}
             </div>
         `;
 
-        // SAFE: Set text content to prevent XSS
-        wrap.querySelector('.bubble-content-text').textContent = data.content || '';
+        // Safety check for text setting
+        const textContainer = wrap.querySelector('.bubble-content-text');
+        if (textContainer) textContainer.textContent = data.content || '';
 
         chatLog.appendChild(wrap);
         chatLog.scrollTop = chatLog.scrollHeight;
     }
 
-    async function editMessage(msgId, btn) {
-        const col = btn.closest('.d-flex.flex-column');
-        const bubbleEl = col ? col.querySelector('.bubble') : null;
-        if (!bubbleEl) return;
-        const oldText = bubbleEl.childNodes[0]?.textContent?.trim() || '';
-        const newText = prompt('Edit message:', oldText);
-        if (!newText || newText === oldText) return;
-        const r = await fetch(`/api/hub/message/${msgId}/edit`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
-            body: JSON.stringify({ content: newText })
-        });
-        if ((await r.json()).ok) {
-            bubbleEl.childNodes[0].textContent = newText;
+    /**
+     * Delete Flow Functions
+     */
+    function confirmDeleteMessage(msgId) {
+        pendingDeleteId = msgId;
+        const modalEl = document.getElementById('deleteMessageModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
         }
     }
 
-    async function deleteMessage(msgId, btn) {
-        if (!confirm('Delete this message?')) return;
-        const r = await fetch(`/api/hub/message/${msgId}/delete`, {
-            method: 'POST',
-            headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
-        });
-        if ((await r.json()).ok) {
-            btn.closest('.bubble-wrap').remove();
+    /**
+     * Edit Flow Functions
+     */
+    function startEditMode(msgId, btn) {
+        const wrap = btn.closest('.bubble-wrap') || btn.closest('.d-flex.flex-column');
+        if (!wrap) return;
+
+        const bubble = wrap.querySelector('.bubble');
+        const textElement = bubble ? bubble.querySelector('.bubble-content-text') : null;
+        if (!textElement) return;
+
+        editingMessageId = msgId;
+        const input = document.getElementById('chatInput');
+        if (input) {
+            input.value = textElement.textContent.trim();
+            document.getElementById('editModeIndicator').classList.remove('d-none');
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+            input.scrollIntoView({ behavior: 'smooth', block: 'end' });
         }
     }
 
-    document.getElementById('chatForm').onsubmit = (e) => {
-        e.preventDefault();
-        const msg = chatInput.value.trim();
-        if (!msg && !attachedDraftId) return;
+    function cancelEditMode() {
+        editingMessageId = null;
+        const input = document.getElementById('chatInput');
+        if (input) {
+            input.value = '';
+            document.getElementById('editModeIndicator').classList.add('d-none');
+        }
+    }
 
-        // Visual feedback
-        const sendBtn = document.getElementById('sendMsgBtn');
-        const sendIcon = document.getElementById('sendIcon');
-        const spinner = document.getElementById('sendSpinner');
-        sendBtn.disabled = true;
-        sendIcon.classList.add('d-none');
-        spinner.classList.remove('d-none');
+    // ──────────────── INITIALIZE LISTENERS ON READY ────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+        // Confirm Delete Button
+        const deleteConfirmBtn = document.getElementById('confirmDeleteBtn');
+        if (deleteConfirmBtn) {
+            deleteConfirmBtn.onclick = async function () {
+                if (!pendingDeleteId) return;
+                const targetId = pendingDeleteId;
 
-        const payload = {
-            message: msg,
-            semester: currentSemester,
-            recipient: activePartner === 'Everyone' ? '' : activePartner,
-            attached_draft_id: attachedDraftId
-        };
+                try {
+                    const r = await fetch(`/api/hub/message/${targetId}/delete`, {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': '{{ csrf_token() }}' }
+                    });
+                    const res = await r.json();
+                    if (res.ok) {
+                        document.querySelectorAll(`.bubble-status[data-msg-id="${targetId}"]`).forEach(el => {
+                            const row = el.closest('.bubble-wrap');
+                            if (row) row.remove();
+                        });
+                        const modalInstance = bootstrap.Modal.getInstance(document.getElementById('deleteMessageModal'));
+                        if (modalInstance) modalInstance.hide();
+                    } else {
+                        alert('Delete failed.');
+                    }
+                } catch (err) {
+                    console.error("Delete call exploded:", err);
+                }
+                pendingDeleteId = null;
+            };
+        }
 
-        console.log("Emitting message with draft:", attachedDraftId);
+        // Chat Form Submit
+        const chatForm = document.getElementById('chatForm');
+        if (chatForm) {
+            chatForm.onsubmit = function (e) {
+                e.preventDefault();
+                const inputEl = document.getElementById('chatInput');
+                const messageText = inputEl.value.trim();
 
-        // Use Socket with success callback
-        socket.emit('send_hub_message', payload, (ack) => {
-            console.log("Message receipt acknowledged by server");
-        });
+                if (!messageText && !attachedDraftId && !editingMessageId) return;
 
-        // Optimistic UI cleanup
-        chatInput.value = '';
-        clearDraftAttachment();
-        sendBtn.disabled = false;
-        sendIcon.classList.remove('d-none');
-        spinner.classList.add('d-none');
-    };
+                const sendBtn = document.getElementById('sendMsgBtn');
+                const sendIcon = document.getElementById('sendIcon');
+                const spinner = document.getElementById('sendSpinner');
+                if (sendBtn) sendBtn.disabled = true;
+                if (sendIcon) sendIcon.classList.add('d-none');
+                if (spinner) spinner.classList.remove('d-none');
+
+                if (editingMessageId) {
+                    fetch(`/api/hub/message/${editingMessageId}/edit`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+                        body: JSON.stringify({ content: messageText })
+                    })
+                        .then(r => r.json())
+                        .then(res => {
+                            if (res.ok) {
+                                document.querySelectorAll(`.bubble-status[data-msg-id="${editingMessageId}"]`).forEach(el => {
+                                    const root = el.closest('.d-flex.flex-column');
+                                    const bText = root.querySelector('.bubble-content-text');
+                                    if (bText) bText.textContent = messageText;
+                                });
+                                cancelEditMode();
+                            }
+                        })
+                        .finally(() => {
+                            if (sendBtn) sendBtn.disabled = false;
+                            if (sendIcon) sendIcon.classList.remove('d-none');
+                            if (spinner) spinner.classList.add('d-none');
+                        });
+                } else {
+                    const payload = {
+                        message: messageText,
+                        semester: currentSemester,
+                        recipient: activePartner === 'Everyone' ? '' : activePartner,
+                        attached_draft_id: attachedDraftId
+                    };
+                    if (typeof socket !== 'undefined') {
+                        socket.emit('send_hub_message', payload);
+                    }
+                    inputEl.value = '';
+                    clearDraftAttachment();
+                    if (sendBtn) sendBtn.disabled = false;
+                    if (sendIcon) sendIcon.classList.remove('d-none');
+                    if (spinner) spinner.classList.add('d-none');
+                }
+            };
+        }
+    });
 
     // ──────────────── ATTACHMENT LOGIC ────────────────
     let allDrafts = [];
@@ -1736,6 +2146,19 @@
         overlay.classList.toggle('d-none', !show);
         if (show) loadDraftsInPicker();
     }
+
+    // Close picker when clicking outside
+    document.addEventListener('mousedown', function (e) {
+        const overlay = document.getElementById('draftPickerOverlay');
+        if (overlay && !overlay.classList.contains('d-none')) {
+            // Check if click is outside overlay and NOT on the toggle/plus button
+            const isClickInside = overlay.contains(e.target);
+            const isClickOnToggle = e.target.closest('.btn-messenger-icon.text-primary');
+            if (!isClickInside && !isClickOnToggle) {
+                toggleDraftPicker(false);
+            }
+        }
+    });
 
     async function loadDraftsInPicker() {
         const list = document.getElementById('draftPickerList');
@@ -1874,7 +2297,7 @@
         // Use the current toggle text or a tracked state to determine direction
         const toggle = document.getElementById('pvSortDropdown');
         const order = (toggle && toggle.textContent.includes('Z → A')) ? 'desc' : 'asc';
-        
+
         let base;
         if (pvEntityMap) {
             base = pvEntityMap[pvCurrentType === 'section' ? 'sections'
@@ -2160,7 +2583,7 @@
         if (dir) {
             const toggle = document.getElementById('pvSortDropdown');
             if (toggle) toggle.textContent = (dir === 'asc') ? 'Sort by: A — Z' : 'Sort by: Z — A';
-            
+
             if (el) {
                 const menu = el.closest('.google-sort-menu');
                 if (menu) {
@@ -2393,4 +2816,57 @@
         pvOpenPresentation(pvPresIndex > 0 ? pvPresIndex - 1 : list.length - 1);
     };
 </script>
-{% endblock %}
+
+<!-- MOBILE DETAILS OFFCANVAS -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasDetails" aria-labelledby="offcanvasDetailsLabel">
+    <div class="offcanvas-header border-bottom">
+        <h6 class="offcanvas-title fw-bold text-uppercase text-muted" id="offcanvasDetailsLabel"
+            style="font-size: 0.75rem; letter-spacing: 0.5px;">Chat Details</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body custom-scrollbar">
+        <div class="mb-4">
+            <h6 class="text-uppercase text-muted fw-bold x-small mb-3"><i
+                    class="bi bi-clock-history me-1 text-warning"></i>Pending Review</h6>
+            <div id="proposalListOffcanvas">
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-secondary"></div>
+                </div>
+            </div>
+        </div>
+
+        <hr class="my-4 op-10">
+
+        <h6 class="text-uppercase text-muted fw-bold x-small mb-3">System Updates</h6>
+        <div class="small">
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Semester</span>
+                <span class="fw-semibold">{{ selected_semester }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Socket</span>
+                <span class="text-success fw-semibold">Online</span>
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+
+    {% block modals %}
+    <!-- DELETE CONFIRMATION MODAL -->
+    <div class="modal fade" id="deleteMessageModal" tabindex="-1" aria-hidden="true" style="z-index: 9999;">
+        <div class="modal-dialog modal-dialog-centered modal-sm" style="max-width: 320px;">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                <div class="modal-body p-4 text-center">
+                    <h6 class="fw-bold mb-2">Delete Message?</h6>
+                    <p class="text-muted small mb-4">Are you sure you want to remove this message?</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <button type="button" class="btn btn-light px-4 fw-semibold small" data-bs-dismiss="modal"
+                            style="border-radius: 10px; font-size: 0.85rem;">Cancel</button>
+                        <button type="button" class="btn btn-danger px-4 fw-semibold small" id="confirmDeleteBtn"
+                            style="border-radius: 10px; font-size: 0.85rem;">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endblock %}
