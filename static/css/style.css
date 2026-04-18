@@ -167,6 +167,14 @@ body {
     transform: rotate(180deg);
 }
 
+.profile-dropdown-menu {
+    max-height: 85vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-width: 280px;
+    border-radius: 12px !important;
+}
+
 /* Animate dropdown: slide + fade on open */
 .profile-dropdown-menu.show {
     animation: profileMenuIn 0.18s ease forwards;
@@ -302,7 +310,7 @@ body {
     background-color: #198754;
     color: #ffffff;
     font-weight: 600;
-    box-shadow: 0 1px 3px rgba(25,135,84,0.3);
+    box-shadow: 0 1px 3px rgba(25, 135, 84, 0.3);
 }
 
 /* ------------------------------------------------------------------- */
@@ -340,6 +348,7 @@ body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     border: none;
 }
+
 .alert-dismissible .btn-close {
     top: 50%;
     transform: translateY(-50%);
@@ -407,7 +416,7 @@ body {
     left: -80px;
     width: 260px;
     height: 600px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 60%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 60%);
     transform: rotate(-15deg);
     pointer-events: none;
     z-index: 0;
@@ -420,26 +429,29 @@ body {
     pointer-events: none;
     z-index: 0;
 }
+
 .auth-circle-1 {
     width: 300px;
     height: 300px;
     top: -90px;
     right: -70px;
-    background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
 }
+
 .auth-circle-2 {
     width: 200px;
     height: 200px;
     bottom: 30px;
     right: 10px;
-    background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.04) 0%, transparent 70%);
 }
+
 .auth-circle-3 {
     width: 120px;
     height: 120px;
     bottom: 120px;
     left: -40px;
-    background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.04) 0%, transparent 70%);
 }
 
 .auth-brand-group {
@@ -593,9 +605,17 @@ body {
     flex-shrink: 0;
 }
 
-.chrome-red   { background: #ff5f57; }
-.chrome-yellow { background: #ffbd2e; }
-.chrome-green  { background: #28c940; }
+.chrome-red {
+    background: #ff5f57;
+}
+
+.chrome-yellow {
+    background: #ffbd2e;
+}
+
+.chrome-green {
+    background: #28c940;
+}
 
 .auth-chrome-title {
     font-size: 0.68rem;
@@ -615,15 +635,18 @@ body {
     z-index: 0;
 }
 
-.auth-3d-card > * {
+.auth-3d-card>* {
     position: relative;
     z-index: 1;
 }
 
 @keyframes floatCard {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: perspective(900px) rotateX(8deg) rotateY(-12deg) rotateZ(-1deg) translateY(0px);
     }
+
     50% {
         transform: perspective(900px) rotateX(5deg) rotateY(-10deg) rotateZ(-0.5deg) translateY(-12px);
     }
@@ -673,11 +696,29 @@ body {
     letter-spacing: 0.03em;
 }
 
-.slot-green { background: rgba(24, 128, 56, 0.6); color: #b6f5cc; }
-.slot-teal  { background: rgba(13, 148, 136, 0.5); color: #99f6e4; }
-.slot-lime  { background: rgba(101, 163, 13, 0.5); color: #d9f99d; }
-.slot-blue  { background: rgba(37, 99, 235, 0.45); color: #bfdbfe; }
-.slot-empty { background: rgba(255, 255, 255, 0.05); }
+.slot-green {
+    background: rgba(24, 128, 56, 0.6);
+    color: #b6f5cc;
+}
+
+.slot-teal {
+    background: rgba(13, 148, 136, 0.5);
+    color: #99f6e4;
+}
+
+.slot-lime {
+    background: rgba(101, 163, 13, 0.5);
+    color: #d9f99d;
+}
+
+.slot-blue {
+    background: rgba(37, 99, 235, 0.45);
+    color: #bfdbfe;
+}
+
+.slot-empty {
+    background: rgba(255, 255, 255, 0.05);
+}
 
 /* ---- Form panel (background image) ---- */
 .auth-right {
@@ -708,11 +749,15 @@ body {
     align-items: center;
     justify-content: center;
 }
+
 #auth-loader img {
     width: 150px;
     height: 150px;
 }
-html.login-loading #page-loader { display: flex !important; }
+
+html.login-loading #page-loader {
+    display: flex !important;
+}
 
 .auth-form-box {
     width: 100%;
@@ -752,8 +797,17 @@ html.login-loading #page-loader { display: flex !important; }
 }
 
 @keyframes pulseDot {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.55; transform: scale(0.8); }
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.55;
+        transform: scale(0.8);
+    }
 }
 
 .auth-form-heading {
@@ -1458,8 +1512,10 @@ table.table tbody tr.teacher-row.selected td,
 table.table tbody tr.rule-row.selected td,
 table.table tbody tr.student-row.selected td,
 table.table tbody tr.irreg-row.selected td {
-    background-color: #e6f4ea !important; /* Premium Light Green */
-    color: #188038 !important; /* Google Green */
+    background-color: #e6f4ea !important;
+    /* Premium Light Green */
+    color: #188038 !important;
+    /* Google Green */
     transition: background-color 0.2s ease;
 }
 
@@ -1474,7 +1530,8 @@ table.table tbody tr.teacher-row.selected:hover td,
 table.table tbody tr.rule-row.selected:hover td,
 table.table tbody tr.student-row.selected:hover td,
 table.table tbody tr.irreg-row.selected:hover td {
-    background-color: #dcece0 !important; /* Slightly darker green on hover */
+    background-color: #dcece0 !important;
+    /* Slightly darker green on hover */
 }
 
 /* 2. HIDE CHECKBOXES */
@@ -1574,6 +1631,7 @@ table.table tbody tr.irreg-row.selected:hover td {
     font-size: 1.1rem;
     cursor: pointer;
 }
+
 .bulk-btn:hover {
     background-color: #f1f3f4;
     color: #3c4043;
@@ -2408,8 +2466,15 @@ table.table tbody tr.irreg-row.selected:hover td {
     cursor: pointer;
 }
 
-.grid-cell:hover { background: #f0f9f0; }
-.grid-cell.drag-over { background: #e6f4ea; outline: 2px dashed #188038; }
+.grid-cell:hover {
+    background: #f0f9f0;
+}
+
+.grid-cell.drag-over {
+    background: #e6f4ea;
+    outline: 2px dashed #188038;
+}
+
 .grid-cell.conflict-target {
     background: #fce8e6 !important;
     outline: 2px dashed #c5221f !important;
@@ -2418,7 +2483,8 @@ table.table tbody tr.irreg-row.selected:hover td {
 /* Schedule blocks inside grid cells */
 .sched-block {
     position: absolute;
-    left: 2px; right: 2px;
+    left: 2px;
+    right: 2px;
     border-radius: 4px;
     padding: 3px 6px;
     font-size: 0.72rem;
@@ -2426,11 +2492,18 @@ table.table tbody tr.irreg-row.selected:hover td {
     overflow: hidden;
     cursor: grab;
     z-index: 1;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
     transition: box-shadow 0.15s, opacity 0.15s;
 }
-.sched-block:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-.sched-block:active { cursor: grabbing; opacity: 0.7; }
+
+.sched-block:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.sched-block:active {
+    cursor: grabbing;
+    opacity: 0.7;
+}
 
 /* GA-finalized entry — green, solid left border */
 .sched-block.source-ga {
@@ -2438,18 +2511,21 @@ table.table tbody tr.irreg-row.selected:hover td {
     border-left: 4px solid #188038;
     color: #137333;
 }
+
 /* Draft entry — blue, dashed border */
 .sched-block.source-manual.is-draft {
     background: #e8f4fd;
     border: 2px dashed #1a73e8;
     color: #1a73e8;
 }
+
 /* Manual master entry — purple, solid left border */
 .sched-block.source-manual:not(.is-draft) {
     background: #f3e8fd;
     border-left: 4px solid #7c3aed;
     color: #6d28d9;
 }
+
 /* Conflict marker overlay */
 .sched-block.has-conflict {
     background: #fce8e6 !important;
@@ -2459,8 +2535,15 @@ table.table tbody tr.irreg-row.selected:hover td {
 }
 
 @keyframes conflictPulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.5; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
 }
 
 /* GA locked icon overlay */
@@ -2490,6 +2573,7 @@ table.table tbody tr.irreg-row.selected:hover td {
     border-radius: 12px;
     font-weight: 500;
 }
+
 .draft-version-badge.published {
     background: #e6f4ea;
     color: #137333;
@@ -2507,7 +2591,7 @@ table.table tbody tr.irreg-row.selected:hover td {
     z-index: 100;
     white-space: nowrap;
     pointer-events: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Legend row for the editor */
@@ -2521,20 +2605,35 @@ table.table tbody tr.irreg-row.selected:hover td {
     background: #f8f9fa;
     border-bottom: 1px solid #e0e0e0;
 }
+
 .legend-swatch {
-    width: 14px; height: 14px;
+    width: 14px;
+    height: 14px;
     border-radius: 2px;
     display: inline-block;
     vertical-align: middle;
 }
-.legend-ga    { background: #e6f4ea; border-left: 3px solid #188038; }
-.legend-draft { background: #e8f4fd; border: 2px dashed #1a73e8; }
-.legend-manual{ background: #f3e8fd; border-left: 3px solid #7c3aed; }
+
+.legend-ga {
+    background: #e6f4ea;
+    border-left: 3px solid #188038;
+}
+
+.legend-draft {
+    background: #e8f4fd;
+    border: 2px dashed #1a73e8;
+}
+
+.legend-manual {
+    background: #f3e8fd;
+    border-left: 3px solid #7c3aed;
+}
 
 /* Archive Switcher No-Caret */
 .no-caret::after {
     display: none !important;
 }
+
 /* Profile/settings modals must appear above the historical-mode-banner (z-index: 1065) */
 #settingsModal,
 #changeUsernameModal,
@@ -2546,12 +2645,26 @@ table.table tbody tr.irreg-row.selected:hover td {
 .dropdown-menu-primary .dropdown-item:hover {
     background-color: #f1f5f9;
 }
+
 /* Table selection highlight */
 
 
 /* DYNAMIC WIDTH OVERRIDE FOR SORT AND FILTER toggles */
-.google-sort-toggle { width: auto !important; min-width: 0 !important; white-space: nowrap !important; display: inline-flex !important; align-items: center !important; gap: 8px !important; justify-content: center !important; }
-.google-sort-menu { width: max-content !important; min-width: 180px !important; box-sizing: border-box; }
+.google-sort-toggle {
+    width: auto !important;
+    min-width: 0 !important;
+    white-space: nowrap !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    justify-content: center !important;
+}
+
+.google-sort-menu {
+    width: max-content !important;
+    min-width: 180px !important;
+    box-sizing: border-box;
+}
 
 
 /* =================================================================== */
@@ -2560,7 +2673,8 @@ table.table tbody tr.irreg-row.selected:hover td {
 
 @media (max-width: 991.98px) {
     body {
-        padding-top: 60px !important; /* Adjusted for smaller navbar */
+        padding-top: 60px !important;
+        /* Adjusted for smaller navbar */
     }
 
     .main-content {
@@ -2580,7 +2694,8 @@ table.table tbody tr.irreg-row.selected:hover td {
     }
 
     .table {
-        min-width: 650px !important; /* Force scrollable context */
+        min-width: 650px !important;
+        /* Force scrollable context */
     }
 
     /* Utility: Stack groups on mobile */
@@ -2592,7 +2707,11 @@ table.table tbody tr.irreg-row.selected:hover td {
 
     /* Buttons: Side-by-side on very small screens unless explicitly stacked */
     @media (max-width: 575.98px) {
-        .btn-google-action, .btn-primary:not(.btn-sm), .btn-secondary:not(.btn-sm), .btn-success:not(.btn-sm) {
+
+        .btn-google-action,
+        .btn-primary:not(.btn-sm),
+        .btn-secondary:not(.btn-sm),
+        .btn-success:not(.btn-sm) {
             width: auto;
             justify-content: center;
         }
@@ -2600,8 +2719,8 @@ table.table tbody tr.irreg-row.selected:hover td {
 }
 
 /* Offcanvas Navigation Styles */
-.offcanvas-navigation .nav-link, .offcanvas-navigation 
-.menu-item {
+.offcanvas-navigation .nav-link,
+.offcanvas-navigation .menu-item {
     color: #3c4043;
     font-size: 0.9rem;
     font-weight: 500;
@@ -2660,7 +2779,7 @@ table.table tbody tr.irreg-row.selected:hover td {
         align-items: center;
     }
 
-    .manage-header-wrap > div:last-child {
+    .manage-header-wrap>div:last-child {
         display: flex;
         flex-wrap: wrap;
         width: auto;
@@ -2678,7 +2797,7 @@ table.table tbody tr.irreg-row.selected:hover td {
         flex: 1 1 auto !important;
         width: auto !important;
     }
-    
+
     .manage-search-wrapper .col-auto {
         flex: 0 0 auto !important;
         width: auto !important;
@@ -2703,7 +2822,7 @@ table.table tbody tr.irreg-row.selected:hover td {
         margin: 0.5rem !important;
         max-width: calc(100% - 1rem) !important;
     }
-    
+
     .modal-content {
         border-radius: 12px !important;
     }
@@ -2713,16 +2832,17 @@ table.table tbody tr.irreg-row.selected:hover td {
 /*  MOBILE ACCORDION FOR DROPDOWN SUBMENUS                             */
 /* ------------------------------------------------------------------- */
 @media (max-width: 991.98px) {
+
     /* Prevent main dropdown from exceeding screen bounds */
     .dropdown-menu {
         max-width: 90vw !important;
         overflow-x: hidden;
     }
-    
+
     /* Allow long labels to wrap instead of pushing width outward */
     .dropdown-item {
         white-space: normal !important;
-        font-size: 0.85rem !important; 
+        font-size: 0.85rem !important;
     }
 
     .dropdown-submenu .dropdown-menu {
@@ -2736,8 +2856,8 @@ table.table tbody tr.irreg-row.selected:hover td {
         border-radius: 8px !important;
         padding: 5px 0 !important;
     }
-    
-    .dropdown-submenu > .dropdown-item {
+
+    .dropdown-submenu>.dropdown-item {
         /* Mute the category header to look like a label */
         pointer-events: none;
         color: #5f6368 !important;
@@ -2749,7 +2869,7 @@ table.table tbody tr.irreg-row.selected:hover td {
         padding-top: 8px;
         padding-bottom: 2px;
     }
-    
+
     .dropdown-submenu .dropdown-menu .dropdown-item {
         padding-left: 15px !important;
         font-size: 0.80rem !important;
@@ -2758,3 +2878,22 @@ table.table tbody tr.irreg-row.selected:hover td {
     }
 }
 
+/* --- RESPONSIVE FIX FOR MID-RANGE SCREENS (Prevent Navbar Overflow) --- */
+@media (min-width: 992px) and (max-width: 1250px) {
+    .menu-item {
+        font-size: 0.82rem !important;
+        padding: 0 8px !important;
+    }
+
+    .navbar-nav {
+        gap: 4px !important;
+    }
+
+    .ms-auto.d-flex {
+        gap: 8px !important;
+    }
+
+    .sheets-menubar {
+        padding: 0 10px !important;
+    }
+}
