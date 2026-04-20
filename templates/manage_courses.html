@@ -362,7 +362,7 @@
 
 <!-- 1. BULK DELETE MODAL -->
 <div class="modal fade" id="bulkArchiveModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Move to Recycle Bin?</h5>
@@ -383,7 +383,7 @@
 
 <!-- 2. ADD COURSE MODAL -->
 <div class="modal fade" id="addCourseModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Add New Course</h5>
@@ -477,7 +477,7 @@
 
 <!-- 3. EDIT MODAL (Logic Updated for Department Selection) -->
 <div class="modal fade" id="editCourseModal{{ course.id }}" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Edit Course</h5>
@@ -573,7 +573,7 @@
 
 <!-- SINGLE DELETE MODAL -->
 <div class="modal fade" id="archiveModal{{ course.id }}" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Move to Recycle Bin?</h5>
@@ -599,7 +599,7 @@
 <!-- WORD IMPORT MODAL -->
 <!-- IMPORT COURSES WORD MODAL -->
 <div class="modal fade" id="importWordModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="bi bi-file-earmark-word-fill text-primary me-2"></i>Import Curriculum (Word)</h5>
@@ -655,7 +655,7 @@
 
 <!-- IMPORT COURSES PDF MODAL -->
 <div class="modal fade" id="importCoursesPdfModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content text-start">
             <form action="{{ url_for('import_courses_pdf') }}" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

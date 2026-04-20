@@ -356,7 +356,7 @@
 
 <!-- 1. FINAL BULK ASSIGN MODAL (v5.3 - EXCEL LIGHT & READABLE) -->
 <div class="modal fade" id="bulkAssignModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-below-nav modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 4px;">
             <form action="{{ url_for('bulk_assign_curriculum') }}" method="POST" id="assignForm"
                 class="d-flex flex-column"
@@ -611,7 +611,7 @@
 
 <!-- 2. ADD SECTION MODAL -->
 <div class="modal fade" id="addSectionModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Add New Section</h5>
@@ -651,7 +651,7 @@
 <!-- 3. EDIT & DELETE MODALS -->
 {% for section in sections %}
 <div class="modal fade" id="editSectionModal{{ section.id }}" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Edit Section</h5>
@@ -690,7 +690,7 @@
 </div>
 
 <div class="modal fade" id="archiveModal{{ section.id }}" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Move to Recycle Bin?</h5>
@@ -715,7 +715,7 @@
 <!-- BULK DELETE MODAL (ILABAS MO DITO PARA ISA LANG SIYA) -->
 <!-- ======================================================= -->
 <div class="modal fade" id="bulkArchiveModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Move to Recycle Bin?</h5>

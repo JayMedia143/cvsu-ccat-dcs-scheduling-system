@@ -170,7 +170,7 @@
 
 <!-- 1. BULK RESTORE MODAL -->
 <div class="modal fade" id="bulkRestoreModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Restore Schedules?</h5>
@@ -190,7 +190,7 @@
 
 <!-- 2. BULK DELETE MODAL -->
 <div class="modal fade" id="bulkDeleteModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title">Delete Forever?</h5>
@@ -212,7 +212,7 @@
 <!-- 3. SINGLE DELETE MODALS -->
 {% for pa in pre_assignments %}
 <div class="modal fade" id="deleteModal{{ pa.id }}" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title">Delete Forever?</h5>
@@ -237,7 +237,7 @@
 <!-- 4. RESTORE MODALS -->
 {% for pa in pre_assignments %}
 <div class="modal fade" id="restoreModal{{ pa.id }}" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Restore Schedule?</h5>

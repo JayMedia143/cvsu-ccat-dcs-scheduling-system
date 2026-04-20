@@ -323,7 +323,7 @@
 
 <!-- ADD STUDENT MODAL -->
 <div class="modal fade" id="addStudentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form action="{{ url_for('add_student') }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -381,7 +381,7 @@
 
 <!-- BULK ARCHIVE MODAL -->
 <div class="modal fade" id="bulkArchiveModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Move to Recycle Bin?</h5>
@@ -404,7 +404,7 @@
 <!-- EDIT MODALS (per student) -->
 {% for student in students %}
 <div class="modal fade" id="editStudentModal{{ student.id }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form action="{{ url_for('update_student', student_pk=student.id) }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -464,7 +464,7 @@
 
 <!-- ARCHIVE MODAL (per student) -->
 <div class="modal fade" id="archiveModal{{ student.id }}" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Move to Recycle Bin?</h5>
@@ -515,7 +515,7 @@
 
 <!-- IMPORT EXCEL MODAL -->
 <div class="modal fade" id="importStudentsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form action="{{ url_for('import_students_xlsx') }}" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

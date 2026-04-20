@@ -221,7 +221,7 @@
 
 <!-- 1. NEW BULK RESTORE MODAL (Custom Design) -->
 <div class="modal fade" id="bulkRestoreModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Restore Courses?</h5>
@@ -241,7 +241,7 @@
 
 <!-- 2. BULK DELETE MODAL -->
 <div class="modal fade" id="bulkDeleteModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title">Delete Forever?</h5>
@@ -263,7 +263,7 @@
 <!-- 3. SINGLE DELETE MODALS -->
 {% for course in courses %}
 <div class="modal fade" id="deleteModal{{ course.id }}" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title">Delete Forever?</h5>
@@ -288,7 +288,7 @@
 <!-- RESTORE MODALS -->
 {% for course in courses %}
 <div class="modal fade" id="restoreModal{{ course.id }}" tabindex="-1">
-    <div class="modal-dialog modal-dialog-below-nav modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Restore Course?</h5>

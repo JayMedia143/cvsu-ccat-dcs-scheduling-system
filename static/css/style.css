@@ -231,9 +231,10 @@ body {
     font-weight: 600;
 }
 
-/* Push modals below fixed navbar */
-.modal-dialog-below-nav {
-    margin-top: 80px;
+/* System-wide modal centering and height limitation */
+.modal-content {
+    max-height: 80vh !important;
+    overflow-y: auto;
 }
 
 /* Plain checkbox style (neutral dark instead of blue) */
