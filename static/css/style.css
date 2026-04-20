@@ -234,7 +234,25 @@ body {
 /* System-wide modal centering and height limitation */
 .modal-content {
     max-height: 80vh !important;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Ensure forms or wizard steps inside modals also behave as flex containers to allow body scrolling */
+.modal-content>form,
+.modal-content>.wizard-step-1,
+.modal-content>.wizard-step-2 {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.modal-body {
     overflow-y: auto;
+    flex: 1;
+    /* Allow the body to take up available space */
 }
 
 /* Plain checkbox style (neutral dark instead of blue) */
