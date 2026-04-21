@@ -8,11 +8,21 @@
     <!-- 1. CONVO LIST -->
     <div class="messenger-sidebar">
         <div class="sidebar-header-main p-3">
-            <h4 class="fw-bold mb-3 d-flex align-items-center">Chats
+            <h4 class="fw-bold mb-3 d-flex align-items-center">
+                Chats
+                <!-- Info Button (Existing) -->
                 <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal"
                     data-bs-target="#decisionHubInfoModal" title="How to use Decision Hub">
                     <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
                 </button>
+
+                <!-- Relocated Pending Review (Three Dots) -->
+                <div class="ms-auto">
+                    <button class="btn btn-messenger-icon" type="button" data-bs-toggle="offcanvas"
+                        data-bs-target="#offcanvasDetails" aria-controls="offcanvasDetails" title="More Options / Pending Review">
+                        <i class="bi bi-three-dots-vertical info-icon-hover"></i>
+                    </button>
+                </div>
             </h4>
             <div class="messenger-search">
                 <i class="bi bi-search"></i>
@@ -44,11 +54,7 @@
                 </div>
             </div>
             <div class="ms-auto d-flex align-items-center gap-2">
-                <!-- Pending Review Button (all screen sizes, hidden at 1100px+ via CSS) -->
-                <button class="btn btn-messenger-icon btn-pending-review" type="button" data-bs-toggle="offcanvas"
-                    data-bs-target="#offcanvasDetails" aria-controls="offcanvasDetails" title="Pending Review">
-                    <i class="bi bi-clock-history text-warning"></i>
-                </button>
+                <!-- Removed Pending Review button from here -->
             </div>
         </div>
 
@@ -1738,7 +1744,11 @@
     document.addEventListener('DOMContentLoaded', () => {
         loadConversations();
         loadPendingDrafts();
-        switchConversation('Everyone');
+        
+        // Auto-switch to default channel only on Desktop
+        if (window.innerWidth >= 768) {
+            switchConversation('Everyone');
+        }
 
         socket.on('connect', () => {
             console.log("Connected to Hub");
