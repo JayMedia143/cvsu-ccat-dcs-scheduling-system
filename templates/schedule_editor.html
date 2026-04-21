@@ -1373,7 +1373,7 @@
                                 data-bs-toggle="dropdown" style="min-width:130px; font-size:.82rem">
                                 <i class="bi bi-funnel me-1"></i>Filter: <span id="allDraftsFilterLabel">All</span>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width: 200px;">
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm google-sort-menu" style="min-width: 200px;">
                                 <li><a class="dropdown-item text-danger" href="#" onclick="clearAllDraftsFilters(); return false;">
                                     <i class="bi bi-x-circle me-2"></i>Clear Filter</a></li>
                                 <li><hr class="dropdown-divider"></li>
@@ -1389,7 +1389,7 @@
                                 </li>
                                 <li class="dropdown-submenu">
                                     <a class="dropdown-item" href="javascript:void(0);">Department</a>
-                                    <ul class="dropdown-menu" style="max-height: 300px; overflow-y: auto;">
+                                    <ul class="dropdown-menu">
                                         <li><a class="dropdown-item" href="#" onclick='setAllDraftsDept("", "All Departments"); return false;'>All Departments</a></li>
                                         <li><hr class="dropdown-divider"></li>
                                         {% for d in departments %}
@@ -1407,8 +1407,7 @@
                                 data-bs-toggle="dropdown" style="min-width:130px; font-size:.82rem">
                                 <i class="bi bi-sort-alpha-down me-1"></i>Sort by: <span id="allDraftsSortLabel">Newest</span>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end google-sort-menu"
-                                style="max-height: 400px; overflow-y: auto;">
+                            <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
                                 <li><a class="dropdown-item google-sort-item" href="#"
                                         onclick="setAllDraftsSort('','Newest');return false">Newest first</a></li>
                                 <li>

@@ -2845,54 +2845,76 @@ table.table tbody tr.irreg-row.selected:hover td {
 }
 
 /* ------------------------------------------------------------------- */
-/*  MOBILE ACCORDION FOR DROPDOWN SUBMENUS                             */
+/*  UNIFIED DROPDOWN BEHAVIOR (Standard Mobile Style for All Views)   */
 /* ------------------------------------------------------------------- */
-@media (max-width: 991.98px) {
 
-    /* Prevent main dropdown from exceeding screen bounds */
-    .dropdown-menu {
-        max-width: 90vw !important;
-        overflow-x: hidden;
-    }
-
-    /* Allow long labels to wrap instead of pushing width outward */
-    .dropdown-item {
-        white-space: normal !important;
-        font-size: 0.85rem !important;
-    }
-
-    .dropdown-submenu .dropdown-menu {
-        /* Make it flow naturally within the parent menu */
-        position: static !important;
-        display: block !important;
-        border: none !important;
-        box-shadow: none !important;
-        background-color: #f8f9fa !important;
-        margin: 4px 5px !important;
-        border-radius: 8px !important;
-        padding: 5px 0 !important;
-    }
-
-    .dropdown-submenu>.dropdown-item {
-        /* Mute the category header to look like a label */
-        pointer-events: none;
-        color: #5f6368 !important;
-        font-weight: 700 !important;
-        font-size: 0.70rem !important;
-        text-transform: uppercase;
-        background: transparent !important;
-        letter-spacing: 0.5px;
-        padding-top: 8px;
-        padding-bottom: 2px;
-    }
-
-    .dropdown-submenu .dropdown-menu .dropdown-item {
-        padding-left: 15px !important;
-        font-size: 0.80rem !important;
-        padding-top: 6px !important;
-        padding-bottom: 6px !important;
-    }
+.google-sort-menu .dropdown-submenu .dropdown-menu {
+    /* Make it flow naturally within the parent menu (Accordion Style) */
+    position: static !important;
+    display: block !important;
+    border: none !important;
+    box-shadow: none !important;
+    background-color: #f8f9fa !important;
+    margin: 4px 5px !important;
+    border-radius: 8px !important;
+    padding: 5px 0 !important;
+    /* INTERNAL SCROLLBAR for long lists */
+    max-height: 280px;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
+
+/* Custom Scrollbar for Dropdowns (Premium Feel) */
+.google-sort-menu .dropdown-menu::-webkit-scrollbar {
+    width: 5px;
+}
+.google-sort-menu .dropdown-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+.google-sort-menu .dropdown-menu::-webkit-scrollbar-thumb {
+    background: #dadce0;
+    border-radius: 10px;
+}
+.google-sort-menu .dropdown-menu::-webkit-scrollbar-thumb:hover {
+    background: #bcc1c8;
+}
+
+.google-sort-menu .dropdown-submenu > .dropdown-item {
+    /* Mute the category header to look like a label */
+    pointer-events: none;
+    color: #5f6368 !important;
+    font-weight: 700 !important;
+    font-size: 0.70rem !important;
+    text-transform: uppercase;
+    background: transparent !important;
+    letter-spacing: 0.5px;
+    padding-top: 8px;
+    padding-bottom: 2px;
+}
+
+.google-sort-menu .dropdown-submenu .dropdown-menu .dropdown-item {
+    padding-left: 15px !important;
+    font-size: 0.80rem !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+}
+
+.google-sort-menu.dropdown-menu {
+    /* Prevent main dropdown from exceeding screen bounds */
+    max-width: 90vw !important;
+    overflow-x: hidden;
+}
+
+.google-sort-menu .dropdown-item {
+    /* Allow long labels to wrap instead of pushing width outward */
+    white-space: normal !important;
+    font-size: 0.85rem !important;
+}
+
+@media (max-width: 991.98px) {
+    /* Standard mobile behaviors are now handled globally for google-sort-menu */
+}
+
 
 /* --- RESPONSIVE FIX FOR MID-RANGE SCREENS (Prevent Navbar Overflow) --- */
 @media (min-width: 992px) and (max-width: 1250px) {

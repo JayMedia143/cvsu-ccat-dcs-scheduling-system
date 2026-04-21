@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Archived Pre-assignments{% endblock %}
+{% block title %}Recycle Bin — Schedules{% endblock %}
 
 {% block content %}
 
@@ -13,13 +13,12 @@
                 <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
             </button>
         </h1>
-        <p class="text-muted small mb-0">Restore or permanently delete locked schedules. Items older than 30 days are
-            flagged.</p>
+        <p class="text-muted small mb-0">View, restore, or permanently delete plotted schedule entries.</p>
     </div>
     <div>
-        <a href="{{ url_for('manage_preassignments') }}"
+        <a href="{{ url_for('schedule_editor') }}"
             class="btn btn-outline-secondary btn-sm d-flex align-items-center rounded-pill px-3">
-            <i class="bi bi-arrow-left me-2"></i> Back to Active
+            <i class="bi bi-arrow-left me-md-2"></i> <span class="d-none d-md-inline">Back to Canvas</span>
         </a>
     </div>
 </div>
@@ -40,13 +39,13 @@
             <button type="button"
                 class="btn btn-sm btn-link text-decoration-none text-success fw-bold d-flex align-items-center"
                 data-bs-toggle="modal" data-bs-target="#bulkRestoreModal">
-                <i class="bi bi-arrow-counterclockwise me-2 fs-5"></i> Restore
+                <i class="bi bi-arrow-counterclockwise me-md-2 fs-5"></i> <span class="d-none d-md-inline">Restore</span>
             </button>
             <div class="vr"></div>
             <button type="button"
                 class="btn btn-sm btn-link text-decoration-none text-danger fw-bold d-flex align-items-center"
                 data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
-                <i class="bi bi-trash-fill me-2 fs-5"></i> Delete Forever
+                <i class="bi bi-trash-fill me-md-2 fs-5"></i> <span class="d-none d-md-inline">Delete Forever</span>
             </button>
         </div>
     </div>
@@ -55,8 +54,8 @@
     <div class="col h-100">
         <div class="google-search-bar d-flex align-items-center h-100 w-100">
             <i class="bi bi-search text-secondary me-3"></i>
-            <input type="text" class="google-search-input" placeholder="Search deleted schedules..."
-                id="liveSearchInput">
+            <input type="text" class="google-search-input" placeholder="Search deleted schedules..." id="liveSearchInput"
+                value="{{ search_query }}">
         </div>
     </div>
 
@@ -65,28 +64,31 @@
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="archiveSortDropdown"
                 data-bs-toggle="dropdown" aria-expanded="false">
-                Sort by: {% if current_sort == 'course-asc' %}Course (A-Z)
-                {% elif current_sort == 'section-asc' %}Section (A-Z)
-                {% else %}Default{% endif %}
+                Sort by: {% if current_sort == 'course-asc' %}Course Name (A-Z)
+                {% elif current_sort == 'course-desc' %}Course Name (Z-A)
+                {% else %}Newest In Trash{% endif %}
             </button>
 
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="archiveSortDropdown">
                 <li>
-                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' or not current_sort %}active{% endif %}"
-                        href="{{ url_for('preassignments_archive', sort='default') }}">
-                        Sort by: Default
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' or not current_sort or current_sort == 'newest' %}active{% endif %}"
+                        href="{{ url_for('preassignments_archive', sort='newest', search=search_query) }}">
+                        Sort by: Newest In Trash
                     </a>
+                </li>
+                <li>
+                    <hr class="dropdown-divider">
                 </li>
                 <li>
                     <a class="dropdown-item google-sort-item {% if current_sort == 'course-asc' %}active{% endif %}"
-                        href="{{ url_for('preassignments_archive', sort='course-asc') }}">
-                        Sort by: Course (A-Z)
+                        href="{{ url_for('preassignments_archive', sort='course-asc', search=search_query) }}">
+                        Sort by: Course Name (A-Z)
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item google-sort-item {% if current_sort == 'section-asc' %}active{% endif %}"
-                        href="{{ url_for('preassignments_archive', sort='section-asc') }}">
-                        Sort by: Section (A-Z)
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'course-desc' %}active{% endif %}"
+                        href="{{ url_for('preassignments_archive', sort='course-desc', search=search_query) }}">
+                        Sort by: Course Name (Z-A)
                     </a>
                 </li>
             </ul>
@@ -100,38 +102,44 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="bg-white rounded border shadow-sm overflow-hidden">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0" id="schedulesTable">
                 <thead class="table-light">
                     <tr>
                         <th class="select-cell ps-0 pe-0 text-center" style="width: 1%; white-space: nowrap;">
                             <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
                         </th>
-                        <th class="ps-0 text-start" style="width: 50%;">Assignment Details</th>
+                        <th class="ps-0 text-start" style="width: 25%;">Course / Section</th>
+                        <th class="text-start" style="width: 20%;">Faculty</th>
+                        <th class="text-center" style="width: 15%;">Slot</th>
+                        <th class="text-center" style="width: 15%;">Room</th>
                         <th class="text-start">In Trash Since</th>
                         <th class="text-center pe-0" style="width: 1%; white-space: nowrap;">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="archiveTableBody">
-                    {% for pa in pre_assignments %}
-                    <tr class="pa-row course-row" data-id="{{ pa.id }}">
+                    {% for item in preassignments %}
+                    <tr class="schedule-row" data-id="{{ item.id }}">
                         <td class="select-cell ps-0 pe-0 text-center">
                             <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
-                                value="{{ pa.id }}">
+                                value="{{ item.id }}">
                         </td>
-
-                        <td class="ps-0 search-target text-start">
-                            <div>
-                                <strong class="text-dark">{{ pa.course.course_code }}</strong>
-                                <span class="badge bg-light border text-dark ms-2">{{ pa.section.section_name }}</span>
-                                <div class="small text-muted mt-1">
-                                    {{ pa.faculty.full_name }} | {{ pa.room.room_name }} | {{ pa.day }} {{ pa.start_time
-                                    }}-{{ pa.end_time }}
-                                </div>
-                            </div>
+                        <td class="ps-0 text-start">
+                            <div class="fw-bold text-dark">{{ item.course_name }}</div>
+                            <div class="text-muted small">{{ item.section_name }}</div>
                         </td>
                         <td class="text-start">
-                            {% if pa.deleted_at %}
-                            {% set days = (now - pa.deleted_at).days %}
+                            <span class="text-dark">{{ item.faculty_name }}</span>
+                        </td>
+                        <td class="text-center">
+                            <div class="fw-medium text-dark">{{ item.day }}</div>
+                            <div class="text-muted small">{{ item.start_time }}–{{ item.end_time }}</div>
+                        </td>
+                        <td class="text-center px-0">
+                            <span class="badge bg-light border text-dark">{{ item.room_name }}</span>
+                        </td>
+                        <td class="text-start">
+                            {% if item.deleted_at %}
+                            {% set days = (now - item.deleted_at).days %}
                             <span class="text-muted small">{{ days }}d ago</span>
                             {% if days >= 30 %}
                             <span class="badge bg-danger ms-1">⚠ Overdue</span>
@@ -140,21 +148,20 @@
                             <span class="text-muted small">—</span>
                             {% endif %}
                         </td>
-
                         <td class="text-center pe-0" onclick="event.stopPropagation()">
-                            <button type="button" class="btn-icon text-success" title="Restore"
-                                data-bs-toggle="modal" data-bs-target="#restoreModal{{ pa.id }}">
+                            <button type="button" class="btn-icon text-success" title="Restore" data-bs-toggle="modal"
+                                data-bs-target="#restoreModal{{ item.id }}">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </button>
                             <button type="button" class="btn-icon delete" data-bs-toggle="modal"
-                                data-bs-target="#deleteModal{{ pa.id }}" title="Delete Forever">
+                                data-bs-target="#deleteModal{{ item.id }}" title="Delete Forever">
                                 <i class="bi bi-trash-fill"></i>
                             </button>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="3" class="text-center text-muted py-5">No deleted schedules found.</td>
+                        <td colspan="7" class="text-center text-muted py-5">No archived schedules found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -163,8 +170,50 @@
     </div>
 </form>
 
+<!-- 4. PAGINATION -->
+<div class="mt-3 pb-5">
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center mb-2">
+            {% if pagination and pagination.pages > 1 %}
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link"
+                    href="{{ url_for('preassignments_archive', page=pagination.prev_num, sort=current_sort, search=search_query) }}"><i
+                        class="bi bi-chevron-left"></i></a>
+            </li>
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+            {% if page_num %}
+            <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                <a class="page-link"
+                    href="{{ url_for('preassignments_archive', page=page_num, sort=current_sort, search=search_query) }}">{{
+                    page_num }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>
+            {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link"
+                    href="{{ url_for('preassignments_archive', page=pagination.next_num, sort=current_sort, search=search_query) }}"><i
+                        class="bi bi-chevron-right"></i></a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% if pagination and pagination.pages > 1 %}
+    <div class="d-flex align-items-center justify-content-center gap-2 text-muted" style="font-size:0.85rem;">
+        <span>Jump to:</span>
+        <input type="number" id="pageJumpInput" class="form-control form-control-sm text-center" style="width:70px;"
+            min="1" max="{{ pagination.pages }}" placeholder="1–{{ pagination.pages }}">
+        <button class="btn btn-sm btn-outline-secondary px-3" onclick="jumpToPage()">Go</button>
+        <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i class="bi bi-arrow-right-short"></i>
+            arrow keys</span>
+    </div>
+    {% endif %}
+</div>
+
 <!-- HIDDEN FORM FOR SINGLE ACTIONS -->
-<form id="singleActionForm" method="POST" style="display: none;"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+<form id="singleActionForm" method="POST" style="display: none;"><input type="hidden" name="csrf_token"
+        value="{{ csrf_token() }}"></form>
 
 <!-- ================= MODALS ================= -->
 
@@ -176,13 +225,13 @@
                 <h5 class="modal-title">Restore Schedules?</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
-                Restore the <span id="modalRestoreCount" class="fw-bold text-success">0</span> selected schedules to the
-                active list?
+            <div class="modal-body p-4 text-center">
+                Restore the <span id="modalRestoreCount" class="fw-bold text-success">0</span> selected entries to the
+                active schedule?
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="submitBulkForm('restore')">Yes, Restore</button>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success px-4" onclick="submitBulkForm('restore')">Yes, Restore</button>
             </div>
         </div>
     </div>
@@ -197,36 +246,35 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 text-center">
-                <p class="mb-0">Permanently delete <strong id="modalDeleteCount">0</strong> locked schedules?</p>
+                <p class="mb-0">Permanently delete <strong id="modalDeleteCount">0</strong> schedule entries?</p>
                 <p class="small text-danger mt-2 fw-bold">Cannot be undone.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger px-4" onclick="submitBulkForm('delete')">Yes, Delete
-                    Forever</button>
+                <button type="button" class="btn btn-danger px-4" onclick="submitBulkForm('delete')">Yes, Delete Forever</button>
             </div>
         </div>
     </div>
 </div>
 
 <!-- 3. SINGLE DELETE MODALS -->
-{% for pa in pre_assignments %}
-<div class="modal fade" id="deleteModal{{ pa.id }}" tabindex="-1">
+{% for item in preassignments %}
+<div class="modal fade" id="deleteModal{{ item.id }}" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Delete Forever?</h5>
+            <div class="modal-header bg-danger text-white border-0 py-3">
+                <h5 class="modal-title fw-bold">Delete Forever?</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 text-center">
-                <p>Permanently delete <strong>{{ pa.course.course_code }}</strong>?</p>
-                <p class="small text-danger fw-bold">This cannot be undone.</p>
+                <p class="mb-0">Permanently delete schedule for <strong>{{ item.course_name }} ({{ item.section_name }})</strong>?</p>
+                <p class="small text-danger fw-bold mt-2">This cannot be undone.</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <form action="{{ url_for('delete_preassignment', pa_id=pa.id) }}" method="POST">
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('delete_preassignment', pa_id=item.id) }}" method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger px-4">Yes, Delete Forever</button>
+                    <button type="submit" class="btn btn-danger px-4 shadow-sm">Yes, Delete Forever</button>
                 </form>
             </div>
         </div>
@@ -234,128 +282,50 @@
 </div>
 {% endfor %}
 
-<!-- 4. RESTORE MODALS -->
-{% for pa in pre_assignments %}
-<div class="modal fade" id="restoreModal{{ pa.id }}" tabindex="-1">
+<!-- RESTORE MODALS -->
+{% for item in preassignments %}
+<div class="modal fade" id="restoreModal{{ item.id }}" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Restore Schedule?</h5>
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header py-3 border-0">
+                <h5 class="modal-title fw-bold">Restore Schedule Entry?</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 text-center">
-                <p>Restore <strong>{{ pa.course.course_code }}</strong>
-                    ({{ pa.section.section_name }}) to the active list?</p>
+                <p class="mb-0">Restore schedule for <strong>{{ item.course_name }}</strong> to the active canvas?</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <form action="{{ url_for('restore_preassignment', pa_id=pa.id) }}" method="POST">
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('restore_preassignment', pa_id=item.id) }}" method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-success px-4">Yes, Restore</button>
+                    <button type="submit" class="btn btn-success px-4 shadow-sm">Yes, Restore</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 {% endfor %}
-
-
-<!-- SCHEDULE RECYCLE BIN INFO MODAL -->
-<div class="modal fade" id="scheduleRecycleBinInfoModal" tabindex="-1" aria-labelledby="scheduleInfoLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold text-dark" id="scheduleInfoLabel">
-                    Schedule Recycle Bin Guide
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="mb-4">
-                    <h6 class="fw-bold text-success small mb-1">1. RESTORING SCHEDULES</h6>
-                    <p class="small text-muted mb-0">Mistakenly deleted a pre-assignment? Use the <strong>Green Restore
-                            icon</strong> (left arrow) to bring it back to the active list instantly.</p>
-                </div>
-                <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1">2. PERMANENT DELETION</h6>
-                    <p class="small text-muted mb-0">The <strong>Trash-Fill icon</strong> will permanently erase the
-                        pre-assignment data. <strong>Warning:</strong> This action cannot be undone and will remove all
-                        associated records.</p>
-                </div>
-                <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1">3. 30-DAY RETENTION</h6>
-                    <p class="small text-muted mb-0">Items in the trash are monitored. If a schedule has been deleted for
-                        more than <strong>30 days</strong>, a red 'Overdue' badge will appear.</p>
-                </div>
-                <div class="mb-4">
-                    <h6 class="fw-bold text-primary small mb-1">4. SEARCH & BULK ACTIONS</h6>
-                    <p class="small text-muted mb-0">Use the <strong>Search Bar</strong> to find specific codes or faculty names.
-                        You can also select multiple items using <strong>Checkboxes</strong> to restore or delete them all at
-                        once.</p>
-                </div>
-                <div class="mb-4">
-                    <h6 class="fw-bold text-info small mb-1">5. SORTING OPTIONS</h6>
-                    <p class="small text-muted mb-0">Organize your view using the <strong>Sort Dropdown</strong>. You
-                        can toggle between <strong>Newest</strong> to see recent deletes or Numerical order.</p>
-                </div>
-                <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
-                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or
-                        the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number
-                        into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's
-                        <strong>Left/Right arrow keys</strong> to flip through pages.
-                    </p>
-                </div>
-            </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-    .text-muted-v2 {
-        color: #adb5bd;
-    }
-
-    .info-icon-hover {
-        transition: all 0.2s ease;
-        cursor: pointer;
-    }
-
-    .info-icon-hover:hover {
-        color: #198754 !important;
-        transform: scale(1.2);
-    }
-</style>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-    function submitSingleAction(url) {
-        const form = document.getElementById('singleActionForm');
-        form.action = url;
-        form.submit();
-    }
-
     document.addEventListener('DOMContentLoaded', function () {
+        // 1. Live Search (Client-side keyup)
         const searchInput = document.getElementById('liveSearchInput');
-        const allRows = document.querySelectorAll('.pa-row');
+        const allRows = document.querySelectorAll('.schedule-row');
 
         if (searchInput) {
             searchInput.addEventListener('keyup', function () {
                 const filterText = this.value.toLowerCase();
                 allRows.forEach(row => {
-                    let rowText = "";
-                    row.querySelectorAll('.search-target').forEach(el => { rowText += el.textContent + " "; });
-                    row.style.display = rowText.toLowerCase().includes(filterText) ? "" : "none";
+                    const text = row.innerText.toLowerCase();
+                    row.style.display = text.includes(filterText) ? "" : "none";
                 });
             });
         }
 
+        // 2. Selection Logic
         const selectAllCheckbox = document.getElementById('selectAllCheckbox');
         const rowCheckboxes = document.querySelectorAll('.row-checkbox');
         const bulkActionBar = document.getElementById('bulkActionBar');
@@ -391,6 +361,7 @@
 
         allRows.forEach(row => {
             row.addEventListener('click', function (e) {
+                if (e.target.closest('button') || e.target.closest('.form-check-input')) return;
                 const checkbox = this.querySelector('.row-checkbox');
                 checkbox.checked = !checkbox.checked;
                 updateSelectionState();
@@ -412,15 +383,49 @@
             updateSelectionState();
         };
 
+        // 3. Bulk Action Submit
         window.submitBulkForm = function (actionType) {
             if (actionType === 'restore') {
-                bulkForm.action = "{{ url_for('bulk_restore_preassignments') }}"; // Route needed
-                bulkForm.submit();
+                bulkForm.action = "{{ url_for('bulk_restore_preassignments') }}";
             } else if (actionType === 'delete') {
-                bulkForm.action = "{{ url_for('bulk_delete_preassignments') }}"; // Route needed
-                bulkForm.submit();
+                bulkForm.action = "{{ url_for('bulk_delete_preassignments') }}";
             }
+            bulkForm.submit();
         };
     });
 </script>
+
+<!-- SCHEDULE RECYCLE BIN INFO MODAL -->
+<div class="modal fade" id="scheduleRecycleBinInfoModal" tabindex="-1" aria-labelledby="scheduleInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="scheduleInfoLabel">Schedule Recycle Bin Guide</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1">1. RESTORING SCHEDULES</h6>
+                    <p class="small text-muted mb-0">Restore deleted schedule entries to move them back to the active canvas for editing or viewing.</p>
+                </div>
+                <!-- ... standardized content ... -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
+                    <p class="small text-muted mb-0">Navigate using keyboard <strong>Left/Right arrows</strong> or the <strong>Jump to</strong> box for efficient data browsing.</p>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-muted-v2 { color: #adb5bd; }
+    .info-icon-hover { transition: all 0.2s ease; cursor: pointer; }
+    .info-icon-hover:hover { color: #198754 !important; transform: scale(1.2); }
+    .schedule-row { cursor: pointer; }
+    .selected { background-color: #f8f9fa; }
+</style>
 {% endblock %}

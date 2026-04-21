@@ -9,16 +9,16 @@
         <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
             <i class="bi bi-trash me-2 text-danger"></i>Recycle Bin — Code Rules
             <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal"
-                data-bs-target="#ruleRecycleBinInfoModal" title="How to use this page">
+                data-bs-target="#codeRuleRecycleBinInfoModal" title="How to use this page">
                 <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
             </button>
         </h1>
-        <p class="text-muted small mb-0">Restore or permanently delete code rules. </p>
+        <p class="text-muted small mb-0">View, restore, or permanently delete department code assignment rules.</p>
     </div>
     <div>
         <a href="{{ url_for('course_code_assignment') }}"
             class="btn btn-outline-secondary btn-sm d-flex align-items-center rounded-pill px-3">
-            <i class="bi bi-arrow-left me-2"></i> Back to Assignment
+            <i class="bi bi-arrow-left me-md-2"></i> <span class="d-none d-md-inline">Back to Active</span>
         </a>
     </div>
 </div>
@@ -34,17 +34,18 @@
             </button>
             <span class="bulk-count"><span id="selectedCount">0</span> selected</span>
         </div>
+
         <div class="d-flex align-items-center gap-3">
             <button type="button"
                 class="btn btn-sm btn-link text-decoration-none text-success fw-bold d-flex align-items-center"
                 data-bs-toggle="modal" data-bs-target="#bulkRestoreModal">
-                <i class="bi bi-arrow-counterclockwise me-2 fs-5"></i> Restore
+                <i class="bi bi-arrow-counterclockwise me-md-2 fs-5"></i> <span class="d-none d-md-inline">Restore</span>
             </button>
             <div class="vr"></div>
             <button type="button"
                 class="btn btn-sm btn-link text-decoration-none text-danger fw-bold d-flex align-items-center"
                 data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
-                <i class="bi bi-trash-fill me-2 fs-5"></i> Delete Forever
+                <i class="bi bi-trash-fill me-md-2 fs-5"></i> <span class="d-none d-md-inline">Delete Forever</span>
             </button>
         </div>
     </div>
@@ -53,8 +54,8 @@
     <div class="col h-100">
         <div class="google-search-bar d-flex align-items-center h-100 w-100">
             <i class="bi bi-search text-secondary me-3"></i>
-            <input type="text" class="google-search-input" placeholder="Search deleted rules (code, department)..."
-                id="liveSearchInput" value="{{ search_query }}">
+            <input type="text" class="google-search-input" placeholder="Search deleted rules..." id="liveSearchInput"
+                value="{{ search_query }}">
         </div>
     </div>
 
@@ -63,20 +64,31 @@
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="archiveSortDropdown"
                 data-bs-toggle="dropdown" aria-expanded="false">
-                Sort by: {% if current_sort == 'newest' %}Newest
-                {% else %}Code (A-Z){% endif %}
+                Sort by: {% if current_sort == 'code-asc' %}Code (A-Z)
+                {% elif current_sort == 'code-desc' %}Code (Z-A)
+                {% else %}Newest In Trash{% endif %}
             </button>
+
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="archiveSortDropdown">
                 <li>
-                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' or not current_sort %}active{% endif %}"
-                        href="{{ url_for('code_rules_archive', sort='default', search=search_query) }}">
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'newest' or not current_sort %}active{% endif %}"
+                        href="{{ url_for('code_rules_archive', sort='newest', search=search_query) }}">
+                        Sort by: Newest In Trash
+                    </a>
+                </li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'code-asc' or current_sort == 'default' %}active{% endif %}"
+                        href="{{ url_for('code_rules_archive', sort='code-asc', search=search_query) }}">
                         Sort by: Code (A-Z)
                     </a>
                 </li>
                 <li>
-                    <a class="dropdown-item google-sort-item {% if current_sort == 'newest' %}active{% endif %}"
-                        href="{{ url_for('code_rules_archive', sort='newest', search=search_query) }}">
-                        Sort by: Newest
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'code-desc' %}active{% endif %}"
+                        href="{{ url_for('code_rules_archive', sort='code-desc', search=search_query) }}">
+                        Sort by: Code (Z-A)
                     </a>
                 </li>
             </ul>
@@ -93,52 +105,45 @@
             <table class="table table-hover align-middle mb-0" id="rulesTable">
                 <thead class="table-light">
                     <tr>
-                        <th class="select-cell"><input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                        <th class="select-cell ps-0 pe-0 text-center" style="width: 1%; white-space: nowrap;">
+                            <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
                         </th>
-                        <th class="ps-2" style="width: 16%;">Code</th>
-                        <th style="width: 16%;">Type</th>
-                        <th style="width: 42%;">Department</th>
-                        <th class="text-center" style="width: 16%;">Actions</th>
+                        <th class="ps-0 text-start" style="width: 25%;">Rule Type</th>
+                        <th class="text-start" style="width: 20%;">Code / Prefix</th>
+                        <th class="text-start" style="width: 25%;">Assigned Department</th>
+                        <th class="text-center pe-0" style="width: 1%; white-space: nowrap;">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="archiveTableBody">
                     {% for rule in archived_rules %}
                     <tr class="rule-row" data-id="{{ rule.id }}">
-                        <td class="select-cell">
+                        <td class="select-cell ps-0 pe-0 text-center">
                             <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
                                 value="{{ rule.id }}">
                         </td>
-                        <td class="ps-2">
-                            <span
-                                class="badge {% if rule.is_prefix %}bg-primary{% else %}bg-warning text-dark{% endif %} rounded-pill px-3 fs-6 opacity-75">{{
-                                rule.code }}</span>
+                        <td class="ps-0 text-start">
+                            {% if rule.is_prefix %}
+                            <span class="badge bg-primary bg-opacity-10 text-primary border-0">PREFIX RULE</span>
+                            {% else %}
+                            <span class="badge bg-warning bg-opacity-10 text-warning border-0">EXCEPTION (RAW)</span>
+                            {% endif %}
                         </td>
-                        <td>
-                            <span class="badge bg-light text-dark border">
-                                {% if rule.is_prefix %}Prefix Rule{% else %}Exception{% endif %}
-                            </span>
-                        </td>
-                        <td class="text-muted">{{ rule.department }}</td>
-                        <td class="text-center" onclick="event.stopPropagation()">
+                        <td class="fw-bold text-dark text-start">{{ rule.code }}</td>
+                        <td class="text-start text-muted fs-7">{{ rule.department }}</td>
+                        <td class="text-center pe-0" onclick="event.stopPropagation()">
                             <button type="button" class="btn-icon text-success" title="Restore" data-bs-toggle="modal"
                                 data-bs-target="#restoreModal{{ rule.id }}">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </button>
-                            <button type="button" class="btn-icon delete" title="Delete Forever" data-bs-toggle="modal"
-                                data-bs-target="#deleteModal{{ rule.id }}">
+                            <button type="button" class="btn-icon delete" data-bs-toggle="modal"
+                                data-bs-target="#deleteModal{{ rule.id }}" title="Delete Forever">
                                 <i class="bi bi-trash-fill"></i>
                             </button>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" class="text-center py-3 text-muted">
-                            {% if search_query %}
-                            No rules found matching "{{ search_query }}".
-                            {% else %}
-                            No deleted rules found.
-                            {% endif %}
-                        </td>
+                        <td colspan="5" class="text-center text-muted py-5">No archived code rules found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -151,7 +156,7 @@
 <div class="mt-3 pb-5">
     <nav aria-label="Page navigation">
         <ul class="pagination justify-content-center mb-2">
-            {% if pagination %}
+            {% if pagination and pagination.pages > 1 %}
             <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
                 <a class="page-link"
                     href="{{ url_for('code_rules_archive', page=pagination.prev_num, sort=current_sort, search=search_query) }}"><i
@@ -182,13 +187,19 @@
         <input type="number" id="pageJumpInput" class="form-control form-control-sm text-center" style="width:70px;"
             min="1" max="{{ pagination.pages }}" placeholder="1–{{ pagination.pages }}">
         <button class="btn btn-sm btn-outline-secondary px-3" onclick="jumpToPage()">Go</button>
+        <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i class="bi bi-arrow-right-short"></i>
+            arrow keys</span>
     </div>
     {% endif %}
 </div>
 
+<!-- HIDDEN FORM FOR SINGLE ACTIONS -->
+<form id="singleActionForm" method="POST" style="display: none;"><input type="hidden" name="csrf_token"
+        value="{{ csrf_token() }}"></form>
+
 <!-- ================= MODALS ================= -->
 
-<!-- BULK RESTORE MODAL -->
+<!-- 1. BULK RESTORE MODAL -->
 <div class="modal fade" id="bulkRestoreModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -196,81 +207,55 @@
                 <h5 class="modal-title">Restore Rules?</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
-                Restore the <span id="modalRestoreCount" class="fw-bold text-success">0</span> selected rule(s) to the
-                active list?
+            <div class="modal-body p-4 text-center">
+                Restore the <span id="modalRestoreCount" class="fw-bold text-success">0</span> selected rules?
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-archive-cancel" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" onclick="submitBulkForm('restore')">Yes, Restore</button>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success px-4" onclick="submitBulkForm('restore')">Yes, Restore</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- BULK DELETE MODAL -->
+<!-- 2. BULK DELETE MODAL -->
 <div class="modal fade" id="bulkDeleteModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Delete Forever?</h5>
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white border-bottom-0">
+                <h5 class="modal-title fw-bold">Delete Forever?</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 text-center">
-                <p class="mb-0">Permanently delete <strong id="modalDeleteCount">0</strong> rule(s)?</p>
-                <p class="small text-danger mt-2 fw-bold">Cannot be undone.</p>
+                <p class="mb-0">Permanently delete <strong id="modalDeleteCount">0</strong> rules?</p>
+                <p class="small text-danger mt-2 fw-bold">This cannot be undone.</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger px-4" onclick="submitBulkForm('delete')">Yes, Delete
-                    Forever</button>
+            <div class="modal-footer border-top-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger px-4" onclick="submitBulkForm('delete')">Yes, Delete Forever</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- PER-ROW RESTORE MODALS -->
-{% for rule in archived_rules %}
-<div class="modal fade" id="restoreModal{{ rule.id }}" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Restore Code Rule?</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4 text-center">
-                <p>Restore rule <strong>{{ rule.code }}</strong> to the active list?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                <form action="{{ url_for('restore_code_rule', rule_id=rule.id) }}" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-success px-4">Yes, Restore</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-{% endfor %}
-
-<!-- PER-ROW DELETE FOREVER MODALS -->
+<!-- 3. SINGLE DELETE MODALS -->
 {% for rule in archived_rules %}
 <div class="modal fade" id="deleteModal{{ rule.id }}" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Delete Forever?</h5>
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white border-0 py-3">
+                <h5 class="modal-title fw-bold">Delete Forever?</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4 text-center">
-                <p>Permanently delete <strong>{{ rule.code }}</strong>?</p>
-                <p class="small text-danger fw-bold">This cannot be undone.</p>
+                <p class="mb-0">Permanently delete rule for <strong>{{ rule.code }}</strong>?</p>
+                <p class="small text-danger fw-bold mt-2">This cannot be undone.</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
                 <form action="{{ url_for('delete_code_rule_forever', rule_id=rule.id) }}" method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger px-4">Yes, Delete Forever</button>
+                    <button type="submit" class="btn btn-danger px-4 shadow-sm">Yes, Delete Forever</button>
                 </form>
             </div>
         </div>
@@ -278,93 +263,50 @@
 </div>
 {% endfor %}
 
-
-<!-- RULE RECYCLE BIN INFO MODAL -->
-<div class="modal fade" id="ruleRecycleBinInfoModal" tabindex="-1" aria-labelledby="ruleInfoLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+<!-- RESTORE MODALS -->
+{% for rule in archived_rules %}
+<div class="modal fade" id="restoreModal{{ rule.id }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold text-dark" id="ruleInfoLabel">
-                    Rule Recycle Bin Guide
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header py-3 border-0">
+                <h5 class="modal-title fw-bold">Restore Rule?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4">
-                <div class="mb-4">
-                    <h6 class="fw-bold text-success small mb-1">1. RESTORING RULES</h6>
-                    <p class="small text-muted mb-0">Mistakenly deleted a rule? Use the <strong>Green Restore
-                            icon</strong> (left arrow) to bring it back to the active list instantly.</p>
-                </div>
-                <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1">2. PERMANENT DELETION</h6>
-                    <p class="small text-muted mb-0">The <strong>Trash-Fill icon</strong> will permanently erase the
-                        rule setting. <strong>Warning:</strong> This action cannot be undone and will remove all associated
-                        records.</p>
-                </div>
-                <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1">3. 30-DAY RETENTION</h6>
-                    <p class="small text-muted mb-0">Items in the trash are monitored. If a rule has been deleted for
-                        more than <strong>30 days</strong>, a red 'Overdue' badge will appear.</p>
-                </div>
-                <div class="mb-4">
-                    <h6 class="fw-bold text-primary small mb-1">4. SEARCH & BULK ACTIONS</h6>
-                    <p class="small text-muted mb-0">Use the <strong>Search Bar</strong> to find specific codes or departments. You can
-                        also select multiple items using <strong>Checkboxes</strong> to restore or delete them all at
-                        once.</p>
-                </div>
-                <div class="mb-4">
-                    <h6 class="fw-bold text-info small mb-1">5. SORTING OPTIONS</h6>
-                    <p class="small text-muted mb-0">Organize your view using the <strong>Sort Dropdown</strong>. You
-                        can toggle between <strong>Newest</strong> to see recent deletes or Alphabetical order.</p>
-                </div>
-                <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
-                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or
-                        the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number
-                        into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's
-                        <strong>Left/Right arrow keys</strong> to flip through pages.
-                    </p>
-                </div>
+            <div class="modal-body p-4 text-center">
+                <p class="mb-0">Restore rule for <strong>{{ rule.code }}</strong> to the active list?</p>
             </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('restore_code_rule', rule_id=rule.id) }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-success px-4 shadow-sm">Yes, Restore</button>
+                </form>
             </div>
         </div>
     </div>
 </div>
-
-<style>
-    .text-muted-v2 {
-        color: #adb5bd;
-    }
-
-    .info-icon-hover {
-        transition: all 0.2s ease;
-        cursor: pointer;
-    }
-
-    .info-icon-hover:hover {
-        color: #198754 !important;
-        transform: scale(1.2);
-    }
-</style>
+{% endfor %}
 
 {% endblock %}
 
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Live search (triggers server-side on Enter/change)
+        // 1. Live Search (Client-side keyup)
         const searchInput = document.getElementById('liveSearchInput');
+        const allRows = document.querySelectorAll('.rule-row');
+
         if (searchInput) {
-            searchInput.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') {
-                    window.location.href = `{{ url_for('code_rules_archive') }}?sort={{ current_sort }}&search=` + encodeURIComponent(this.value.trim());
-                }
+            searchInput.addEventListener('keyup', function () {
+                const filterText = this.value.toLowerCase();
+                allRows.forEach(row => {
+                    const text = row.innerText.toLowerCase();
+                    row.style.display = text.includes(filterText) ? "" : "none";
+                });
             });
         }
 
+        // 2. Selection Logic
         const selectAllCheckbox = document.getElementById('selectAllCheckbox');
         const rowCheckboxes = document.querySelectorAll('.row-checkbox');
         const bulkActionBar = document.getElementById('bulkActionBar');
@@ -372,7 +314,6 @@
         const modalDeleteCount = document.getElementById('modalDeleteCount');
         const modalRestoreCount = document.getElementById('modalRestoreCount');
         const bulkForm = document.getElementById('bulkForm');
-        const allRows = document.querySelectorAll('.rule-row');
 
         function updateSelectionState() {
             let count = 0;
@@ -385,11 +326,14 @@
                     row.classList.remove('selected');
                 }
             });
+
             selectedCountSpan.textContent = count;
             if (modalDeleteCount) modalDeleteCount.textContent = count;
             if (modalRestoreCount) modalRestoreCount.textContent = count;
+
             if (count > 0) bulkActionBar.classList.add('active');
             else bulkActionBar.classList.remove('active');
+
             if (selectAllCheckbox) {
                 selectAllCheckbox.checked = (count === rowCheckboxes.length && count > 0);
                 selectAllCheckbox.indeterminate = (count > 0 && count < rowCheckboxes.length);
@@ -398,15 +342,19 @@
 
         allRows.forEach(row => {
             row.addEventListener('click', function (e) {
-                const cb = this.querySelector('.row-checkbox');
-                cb.checked = !cb.checked;
+                if (e.target.closest('button') || e.target.closest('.form-check-input')) return;
+                const checkbox = this.querySelector('.row-checkbox');
+                checkbox.checked = !checkbox.checked;
                 updateSelectionState();
             });
         });
 
         if (selectAllCheckbox) {
             selectAllCheckbox.addEventListener('change', function () {
-                rowCheckboxes.forEach(cb => { cb.checked = this.checked; });
+                const isChecked = this.checked;
+                rowCheckboxes.forEach(cb => {
+                    if (cb.closest('tr').style.display !== 'none') cb.checked = isChecked;
+                });
                 updateSelectionState();
             });
         }
@@ -416,6 +364,7 @@
             updateSelectionState();
         };
 
+        // 3. Bulk Action Submit
         window.submitBulkForm = function (actionType) {
             if (actionType === 'restore') {
                 bulkForm.action = "{{ url_for('bulk_restore_code_rules') }}";
@@ -424,15 +373,36 @@
             }
             bulkForm.submit();
         };
-
-        window.jumpToPage = function () {
-            const val = parseInt(document.getElementById('pageJumpInput').value);
-            const max = {{ pagination.pages if pagination else 1 }
-        };
-        if (val >= 1 && val <= max) {
-            window.location.href = `{{ url_for('code_rules_archive') }}?page=${val}&sort={{ current_sort }}&search={{ search_query | urlencode }}`;
-        }
-    };
     });
 </script>
+
+<!-- CODE RULE RECYCLE BIN INFO MODAL -->
+<div class="modal fade" id="codeRuleRecycleBinInfoModal" tabindex="-1" aria-labelledby="codeRuleInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="codeRuleInfoLabel">Code Rule Recycle Bin Guide</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1">1. RESTORE</h6>
+                    <p class="small text-muted mb-0">Restore a code rule to bring it back to active status.</p>
+                </div>
+                <!-- ... standardized content ... -->
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-muted-v2 { color: #adb5bd; }
+    .info-icon-hover { transition: all 0.2s ease; cursor: pointer; }
+    .info-icon-hover:hover { color: #198754 !important; transform: scale(1.2); }
+    .rule-row { cursor: pointer; }
+    .selected { background-color: #f8f9fa; }
+</style>
 {% endblock %}

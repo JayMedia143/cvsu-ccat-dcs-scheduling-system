@@ -502,6 +502,7 @@ class Course(db.Model):
     asynchronous_lab_hours = db.Column(db.Integer, default=0)
     is_archived = db.Column(db.Boolean, default=False, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
 class User(db.Model):
@@ -518,6 +519,7 @@ class User(db.Model):
     # Advanced Management: Recycle Bin Support
     is_deleted    = db.Column(db.Boolean, default=False, nullable=False)
     deleted_at    = db.Column(db.DateTime, nullable=True)
+    created_at    = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Room(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -529,6 +531,7 @@ class Room(db.Model):
     functional_computers = db.Column(db.Integer, nullable=False, default=40)
     is_archived = db.Column(db.Boolean, default=False, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     special_course_ids = db.Column(db.Text, nullable=True, default='')
     room_departments = db.Column(db.Text, nullable=True, default='')  # comma-separated dept names; empty = all depts
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
@@ -540,6 +543,7 @@ class Section(db.Model):
     number_of_students = db.Column(db.Integer, nullable=False, default=40)
     is_archived = db.Column(db.Boolean, default=False, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     courses = db.relationship('Course', secondary=section_courses, lazy='subquery', backref=db.backref('sections', lazy=True))
 
@@ -556,6 +560,7 @@ class Faculty(db.Model):
     available_days = db.Column(db.Text, nullable=False, default='Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday')
     is_archived = db.Column(db.Boolean, default=False, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     courses = db.relationship('Course', secondary=faculty_courses, lazy='subquery', backref=db.backref('faculty_can_teach', lazy=True))
 
@@ -587,6 +592,7 @@ class PreAssignment(db.Model):
     end_time = db.Column(db.String(20), nullable=False)
     is_archived = db.Column(db.Boolean, default=False, nullable=False)
     deleted_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships para madaling i-display
     course = db.relationship('Course')
@@ -602,6 +608,7 @@ class Constraint(db.Model):
     description = db.Column(db.Text, nullable=True)
     constraint_type = db.Column(db.String(10), nullable=False, default='HC')
     weight = db.Column(db.Integer, nullable=False, default=1)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class CodePrefixRule(db.Model):
     __tablename__ = 'code_prefix_rules'
@@ -610,6 +617,8 @@ class CodePrefixRule(db.Model):
     is_prefix   = db.Column(db.Boolean, default=True, nullable=False)    # True=prefix rule, False=exact code
     department  = db.Column(db.String(100), nullable=False)
     is_archived = db.Column(db.Boolean, default=False, nullable=False)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    deleted_at  = db.Column(db.DateTime, nullable=True)
 
 # --- BAGONG MODEL PARA SA FINAL SCHEDULE ---
 class ScheduledClass(db.Model):
@@ -634,6 +643,7 @@ class ScheduledClass(db.Model):
     is_draft         = db.Column(db.Boolean, nullable=False, default=False)
     # draft_version_id: FK to DraftVersion; NULL = master/live record
     draft_version_id = db.Column(db.Integer, db.ForeignKey('draft_version.id'), nullable=True)
+    created_at       = db.Column(db.DateTime, default=datetime.utcnow)
 
     course = db.relationship('Course')
     section = db.relationship('Section')
@@ -771,6 +781,7 @@ class Student(db.Model):
     is_archived  = db.Column(db.Boolean, default=False, nullable=False)
     is_irregular = db.Column(db.Boolean, default=False, nullable=False)
     deleted_at   = db.Column(db.DateTime, nullable=True)
+    created_at   = db.Column(db.DateTime, default=datetime.utcnow)
     section      = db.relationship('Section', backref='students')
 
 class IrregularAssignment(db.Model):
@@ -2366,8 +2377,10 @@ def courses_archive():
 
     if sort_by == 'a-z':
         query = query.order_by(Course.course_code.asc())
-    elif sort_by == 'z-a': # Added Z-A sort just in case
+    elif sort_by == 'z-a':
         query = query.order_by(Course.course_code.desc())
+    elif sort_by == 'newest' or sort_by == 'default':
+        query = query.order_by(Course.deleted_at.desc(), Course.id.desc())
     else: 
         query = query.order_by(Course.id.desc())
 
@@ -2968,9 +2981,13 @@ def code_rules_archive():
             )
         )
     if sort_by == 'newest':
-        query = query.order_by(CodePrefixRule.id.desc())
+        query = query.order_by(CodePrefixRule.deleted_at.desc(), CodePrefixRule.id.desc())
+    elif sort_by == 'code-asc' or sort_by == 'default':
+        query = query.order_by(CodePrefixRule.code.asc())
+    elif sort_by == 'code-desc':
+        query = query.order_by(CodePrefixRule.code.desc())
     else:
-        query = query.order_by(CodePrefixRule.code)
+        query = query.order_by(CodePrefixRule.id.desc())
 
     pagination = query.paginate(page=page, per_page=20, error_out=False)
     archived_rules = pagination.items
@@ -3347,13 +3364,17 @@ def manage_archives():
 
     # 3. Sort
     if sort_by == 'oldest':
-        query = query.order_by(TermArchive.created_at.asc())
+        query = query.order_by(TermArchive.created_at.asc(), TermArchive.id.asc())
     elif sort_by == 'semester-asc':
         query = query.order_by(TermArchive.semester.asc())
+    elif sort_by == 'semester-desc':
+        query = query.order_by(TermArchive.semester.desc())
     elif sort_by == 'ay-asc':
         query = query.order_by(TermArchive.academic_year.asc())
+    elif sort_by == 'ay-desc':
+        query = query.order_by(TermArchive.academic_year.desc())
     else: # newest
-        query = query.order_by(TermArchive.created_at.desc())
+        query = query.order_by(TermArchive.created_at.desc(), TermArchive.id.desc())
 
     # Get unique values for filter dropdown
     unique_semesters = [r[0] for r in db.session.query(TermArchive.semester).distinct().all()]
@@ -3468,6 +3489,7 @@ def bulk_delete_rooms():
 @login_required
 def rooms_archive():
     # --- KUNIN ANG MGA PARAMETERS ---
+    page = request.args.get('page', 1, type=int)
     sort_by = request.args.get('sort', 'default', type=str)
     search_query = request.args.get('search', '', type=str)
 
@@ -3486,14 +3508,18 @@ def rooms_archive():
         query = query.order_by(Room.room_name.asc())
     elif sort_by == 'name-desc':
         query = query.order_by(Room.room_name.desc())
-    else: # Default sort (pababa para makita agad ang huling in-archive)
+    elif sort_by == 'newest' or sort_by == 'default':
+        query = query.order_by(Room.deleted_at.desc(), Room.id.desc())
+    else:
         query = query.order_by(Room.id.desc())
 
-    archived_rooms = query.all()
+    pagination = query.paginate(page=page, per_page=10, error_out=False)
+    archived_rooms = pagination.items
     
     return render_template(
         'rooms_archive.html', 
         rooms=archived_rooms,
+        pagination=pagination,
         current_sort=sort_by,
         search_query=search_query,
         now=datetime.utcnow()
@@ -3837,7 +3863,9 @@ def sections_archive():
         query = query.order_by(Section.section_name.asc())
     elif sort_by == 'name-desc':
         query = query.order_by(Section.section_name.desc())
-    else: # Default (Newest first based on ID)
+    elif sort_by == 'newest' or sort_by == 'default':
+        query = query.order_by(Section.deleted_at.desc(), Section.id.desc())
+    else:
         query = query.order_by(Section.id.desc())
 
     # Pagination Logic
@@ -4471,6 +4499,7 @@ def bulk_delete_faculty():
 @login_required
 def faculty_archive():
     # --- KUNIN ANG MGA PARAMETERS ---
+    page = request.args.get('page', 1, type=int)
     sort_by = request.args.get('sort', 'default', type=str)
     search_query = request.args.get('search', '', type=str)
 
@@ -4489,14 +4518,18 @@ def faculty_archive():
         query = query.order_by(Faculty.full_name.asc())
     elif sort_by == 'name-desc':
         query = query.order_by(Faculty.full_name.desc())
-    else: # Default sort (pababa para makita agad ang huling in-archive)
+    elif sort_by == 'newest' or sort_by == 'default':
+        query = query.order_by(Faculty.deleted_at.desc(), Faculty.id.desc())
+    else:
         query = query.order_by(Faculty.id.desc())
 
-    archived_faculty = query.all()
+    pagination = query.paginate(page=page, per_page=10, error_out=False)
+    archived_faculty = pagination.items
     
     return render_template(
         'faculty_archive.html', 
         faculties=archived_faculty,
+        pagination=pagination,
         current_sort=sort_by,
         search_query=search_query,
         now=datetime.utcnow()
@@ -5948,10 +5981,15 @@ def manage_preassignments():
 
         if sort_by == 'course-asc':
             all_objs.sort(key=lambda x: course_map.get(getattr(x, 'course_id', 0), ''))
+        elif sort_by == 'course-desc':
+            all_objs.sort(key=lambda x: course_map.get(getattr(x, 'course_id', 0), ''), reverse=True)
         elif sort_by == 'section-asc':
             all_objs.sort(key=lambda x: sec_map.get(getattr(x, 'section_id', 0), ''))
+        elif sort_by == 'section-desc':
+            all_objs.sort(key=lambda x: sec_map.get(getattr(x, 'section_id', 0), ''), reverse=True)
         else:
-            all_objs.sort(key=lambda x: getattr(x, 'id', 0), reverse=True)
+            # Fallback for Newest: Sort by created_at if it exists, else id
+            all_objs.sort(key=lambda x: (getattr(x, 'created_at', None) or datetime.min, getattr(x, 'id', 0)), reverse=True)
 
         return render_template(
             'manage_preassignments.html',
@@ -5978,7 +6016,10 @@ def manage_preassignments():
         ))
 
     if sort_by == 'course-asc': query = query.join(Course).order_by(Course.course_code.asc())
+    elif sort_by == 'course-desc': query = query.join(Course).order_by(Course.course_code.desc())
     elif sort_by == 'section-asc': query = query.join(Section).order_by(Section.section_name.asc())
+    elif sort_by == 'section-desc': query = query.join(Section).order_by(Section.section_name.desc())
+    elif sort_by == 'newest' or sort_by == 'default': query = query.order_by(PreAssignment.created_at.desc(), PreAssignment.id.desc())
     else: query = query.order_by(PreAssignment.id.desc())
     
     pagination = query.paginate(page=page, per_page=10, error_out=False)
@@ -6118,12 +6159,34 @@ def archive_preassignment(pa_id):
 @login_required
 @role_required('admin', 'superadmin')
 def preassignments_archive():
+    page = request.args.get('page', 1, type=int)
     sort_by = request.args.get('sort', 'default', type=str)
+    search_query = request.args.get('search', '', type=str)
+    
     query = PreAssignment.query.filter_by(is_archived=True)
+    
+    if search_query:
+        search_term = f"%{search_query}%"
+        # Search by course code or section name
+        query = query.join(Course).join(Section).filter(
+            or_(Course.course_code.ilike(search_term), Section.section_name.ilike(search_term))
+        )
+        
     if sort_by == 'course-asc': query = query.join(Course).order_by(Course.course_code.asc())
+    elif sort_by == 'course-desc': query = query.join(Course).order_by(Course.course_code.desc())
     elif sort_by == 'section-asc': query = query.join(Section).order_by(Section.section_name.asc())
+    elif sort_by == 'section-desc': query = query.join(Section).order_by(Section.section_name.desc())
+    elif sort_by == 'newest' or sort_by == 'default': query = query.order_by(PreAssignment.deleted_at.desc(), PreAssignment.id.desc())
     else: query = query.order_by(PreAssignment.id.desc())
-    return render_template('preassignments_archive.html', pre_assignments=query.all(), current_sort=sort_by, now=datetime.utcnow())
+    
+    pagination = query.paginate(page=page, per_page=10, error_out=False)
+    
+    return render_template('preassignments_archive.html', 
+                           pre_assignments=pagination.items, 
+                           pagination=pagination,
+                           current_sort=sort_by, 
+                           search_query=search_query,
+                           now=datetime.utcnow())
 
 @app.route('/manage/pre-assignment/restore/<int:pa_id>', methods=['POST'])
 @login_required
@@ -6186,12 +6249,14 @@ def manage_constraints():
         ))
 
     # Apply Sort
-    if sort_by == 'name-desc': # HC-20 to HC-01
+    if sort_by == 'name-desc':
         query = query.order_by(Constraint.name.desc())
-    elif sort_by == 'name-asc': # HC-01 to HC-20
+    elif sort_by == 'name-asc':
         query = query.order_by(Constraint.name.asc())
     elif sort_by == 'category':
         query = query.order_by(Constraint.category.asc(), Constraint.name.asc())
+    elif sort_by == 'newest' or sort_by == 'default':
+        query = query.order_by(Constraint.created_at.desc(), Constraint.id.desc())
     else:
         query = query.order_by(Constraint.name.asc())
 
@@ -13643,6 +13708,9 @@ def manage_students():
             all_secs = get_archive_entities(archive_id, 'Section')
             sec_map = {s.id: getattr(s, 'section_name', '') for s in all_secs}
             all_objs.sort(key=lambda x: (sec_map.get(getattr(x, 'section_id', 0), 'Z-NoSection'), (getattr(x, 'full_name', '') or '').lower()))
+        elif sort_by == 'newest':
+            from datetime import datetime as dtt
+            all_objs.sort(key=lambda x: (getattr(x, 'created_at', None) or dtt.min, getattr(x, 'id', 0)), reverse=True)
         else: # Default: name-asc
             all_objs.sort(key=lambda x: (getattr(x, 'full_name', '') or '').lower())
 
@@ -13867,23 +13935,37 @@ def bulk_archive_students():
 @login_required
 @role_required('admin', 'superadmin')
 def students_archive():
+    page         = request.args.get('page', 1, type=int)
     sort_by      = request.args.get('sort', 'default', type=str)
     search_query = request.args.get('search', '', type=str)
-    query        = Student.query.filter_by(is_archived=True)
+    
+    query = Student.query.filter_by(is_archived=True)
+    
     if search_query:
+        search_term = f"%{search_query}%"
         query = query.filter(or_(
-            Student.full_name.ilike(f'%{search_query}%'),
-            Student.student_id.ilike(f'%{search_query}%'),
+            Student.full_name.ilike(search_term),
+            Student.student_id.ilike(search_term)
         ))
+        
     if sort_by == 'name-asc':
         query = query.order_by(Student.full_name.asc())
+    elif sort_by == 'name-desc':
+        query = query.order_by(Student.full_name.desc())
+    elif sort_by == 'newest' or sort_by == 'default':
+        query = query.order_by(Student.deleted_at.desc(), Student.id.desc())
     else:
-        query = query.order_by(Student.deleted_at.desc())
-    students = query.all()
+        query = query.order_by(Student.id.desc())
+        
+    pagination = query.paginate(page=page, per_page=10, error_out=False)
+    students = pagination.items
+    
     return render_template('students_archive.html',
         students=students,
+        pagination=pagination,
         current_sort=sort_by,
-        now=datetime.utcnow(),
+        search_query=search_query,
+        now=datetime.utcnow()
     )
 
 
@@ -14607,6 +14689,9 @@ def manage_irregular():
             all_secs = get_archive_entities(archive_id, 'Section')
             sec_map = {s.id: getattr(s, 'section_name', '') for s in all_secs}
             all_objs.sort(key=lambda x: (sec_map.get(getattr(x, 'section_id', 0), 'Z-NoSection'), (getattr(x, 'full_name', '') or '').lower()))
+        elif sort_by == 'newest':
+            from datetime import datetime as dtt
+            all_objs.sort(key=lambda x: (getattr(x, 'created_at', None) or dtt.min, getattr(x, 'id', 0)), reverse=True)
         else: # Default: name-asc
             all_objs.sort(key=lambda x: (getattr(x, 'full_name', '') or '').lower())
 
@@ -14667,6 +14752,8 @@ def manage_irregular():
     elif sort_by == 'section':
         query = query.outerjoin(Section, Student.section_id == Section.id)\
                      .order_by(Section.section_name.asc(), Student.full_name.asc())
+    elif sort_by == 'newest' or sort_by == 'default':
+        query = query.order_by(Student.created_at.desc(), Student.id.desc())
     else:
         query = query.order_by(Student.full_name.asc())
 

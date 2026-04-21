@@ -113,7 +113,7 @@
                 <!-- Section Filter -->
                 <li class="dropdown-submenu">
                     <a class="dropdown-item" href="javascript:void(0);">Section</a>
-                    <ul class="dropdown-menu" style="max-height: 250px; overflow-y: auto;">
+                    <ul class="dropdown-menu">
                         {% for sec in all_sections %}
                         <li>
                             <a class="dropdown-item {% if current_filter_val == sec.id|string and current_filter_by == 'section' %}active{% endif %}"

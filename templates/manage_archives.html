@@ -117,7 +117,7 @@
                 <!-- NESTED 2: Academic Year -->
                 <li class="dropdown-submenu">
                     <a class="dropdown-item submenu-trigger" href="javascript:void(0);">Academic Year</a>
-                    <ul class="dropdown-menu" style="max-height: 300px; overflow-y: auto;">
+                    <ul class="dropdown-menu">
                         {% for ay in unique_ay %}
                         <li>
                             <a class="dropdown-item {% if current_filter_val == ay %}active{% endif %}"
@@ -140,7 +140,9 @@
                     Sort by: {% if current_sort == 'newest' %} Newest First
                     {% elif current_sort == 'oldest' %} Oldest First
                     {% elif current_sort == 'semester-asc' %} Semester (A-Z)
+                    {% elif current_sort == 'semester-desc' %} Semester (Z-A)
                     {% elif current_sort == 'ay-asc' %} Academic Year (A-Z)
+                    {% elif current_sort == 'ay-desc' %} Academic Year (Z-A)
                     {% else %} Newest First
                     {% endif %}
                 </span>
@@ -168,9 +170,24 @@
                     </a>
                 </li>
                 <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'semester-desc' %}active{% endif %}"
+                        href="{{ url_for('manage_archives', sort='semester-desc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Sort by: Semester (Z-A)
+                    </a>
+                </li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+                <li>
                     <a class="dropdown-item google-sort-item {% if current_sort == 'ay-asc' %}active{% endif %}"
                         href="{{ url_for('manage_archives', sort='ay-asc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
                         Sort by: Academic Year (A-Z)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'ay-desc' %}active{% endif %}"
+                        href="{{ url_for('manage_archives', sort='ay-desc', search=search_query, filter_by=current_filter_by, filter_val=current_filter_val) }}">
+                        Sort by: Academic Year (Z-A)
                     </a>
                 </li>
             </ul>

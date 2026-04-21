@@ -13,13 +13,13 @@
                 <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
             </button>
         </h1>
-        <p class="text-muted small mb-0">Restore or permanently delete student sections. Items older than 30 days are
+        <p class="text-muted small mb-0">View, restore, or permanently delete sections. Items older than 30 days are
             flagged.</p>
     </div>
     <div>
         <a href="{{ url_for('manage_sections') }}"
             class="btn btn-outline-secondary btn-sm d-flex align-items-center rounded-pill px-3">
-            <i class="bi bi-arrow-left me-2"></i> Back to Active
+            <i class="bi bi-arrow-left me-md-2"></i> <span class="d-none d-md-inline">Back to Active</span>
         </a>
     </div>
 </div>
@@ -37,18 +37,16 @@
         </div>
 
         <div class="d-flex align-items-center gap-3">
-            <!-- Bulk Restore -->
             <button type="button"
                 class="btn btn-sm btn-link text-decoration-none text-success fw-bold d-flex align-items-center"
                 data-bs-toggle="modal" data-bs-target="#bulkRestoreModal">
-                <i class="bi bi-arrow-counterclockwise me-2 fs-5"></i> Restore
+                <i class="bi bi-arrow-counterclockwise me-md-2 fs-5"></i> <span class="d-none d-md-inline">Restore</span>
             </button>
             <div class="vr"></div>
-            <!-- Bulk Delete -->
             <button type="button"
                 class="btn btn-sm btn-link text-decoration-none text-danger fw-bold d-flex align-items-center"
                 data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
-                <i class="bi bi-trash-fill me-2 fs-5"></i> Delete Forever
+                <i class="bi bi-trash-fill me-md-2 fs-5"></i> <span class="d-none d-md-inline">Delete Forever</span>
             </button>
         </div>
     </div>
@@ -57,8 +55,8 @@
     <div class="col h-100">
         <div class="google-search-bar d-flex align-items-center h-100 w-100">
             <i class="bi bi-search text-secondary me-3"></i>
-            <input type="text" class="google-search-input" placeholder="Search deleted sections..."
-                id="liveSearchInput">
+            <input type="text" class="google-search-input" placeholder="Search deleted sections..." id="liveSearchInput"
+                value="{{ search_query }}">
         </div>
     </div>
 
@@ -68,20 +66,30 @@
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="archiveSortDropdown"
                 data-bs-toggle="dropdown" aria-expanded="false">
                 Sort by: {% if current_sort == 'name-asc' %}Name (A-Z)
-                {% else %}Newest{% endif %}
+                {% elif current_sort == 'name-desc' %}Name (Z-A)
+                {% else %}Newest In Trash{% endif %}
             </button>
 
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="archiveSortDropdown">
                 <li>
-                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' or not current_sort %}active{% endif %}"
-                        href="{{ url_for('sections_archive', sort='default') }}">
-                        Sort by: Newest
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' or not current_sort or current_sort == 'newest' %}active{% endif %}"
+                        href="{{ url_for('sections_archive', sort='newest', search=search_query) }}">
+                        Sort by: Newest In Trash
                     </a>
                 </li>
                 <li>
+                    <hr class="dropdown-divider">
+                </li>
+                <li>
                     <a class="dropdown-item google-sort-item {% if current_sort == 'name-asc' %}active{% endif %}"
-                        href="{{ url_for('sections_archive', sort='name-asc') }}">
+                        href="{{ url_for('sections_archive', sort='name-asc', search=search_query) }}">
                         Sort by: Name (A-Z)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'name-desc' %}active{% endif %}"
+                        href="{{ url_for('sections_archive', sort='name-desc', search=search_query) }}">
+                        Sort by: Name (Z-A)
                     </a>
                 </li>
             </ul>
@@ -95,14 +103,15 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="bg-white rounded border shadow-sm overflow-hidden">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0" id="sectionsTable">
                 <thead class="table-light">
                     <tr>
                         <th class="select-cell ps-0 pe-0 text-center" style="width: 1%; white-space: nowrap;">
                             <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
                         </th>
-                        <th class="ps-0 text-start" style="width: 40%;">Section Name</th>
-                        <th class="text-start" style="width: 20%;">Year Level</th>
+                        <th class="ps-0 text-start" style="width: 30%;">Section Name</th>
+                        <th class="text-start" style="width: 25%;">Academic Year</th>
+                        <th class="text-center" style="width: 15%;">Semester</th>
                         <th class="text-start">In Trash Since</th>
                         <th class="text-center pe-0" style="width: 1%; white-space: nowrap;">Actions</th>
                     </tr>
@@ -114,11 +123,10 @@
                             <input class="form-check-input row-checkbox" type="checkbox" name="row_ids"
                                 value="{{ section.id }}">
                         </td>
-
                         <td class="fw-bold text-dark ps-0 text-start">{{ section.section_name }}</td>
-                        <td class="text-start">
-                            <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary">{{
-                                section.year_level }}</span>
+                        <td class="text-start">{{ section.academic_year }}</td>
+                        <td class="text-center px-0">
+                            <span class="badge bg-light border text-dark">{{ section.semester }}</span>
                         </td>
                         <td class="text-start">
                             {% if section.deleted_at %}
@@ -131,10 +139,9 @@
                             <span class="text-muted small">—</span>
                             {% endif %}
                         </td>
-
                         <td class="text-center pe-0" onclick="event.stopPropagation()">
-                            <button type="button" class="btn-icon text-success" title="Restore"
-                                data-bs-toggle="modal" data-bs-target="#restoreModal{{ section.id }}">
+                            <button type="button" class="btn-icon text-success" title="Restore" data-bs-toggle="modal"
+                                data-bs-target="#restoreModal{{ section.id }}">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </button>
                             <button type="button" class="btn-icon delete" data-bs-toggle="modal"
@@ -145,7 +152,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="4" class="text-center text-muted py-5">No deleted sections found.</td>
+                        <td colspan="6" class="text-center text-muted py-5">No deleted sections found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -154,8 +161,50 @@
     </div>
 </form>
 
+<!-- 4. PAGINATION -->
+<div class="mt-3 pb-5">
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center mb-2">
+            {% if pagination and pagination.pages > 1 %}
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link"
+                    href="{{ url_for('sections_archive', page=pagination.prev_num, sort=current_sort, search=search_query) }}"><i
+                        class="bi bi-chevron-left"></i></a>
+            </li>
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+            {% if page_num %}
+            <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                <a class="page-link"
+                    href="{{ url_for('sections_archive', page=page_num, sort=current_sort, search=search_query) }}">{{
+                    page_num }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>
+            {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link"
+                    href="{{ url_for('sections_archive', page=pagination.next_num, sort=current_sort, search=search_query) }}"><i
+                        class="bi bi-chevron-right"></i></a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% if pagination and pagination.pages > 1 %}
+    <div class="d-flex align-items-center justify-content-center gap-2 text-muted" style="font-size:0.85rem;">
+        <span>Jump to:</span>
+        <input type="number" id="pageJumpInput" class="form-control form-control-sm text-center" style="width:70px;"
+            min="1" max="{{ pagination.pages }}" placeholder="1–{{ pagination.pages }}">
+        <button class="btn btn-sm btn-outline-secondary px-3" onclick="jumpToPage()">Go</button>
+        <span style="font-size:0.75rem;"><i class="bi bi-arrow-left-short"></i><i class="bi bi-arrow-right-short"></i>
+            arrow keys</span>
+    </div>
+    {% endif %}
+</div>
+
 <!-- HIDDEN FORM FOR SINGLE ACTIONS -->
-<form id="singleActionForm" method="POST" style="display: none;"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"></form>
+<form id="singleActionForm" method="POST" style="display: none;"><input type="hidden" name="csrf_token"
+        value="{{ csrf_token() }}"></form>
 
 <!-- ================= MODALS ================= -->
 
@@ -249,89 +298,12 @@
 </div>
 {% endfor %}
 
-
-<!-- SECTION RECYCLE BIN INFO MODAL -->
-<div class="modal fade" id="sectionRecycleBinInfoModal" tabindex="-1" aria-labelledby="sectionInfoLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold text-dark" id="sectionInfoLabel">
-                    Section Recycle Bin Guide
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="mb-4">
-                    <h6 class="fw-bold text-success small mb-1">1. RESTORING SECTIONS</h6>
-                    <p class="small text-muted mb-0">Mistakenly deleted a section? Use the <strong>Green Restore
-                            icon</strong> (left arrow) to bring it back to the active list instantly.</p>
-                </div>
-                <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1">2. PERMANENT DELETION</h6>
-                    <p class="small text-muted mb-0">The <strong>Trash-Fill icon</strong> will permanently erase the
-                        section. <strong>Warning:</strong> This action cannot be undone and will remove all associated
-                        records.</p>
-                </div>
-                <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1">3. 30-DAY RETENTION</h6>
-                    <p class="small text-muted mb-0">Items in the trash are monitored. If a section has been deleted for
-                        more than <strong>30 days</strong>, a red 'Overdue' badge will appear.</p>
-                </div>
-                <div class="mb-4">
-                    <h6 class="fw-bold text-primary small mb-1">4. SEARCH & BULK ACTIONS</h6>
-                    <p class="small text-muted mb-0">Use the <strong>Search Bar</strong> to find specific labels. You can
-                        also select multiple items using <strong>Checkboxes</strong> to restore or delete them all at
-                        once.</p>
-                </div>
-                <div class="mb-4">
-                    <h6 class="fw-bold text-info small mb-1">5. SORTING OPTIONS</h6>
-                    <p class="small text-muted mb-0">Organize your view using the <strong>Sort Dropdown</strong>. You
-                        can toggle between <strong>Newest</strong> to see recent deletes or Alphabetical order.</p>
-                </div>
-                <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
-                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or
-                        the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number
-                        into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's
-                        <strong>Left/Right arrow keys</strong> to flip through pages.
-                    </p>
-                </div>
-            </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-    .text-muted-v2 {
-        color: #adb5bd;
-    }
-
-    .info-icon-hover {
-        transition: all 0.2s ease;
-        cursor: pointer;
-    }
-
-    .info-icon-hover:hover {
-        color: #198754 !important;
-        transform: scale(1.2);
-    }
-</style>
-
 {% endblock %}
 
 {% block scripts %}
 <script>
-    function submitSingleAction(url) {
-        const form = document.getElementById('singleActionForm');
-        form.action = url;
-        form.submit();
-    }
-
     document.addEventListener('DOMContentLoaded', function () {
+        // 1. Live Search (Client-side keyup)
         const searchInput = document.getElementById('liveSearchInput');
         const allRows = document.querySelectorAll('.section-row');
 
@@ -345,6 +317,7 @@
             });
         }
 
+        // 2. Selection Logic
         const selectAllCheckbox = document.getElementById('selectAllCheckbox');
         const rowCheckboxes = document.querySelectorAll('.row-checkbox');
         const bulkActionBar = document.getElementById('bulkActionBar');
@@ -380,6 +353,7 @@
 
         allRows.forEach(row => {
             row.addEventListener('click', function (e) {
+                if (e.target.closest('button') || e.target.closest('.form-check-input')) return;
                 const checkbox = this.querySelector('.row-checkbox');
                 checkbox.checked = !checkbox.checked;
                 updateSelectionState();
@@ -401,15 +375,52 @@
             updateSelectionState();
         };
 
+        // 3. Bulk Action Submit
         window.submitBulkForm = function (actionType) {
             if (actionType === 'restore') {
-                bulkForm.action = "{{ url_for('bulk_restore_sections') }}"; // Make sure to add this route!
-                bulkForm.submit();
+                bulkForm.action = "{{ url_for('bulk_restore_sections') }}";
             } else if (actionType === 'delete') {
-                bulkForm.action = "{{ url_for('bulk_delete_sections') }}"; // Make sure to add this route!
-                bulkForm.submit();
+                bulkForm.action = "{{ url_for('bulk_delete_sections') }}";
             }
+            bulkForm.submit();
         };
     });
 </script>
+
+<!-- SECTION RECYCLE BIN INFO MODAL -->
+<div class="modal fade" id="sectionRecycleBinInfoModal" tabindex="-1" aria-labelledby="sectionInfoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-dark" id="sectionInfoLabel">Section Recycle Bin Guide</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1">1. RESTORING SECTIONS</h6>
+                    <p class="small text-muted mb-0">Mistakenly deleted a section? Use the <strong>Green Restore icon</strong> to bring it back instantly.</p>
+                </div>
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1">2. PERMANENT DELETION</h6>
+                    <p class="small text-muted mb-0">The <strong>Trash-Fill icon</strong> will permanently erase the section data. This action cannot be undone.</p>
+                </div>
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
+                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or keyboard <strong>Left/Right arrow keys</strong>. Use the <strong>'Jump to'</strong> box for direct navigation.</p>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-muted-v2 { color: #adb5bd; }
+    .info-icon-hover { transition: all 0.2s ease; cursor: pointer; }
+    .info-icon-hover:hover { color: #198754 !important; transform: scale(1.2); }
+    .section-row { cursor: pointer; }
+    .selected { background-color: #f8f9fa; }
+</style>
 {% endblock %}

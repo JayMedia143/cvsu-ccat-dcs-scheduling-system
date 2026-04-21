@@ -104,7 +104,7 @@
                     data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
                 <i class="bi bi-funnel me-2"></i><span id="filterBtnLabel">Filter</span>
             </button>
-            <ul class="dropdown-menu dropdown-menu-end" style="min-width:230px;padding:6px 0;">
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
 
                 <!-- Constraint Type group -->
                 <li><h6 class="dropdown-header px-3 mb-0" style="font-size:0.68rem;letter-spacing:.06em;color:#888;">CONSTRAINT TYPE</h6></li>
@@ -147,16 +147,20 @@
         <!-- Sort dropdown -->
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="sortToggleBtn" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-arrow-down-up me-2"></i>Sort by: {% if sort_by == 'rule-desc' %}Rule (Z-A){% else %}Rule Name{% endif %}
+                <i class="bi bi-arrow-down-up me-2"></i>Sort by: {% if sort_by == 'rule-desc' %}Rule (Z-A){% else %}Rule (A-Z){% endif %}
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu">
                 <li>
-                    <a class="dropdown-item google-sort-item {% if sort_by == 'rule-asc' or not sort_by %}active{% endif %}"
-                       href="#" data-sort="rule-asc" onclick="setSort('rule-asc'); return false;">Rule Name (A-Z)</a>
+                    <a class="dropdown-item google-sort-item {% if sort_by == 'rule-asc' or not sort_by or sort_by == 'default' %}active{% endif %}"
+                       href="#" data-sort="rule-asc" onclick="setSort('rule-asc'); return false;">
+                        Sort by: Rule (A-Z)
+                    </a>
                 </li>
                 <li>
                     <a class="dropdown-item google-sort-item {% if sort_by == 'rule-desc' %}active{% endif %}"
-                       href="#" data-sort="rule-desc" onclick="setSort('rule-desc'); return false;">Rule Name (Z-A)</a>
+                       href="#" data-sort="rule-desc" onclick="setSort('rule-desc'); return false;">
+                        Sort by: Rule (Z-A)
+                    </a>
                 </li>
             </ul>
         </div>
@@ -450,7 +454,7 @@
                 const newSortParam = new URL(url).searchParams.get('sort') || 'rule-asc';
                 currentSort = newSortParam;
                 const sortBtn = document.getElementById('sortToggleBtn');
-                if (sortBtn) sortBtn.innerHTML = '<i class="bi bi-arrow-down-up me-2"></i>' + (newSortParam === 'rule-desc' ? 'Rule (Z-A)' : 'Rule Name');
+                if (sortBtn) sortBtn.innerHTML = '<i class="bi bi-arrow-down-up me-2"></i>Sort by: ' + (newSortParam === 'rule-desc' ? 'Rule (Z-A)' : 'Rule (A-Z)');
                 document.querySelectorAll('[data-sort]').forEach(function (el) {
                     el.classList.toggle('active', el.dataset.sort === newSortParam);
                 });

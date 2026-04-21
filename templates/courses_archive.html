@@ -19,7 +19,7 @@
     <div>
         <a href="{{ url_for('manage_courses') }}"
             class="btn btn-outline-secondary btn-sm d-flex align-items-center rounded-pill px-3">
-            <i class="bi bi-arrow-left me-2"></i> Back to Active
+            <i class="bi bi-arrow-left me-md-2"></i> <span class="d-none d-md-inline">Back to Active</span>
         </a>
     </div>
 </div>
@@ -41,14 +41,14 @@
             <button type="button"
                 class="btn btn-sm btn-link text-decoration-none text-success fw-bold d-flex align-items-center"
                 data-bs-toggle="modal" data-bs-target="#bulkRestoreModal">
-                <i class="bi bi-arrow-counterclockwise me-2 fs-5"></i> Restore
+                <i class="bi bi-arrow-counterclockwise me-md-2 fs-5"></i> <span class="d-none d-md-inline">Restore</span>
             </button>
             <div class="vr"></div>
             <!-- Bulk Delete Button (Triggers Modal) -->
             <button type="button"
                 class="btn btn-sm btn-link text-decoration-none text-danger fw-bold d-flex align-items-center"
                 data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
-                <i class="bi bi-trash-fill me-2 fs-5"></i> Delete Forever
+                <i class="bi bi-trash-fill me-md-2 fs-5"></i> <span class="d-none d-md-inline">Delete Forever</span>
             </button>
         </div>
     </div>
@@ -68,20 +68,30 @@
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="archiveSortDropdown"
                 data-bs-toggle="dropdown" aria-expanded="false">
                 Sort by: {% if current_sort == 'a-z' %}Code (A-Z)
-                {% else %}Newest{% endif %}
+                {% elif current_sort == 'z-a' %}Code (Z-A)
+                {% else %}Newest In Trash{% endif %}
             </button>
 
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="archiveSortDropdown">
                 <li>
-                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' or not current_sort %}active{% endif %}"
-                        href="{{ url_for('courses_archive', sort='default', search=search_query) }}">
-                        Sort by: Newest
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'default' or not current_sort or current_sort == 'newest' %}active{% endif %}"
+                        href="{{ url_for('courses_archive', sort='newest', search=search_query) }}">
+                        Sort by: Newest In Trash
                     </a>
+                </li>
+                <li>
+                    <hr class="dropdown-divider">
                 </li>
                 <li>
                     <a class="dropdown-item google-sort-item {% if current_sort == 'a-z' %}active{% endif %}"
                         href="{{ url_for('courses_archive', sort='a-z', search=search_query) }}">
                         Sort by: Code (A-Z)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item google-sort-item {% if current_sort == 'z-a' %}active{% endif %}"
+                        href="{{ url_for('courses_archive', sort='z-a', search=search_query) }}">
+                        Sort by: Code (Z-A)
                     </a>
                 </li>
             </ul>
