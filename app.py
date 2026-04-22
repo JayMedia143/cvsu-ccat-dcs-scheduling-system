@@ -7381,7 +7381,12 @@ def view_schedule_modal(view_type, entity_id):
             return '<div class="alert alert-warning m-3">Student not found.</div>'
         if student.is_irregular:
             iframe_src = url_for('irregular_timetable_html', viewer='true', student_id=student.student_id)
-            return f'<div style="width:100%; aspect-ratio: 1 / 1.414; max-height:76vh;"><iframe src="{iframe_src}" style="width:100%;height:100%;border:none;display:block;"></iframe></div>'
+            # Use dynamic sizing even for irregulars
+            settings = get_settings()
+            sec_p = getattr(settings, 'paper_size', 'A4') or 'A4'
+            w_in, h_in, _ = PAPER_SIZES.get(sec_p, PAPER_SIZES['A4'])
+            pw, ph = int(w_in * 96), int(h_in * 96)
+            return f'<div class="dynamic-paper-wrapper" data-width="{pw}" data-height="{ph}"><iframe src="{iframe_src}" style="width:100%;height:100%;border:none;display:block;"></iframe></div>'
         if not student.section_id:
             return '<div class="alert alert-warning m-3">This student has no section assigned yet.</div>'
         view_type = 'section'
@@ -7399,12 +7404,21 @@ def view_schedule_modal(view_type, entity_id):
     assets_dir    = os.path.join(basedir, 'static', 'assets')
     template_path = os.path.join(assets_dir, f'{view_type}_template.xlsx')
 
+    # Dynamic Paper Sizing for the Viewer
+    settings = get_settings()
+    sec_p = getattr(settings, 'paper_size', 'A4') or 'A4'
+    fac_p = getattr(settings, 'fac_paper_size', 'A4') or 'A4'
+    pk = fac_p if view_type == 'faculty' else sec_p
+    w_in, h_in, _ = PAPER_SIZES.get(pk, PAPER_SIZES['A4'])
+    
+    pw, ph = int(w_in * 96), int(h_in * 96)
+
     if os.path.isfile(template_path):
         func_name, param_name = _timetable_routes[view_type]
-        iframe_src = url_for(func_name, viewer='true', **{param_name: entity_id})
-        return f'<div style="width:100%; aspect-ratio: 1 / 1.414; max-height:76vh;"><iframe src="{iframe_src}" style="width:100%;height:100%;border:none;display:block;"></iframe></div>'
+        iframe_src = url_for(func_name, viewer='true', canvas='true', **{param_name: entity_id})
+        return f'<div class="dynamic-paper-wrapper" data-width="{pw}" data-height="{ph}"><iframe src="{iframe_src}" style="width:100%;height:100%;border:none;display:block;"></iframe></div>'
     else:
-        return get_schedule_grid(view_type, entity_id)
+        return f'<div class="dynamic-paper-wrapper" data-width="{pw}" data-height="{ph}">{get_schedule_grid(view_type, entity_id)}</div>'
 
 
 @app.route('/api/move-class', methods=['POST'])
@@ -10969,7 +10983,7 @@ def render_excel_to_html(ws, variable_map=None, cell_overrides=None,
 
 
 
-def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
+def render_a4_page(html_content, table_px, margins=None, for_canvas=False, dominant_font=None):
     """Wrap HTML table in a paper-sized page for iframe preview.
 
     margins: dict with keys top/bottom/left/right (float, inches) + paper (str key).
@@ -10987,6 +11001,13 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
     bg_style = "background: transparent;" if for_canvas else "background: #c8c8c8;"
     body_padding = "padding: 0;" if for_canvas else "padding: 24px 0;"
     body_overflow = "overflow: hidden;" if for_canvas else ""
+    paper_shadow = "box-shadow: none;" if for_canvas else "box-shadow: 0 4px 24px rgba(0,0,0,.28), 0 1px 4px rgba(0,0,0,.14);"
+    
+    dfont = f"'{dominant_font}', " if dominant_font else ""
+    
+    # Check if viewer mode (request arg)
+    is_viewer = request.args.get('viewer', 'false') == 'true'
+    body_class = "viewer-mode" if is_viewer else ""
 
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
@@ -10995,11 +11016,21 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
   body {{
     {bg_style}
-    font-family: Calibri, Arial, sans-serif;
+    font-family: {dfont}Calibri, Arial, sans-serif;
     {body_padding}
     {body_overflow}
     min-height: 100vh;
+    display: block;
     touch-action: pan-x pan-y;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    image-rendering: -webkit-optimize-contrast;
+  }}
+  
+  /* Reset internal padding for viewer mode if needed */
+  body.viewer-mode {{
+    padding: 0 !important;
   }}
   
   /* On larger screens, center the paper. On mobile, keep it left-aligned so it scales cleanly */
@@ -11015,10 +11046,12 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False):
     width: {pw}in;
     min-height: {ph}in;
     padding: {mt}in {mr}in {mb}in {ml}in;
-    box-shadow: 0 4px 24px rgba(0,0,0,.28), 0 1px 4px rgba(0,0,0,.14);
+    {paper_shadow}
     border-radius: 1px;
     position: relative;
     overflow: visible;
+    margin: 0 auto;
+
   }}
   .table-wrap {{
     width: 100%;
@@ -11497,7 +11530,7 @@ def build_schedule_overlays(schedules, grid_info, view_type):
                 'border-top:1px solid #000000;border-right:1px solid #000000;'
                 'border-bottom:1px solid #000000;border-left:1px solid #000000;overflow:hidden;">'
                 '<div style="display:table-cell;vertical-align:middle;text-align:center;'
-                'padding:3px;font-size:11px;line-height:1.3;color:#000;">'
+                'padding:3px;font-size:11px;line-height:1.3;color:#000;font-family:inherit;">'
                 f'<div>{main_line}</div>'
                 f'{sub_html}'
                 '</div></div>'
@@ -11521,7 +11554,7 @@ def build_schedule_overlays(schedules, grid_info, view_type):
                 'border-bottom:1px solid #000000;border-left:1px solid #000000;overflow:hidden;">'
                 f'{badge}'
                 '<div style="display:table-cell;vertical-align:middle;text-align:center;'
-                'padding:3px;font-size:11px;line-height:1.3;color:#000;">'
+                'padding:3px;font-size:11px;line-height:1.3;color:#000;font-family:inherit;">'
                 f'<div>{main_line}</div>'
                 f'{sub_html}'
                 '</div></div>'
@@ -11654,6 +11687,16 @@ def preview_layout(layout_type):
 
     wb = load_workbook(path, data_only=True)
     ws = wb.active
+    
+    # Extract dominant font from Excel
+    font_counts = {}
+    for r in range(1, min(ws.max_row, 50) + 1):
+        for c in range(1, min(ws.max_column, 20) + 1):
+            f = ws.cell(row=r, column=c).font
+            if f and f.name:
+                font_counts[f.name] = font_counts.get(f.name, 0) + 1
+    dom_font = max(font_counts, key=font_counts.get) if font_counts else None
+
     settings = get_settings()
     var_map  = build_variable_map(layout_type, settings)   # preview: dynamic fields show [placeholder]
     bounds   = detect_content_bounds(ws)
@@ -11667,11 +11710,11 @@ def preview_layout(layout_type):
     html_content, table_px, _, _ = render_excel_to_html(
         ws, variable_map=var_map, cell_overrides=static_overrides, bounds=bounds,
         layout_type=layout_type, margins=_margins, img_settings=_img_settings)
-    return render_a4_page(html_content, table_px, margins=_margins)
+    return render_a4_page(html_content, table_px, margins=_margins, dominant_font=dom_font)
 
 
 
-def render_viewer_page(html_content, table_px, margins=None, for_canvas=False):
+def render_viewer_page(html_content, table_px, margins=None, for_canvas=False, dominant_font=None):
     """Wrap HTML table in a paper-sized page for iframe preview.
 
     margins: dict with keys top/bottom/left/right (float, inches) + paper (str key).
@@ -11689,6 +11732,8 @@ def render_viewer_page(html_content, table_px, margins=None, for_canvas=False):
     bg_style = "background: transparent;" if for_canvas else "background: #c8c8c8;"
     body_padding = "padding: 0;" if for_canvas else "padding: 24px 0;"
     body_overflow = "overflow: hidden;" if for_canvas else ""
+    
+    dfont = f"'{dominant_font}', " if dominant_font else ""
 
     return f"""<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
@@ -11697,7 +11742,7 @@ def render_viewer_page(html_content, table_px, margins=None, for_canvas=False):
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
   body {{
     {bg_style}
-    font-family: Calibri, Arial, sans-serif;
+    font-family: {dfont}Calibri, Arial, sans-serif;
     {body_padding}
     {body_overflow}
     min-height: 100vh;

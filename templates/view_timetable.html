@@ -23,7 +23,7 @@
 
     #canvas-viewport {
         position: fixed;
-        top: {% if is_hist %}92px{% else %}48px{% endif %};
+        /* top is set via inline style to avoid CSS linter errors */
         /* Below navbar */
         left: 0;
         right: 0;
@@ -63,9 +63,11 @@
         border: none;
         overflow: visible;
         transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        position: absolute; /* Positioned by JS */
+        position: absolute;
+        /* Positioned by JS */
         padding: 0;
-        width: auto !important; /* Wrapper grows to fit inner wrap */
+        width: auto !important;
+        /* Wrapper grows to fit inner wrap */
         height: auto !important;
     }
 
@@ -75,23 +77,28 @@
     }
 
     .sticker-card {
-        background-color: transparent; /* No double background */
+        background-color: transparent;
+        /* No double background */
         border: none;
     }
 
     .sticker-card::before {
-        display: none; /* Removed redundant layer */
+        display: none;
+        /* Removed redundant layer */
     }
 
     .card-iframe-wrap {
-        width: var(--pw); /* Sized by JS inline style */
+        width: var(--pw);
+        /* Sized by JS inline style */
         height: var(--ph);
         background: white;
         border: 1px solid #ddd;
         position: relative;
-        margin-top: 34px; /* Move paper down below header */
+        margin-top: 34px;
+        /* Move paper down below header */
         overflow: hidden;
-        box-shadow: 0 12px 45px rgba(0, 0, 0, 0.08); /* Smoother shadow */
+        box-shadow: 0 12px 45px rgba(0, 0, 0, 0.08);
+        /* Smoother shadow */
         border-radius: 4px;
     }
 
@@ -306,7 +313,7 @@
     /* ── FLOATING HUD (PILL DESIGN) ────────────────────────── */
     .hud-controls {
         position: fixed;
-        top: {% if is_hist %}110px{% else %}66px{% endif %};
+        /* top is set via inline style to avoid CSS linter errors */
         left: 50%;
         transform: translateX(-50%);
         background: #fff;
@@ -623,12 +630,44 @@
             overflow: auto !important;
         }
     }
+
+    /* ── MOBILE HUD RESPONSIVENESS ────────────────────────────── */
+    @media (max-width: 768px) {
+        .hud-controls {
+            width: 95vw !important;
+            max-width: 95vw !important;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            justify-content: flex-start;
+            padding: 8px 12px;
+            gap: 10px;
+            border-radius: 30px;
+            scrollbar-width: none; /* Firefox */
+        }
+        
+        .hud-controls::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
+        
+        .hud-search-pill {
+            min-width: 140px;
+        }
+
+        #minimap-container {
+            display: none !important;
+        }
+        
+        .hud-nav-btn {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
+    }
 </style>
 
 <!-- REDESIGNED FLOATING HUD -->
-<div class="hud-controls">
+<div class="hud-controls" style="top: {% if is_hist %}110px{% else %}66px{% endif %};">
     <div class="hud-title-pill">
-        <i class="bi bi-calendar3-fill"></i> Timetable
+        <i class="bi bi-calendar3-fill"></i> <span class="d-none d-md-inline">Schedule</span>
         <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#viewInfoModal"
             title="How to use this workspace">
             <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
@@ -636,7 +675,7 @@
     </div>
 
     <div class="hud-pill-segment">
-        <span class="hud-pill-label">View:</span>
+        <span class="hud-pill-label d-none d-md-inline">View:</span>
         <select id="typeSelect" class="hud-pill-select" onchange="resetAndLoad()">
             <option value="section" {% if current_type=='section' %}selected{% endif %}>Sections</option>
             <option value="faculty" {% if current_type=='faculty' %}selected{% endif %}>Faculty</option>
@@ -646,8 +685,10 @@
     </div>
 
     <div class="hud-pill-segment">
-        <span class="hud-pill-label">Sort:</span>
-        <div class="dropdown d-inline-block">
+        <span class="hud-pill-label d-none d-md-inline">Sort:</span>
+        
+        <!-- DESKTOP DROPDOWN -->
+        <div class="dropdown d-none d-md-inline-block">
             <button class="btn hud-pill-select dropdown-toggle p-0" type="button" id="sortDropdown"
                 data-bs-toggle="dropdown" aria-expanded="false" style="width: auto; text-align: left;">
                 Sort by: Newest
@@ -676,6 +717,12 @@
                 </li>
             </ul>
         </div>
+        
+        <!-- MOBILE CYCLE TOGGLE -->
+        <button class="btn hud-pill-select p-0 d-flex d-md-none align-items-center" type="button" id="sortMobileBtn"
+            onclick="cycleSortMobile()" style="width: max-content; gap: 4px;">
+            <i class="bi bi-filter"></i> <span>:</span> <span id="sortMobileText">Newest</span>
+        </button>
     </div>
 
     <div class="hud-search-pill">
@@ -685,7 +732,7 @@
 
     <div class="d-flex align-items-center gap-2">
         <button class="btn btn-outline-success hud-pill-btn d-flex align-items-center gap-2" onclick="fitAll()">
-            <i class="bi bi-arrows-angle-contract"></i> <span>Fit All</span>
+            <i class="bi bi-arrows-angle-contract"></i> <span class="d-none d-md-inline">Fit All</span>
         </button>
 
         <div class="hud-nav-pill">
@@ -732,7 +779,7 @@
 </div>
 
 <!-- VIEWPORT & CANVAS -->
-<div id="canvas-viewport">
+<div id="canvas-viewport" style="top: {% if is_hist %}92px{% else %}48px{% endif %};">
     <div id="infinite-canvas">
         <!-- Timetables will be loaded here dynamically -->
     </div>
@@ -741,13 +788,21 @@
 <script>
     (function () {
         // ── Data from Flask ──────────────────────────────────────────
-    const _sec = {{ sections_json | tojson | safe }};
+        const _sec = {{ sections_json | tojson | safe
+    }};
     const _fac = {{ faculty_json  | tojson | safe }};
     const _rom = {{ rooms_json    | tojson | safe }};
     const _crs = {{ courses_json  | tojson | safe }};
     const activeDraftId = {{ active_draft_id | tojson | safe }};
     const layoutConfigs = {{ layout_configs | tojson | safe }};
     const listMap = { section: [..._sec], faculty: [..._fac], room: [..._rom], course: [..._crs] };
+
+    window.cycleSortMobile = function() {
+        const states = ['newest', 'asc', 'desc'];
+        let current = localStorage.getItem('vt_sort_pref') || 'newest';
+        let nextIdx = (states.indexOf(current) + 1) % states.length;
+        window.applySort(states[nextIdx], null);
+    };
 
     window.applySort = function (dir, el) {
         if (!dir) {
@@ -759,25 +814,33 @@
         }
 
         // Update UI state
-        const toggle = document.getElementById('sortDropdown');
-        if (toggle) {
-            if (dir === 'newest') toggle.textContent = 'Sort by: Newest';
-            else if (dir === 'asc') toggle.textContent = 'Sort by: A — Z';
-            else if (dir === 'desc') toggle.textContent = 'Sort by: Z — A';
+        const toggleDesktop = document.getElementById('sortDropdown');
+        const toggleMobile = document.getElementById('sortMobileBtn');
+        
+        let labelText = '';
+        let mobileText = '';
+        if (dir === 'newest') { labelText = 'Sort by: Newest'; mobileText = 'Newest'; }
+        else if (dir === 'asc') { labelText = 'Sort by: A — Z'; mobileText = 'A-Z'; }
+        else if (dir === 'desc') { labelText = 'Sort by: Z — A'; mobileText = 'Z-A'; }
+
+        if (toggleDesktop) toggleDesktop.textContent = labelText;
+        if (toggleMobile) {
+            const spanText = document.getElementById('sortMobileText');
+            if (spanText) spanText.textContent = mobileText;
         }
 
-        if (el) {
-            const menu = el.closest('.google-sort-menu');
-            if (menu) {
-                menu.querySelectorAll('.google-sort-item').forEach(i => i.classList.remove('active'));
-                el.classList.add('active');
+        // Update active class dynamically
+        document.querySelectorAll('.google-sort-item').forEach(i => {
+            i.classList.remove('active');
+            if (i.getAttribute('onclick') && i.getAttribute('onclick').includes(`'${dir}'`)) {
+                i.classList.add('active');
             }
-        }
+        });
 
         [['section', _sec], ['faculty', _fac], ['room', _rom], ['course', _crs]].forEach(([type, orig]) => {
             const nonTba = orig.filter(x => !x.label.startsWith('T.B.A.'));
             const tba = orig.filter(x => x.label.startsWith('T.B.A.'));
-            
+
             if (dir === 'newest') {
                 nonTba.sort((a, b) => b.id - a.id);
             } else {
@@ -865,15 +928,15 @@
         }
 
         isInitializing = true;
-        
+
         // Priority 1: Restore saved state for this specific module
         if (loadViewState()) {
             isInitializing = false;
         } else {
             // Priority 2: If fresh session or no saved state, go to first
             sessionStorage.setItem(sessionKey, 'true');
-            setTimeout(() => { 
-                goToFirst(); 
+            setTimeout(() => {
+                goToFirst();
                 isInitializing = false;
             }, 400);
         }
@@ -897,6 +960,84 @@
         isDragging = false;
         viewport.style.cursor = 'grab';
     });
+
+    // ── ZOOM BUTTON LOGIC ──────────────────────────────────────
+    window.zoomCanvas = function(delta) {
+        const oldScale = scale;
+        scale = Math.max(0.05, Math.min(3.0, scale + delta));
+        
+        // Zoom relative to viewport center
+        const rect = viewport.getBoundingClientRect();
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        
+        translateX -= (centerX - translateX) * (scale / oldScale - 1);
+        translateY -= (centerY - translateY) * (scale / oldScale - 1);
+        
+        updateTransform();
+    };
+
+    // ── TOUCH INTERACTION LOGIC (MOBILE) ───────────────────────
+    let initialPinchDistance = null;
+    let initialScale = 1.0;
+    let isTouching = false;
+    let lastTouchX, lastTouchY;
+
+    viewport.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+            // Single finger pan
+            isTouching = true;
+            isDragging = true;
+            lastTouchX = e.touches[0].clientX;
+            lastTouchY = e.touches[0].clientY;
+            startX = lastTouchX - translateX;
+            startY = lastTouchY - translateY;
+        } else if (e.touches.length === 2) {
+            // Two finger pinch
+            isTouching = true;
+            isDragging = false;
+            initialPinchDistance = getDistance(e.touches[0], e.touches[1]);
+            initialScale = scale;
+        }
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+        if (!isTouching) return;
+        
+        if (e.touches.length === 1 && isDragging) {
+            // Pan
+            translateX = e.touches[0].clientX - startX;
+            translateY = e.touches[0].clientY - startY;
+            updateTransform();
+        } else if (e.touches.length === 2 && initialPinchDistance !== null) {
+            // Pinch Zoom
+            e.preventDefault();
+            const currentDistance = getDistance(e.touches[0], e.touches[1]);
+            const zoomFactor = currentDistance / initialPinchDistance;
+            const oldScale = scale;
+            scale = Math.max(0.05, Math.min(3.0, initialScale * zoomFactor));
+
+            // Zoom centered between the two fingers
+            const rect = viewport.getBoundingClientRect();
+            const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+            const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+
+            translateX -= (centerX - translateX) * (scale / oldScale - 1);
+            translateY -= (centerY - translateY) * (scale / oldScale - 1);
+
+            updateTransform();
+        }
+    }, { passive: false });
+
+    window.addEventListener('touchend', () => {
+        isTouching = false;
+        isDragging = false;
+        initialPinchDistance = null;
+    });
+
+    function getDistance(t1, t2) {
+        return Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
+    }
 
     viewport.addEventListener('wheel', (e) => {
         e.preventDefault();
@@ -933,7 +1074,7 @@
     window.loadCanvas = function () {
         const list = listMap[currentType] || [];
         canvas.innerHTML = '';
-        
+
         // Dynamic Paper Size lookup from Manifest
         const cfg = layoutConfigs[currentType] || { w: 8.27, h: 11.69 };
         const paperW = cfg.w * 96;
@@ -947,7 +1088,7 @@
             id: item.id, label: item.label, lowerLabel: item.label.toLowerCase(),
             url: urlMap[currentType](item.id),
             x: (index % columns) * spacingX + 500, y: Math.floor(index / columns) * spacingY + 500,
-            width: paperW, height: paperH + 34, 
+            width: paperW, height: paperH + 34,
             paperW_raw: paperW, paperH_raw: paperH,
             index: index, isMounted: false, element: null
         }));
@@ -974,13 +1115,13 @@
         // Only position and layout metadata on the outer card
         card.style.cssText = `left:${data.x}px;top:${data.y}px;`;
         if (window.lastSearchQuery && !data.lowerLabel.includes(window.lastSearchQuery)) card.classList.add('canvas-dimmed');
-const excelUrlMap = {
+        const excelUrlMap = {
             section: id => `/section-timetable-excel/${id}?semester=${encodeURIComponent(currentSemester)}`,
             faculty: id => `/faculty-timetable-excel/${id}?semester=${encodeURIComponent(currentSemester)}`,
             room: id => `/room-timetable-excel/${id}?semester=${encodeURIComponent(currentSemester)}`,
             course: id => `/course-timetable-excel/${id}?semester=${encodeURIComponent(currentSemester)}`
         };
-const excelUrl = excelUrlMap[currentType](data.id);
+        const excelUrl = excelUrlMap[currentType](data.id);
 
         card.innerHTML = `
             <div class="card-header-bar">
@@ -1000,7 +1141,9 @@ const excelUrl = excelUrlMap[currentType](data.id);
                 </div>
                 <iframe src="${data.url}" onload="this.previousElementSibling.style.display='none'"></iframe>
             </div>`;
-        card.addEventListener('dblclick', () => openPresentation(data.index));
+        if (window.innerWidth > 768) {
+            card.addEventListener('dblclick', () => openPresentation(data.index));
+        }
         canvas.appendChild(card);
         data.element = card;
         data.isMounted = true;
@@ -1367,7 +1510,8 @@ const excelUrl = excelUrlMap[currentType](data.id);
                     <h6 class="fw-bold text-info small mb-1">3. SEARCH & SORT</h6>
                     <p class="small text-muted mb-0">Type any name or code into the <strong>Search Pill</strong> to
                         instantly filter the canvas. You can also toggle between <strong>A-Z</strong> and
-                        <strong>Z-A</strong> sorting for easier discovery.</p>
+                        <strong>Z-A</strong> sorting for easier discovery.
+                    </p>
                 </div>
 
                 <!-- 4. RADAR MINIMAP -->

@@ -121,7 +121,8 @@
         gap: 6px;
     }
 
-    .form-control, .form-select {
+    .form-control,
+    .form-select {
         font-size: 0.875rem;
     }
 
@@ -153,7 +154,7 @@
 
     .save-btn:hover {
         background-color: #157347;
-        box-shadow: 0 3px 10px rgba(25,135,84,0.25);
+        box-shadow: 0 3px 10px rgba(25, 135, 84, 0.25);
         transform: translateY(-1px);
     }
 
@@ -164,10 +165,154 @@
     }
 
     /* ── Character counter ── */
-    .char-limit-wrap { min-height: 16px; }
-    .char-counter    { font-size: 0.71rem; line-height: 1.4; white-space: nowrap; }
-    .char-warning    { font-size: 0.72rem; line-height: 1.3; }
+    .char-limit-wrap {
+        min-height: 16px;
+    }
 
+    .char-counter {
+        font-size: 0.71rem;
+        line-height: 1.4;
+        white-space: nowrap;
+    }
+
+    .char-warning {
+        font-size: 0.72rem;
+        line-height: 1.3;
+    }
+
+    /* ── RESPONSIVE OVERRIDES ── */
+    @media (max-width: 991px) {
+        .layout-left {
+            width: 200px;
+            padding: 15px 10px;
+        }
+
+        .layout-right {
+            padding: 15px;
+        }
+
+        .settings-card {
+            padding: 15px;
+        }
+    }
+
+    @media (max-width: 767px) {
+        .manage-header-wrap {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 5px;
+            margin-bottom: 10px !important;
+        }
+
+        .layout-page {
+            flex-direction: column;
+        }
+
+        .layout-left {
+            width: 100% !important;
+            max-width: none !important;
+            border-right: none;
+            border-bottom: 1px solid #dee2e6;
+            background: #fff;
+            padding: 15px;
+        }
+
+        .layout-left .nav-tabs {
+            flex-direction: row !important;
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            gap: 8px;
+            padding-bottom: 5px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .layout-left .nav-item {
+            flex: 0 0 auto;
+        }
+
+        .layout-left .nav-link {
+            white-space: nowrap;
+            font-size: 0.8rem;
+            padding: 8px 15px;
+            border: 1px solid #dee2e6 !important;
+        }
+
+        .sidebar-card {
+            margin-bottom: 0px;
+            border: none;
+            padding: 0;
+            background: transparent;
+        }
+
+        .sidebar-card-label {
+            display: none;
+        }
+
+        .upload-card {
+            margin-top: 10px;
+        }
+
+        .layout-right {
+            padding: 15px 10px 80px !important;
+            /* Extra bottom padding for floating button */
+        }
+
+        /* 2-COLUMN GRID FOR INPUTS */
+        .d-flex.gap-3.align-items-end.flex-wrap {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px !important;
+        }
+
+        .d-flex.gap-3.align-items-end.flex-wrap>div {
+            width: 100% !important;
+            margin: 0 !important;
+        }
+
+        .input-group.input-group-sm {
+            width: 100% !important;
+        }
+
+        .form-select {
+            max-width: none !important;
+        }
+
+        /* FLOATING SAVE BUTTON */
+        .save-btn {
+            position: fixed !important;
+            bottom: 20px !important;
+            right: 20px !important;
+            width: auto !important;
+            padding: 12px 20px !important;
+            z-index: 1000 !important;
+            border-radius: 50px !important;
+            box-shadow: 0 4px 15px rgba(25, 135, 84, 0.4) !important;
+            font-weight: 700 !important;
+            border: 2px solid white !important;
+        }
+
+        /* WRAP ALL LABELS */
+        .section-label,
+        .form-label,
+        .sidebar-card-label {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            align-items: center !important;
+            gap: 2px 6px !important;
+        }
+
+        .section-label span,
+        .section-label small,
+        .form-label span,
+        .form-label small,
+        .sidebar-card-label span,
+        .sidebar-card-label small {
+            width: 100% !important;
+            margin-left: 0 !important;
+            display: block !important;
+            margin-top: 2px !important;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -176,7 +321,8 @@
     <div>
         <h5 class="mb-0 fw-semibold d-flex align-items-center">
             Layout Settings
-            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#layoutInfoModal" title="How to use this page">
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal"
+                data-bs-target="#layoutInfoModal" title="How to use this page">
                 <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
             </button>
         </h5>
@@ -197,22 +343,26 @@
             <div class="sidebar-card-label"><i class="bi bi-layout-text-sidebar me-1"></i>Layout Type</div>
             <ul class="nav nav-tabs flex-column" id="layoutTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link w-100" data-bs-toggle="tab" data-bs-target="#tab-course" type="button" data-tab="course">
+                    <button class="nav-link w-100" data-bs-toggle="tab" data-bs-target="#tab-course" type="button"
+                        data-tab="course">
                         <i class="bi bi-book me-2"></i>Course
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active w-100" data-bs-toggle="tab" data-bs-target="#tab-section" type="button" data-tab="section">
+                    <button class="nav-link active w-100" data-bs-toggle="tab" data-bs-target="#tab-section"
+                        type="button" data-tab="section">
                         <i class="bi bi-person-badge me-2"></i>Section
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link w-100" data-bs-toggle="tab" data-bs-target="#tab-faculty" type="button" data-tab="faculty">
+                    <button class="nav-link w-100" data-bs-toggle="tab" data-bs-target="#tab-faculty" type="button"
+                        data-tab="faculty">
                         <i class="bi bi-person-lines-fill me-2"></i>Faculty
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link w-100" data-bs-toggle="tab" data-bs-target="#tab-room" type="button" data-tab="room">
+                    <button class="nav-link w-100" data-bs-toggle="tab" data-bs-target="#tab-room" type="button"
+                        data-tab="room">
                         <i class="bi bi-door-open me-2"></i>Room
                     </button>
                 </li>
@@ -233,7 +383,8 @@
             <form id="uploadForm" method="POST" action="{{ url_for('upload_template') }}" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="template_type" id="uploadTypeInput" value="section">
-                <input type="file" name="template_file" accept=".xlsx" class="form-control form-control-sm mb-2" id="uploadFileInput">
+                <input type="file" name="template_file" accept=".xlsx" class="form-control form-control-sm mb-2"
+                    id="uploadFileInput">
                 <button type="submit" class="btn btn-sm btn-success w-100 mb-2">
                     <i class="bi bi-upload me-1"></i>Upload .xlsx
                 </button>
@@ -268,1060 +419,1140 @@
     <!-- ══════════════ RIGHT COLUMN ══════════════ -->
     <div class="layout-right">
         <form method="POST" action="{{ url_for('manage_layouts') }}" id="settingsForm">
-        <fieldset {% if is_hist %}disabled{% endif %} style="border:none; padding:0; margin:0;">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="active_tab" id="activeTabInput" value="section">
-        <div class="tab-content">
+            <fieldset {% if is_hist %}disabled{% endif %} style="border:none; padding:0; margin:0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="active_tab" id="activeTabInput" value="section">
+                <div class="tab-content">
 
-            <!-- ===================== SECTION TAB ===================== -->
-            <div class="tab-pane fade show active" id="tab-section" role="tabpanel">
+                    <!-- ===================== SECTION TAB ===================== -->
+                    <div class="tab-pane fade show active" id="tab-section" role="tabpanel">
 
-                <!-- Card 0: Page Margins (shared, appears first on all tabs) -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-layout-text-window-reverse"></i>Paper Size &amp; Margins
-                    </div>
-                    <!-- Paper size dropdown -->
-                    <div class="mb-3">
-                        <label class="form-label mb-1">Paper Size</label>
-                        <select class="form-select form-select-sm" name="paper_size" style="max-width:320px;">
-                            {% for key, (pw, ph, label) in paper_sizes.items() %}
-                            <option value="{{ key }}" {% if (settings.paper_size or 'A4') == key %}selected{% endif %}>
-                                {{ label }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <!-- Margins row -->
-                    <div class="form-label mb-1">Margins <span class="text-muted fw-normal" style="font-size:0.7rem;">(in inches)</span></div>
-                    <div class="d-flex gap-3 align-items-end flex-wrap">
-                        <div>
-                            <label class="form-label mb-1">Top</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" name="margin_top"
-                                       value="{{ settings.margin_top or 1.0 }}" min="0" max="5" step="0.1">
-                                <span class="input-group-text">in</span>
+                        <!-- Card 0: Page Margins (shared, appears first on all tabs) -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-layout-text-window-reverse"></i>Paper Size &amp; Margins
                             </div>
-                        </div>
-                        <div>
-                            <label class="form-label mb-1">Bottom</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" name="margin_bottom"
-                                       value="{{ settings.margin_bottom or 1.0 }}" min="0" max="5" step="0.1">
-                                <span class="input-group-text">in</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="form-label mb-1">Left</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" name="margin_left"
-                                       value="{{ settings.margin_left or 1.0 }}" min="0" max="5" step="0.1">
-                                <span class="input-group-text">in</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="form-label mb-1">Right</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" name="margin_right"
-                                       value="{{ settings.margin_right or 1.0 }}" min="0" max="5" step="0.1">
-                                <span class="input-group-text">in</span>
-                            </div>
-                        </div>
-                        <div class="text-muted" style="font-size:0.75rem;padding-bottom:6px;">
-                            <i class="bi bi-info-circle me-1"></i>Applies to preview &amp; View Page.
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Image Adjustments -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-image"></i>Image Adjustments
-                        <span class="text-muted fw-normal ms-1" style="font-size:0.7rem;">(matches Excel image order)</span>
-                    </div>
-                    {% for i in range(img_counts.section) %}
-                    <div class="border rounded p-2 mb-2">
-                        <div class="fw-semibold small mb-2">Image {{ i + 1 }}</div>
-                        <div class="d-flex gap-3 align-items-end flex-wrap">
-                            <div>
-                                <label class="form-label mb-1">X Offset (px)</label>
-                                <input type="number" step="1" name="section_img_{{ i+1 }}_x"
-                                       value="{{ img_slots.section[i].x | int }}"
-                                       class="form-control form-control-sm" style="width:90px;">
-                            </div>
-                            <div>
-                                <label class="form-label mb-1">Y Offset (px)</label>
-                                <input type="number" step="1" name="section_img_{{ i+1 }}_y"
-                                       value="{{ img_slots.section[i].y | int }}"
-                                       class="form-control form-control-sm" style="width:90px;">
-                            </div>
-                            <div>
-                                <label class="form-label mb-1">Scale</label>
-                                <input type="number" step="0.05" min="0.1" max="5.0"
-                                       name="section_img_{{ i+1 }}_scale"
-                                       value="{{ img_slots.section[i].scale }}"
-                                       class="form-control form-control-sm" style="width:90px;">
-                            </div>
-                            <div>
-                                <label class="form-label mb-1">Z-Order</label>
-                                <select name="section_img_{{ i+1 }}_z_above" class="form-select form-select-sm" style="width:140px;">
-                                    <option value="1" {% if img_slots.section[i].z_above %}selected{% endif %}>Above Text</option>
-                                    <option value="0" {% if not img_slots.section[i].z_above %}selected{% endif %}>Below Text</option>
+                            <!-- Paper size dropdown -->
+                            <div class="mb-3">
+                                <label class="form-label mb-1">Paper Size</label>
+                                <select class="form-select form-select-sm" name="paper_size" style="max-width:320px;">
+                                    {% for key, (pw, ph, label) in paper_sizes.items() %}
+                                    <option value="{{ key }}" {% if (settings.paper_size or 'A4' )==key %}selected{%
+                                        endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
                                 </select>
                             </div>
+                            <!-- Margins row -->
+                            <div class="form-label mb-1">Margins <span class="text-muted fw-normal"
+                                    style="font-size:0.7rem;">(in inches)</span></div>
+                            <div class="d-flex gap-3 align-items-end flex-wrap">
+                                <div>
+                                    <label class="form-label mb-1">Top</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control" name="margin_top"
+                                            value="{{ settings.margin_top or 1.0 }}" min="0" max="5" step="0.1">
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label mb-1">Bottom</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control" name="margin_bottom"
+                                            value="{{ settings.margin_bottom or 1.0 }}" min="0" max="5" step="0.1">
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label mb-1">Left</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control" name="margin_left"
+                                            value="{{ settings.margin_left or 1.0 }}" min="0" max="5" step="0.1">
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label mb-1">Right</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control" name="margin_right"
+                                            value="{{ settings.margin_right or 1.0 }}" min="0" max="5" step="0.1">
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div class="text-muted" style="font-size:0.75rem;padding-bottom:6px;">
+                                    <i class="bi bi-info-circle me-1"></i>Applies to preview &amp; View Page.
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    {% endfor %}
-                </div>
 
-                <!-- Card 1: Header Information -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-building"></i>Header Information
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-12">
-                            <label class="form-label">Republic Text</label>
-                            <input type="text" name="republic_text" class="form-control"
-                                value="{{ settings.republic_text or 'Republic of the Philippines' }}">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">University Name</label>
-                            <input type="text" name="section_school_name" class="form-control"
-                                value="{{ settings.section_school_name or 'CAVITE STATE UNIVERSITY' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Campus Name</label>
-                            <input type="text" name="campus_name" class="form-control"
-                                value="{{ settings.campus_name or 'CCAT Campus' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Address</label>
-                            <input type="text" name="address" class="form-control"
-                                value="{{ settings.address or 'Rosario, Cavite' }}">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Contact Details</label>
-                            <input type="text" name="contact_details" class="form-control"
-                                value="{{ settings.contact_details or '(046) 437-9505 / (046) 437-6659' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Email</label>
-                            <input type="text" name="email" class="form-control"
-                                value="{{ settings.email or 'cvsurosario@cvsu.edu.ph' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Website</label>
-                            <input type="text" name="website" class="form-control"
-                                value="{{ settings.website or 'www.cvsu-rosario.edu.ph' }}">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 2: Schedule Details -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-calendar3"></i>Schedule Detail Labels &amp; Values
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <label class="form-label">Section Name <small class="fw-normal text-muted">{{section_name}}</small></label>
-                            <input type="text" class="form-control auto-field" value="(auto)" readonly>
-                            <div class="hint-text"><i class="bi bi-info-circle me-1"></i>Auto-filled from the Section Name during export.</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Sem/AY Value <small class="fw-normal text-muted">{{sem_ay}}</small></label>
-                            <input type="text" name="sem_ay_value" class="form-control"
-                                value="{{ settings.sem_ay_value or '2nd Semester / 2024-2025' }}">
-                            <div class="hint-text">Default — overridden at export by actual semester.</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Class Label <small class="fw-normal text-muted">{{class_label}}</small></label>
-                            <input type="text" name="class_label" class="form-control"
-                                value="{{ settings.class_label or 'CLASS' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Sem/AY Label <small class="fw-normal text-muted">{{sem_ay_label}}</small></label>
-                            <input type="text" name="sem_ay_label" class="form-control"
-                                value="{{ settings.sem_ay_label or 'Semester / Academic Year' }}">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 3: Signatory Block Labels -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-tag"></i>Signatory Block Labels
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-md-4">
-                            <label class="form-label">Prepared By Label</label>
-                            <input type="text" name="prepared_by_label" class="form-control"
-                                value="{{ settings.prepared_by_label or 'Prepared by:' }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Recommending Approval Label</label>
-                            <input type="text" name="rec_approval_label" class="form-control"
-                                value="{{ settings.rec_approval_label or 'Recommending Approval:' }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Approved Label</label>
-                            <input type="text" name="approved_label" class="form-control"
-                                value="{{ settings.approved_label or 'APPROVED:' }}">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 4: Signatories -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-people"></i>Signatories
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-12">
-                            <label class="form-label">Signatory 1 — Name <small class="fw-normal text-muted">{{signatory_1_name}}</small></label>
-                            <input type="text" name="section_signatory_1" class="form-control"
-                                value="{{ settings.section_signatory_1 or 'SCHEDULE COMMITTEE' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Signatory 2 — Name <small class="fw-normal text-muted">{{signatory_2_name}}</small></label>
-                            <input type="text" name="section_signatory_2" class="form-control"
-                                value="{{ settings.section_signatory_2 or 'ARIEL G. SANTOS, EdD' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Signatory 2 — Title <small class="fw-normal text-muted">{{signatory_2_title}}</small></label>
-                            <input type="text" name="section_sig2_title" class="form-control"
-                                value="{{ settings.section_sig2_title or 'Director, Instruction' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Signatory 3 — Name <small class="fw-normal text-muted">{{signatory_3_name}}</small></label>
-                            <input type="text" name="section_signatory_3" class="form-control"
-                                value="{{ settings.section_signatory_3 or 'LAURO B. PASCUA, EdD' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Signatory 3 — Title <small class="fw-normal text-muted">{{signatory_3_title}}</small></label>
-                            <input type="text" name="section_sig3_title" class="form-control"
-                                value="{{ settings.section_sig3_title or 'Campus Administrator' }}">
-                        </div>
-                    </div>
-                </div>
-
-            </div><!-- /tab-section -->
-
-            <!-- ===================== FACULTY TAB ===================== -->
-            <div class="tab-pane fade" id="tab-faculty" role="tabpanel">
-
-                <!-- ── Card 0: Paper Size & Margins (Faculty-specific, independent) ── -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-layout-text-window-reverse"></i>Paper Size &amp; Margins
-                    </div>
-                    <!-- Paper size dropdown -->
-                    <div class="mb-3">
-                        <label class="form-label mb-1">Paper Size</label>
-                        <select class="form-select form-select-sm" name="fac_paper_size" style="max-width:320px;">
-                            {% for key, (pw, ph, label) in paper_sizes.items() %}
-                            <option value="{{ key }}" {% if (settings.fac_paper_size or 'A4') == key %}selected{% endif %}>
-                                {{ label }}
-                            </option>
+                        <!-- Image Adjustments -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-image"></i>Image Adjustments
+                                <span class="text-muted fw-normal ms-1" style="font-size:0.7rem;">(matches Excel image
+                                    order)</span>
+                            </div>
+                            {% for i in range(img_counts.section) %}
+                            <div class="border rounded p-2 mb-2">
+                                <div class="fw-semibold small mb-2">Image {{ i + 1 }}</div>
+                                <div class="d-flex gap-3 align-items-end flex-wrap">
+                                    <div>
+                                        <label class="form-label mb-1">X Offset (px)</label>
+                                        <input type="number" step="1" name="section_img_{{ i+1 }}_x"
+                                            value="{{ img_slots.section[i].x | int }}"
+                                            class="form-control form-control-sm" style="width:90px;">
+                                    </div>
+                                    <div>
+                                        <label class="form-label mb-1">Y Offset (px)</label>
+                                        <input type="number" step="1" name="section_img_{{ i+1 }}_y"
+                                            value="{{ img_slots.section[i].y | int }}"
+                                            class="form-control form-control-sm" style="width:90px;">
+                                    </div>
+                                    <div>
+                                        <label class="form-label mb-1">Scale</label>
+                                        <input type="number" step="0.05" min="0.1" max="5.0"
+                                            name="section_img_{{ i+1 }}_scale" value="{{ img_slots.section[i].scale }}"
+                                            class="form-control form-control-sm" style="width:90px;">
+                                    </div>
+                                    <div>
+                                        <label class="form-label mb-1">Z-Order</label>
+                                        <select name="section_img_{{ i+1 }}_z_above" class="form-select form-select-sm"
+                                            style="width:140px;">
+                                            <option value="1" {% if img_slots.section[i].z_above %}selected{% endif %}>
+                                                Above Text</option>
+                                            <option value="0" {% if not img_slots.section[i].z_above %}selected{% endif
+                                                %}>Below Text</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                             {% endfor %}
-                        </select>
-                    </div>
-                    <!-- Margins row -->
-                    <div class="form-label mb-1">Margins <span class="text-muted fw-normal" style="font-size:0.7rem;">(in inches)</span></div>
-                    <div class="d-flex gap-3 align-items-end flex-wrap">
-                        <div>
-                            <label class="form-label mb-1">Top</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" name="fac_margin_top"
-                                       value="{{ settings.fac_margin_top or 1.0 }}" min="0" max="5" step="0.1">
-                                <span class="input-group-text">in</span>
-                            </div>
                         </div>
-                        <div>
-                            <label class="form-label mb-1">Bottom</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" name="fac_margin_bottom"
-                                       value="{{ settings.fac_margin_bottom or 1.0 }}" min="0" max="5" step="0.1">
-                                <span class="input-group-text">in</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="form-label mb-1">Left</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" name="fac_margin_left"
-                                       value="{{ settings.fac_margin_left or 1.0 }}" min="0" max="5" step="0.1">
-                                <span class="input-group-text">in</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="form-label mb-1">Right</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" name="fac_margin_right"
-                                       value="{{ settings.fac_margin_right or 1.0 }}" min="0" max="5" step="0.1">
-                                <span class="input-group-text">in</span>
-                            </div>
-                        </div>
-                        <div class="text-muted" style="font-size:0.75rem;padding-bottom:6px;">
-                            <i class="bi bi-info-circle me-1"></i>Applies to Faculty preview &amp; View Page only.
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Image Adjustments -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-image"></i>Image Adjustments
-                        <span class="text-muted fw-normal ms-1" style="font-size:0.7rem;">(matches Excel image order)</span>
-                    </div>
-                    {% for i in range(img_counts.faculty) %}
-                    <div class="border rounded p-2 mb-2">
-                        <div class="fw-semibold small mb-2">Image {{ i + 1 }}</div>
-                        <div class="d-flex gap-3 align-items-end flex-wrap">
-                            <div>
-                                <label class="form-label mb-1">X Offset (px)</label>
-                                <input type="number" step="1" name="faculty_img_{{ i+1 }}_x"
-                                       value="{{ img_slots.faculty[i].x | int }}"
-                                       class="form-control form-control-sm" style="width:90px;">
+                        <!-- Card 1: Header Information -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-building"></i>Header Information
                             </div>
-                            <div>
-                                <label class="form-label mb-1">Y Offset (px)</label>
-                                <input type="number" step="1" name="faculty_img_{{ i+1 }}_y"
-                                       value="{{ img_slots.faculty[i].y | int }}"
-                                       class="form-control form-control-sm" style="width:90px;">
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label class="form-label">Republic Text</label>
+                                    <input type="text" name="republic_text" class="form-control"
+                                        value="{{ settings.republic_text or 'Republic of the Philippines' }}">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">University Name</label>
+                                    <input type="text" name="section_school_name" class="form-control"
+                                        value="{{ settings.section_school_name or 'CAVITE STATE UNIVERSITY' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Campus Name</label>
+                                    <input type="text" name="campus_name" class="form-control"
+                                        value="{{ settings.campus_name or 'CCAT Campus' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Address</label>
+                                    <input type="text" name="address" class="form-control"
+                                        value="{{ settings.address or 'Rosario, Cavite' }}">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Contact Details</label>
+                                    <input type="text" name="contact_details" class="form-control"
+                                        value="{{ settings.contact_details or '(046) 437-9505 / (046) 437-6659' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email</label>
+                                    <input type="text" name="email" class="form-control"
+                                        value="{{ settings.email or 'cvsurosario@cvsu.edu.ph' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Website</label>
+                                    <input type="text" name="website" class="form-control"
+                                        value="{{ settings.website or 'www.cvsu-rosario.edu.ph' }}">
+                                </div>
                             </div>
-                            <div>
-                                <label class="form-label mb-1">Scale</label>
-                                <input type="number" step="0.05" min="0.1" max="5.0"
-                                       name="faculty_img_{{ i+1 }}_scale"
-                                       value="{{ img_slots.faculty[i].scale }}"
-                                       class="form-control form-control-sm" style="width:90px;">
+                        </div>
+
+                        <!-- Card 2: Schedule Details -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-calendar3"></i>Schedule Detail Labels &amp; Values
                             </div>
-                            <div>
-                                <label class="form-label mb-1">Z-Order</label>
-                                <select name="faculty_img_{{ i+1 }}_z_above" class="form-select form-select-sm" style="width:140px;">
-                                    <option value="1" {% if img_slots.faculty[i].z_above %}selected{% endif %}>Above Text</option>
-                                    <option value="0" {% if not img_slots.faculty[i].z_above %}selected{% endif %}>Below Text</option>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label">Section Name <small
+                                            class="fw-normal text-muted">{{section_name}}</small></label>
+                                    <input type="text" class="form-control auto-field" value="(auto)" readonly>
+                                    <div class="hint-text"><i class="bi bi-info-circle me-1"></i>Auto-filled from the
+                                        Section Name during export.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Sem/AY Value <small
+                                            class="fw-normal text-muted">{{sem_ay}}</small></label>
+                                    <input type="text" name="sem_ay_value" class="form-control"
+                                        value="{{ settings.sem_ay_value or '2nd Semester / 2024-2025' }}">
+                                    <div class="hint-text">Default — overridden at export by actual semester.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Class Label <small
+                                            class="fw-normal text-muted">{{class_label}}</small></label>
+                                    <input type="text" name="class_label" class="form-control"
+                                        value="{{ settings.class_label or 'CLASS' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Sem/AY Label <small
+                                            class="fw-normal text-muted">{{sem_ay_label}}</small></label>
+                                    <input type="text" name="sem_ay_label" class="form-control"
+                                        value="{{ settings.sem_ay_label or 'Semester / Academic Year' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: Signatory Block Labels -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-tag"></i>Signatory Block Labels
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label">Prepared By Label</label>
+                                    <input type="text" name="prepared_by_label" class="form-control"
+                                        value="{{ settings.prepared_by_label or 'Prepared by:' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Recommending Approval Label</label>
+                                    <input type="text" name="rec_approval_label" class="form-control"
+                                        value="{{ settings.rec_approval_label or 'Recommending Approval:' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Approved Label</label>
+                                    <input type="text" name="approved_label" class="form-control"
+                                        value="{{ settings.approved_label or 'APPROVED:' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 4: Signatories -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-people"></i>Signatories
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label class="form-label">Signatory 1 — Name <small
+                                            class="fw-normal text-muted">{{signatory_1_name}}</small></label>
+                                    <input type="text" name="section_signatory_1" class="form-control"
+                                        value="{{ settings.section_signatory_1 or 'SCHEDULE COMMITTEE' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Signatory 2 — Name <small
+                                            class="fw-normal text-muted">{{signatory_2_name}}</small></label>
+                                    <input type="text" name="section_signatory_2" class="form-control"
+                                        value="{{ settings.section_signatory_2 or 'ARIEL G. SANTOS, EdD' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Signatory 2 — Title <small
+                                            class="fw-normal text-muted">{{signatory_2_title}}</small></label>
+                                    <input type="text" name="section_sig2_title" class="form-control"
+                                        value="{{ settings.section_sig2_title or 'Director, Instruction' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Signatory 3 — Name <small
+                                            class="fw-normal text-muted">{{signatory_3_name}}</small></label>
+                                    <input type="text" name="section_signatory_3" class="form-control"
+                                        value="{{ settings.section_signatory_3 or 'LAURO B. PASCUA, EdD' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Signatory 3 — Title <small
+                                            class="fw-normal text-muted">{{signatory_3_title}}</small></label>
+                                    <input type="text" name="section_sig3_title" class="form-control"
+                                        value="{{ settings.section_sig3_title or 'Campus Administrator' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                    </div><!-- /tab-section -->
+
+                    <!-- ===================== FACULTY TAB ===================== -->
+                    <div class="tab-pane fade" id="tab-faculty" role="tabpanel">
+
+                        <!-- ── Card 0: Paper Size & Margins (Faculty-specific, independent) ── -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-layout-text-window-reverse"></i>Paper Size &amp; Margins
+                            </div>
+                            <!-- Paper size dropdown -->
+                            <div class="mb-3">
+                                <label class="form-label mb-1">Paper Size</label>
+                                <select class="form-select form-select-sm" name="fac_paper_size"
+                                    style="max-width:320px;">
+                                    {% for key, (pw, ph, label) in paper_sizes.items() %}
+                                    <option value="{{ key }}" {% if (settings.fac_paper_size or 'A4' )==key %}selected{%
+                                        endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
                                 </select>
                             </div>
+                            <!-- Margins row -->
+                            <div class="form-label mb-1">Margins <span class="text-muted fw-normal"
+                                    style="font-size:0.7rem;">(in inches)</span></div>
+                            <div class="d-flex gap-3 align-items-end flex-wrap">
+                                <div>
+                                    <label class="form-label mb-1">Top</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control" name="fac_margin_top"
+                                            value="{{ settings.fac_margin_top or 1.0 }}" min="0" max="5" step="0.1">
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label mb-1">Bottom</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control" name="fac_margin_bottom"
+                                            value="{{ settings.fac_margin_bottom or 1.0 }}" min="0" max="5" step="0.1">
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label mb-1">Left</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control" name="fac_margin_left"
+                                            value="{{ settings.fac_margin_left or 1.0 }}" min="0" max="5" step="0.1">
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label mb-1">Right</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control" name="fac_margin_right"
+                                            value="{{ settings.fac_margin_right or 1.0 }}" min="0" max="5" step="0.1">
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div class="text-muted" style="font-size:0.75rem;padding-bottom:6px;">
+                                    <i class="bi bi-info-circle me-1"></i>Applies to Faculty preview &amp; View Page
+                                    only.
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    {% endfor %}
-                </div>
 
-                <!-- ── Card 1: Header Information ── -->
-                <div class="settings-card">
-                    <div class="section-label"><i class="bi bi-building"></i>Header Information</div>
-                    <div class="row g-2">
-                        <div class="col-12">
-                            <label class="form-label mb-1">Republic Text</label>
-                            <input type="text" name="fac_republic_text" class="form-control"
-                                value="{{ settings.fac_republic_text or 'Republic of the Philippines' }}">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label mb-1">University Name</label>
-                            <input type="text" name="fac_univ_name" class="form-control"
-                                value="{{ settings.fac_univ_name or 'CAVITE STATE UNIVERSITY' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label mb-1">Campus</label>
-                            <input type="text" name="fac_campus_name" class="form-control"
-                                value="{{ settings.fac_campus_name or 'CCAT Campus' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label mb-1">Address</label>
-                            <input type="text" name="fac_address" class="form-control"
-                                value="{{ settings.fac_address or 'Rosario, Cavite' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label mb-1">Contact Details</label>
-                            <input type="text" name="fac_contact_details" class="form-control"
-                                value="{{ settings.fac_contact_details or '(046) 437-9505 / (046) 437-6659' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label mb-1">Email</label>
-                            <input type="text" name="fac_email" class="form-control"
-                                value="{{ settings.fac_email or 'cvsurosario@cvsu.edu.ph' }}">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label mb-1">Website</label>
-                            <input type="text" name="fac_website" class="form-control"
-                                value="{{ settings.fac_website or 'www.cvsu-rosario.edu.ph' }}">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label mb-1">Department Label</label>
-                            <input type="text" name="fac_dept_label" class="form-control"
-                                value="{{ settings.fac_dept_label or 'DEPARTMENT OF COMPUTER STUDIES' }}">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label mb-1">Schedule Title</label>
-                            <input type="text" name="fac_sched_title" class="form-control"
-                                value="{{ settings.fac_sched_title or 'FACULTY CLASS SCHEDULE' }}">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label mb-1">Semester / Academic Year</label>
-                            <input type="text" name="fac_sem_ay_label" class="form-control"
-                                value="{{ settings.fac_sem_ay_label or 'SECOND SEMESTER SY 2023 - 2024' }}">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ── Card 2: Faculty Info Block ── -->
-                <div class="settings-card">
-                    <div class="section-label"><i class="bi bi-person-badge"></i>Faculty Info Block</div>
-                    <p class="text-muted mb-3" style="font-size:0.78rem;">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Edit the <strong>label text</strong> shown on the printed form. Values are automatically pulled from the Faculty database record during export.
-                    </p>
-                    <!-- Label + Value rows -->
-                    <div class="row g-0 mb-1 px-1" style="font-size:0.75rem; color:#6c757d;">
-                        <div class="col-6 fw-semibold">Label (Editable)</div>
-                        <div class="col-6 fw-semibold ps-2">Value (Auto-filled)</div>
-                    </div>
-                    <div class="row g-2 align-items-center mb-2">
-                        <div class="col-md-6">
-                            <input type="text" name="fac_name_label" class="form-control form-control-sm"
-                                value="{{ settings.fac_name_label or 'Name:' }}"
-                                placeholder="e.g. Name:">
-                        </div>
-                        <div class="col-md-6">
-                            <input type="text" class="form-control form-control-sm auto-field" readonly
-                                value="[Auto: Faculty's Full Name]">
-                        </div>
-                    </div>
-                    <div class="row g-2 align-items-center mb-2">
-                        <div class="col-md-6">
-                            <input type="text" name="fac_educ_label" class="form-control form-control-sm"
-                                value="{{ settings.fac_educ_label or 'Highest Educ. Attainment:' }}"
-                                placeholder="e.g. Highest Educ. Attainment:">
-                        </div>
-                        <div class="col-md-6">
-                            <input type="text" class="form-control form-control-sm auto-field" readonly
-                                value="[Auto: Highest Educational Attainment]">
-                        </div>
-                    </div>
-                    <div class="row g-2 align-items-center mb-2">
-                        <div class="col-md-6">
-                            <input type="text" name="fac_prep_label" class="form-control form-control-sm"
-                                value="{{ settings.fac_prep_label or 'No. of Preparation/s:' }}"
-                                placeholder="e.g. No. of Preparation/s:">
-                        </div>
-                        <div class="col-md-6">
-                            <input type="text" class="form-control form-control-sm auto-field" readonly
-                                value="[Auto: Count of Distinct Courses]">
-                        </div>
-                    </div>
-                    <div class="row g-2 align-items-center">
-                        <div class="col-md-6">
-                            <input type="text" name="fac_hours_label" class="form-control form-control-sm"
-                                value="{{ settings.fac_hours_label or 'Total no. of contact hours per week:' }}"
-                                placeholder="e.g. Total no. of contact hours per week:">
-                        </div>
-                        <div class="col-md-6">
-                            <input type="text" class="form-control form-control-sm auto-field" readonly
-                                value="[Auto: Sum of All Scheduled Hours]">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ── Card 3: Faculty Activity Labels ── -->
-                <div class="settings-card">
-                    <div class="section-label"><i class="bi bi-list-task"></i>Faculty Activity Labels</div>
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <label class="form-label">Consultation Label</label>
-                            <input type="text" name="fac_consultation" class="form-control"
-                                value="{{ settings.fac_consultation or 'Consultation:' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Research Label</label>
-                            <input type="text" name="fac_research" class="form-control"
-                                value="{{ settings.fac_research or 'Research:' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Designation Label</label>
-                            <input type="text" name="fac_designation" class="form-control"
-                                value="{{ settings.fac_designation or 'Designation :' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Extension Label</label>
-                            <input type="text" name="fac_extension" class="form-control"
-                                value="{{ settings.fac_extension or 'Extension:' }}">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ── Card 4: Signatories & Labels ── -->
-                <div class="settings-card">
-                    <div class="section-label"><i class="bi bi-people"></i>Signatories &amp; Labels</div>
-
-                    <!-- A. Faculty / Conforme Block -->
-                    <p class="form-label mb-2" style="font-size:0.78rem; color:#495057; border-bottom:1px solid #eee; padding-bottom:4px;">
-                        <strong>A. Faculty / Conforme Block</strong>
-                    </p>
-                    <div class="row g-2 mb-2">
-                        <div class="col-md-4">
-                            <label class="form-label mb-1">Conforme Label</label>
-                            <input type="text" name="fac_conforme_label" class="form-control"
-                                value="{{ settings.fac_conforme_label or 'Conforme:' }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label mb-1">Faculty Name</label>
-                            <input type="text" class="form-control auto-field" readonly
-                                value="[Auto: Faculty Name]">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label mb-1">Academic Rank / Title</label>
-                            <input type="text" class="form-control auto-field" readonly
-                                value="[Auto: Academic Rank]">
-                        </div>
-                    </div>
-
-                    <!-- Review Block (3 cols) — directly below Conforme -->
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label mb-1">Reviewed By Label</label>
-                            <input type="text" name="fac_reviewed_label" class="form-control"
-                                value="{{ settings.fac_reviewed_label or 'Reviewed by:' }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label mb-1">Registrar Name</label>
-                            <input type="text" name="fac_registrar_name" class="form-control"
-                                value="{{ settings.fac_registrar_name or 'MARLYN A. QUINEZ' }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label mb-1">Registrar Label</label>
-                            <input type="text" name="fac_registrar_label" class="form-control"
-                                value="{{ settings.fac_registrar_label or 'OIC, Registrar' }}">
-                        </div>
-                    </div>
-
-                    <!-- B. Recommending Approval Block -->
-                    <p class="form-label mb-2" style="font-size:0.78rem; color:#495057; border-bottom:1px solid #eee; padding-bottom:4px;">
-                        <strong>B. Recommending Approval Block</strong>
-                    </p>
-                    <div class="row g-2 mb-2">
-                        <div class="col-12">
-                            <label class="form-label mb-1">Recommending Approval Label</label>
-                            <input type="text" name="fac_rec_approval_label" class="form-control"
-                                value="{{ settings.fac_rec_approval_label or 'Recommending Approval:' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label mb-1">Chairperson Name</label>
-                            <input type="text" name="fac_chair_name" class="form-control"
-                                value="{{ settings.fac_chair_name or 'ARIES M. GELERA' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label mb-1">Chairperson Title</label>
-                            <input type="text" name="fac_chair_title" class="form-control"
-                                value="{{ settings.fac_chair_title or 'Department Chairperson' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label mb-1">Director Name</label>
-                            <input type="text" name="fac_director_name" class="form-control"
-                                value="{{ settings.fac_director_name or 'ARIEL G. SANTOS, EdD' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label mb-1">Director Title</label>
-                            <input type="text" name="fac_director_title" class="form-control"
-                                value="{{ settings.fac_director_title or 'Director, Instruction' }}">
-                        </div>
-                    </div>
-
-                    <!-- Approval Block (3 cols) — directly below Recommending Approval -->
-                    <div class="row g-2">
-                        <div class="col-md-4">
-                            <label class="form-label mb-1">Approved Label</label>
-                            <input type="text" name="fac_approved_label" class="form-control"
-                                value="{{ settings.fac_approved_label or 'Approved:' }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label mb-1">Admin Name</label>
-                            <input type="text" name="fac_admin_name" class="form-control"
-                                value="{{ settings.fac_admin_name or 'LAURO B. PASCUA, EdD' }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label mb-1">Admin Title</label>
-                            <input type="text" name="fac_admin_title" class="form-control"
-                                value="{{ settings.fac_admin_title or 'Campus Administrator' }}">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ── Card 4: Form Identifiers ── -->
-                <div class="settings-card">
-                    <div class="section-label"><i class="bi bi-upc-scan"></i>Form Identifiers</div>
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <label class="form-label mb-1">Top Form Code <span class="text-muted fw-normal">(top-right corner)</span></label>
-                            <input type="text" name="fac_form_num_top" class="form-control"
-                                value="{{ settings.fac_form_num_top or 'VPAA-QF-11' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label mb-1">Bottom Form Code <span class="text-muted fw-normal">(bottom-right corner)</span></label>
-                            <input type="text" name="fac_form_num_bottom" class="form-control"
-                                value="{{ settings.fac_form_num_bottom or 'V01-2018-07-24' }}">
-                        </div>
-                    </div>
-                </div>
-
-            </div><!-- /tab-faculty -->
-
-            <!-- ===================== ROOM TAB ===================== -->
-            <div class="tab-pane fade" id="tab-room" role="tabpanel">
-
-                <!-- Card 0: Page Margins (shared, display-only mirror) -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-layout-text-window-reverse"></i>Paper Size &amp; Margins
-                        <span class="badge bg-secondary ms-1 fw-normal" style="font-size:0.65rem;letter-spacing:0;">shared</span>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label mb-1">Paper Size</label>
-                        <select class="form-select form-select-sm" style="max-width:320px;" disabled>
-                            {% for key, (pw, ph, label) in paper_sizes.items() %}
-                            <option value="{{ key }}" {% if (settings.paper_size or 'A4') == key %}selected{% endif %}>
-                                {{ label }}
-                            </option>
+                        <!-- Image Adjustments -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-image"></i>Image Adjustments
+                                <span class="text-muted fw-normal ms-1" style="font-size:0.7rem;">(matches Excel image
+                                    order)</span>
+                            </div>
+                            {% for i in range(img_counts.faculty) %}
+                            <div class="border rounded p-2 mb-2">
+                                <div class="fw-semibold small mb-2">Image {{ i + 1 }}</div>
+                                <div class="d-flex gap-3 align-items-end flex-wrap">
+                                    <div>
+                                        <label class="form-label mb-1">X Offset (px)</label>
+                                        <input type="number" step="1" name="faculty_img_{{ i+1 }}_x"
+                                            value="{{ img_slots.faculty[i].x | int }}"
+                                            class="form-control form-control-sm" style="width:90px;">
+                                    </div>
+                                    <div>
+                                        <label class="form-label mb-1">Y Offset (px)</label>
+                                        <input type="number" step="1" name="faculty_img_{{ i+1 }}_y"
+                                            value="{{ img_slots.faculty[i].y | int }}"
+                                            class="form-control form-control-sm" style="width:90px;">
+                                    </div>
+                                    <div>
+                                        <label class="form-label mb-1">Scale</label>
+                                        <input type="number" step="0.05" min="0.1" max="5.0"
+                                            name="faculty_img_{{ i+1 }}_scale" value="{{ img_slots.faculty[i].scale }}"
+                                            class="form-control form-control-sm" style="width:90px;">
+                                    </div>
+                                    <div>
+                                        <label class="form-label mb-1">Z-Order</label>
+                                        <select name="faculty_img_{{ i+1 }}_z_above" class="form-select form-select-sm"
+                                            style="width:140px;">
+                                            <option value="1" {% if img_slots.faculty[i].z_above %}selected{% endif %}>
+                                                Above Text</option>
+                                            <option value="0" {% if not img_slots.faculty[i].z_above %}selected{% endif
+                                                %}>Below Text</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                             {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-label mb-1">Margins <span class="text-muted fw-normal" style="font-size:0.7rem;">(in inches)</span></div>
-                    <div class="d-flex gap-3 align-items-end flex-wrap">
-                        <div>
-                            <label class="form-label mb-1">Top</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" value="{{ settings.margin_top or 1.0 }}" disabled>
-                                <span class="input-group-text">in</span>
-                            </div>
                         </div>
-                        <div>
-                            <label class="form-label mb-1">Bottom</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" value="{{ settings.margin_bottom or 1.0 }}" disabled>
-                                <span class="input-group-text">in</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="form-label mb-1">Left</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" value="{{ settings.margin_left or 1.0 }}" disabled>
-                                <span class="input-group-text">in</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="form-label mb-1">Right</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" value="{{ settings.margin_right or 1.0 }}" disabled>
-                                <span class="input-group-text">in</span>
-                            </div>
-                        </div>
-                        <div class="text-muted" style="font-size:0.75rem;padding-bottom:6px;">
-                            <i class="bi bi-pencil-square me-1"></i>Edit in <strong>Section</strong> tab.
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Image Adjustments -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-image"></i>Image Adjustments
-                        <span class="text-muted fw-normal ms-1" style="font-size:0.7rem;">(matches Excel image order)</span>
-                    </div>
-                    {% for i in range(img_counts.room) %}
-                    <div class="border rounded p-2 mb-2">
-                        <div class="fw-semibold small mb-2">Image {{ i + 1 }}</div>
-                        <div class="d-flex gap-3 align-items-end flex-wrap">
-                            <div>
-                                <label class="form-label mb-1">X Offset (px)</label>
-                                <input type="number" step="1" name="room_img_{{ i+1 }}_x"
-                                       value="{{ img_slots.room[i].x | int }}"
-                                       class="form-control form-control-sm" style="width:90px;">
+                        <!-- ── Card 1: Header Information ── -->
+                        <div class="settings-card">
+                            <div class="section-label"><i class="bi bi-building"></i>Header Information</div>
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label class="form-label mb-1">Republic Text</label>
+                                    <input type="text" name="fac_republic_text" class="form-control"
+                                        value="{{ settings.fac_republic_text or 'Republic of the Philippines' }}">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label mb-1">University Name</label>
+                                    <input type="text" name="fac_univ_name" class="form-control"
+                                        value="{{ settings.fac_univ_name or 'CAVITE STATE UNIVERSITY' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label mb-1">Campus</label>
+                                    <input type="text" name="fac_campus_name" class="form-control"
+                                        value="{{ settings.fac_campus_name or 'CCAT Campus' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label mb-1">Address</label>
+                                    <input type="text" name="fac_address" class="form-control"
+                                        value="{{ settings.fac_address or 'Rosario, Cavite' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label mb-1">Contact Details</label>
+                                    <input type="text" name="fac_contact_details" class="form-control"
+                                        value="{{ settings.fac_contact_details or '(046) 437-9505 / (046) 437-6659' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label mb-1">Email</label>
+                                    <input type="text" name="fac_email" class="form-control"
+                                        value="{{ settings.fac_email or 'cvsurosario@cvsu.edu.ph' }}">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label mb-1">Website</label>
+                                    <input type="text" name="fac_website" class="form-control"
+                                        value="{{ settings.fac_website or 'www.cvsu-rosario.edu.ph' }}">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label mb-1">Department Label</label>
+                                    <input type="text" name="fac_dept_label" class="form-control"
+                                        value="{{ settings.fac_dept_label or 'DEPARTMENT OF COMPUTER STUDIES' }}">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label mb-1">Schedule Title</label>
+                                    <input type="text" name="fac_sched_title" class="form-control"
+                                        value="{{ settings.fac_sched_title or 'FACULTY CLASS SCHEDULE' }}">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label mb-1">Semester / Academic Year</label>
+                                    <input type="text" name="fac_sem_ay_label" class="form-control"
+                                        value="{{ settings.fac_sem_ay_label or 'SECOND SEMESTER SY 2023 - 2024' }}">
+                                </div>
                             </div>
-                            <div>
-                                <label class="form-label mb-1">Y Offset (px)</label>
-                                <input type="number" step="1" name="room_img_{{ i+1 }}_y"
-                                       value="{{ img_slots.room[i].y | int }}"
-                                       class="form-control form-control-sm" style="width:90px;">
+                        </div>
+
+                        <!-- ── Card 2: Faculty Info Block ── -->
+                        <div class="settings-card">
+                            <div class="section-label"><i class="bi bi-person-badge"></i>Faculty Info Block</div>
+                            <p class="text-muted mb-3" style="font-size:0.78rem;">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Edit the <strong>label text</strong> shown on the printed form. Values are automatically
+                                pulled from the Faculty database record during export.
+                            </p>
+                            <!-- Label + Value rows -->
+                            <div class="row g-0 mb-1 px-1" style="font-size:0.75rem; color:#6c757d;">
+                                <div class="col-6 fw-semibold">Label (Editable)</div>
+                                <div class="col-6 fw-semibold ps-2">Value (Auto-filled)</div>
                             </div>
-                            <div>
-                                <label class="form-label mb-1">Scale</label>
-                                <input type="number" step="0.05" min="0.1" max="5.0"
-                                       name="room_img_{{ i+1 }}_scale"
-                                       value="{{ img_slots.room[i].scale }}"
-                                       class="form-control form-control-sm" style="width:90px;">
+                            <div class="row g-2 align-items-center mb-2">
+                                <div class="col-md-6">
+                                    <input type="text" name="fac_name_label" class="form-control form-control-sm"
+                                        value="{{ settings.fac_name_label or 'Name:' }}" placeholder="e.g. Name:">
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control form-control-sm auto-field" readonly
+                                        value="[Auto: Faculty's Full Name]">
+                                </div>
                             </div>
-                            <div>
-                                <label class="form-label mb-1">Z-Order</label>
-                                <select name="room_img_{{ i+1 }}_z_above" class="form-select form-select-sm" style="width:140px;">
-                                    <option value="1" {% if img_slots.room[i].z_above %}selected{% endif %}>Above Text</option>
-                                    <option value="0" {% if not img_slots.room[i].z_above %}selected{% endif %}>Below Text</option>
+                            <div class="row g-2 align-items-center mb-2">
+                                <div class="col-md-6">
+                                    <input type="text" name="fac_educ_label" class="form-control form-control-sm"
+                                        value="{{ settings.fac_educ_label or 'Highest Educ. Attainment:' }}"
+                                        placeholder="e.g. Highest Educ. Attainment:">
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control form-control-sm auto-field" readonly
+                                        value="[Auto: Highest Educational Attainment]">
+                                </div>
+                            </div>
+                            <div class="row g-2 align-items-center mb-2">
+                                <div class="col-md-6">
+                                    <input type="text" name="fac_prep_label" class="form-control form-control-sm"
+                                        value="{{ settings.fac_prep_label or 'No. of Preparation/s:' }}"
+                                        placeholder="e.g. No. of Preparation/s:">
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control form-control-sm auto-field" readonly
+                                        value="[Auto: Count of Distinct Courses]">
+                                </div>
+                            </div>
+                            <div class="row g-2 align-items-center">
+                                <div class="col-md-6">
+                                    <input type="text" name="fac_hours_label" class="form-control form-control-sm"
+                                        value="{{ settings.fac_hours_label or 'Total no. of contact hours per week:' }}"
+                                        placeholder="e.g. Total no. of contact hours per week:">
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control form-control-sm auto-field" readonly
+                                        value="[Auto: Sum of All Scheduled Hours]">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── Card 3: Faculty Activity Labels ── -->
+                        <div class="settings-card">
+                            <div class="section-label"><i class="bi bi-list-task"></i>Faculty Activity Labels</div>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label">Consultation Label</label>
+                                    <input type="text" name="fac_consultation" class="form-control"
+                                        value="{{ settings.fac_consultation or 'Consultation:' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Research Label</label>
+                                    <input type="text" name="fac_research" class="form-control"
+                                        value="{{ settings.fac_research or 'Research:' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Designation Label</label>
+                                    <input type="text" name="fac_designation" class="form-control"
+                                        value="{{ settings.fac_designation or 'Designation :' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Extension Label</label>
+                                    <input type="text" name="fac_extension" class="form-control"
+                                        value="{{ settings.fac_extension or 'Extension:' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── Card 4: Signatories & Labels ── -->
+                        <div class="settings-card">
+                            <div class="section-label"><i class="bi bi-people"></i>Signatories &amp; Labels</div>
+
+                            <!-- A. Faculty / Conforme Block -->
+                            <p class="form-label mb-2"
+                                style="font-size:0.78rem; color:#495057; border-bottom:1px solid #eee; padding-bottom:4px;">
+                                <strong>A. Faculty / Conforme Block</strong>
+                            </p>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4">
+                                    <label class="form-label mb-1">Conforme Label</label>
+                                    <input type="text" name="fac_conforme_label" class="form-control"
+                                        value="{{ settings.fac_conforme_label or 'Conforme:' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label mb-1">Faculty Name</label>
+                                    <input type="text" class="form-control auto-field" readonly
+                                        value="[Auto: Faculty Name]">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label mb-1">Academic Rank / Title</label>
+                                    <input type="text" class="form-control auto-field" readonly
+                                        value="[Auto: Academic Rank]">
+                                </div>
+                            </div>
+
+                            <!-- Review Block (3 cols) — directly below Conforme -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label mb-1">Reviewed By Label</label>
+                                    <input type="text" name="fac_reviewed_label" class="form-control"
+                                        value="{{ settings.fac_reviewed_label or 'Reviewed by:' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label mb-1">Registrar Name</label>
+                                    <input type="text" name="fac_registrar_name" class="form-control"
+                                        value="{{ settings.fac_registrar_name or 'MARLYN A. QUINEZ' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label mb-1">Registrar Label</label>
+                                    <input type="text" name="fac_registrar_label" class="form-control"
+                                        value="{{ settings.fac_registrar_label or 'OIC, Registrar' }}">
+                                </div>
+                            </div>
+
+                            <!-- B. Recommending Approval Block -->
+                            <p class="form-label mb-2"
+                                style="font-size:0.78rem; color:#495057; border-bottom:1px solid #eee; padding-bottom:4px;">
+                                <strong>B. Recommending Approval Block</strong>
+                            </p>
+                            <div class="row g-2 mb-2">
+                                <div class="col-12">
+                                    <label class="form-label mb-1">Recommending Approval Label</label>
+                                    <input type="text" name="fac_rec_approval_label" class="form-control"
+                                        value="{{ settings.fac_rec_approval_label or 'Recommending Approval:' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label mb-1">Chairperson Name</label>
+                                    <input type="text" name="fac_chair_name" class="form-control"
+                                        value="{{ settings.fac_chair_name or 'ARIES M. GELERA' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label mb-1">Chairperson Title</label>
+                                    <input type="text" name="fac_chair_title" class="form-control"
+                                        value="{{ settings.fac_chair_title or 'Department Chairperson' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label mb-1">Director Name</label>
+                                    <input type="text" name="fac_director_name" class="form-control"
+                                        value="{{ settings.fac_director_name or 'ARIEL G. SANTOS, EdD' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label mb-1">Director Title</label>
+                                    <input type="text" name="fac_director_title" class="form-control"
+                                        value="{{ settings.fac_director_title or 'Director, Instruction' }}">
+                                </div>
+                            </div>
+
+                            <!-- Approval Block (3 cols) — directly below Recommending Approval -->
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label mb-1">Approved Label</label>
+                                    <input type="text" name="fac_approved_label" class="form-control"
+                                        value="{{ settings.fac_approved_label or 'Approved:' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label mb-1">Admin Name</label>
+                                    <input type="text" name="fac_admin_name" class="form-control"
+                                        value="{{ settings.fac_admin_name or 'LAURO B. PASCUA, EdD' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label mb-1">Admin Title</label>
+                                    <input type="text" name="fac_admin_title" class="form-control"
+                                        value="{{ settings.fac_admin_title or 'Campus Administrator' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ── Card 4: Form Identifiers ── -->
+                        <div class="settings-card">
+                            <div class="section-label"><i class="bi bi-upc-scan"></i>Form Identifiers</div>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label mb-1">Top Form Code <span
+                                            class="text-muted fw-normal">(top-right corner)</span></label>
+                                    <input type="text" name="fac_form_num_top" class="form-control"
+                                        value="{{ settings.fac_form_num_top or 'VPAA-QF-11' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label mb-1">Bottom Form Code <span
+                                            class="text-muted fw-normal">(bottom-right corner)</span></label>
+                                    <input type="text" name="fac_form_num_bottom" class="form-control"
+                                        value="{{ settings.fac_form_num_bottom or 'V01-2018-07-24' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                    </div><!-- /tab-faculty -->
+
+                    <!-- ===================== ROOM TAB ===================== -->
+                    <div class="tab-pane fade" id="tab-room" role="tabpanel">
+
+                        <!-- Card 0: Page Margins (shared, display-only mirror) -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-layout-text-window-reverse"></i>Paper Size &amp; Margins
+                                <span class="badge bg-secondary ms-1 fw-normal"
+                                    style="font-size:0.65rem;letter-spacing:0;">shared</span>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label mb-1">Paper Size</label>
+                                <select class="form-select form-select-sm" style="max-width:320px;" disabled>
+                                    {% for key, (pw, ph, label) in paper_sizes.items() %}
+                                    <option value="{{ key }}" {% if (settings.paper_size or 'A4' )==key %}selected{%
+                                        endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
                                 </select>
                             </div>
+                            <div class="form-label mb-1">Margins <span class="text-muted fw-normal"
+                                    style="font-size:0.7rem;">(in inches)</span></div>
+                            <div class="d-flex gap-3 align-items-end flex-wrap">
+                                <div>
+                                    <label class="form-label mb-1">Top</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control"
+                                            value="{{ settings.margin_top or 1.0 }}" disabled>
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label mb-1">Bottom</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control"
+                                            value="{{ settings.margin_bottom or 1.0 }}" disabled>
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label mb-1">Left</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control"
+                                            value="{{ settings.margin_left or 1.0 }}" disabled>
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label mb-1">Right</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control"
+                                            value="{{ settings.margin_right or 1.0 }}" disabled>
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div class="text-muted" style="font-size:0.75rem;padding-bottom:6px;">
+                                    <i class="bi bi-pencil-square me-1"></i>Edit in <strong>Section</strong> tab.
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    {% endfor %}
-                </div>
 
-                <!-- Card 1: Header Information -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-building"></i>Header Information
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-12">
-                            <label class="form-label">Republic Text <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control"
-                                value="{{ settings.republic_text or 'Republic of the Philippines' }}" readonly>
-                            <div class="hint-text">Edit in Section tab — shared across all layouts.</div>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">University Name</label>
-                            <input type="text" name="room_school_name" class="form-control"
-                                value="{{ settings.room_school_name or 'CAVITE STATE UNIVERSITY' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Campus Name <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control"
-                                value="{{ settings.campus_name or 'CCAT Campus' }}" readonly>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Address <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control"
-                                value="{{ settings.address or 'Rosario, Cavite' }}" readonly>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Contact Details <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control"
-                                value="{{ settings.contact_details or '(046) 437-9505 / (046) 437-6659' }}" readonly>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Email <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control"
-                                value="{{ settings.email or 'cvsurosario@cvsu.edu.ph' }}" readonly>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Website <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control"
-                                value="{{ settings.website or 'www.cvsu-rosario.edu.ph' }}" readonly>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 2: Schedule Details -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-calendar3"></i>Schedule Detail Labels &amp; Values
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <label class="form-label">Room Name</label>
-                            <input type="text" class="form-control auto-field" value="(auto)" readonly>
-                            <div class="hint-text"><i class="bi bi-info-circle me-1"></i>Auto-filled from the Room Name during export.</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Sem/AY Value <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control auto-field" value="{{ settings.sem_ay_value or '2nd Semester / 2024-2025' }}" readonly>
-                            <div class="hint-text">Edit in Section tab.</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Room Label <small class="fw-normal text-muted">{{class_label}}</small></label>
-                            <input type="text" name="room_label" class="form-control"
-                                value="{{ settings.room_label or 'ROOM' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Sem/AY Label <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control auto-field" value="{{ settings.sem_ay_label or 'Semester / Academic Year' }}" readonly>
-                            <div class="hint-text">Edit in Section tab.</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 3: Signatory Block Labels -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-tag"></i>Signatory Block Labels <small class="fw-normal text-muted ms-1">(shared)</small>
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-md-4">
-                            <label class="form-label">Prepared By Label</label>
-                            <input type="text" class="form-control" value="{{ settings.prepared_by_label or 'Prepared by:' }}" readonly>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Recommending Approval Label</label>
-                            <input type="text" class="form-control" value="{{ settings.rec_approval_label or 'Recommending Approval:' }}" readonly>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Approved Label</label>
-                            <input type="text" class="form-control" value="{{ settings.approved_label or 'APPROVED:' }}" readonly>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 4: Signatories -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-people"></i>Signatories
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-12">
-                            <label class="form-label">Signatory 1 — Name</label>
-                            <input type="text" name="room_signatory_1" class="form-control"
-                                value="{{ settings.room_signatory_1 or 'SCHEDULE COMMITTEE' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Signatory 2 — Name</label>
-                            <input type="text" name="room_signatory_2" class="form-control"
-                                value="{{ settings.room_signatory_2 or 'ARIEL G. SANTOS, EdD' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Signatory 2 — Title</label>
-                            <input type="text" name="room_sig2_title" class="form-control"
-                                value="{{ settings.room_sig2_title or 'Director, Instruction' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Signatory 3 — Name</label>
-                            <input type="text" name="room_signatory_3" class="form-control"
-                                value="{{ settings.room_signatory_3 or 'LAURO B. PASCUA, EdD' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Signatory 3 — Title</label>
-                            <input type="text" name="room_sig3_title" class="form-control"
-                                value="{{ settings.room_sig3_title or 'Campus Administrator' }}">
-                        </div>
-                    </div>
-                </div>
-
-            </div><!-- /tab-room -->
-
-            <!-- ===================== COURSE TAB ===================== -->
-            <div class="tab-pane fade" id="tab-course" role="tabpanel">
-
-                <!-- Card 0: Page Margins (shared, display-only mirror) -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-layout-text-window-reverse"></i>Paper Size &amp; Margins
-                        <span class="badge bg-secondary ms-1 fw-normal" style="font-size:0.65rem;letter-spacing:0;">shared</span>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label mb-1">Paper Size</label>
-                        <select class="form-select form-select-sm" style="max-width:320px;" disabled>
-                            {% for key, (pw, ph, label) in paper_sizes.items() %}
-                            <option value="{{ key }}" {% if (settings.paper_size or 'A4') == key %}selected{% endif %}>
-                                {{ label }}
-                            </option>
+                        <!-- Image Adjustments -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-image"></i>Image Adjustments
+                                <span class="text-muted fw-normal ms-1" style="font-size:0.7rem;">(matches Excel image
+                                    order)</span>
+                            </div>
+                            {% for i in range(img_counts.room) %}
+                            <div class="border rounded p-2 mb-2">
+                                <div class="fw-semibold small mb-2">Image {{ i + 1 }}</div>
+                                <div class="d-flex gap-3 align-items-end flex-wrap">
+                                    <div>
+                                        <label class="form-label mb-1">X Offset (px)</label>
+                                        <input type="number" step="1" name="room_img_{{ i+1 }}_x"
+                                            value="{{ img_slots.room[i].x | int }}" class="form-control form-control-sm"
+                                            style="width:90px;">
+                                    </div>
+                                    <div>
+                                        <label class="form-label mb-1">Y Offset (px)</label>
+                                        <input type="number" step="1" name="room_img_{{ i+1 }}_y"
+                                            value="{{ img_slots.room[i].y | int }}" class="form-control form-control-sm"
+                                            style="width:90px;">
+                                    </div>
+                                    <div>
+                                        <label class="form-label mb-1">Scale</label>
+                                        <input type="number" step="0.05" min="0.1" max="5.0"
+                                            name="room_img_{{ i+1 }}_scale" value="{{ img_slots.room[i].scale }}"
+                                            class="form-control form-control-sm" style="width:90px;">
+                                    </div>
+                                    <div>
+                                        <label class="form-label mb-1">Z-Order</label>
+                                        <select name="room_img_{{ i+1 }}_z_above" class="form-select form-select-sm"
+                                            style="width:140px;">
+                                            <option value="1" {% if img_slots.room[i].z_above %}selected{% endif %}>
+                                                Above Text</option>
+                                            <option value="0" {% if not img_slots.room[i].z_above %}selected{% endif %}>
+                                                Below Text</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                             {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-label mb-1">Margins <span class="text-muted fw-normal" style="font-size:0.7rem;">(in inches)</span></div>
-                    <div class="d-flex gap-3 align-items-end flex-wrap">
-                        <div>
-                            <label class="form-label mb-1">Top</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" value="{{ settings.margin_top or 1.0 }}" disabled>
-                                <span class="input-group-text">in</span>
-                            </div>
                         </div>
-                        <div>
-                            <label class="form-label mb-1">Bottom</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" value="{{ settings.margin_bottom or 1.0 }}" disabled>
-                                <span class="input-group-text">in</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="form-label mb-1">Left</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" value="{{ settings.margin_left or 1.0 }}" disabled>
-                                <span class="input-group-text">in</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="form-label mb-1">Right</label>
-                            <div class="input-group input-group-sm" style="width:100px;">
-                                <input type="number" class="form-control" value="{{ settings.margin_right or 1.0 }}" disabled>
-                                <span class="input-group-text">in</span>
-                            </div>
-                        </div>
-                        <div class="text-muted" style="font-size:0.75rem;padding-bottom:6px;">
-                            <i class="bi bi-pencil-square me-1"></i>Edit in <strong>Section</strong> tab.
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Image Adjustments -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-image"></i>Image Adjustments
-                        <span class="text-muted fw-normal ms-1" style="font-size:0.7rem;">(matches Excel image order)</span>
-                    </div>
-                    {% for i in range(img_counts.course) %}
-                    <div class="border rounded p-2 mb-2">
-                        <div class="fw-semibold small mb-2">Image {{ i + 1 }}</div>
-                        <div class="d-flex gap-3 align-items-end flex-wrap">
-                            <div>
-                                <label class="form-label mb-1">X Offset (px)</label>
-                                <input type="number" step="1" name="course_img_{{ i+1 }}_x"
-                                       value="{{ img_slots.course[i].x | int }}"
-                                       class="form-control form-control-sm" style="width:90px;">
+                        <!-- Card 1: Header Information -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-building"></i>Header Information
                             </div>
-                            <div>
-                                <label class="form-label mb-1">Y Offset (px)</label>
-                                <input type="number" step="1" name="course_img_{{ i+1 }}_y"
-                                       value="{{ img_slots.course[i].y | int }}"
-                                       class="form-control form-control-sm" style="width:90px;">
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label class="form-label">Republic Text <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.republic_text or 'Republic of the Philippines' }}" readonly>
+                                    <div class="hint-text">Edit in Section tab — shared across all layouts.</div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">University Name</label>
+                                    <input type="text" name="room_school_name" class="form-control"
+                                        value="{{ settings.room_school_name or 'CAVITE STATE UNIVERSITY' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Campus Name <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.campus_name or 'CCAT Campus' }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Address <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.address or 'Rosario, Cavite' }}" readonly>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Contact Details <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.contact_details or '(046) 437-9505 / (046) 437-6659' }}"
+                                        readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.email or 'cvsurosario@cvsu.edu.ph' }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Website <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.website or 'www.cvsu-rosario.edu.ph' }}" readonly>
+                                </div>
                             </div>
-                            <div>
-                                <label class="form-label mb-1">Scale</label>
-                                <input type="number" step="0.05" min="0.1" max="5.0"
-                                       name="course_img_{{ i+1 }}_scale"
-                                       value="{{ img_slots.course[i].scale }}"
-                                       class="form-control form-control-sm" style="width:90px;">
+                        </div>
+
+                        <!-- Card 2: Schedule Details -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-calendar3"></i>Schedule Detail Labels &amp; Values
                             </div>
-                            <div>
-                                <label class="form-label mb-1">Z-Order</label>
-                                <select name="course_img_{{ i+1 }}_z_above" class="form-select form-select-sm" style="width:140px;">
-                                    <option value="1" {% if img_slots.course[i].z_above %}selected{% endif %}>Above Text</option>
-                                    <option value="0" {% if not img_slots.course[i].z_above %}selected{% endif %}>Below Text</option>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label">Room Name</label>
+                                    <input type="text" class="form-control auto-field" value="(auto)" readonly>
+                                    <div class="hint-text"><i class="bi bi-info-circle me-1"></i>Auto-filled from the
+                                        Room Name during export.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Sem/AY Value <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control auto-field"
+                                        value="{{ settings.sem_ay_value or '2nd Semester / 2024-2025' }}" readonly>
+                                    <div class="hint-text">Edit in Section tab.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Room Label <small
+                                            class="fw-normal text-muted">{{class_label}}</small></label>
+                                    <input type="text" name="room_label" class="form-control"
+                                        value="{{ settings.room_label or 'ROOM' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Sem/AY Label <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control auto-field"
+                                        value="{{ settings.sem_ay_label or 'Semester / Academic Year' }}" readonly>
+                                    <div class="hint-text">Edit in Section tab.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: Signatory Block Labels -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-tag"></i>Signatory Block Labels <small
+                                    class="fw-normal text-muted ms-1">(shared)</small>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label">Prepared By Label</label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.prepared_by_label or 'Prepared by:' }}" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Recommending Approval Label</label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.rec_approval_label or 'Recommending Approval:' }}" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Approved Label</label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.approved_label or 'APPROVED:' }}" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 4: Signatories -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-people"></i>Signatories
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label class="form-label">Signatory 1 — Name</label>
+                                    <input type="text" name="room_signatory_1" class="form-control"
+                                        value="{{ settings.room_signatory_1 or 'SCHEDULE COMMITTEE' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Signatory 2 — Name</label>
+                                    <input type="text" name="room_signatory_2" class="form-control"
+                                        value="{{ settings.room_signatory_2 or 'ARIEL G. SANTOS, EdD' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Signatory 2 — Title</label>
+                                    <input type="text" name="room_sig2_title" class="form-control"
+                                        value="{{ settings.room_sig2_title or 'Director, Instruction' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Signatory 3 — Name</label>
+                                    <input type="text" name="room_signatory_3" class="form-control"
+                                        value="{{ settings.room_signatory_3 or 'LAURO B. PASCUA, EdD' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Signatory 3 — Title</label>
+                                    <input type="text" name="room_sig3_title" class="form-control"
+                                        value="{{ settings.room_sig3_title or 'Campus Administrator' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                    </div><!-- /tab-room -->
+
+                    <!-- ===================== COURSE TAB ===================== -->
+                    <div class="tab-pane fade" id="tab-course" role="tabpanel">
+
+                        <!-- Card 0: Page Margins (shared, display-only mirror) -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-layout-text-window-reverse"></i>Paper Size &amp; Margins
+                                <span class="badge bg-secondary ms-1 fw-normal"
+                                    style="font-size:0.65rem;letter-spacing:0;">shared</span>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label mb-1">Paper Size</label>
+                                <select class="form-select form-select-sm" style="max-width:320px;" disabled>
+                                    {% for key, (pw, ph, label) in paper_sizes.items() %}
+                                    <option value="{{ key }}" {% if (settings.paper_size or 'A4' )==key %}selected{%
+                                        endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
                                 </select>
                             </div>
+                            <div class="form-label mb-1">Margins <span class="text-muted fw-normal"
+                                    style="font-size:0.7rem;">(in inches)</span></div>
+                            <div class="d-flex gap-3 align-items-end flex-wrap">
+                                <div>
+                                    <label class="form-label mb-1">Top</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control"
+                                            value="{{ settings.margin_top or 1.0 }}" disabled>
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label mb-1">Bottom</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control"
+                                            value="{{ settings.margin_bottom or 1.0 }}" disabled>
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label mb-1">Left</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control"
+                                            value="{{ settings.margin_left or 1.0 }}" disabled>
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label mb-1">Right</label>
+                                    <div class="input-group input-group-sm" style="width:100px;">
+                                        <input type="number" class="form-control"
+                                            value="{{ settings.margin_right or 1.0 }}" disabled>
+                                        <span class="input-group-text">in</span>
+                                    </div>
+                                </div>
+                                <div class="text-muted" style="font-size:0.75rem;padding-bottom:6px;">
+                                    <i class="bi bi-pencil-square me-1"></i>Edit in <strong>Section</strong> tab.
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    {% endfor %}
-                </div>
 
-                <!-- Card 1: Header Information -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-building"></i>Header Information
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-12">
-                            <label class="form-label">Republic Text <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control"
-                                value="{{ settings.republic_text or 'Republic of the Philippines' }}" readonly>
-                            <div class="hint-text">Edit in Section tab — shared across all layouts.</div>
+                        <!-- Image Adjustments -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-image"></i>Image Adjustments
+                                <span class="text-muted fw-normal ms-1" style="font-size:0.7rem;">(matches Excel image
+                                    order)</span>
+                            </div>
+                            {% for i in range(img_counts.course) %}
+                            <div class="border rounded p-2 mb-2">
+                                <div class="fw-semibold small mb-2">Image {{ i + 1 }}</div>
+                                <div class="d-flex gap-3 align-items-end flex-wrap">
+                                    <div>
+                                        <label class="form-label mb-1">X Offset (px)</label>
+                                        <input type="number" step="1" name="course_img_{{ i+1 }}_x"
+                                            value="{{ img_slots.course[i].x | int }}"
+                                            class="form-control form-control-sm" style="width:90px;">
+                                    </div>
+                                    <div>
+                                        <label class="form-label mb-1">Y Offset (px)</label>
+                                        <input type="number" step="1" name="course_img_{{ i+1 }}_y"
+                                            value="{{ img_slots.course[i].y | int }}"
+                                            class="form-control form-control-sm" style="width:90px;">
+                                    </div>
+                                    <div>
+                                        <label class="form-label mb-1">Scale</label>
+                                        <input type="number" step="0.05" min="0.1" max="5.0"
+                                            name="course_img_{{ i+1 }}_scale" value="{{ img_slots.course[i].scale }}"
+                                            class="form-control form-control-sm" style="width:90px;">
+                                    </div>
+                                    <div>
+                                        <label class="form-label mb-1">Z-Order</label>
+                                        <select name="course_img_{{ i+1 }}_z_above" class="form-select form-select-sm"
+                                            style="width:140px;">
+                                            <option value="1" {% if img_slots.course[i].z_above %}selected{% endif %}>
+                                                Above Text</option>
+                                            <option value="0" {% if not img_slots.course[i].z_above %}selected{% endif
+                                                %}>Below Text</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
                         </div>
-                        <div class="col-12">
-                            <label class="form-label">University Name</label>
-                            <input type="text" name="course_school_name" class="form-control"
-                                value="{{ settings.course_school_name or 'CAVITE STATE UNIVERSITY' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Campus Name <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control"
-                                value="{{ settings.campus_name or 'CCAT Campus' }}" readonly>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Address <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control"
-                                value="{{ settings.address or 'Rosario, Cavite' }}" readonly>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Contact Details <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control"
-                                value="{{ settings.contact_details or '(046) 437-9505 / (046) 437-6659' }}" readonly>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Email <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control"
-                                value="{{ settings.email or 'cvsurosario@cvsu.edu.ph' }}" readonly>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Website <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control"
-                                value="{{ settings.website or 'www.cvsu-rosario.edu.ph' }}" readonly>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Card 2: Schedule Details -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-calendar3"></i>Schedule Detail Labels &amp; Values
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-md-6">
-                            <label class="form-label">Course Name</label>
-                            <input type="text" class="form-control auto-field" value="(auto)" readonly>
-                            <div class="hint-text"><i class="bi bi-info-circle me-1"></i>Auto-filled from the Course Name during export.</div>
+                        <!-- Card 1: Header Information -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-building"></i>Header Information
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label class="form-label">Republic Text <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.republic_text or 'Republic of the Philippines' }}" readonly>
+                                    <div class="hint-text">Edit in Section tab — shared across all layouts.</div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">University Name</label>
+                                    <input type="text" name="course_school_name" class="form-control"
+                                        value="{{ settings.course_school_name or 'CAVITE STATE UNIVERSITY' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Campus Name <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.campus_name or 'CCAT Campus' }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Address <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.address or 'Rosario, Cavite' }}" readonly>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Contact Details <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.contact_details or '(046) 437-9505 / (046) 437-6659' }}"
+                                        readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.email or 'cvsurosario@cvsu.edu.ph' }}" readonly>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Website <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.website or 'www.cvsu-rosario.edu.ph' }}" readonly>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Sem/AY Value <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control auto-field" value="{{ settings.sem_ay_value or '2nd Semester / 2024-2025' }}" readonly>
-                            <div class="hint-text">Edit in Section tab.</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Course Label <small class="fw-normal text-muted">{{class_label}}</small></label>
-                            <input type="text" name="course_label" class="form-control"
-                                value="{{ settings.course_label or 'COURSE' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Sem/AY Label <small class="fw-normal text-muted">(shared)</small></label>
-                            <input type="text" class="form-control auto-field" value="{{ settings.sem_ay_label or 'Semester / Academic Year' }}" readonly>
-                            <div class="hint-text">Edit in Section tab.</div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Card 3: Signatory Block Labels -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-tag"></i>Signatory Block Labels <small class="fw-normal text-muted ms-1">(shared)</small>
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-md-4">
-                            <label class="form-label">Prepared By Label</label>
-                            <input type="text" class="form-control" value="{{ settings.prepared_by_label or 'Prepared by:' }}" readonly>
+                        <!-- Card 2: Schedule Details -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-calendar3"></i>Schedule Detail Labels &amp; Values
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label">Course Name</label>
+                                    <input type="text" class="form-control auto-field" value="(auto)" readonly>
+                                    <div class="hint-text"><i class="bi bi-info-circle me-1"></i>Auto-filled from the
+                                        Course Name during export.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Sem/AY Value <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control auto-field"
+                                        value="{{ settings.sem_ay_value or '2nd Semester / 2024-2025' }}" readonly>
+                                    <div class="hint-text">Edit in Section tab.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Course Label <small
+                                            class="fw-normal text-muted">{{class_label}}</small></label>
+                                    <input type="text" name="course_label" class="form-control"
+                                        value="{{ settings.course_label or 'COURSE' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Sem/AY Label <small
+                                            class="fw-normal text-muted">(shared)</small></label>
+                                    <input type="text" class="form-control auto-field"
+                                        value="{{ settings.sem_ay_label or 'Semester / Academic Year' }}" readonly>
+                                    <div class="hint-text">Edit in Section tab.</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Recommending Approval Label</label>
-                            <input type="text" class="form-control" value="{{ settings.rec_approval_label or 'Recommending Approval:' }}" readonly>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Approved Label</label>
-                            <input type="text" class="form-control" value="{{ settings.approved_label or 'APPROVED:' }}" readonly>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Card 4: Signatories -->
-                <div class="settings-card">
-                    <div class="section-label">
-                        <i class="bi bi-people"></i>Signatories
-                    </div>
-                    <div class="row g-2">
-                        <div class="col-12">
-                            <label class="form-label">Signatory 1 — Name</label>
-                            <input type="text" name="course_signatory_1" class="form-control"
-                                value="{{ settings.course_signatory_1 or 'SCHEDULE COMMITTEE' }}">
+                        <!-- Card 3: Signatory Block Labels -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-tag"></i>Signatory Block Labels <small
+                                    class="fw-normal text-muted ms-1">(shared)</small>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label">Prepared By Label</label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.prepared_by_label or 'Prepared by:' }}" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Recommending Approval Label</label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.rec_approval_label or 'Recommending Approval:' }}" readonly>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Approved Label</label>
+                                    <input type="text" class="form-control"
+                                        value="{{ settings.approved_label or 'APPROVED:' }}" readonly>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Signatory 2 — Name</label>
-                            <input type="text" name="course_signatory_2" class="form-control"
-                                value="{{ settings.course_signatory_2 or 'ARIEL G. SANTOS, EdD' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Signatory 2 — Title</label>
-                            <input type="text" name="course_sig2_title" class="form-control"
-                                value="{{ settings.course_sig2_title or 'Director, Instruction' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Signatory 3 — Name</label>
-                            <input type="text" name="course_signatory_3" class="form-control"
-                                value="{{ settings.course_signatory_3 or 'LAURO B. PASCUA, EdD' }}">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Signatory 3 — Title</label>
-                            <input type="text" name="course_sig3_title" class="form-control"
-                                value="{{ settings.course_sig3_title or 'Campus Administrator' }}">
-                        </div>
-                    </div>
-                </div>
 
-            </div><!-- /tab-course -->
+                        <!-- Card 4: Signatories -->
+                        <div class="settings-card">
+                            <div class="section-label">
+                                <i class="bi bi-people"></i>Signatories
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <label class="form-label">Signatory 1 — Name</label>
+                                    <input type="text" name="course_signatory_1" class="form-control"
+                                        value="{{ settings.course_signatory_1 or 'SCHEDULE COMMITTEE' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Signatory 2 — Name</label>
+                                    <input type="text" name="course_signatory_2" class="form-control"
+                                        value="{{ settings.course_signatory_2 or 'ARIEL G. SANTOS, EdD' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Signatory 2 — Title</label>
+                                    <input type="text" name="course_sig2_title" class="form-control"
+                                        value="{{ settings.course_sig2_title or 'Director, Instruction' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Signatory 3 — Name</label>
+                                    <input type="text" name="course_signatory_3" class="form-control"
+                                        value="{{ settings.course_signatory_3 or 'LAURO B. PASCUA, EdD' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Signatory 3 — Title</label>
+                                    <input type="text" name="course_sig3_title" class="form-control"
+                                        value="{{ settings.course_sig3_title or 'Campus Administrator' }}">
+                                </div>
+                            </div>
+                        </div>
 
-        </div><!-- /tab-content -->
+                    </div><!-- /tab-course -->
+
+                </div><!-- /tab-content -->
 
         </form>
     </div><!-- /layout-right -->
@@ -1329,178 +1560,434 @@
 
 <!-- ── Preview Modal ── -->
 <div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered" style="max-width:92vw;">
-        <div class="modal-content" style="height:88vh;">
-            <div class="modal-header py-2">
-                <h6 class="modal-title mb-0 me-auto" id="previewModalLabel">Template Preview</h6>
+    <div class="modal-dialog modal-dialog-centered modal-preview-custom">
+        <div class="modal-content preview-modal-shell">
+            <div class="modal-header py-2 bg-white border-bottom">
+                <h6 class="modal-title mb-0 me-auto fw-bold text-dark" id="previewModalLabel">Template Preview</h6>
+                <div class="d-flex align-items-center gap-2 me-3">
+                    <span id="zoomPercent" class="badge bg-light text-dark border fw-normal"
+                        style="font-size:0.75rem; width:45px;">100%</span>
+                    <button class="btn btn-xs btn-outline-secondary" onclick="resetZoom()" title="Fit to Screen">
+                        <i class="bi bi-fullscreen"></i>
+                    </button>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-0" style="overflow:hidden;height:100%;">
-                <iframe id="previewFrame" src="" style="width:100%;height:100%;border:none;" title="Template Preview"></iframe>
+            <div class="modal-body p-0 position-relative preview-dotted-bg" style="overflow:hidden; cursor: grab;"
+                id="previewContainer">
+                <div id="zoomWrapper"
+                    style="transform-origin: 0 0; transition: transform 0.1s ease-out; pointer-events: none; width:fit-content; height:fit-content; will-change: transform;">
+                    <iframe id="previewFrame" src="" scrolling="no"
+                        style="width:1px; height:1px; border:none; background:transparent; overflow:hidden;"
+                        title="Template Preview"></iframe>
+                </div>
+
+                <!-- Interaction Overlay -->
+                <div id="previewOverlay" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:10;">
+                </div>
             </div>
         </div>
     </div>
 </div>
+<style>
+    .btn-xs {
+        padding: 2px 6px;
+        font-size: 0.75rem;
+    }
+
+    #previewContainer:active {
+        cursor: grabbing;
+    }
+
+    /* Premium Preview Styling */
+    .preview-dotted-bg {
+        background-color: #f8f9fa;
+        background-image: radial-gradient(#d1d5db 1px, transparent 1px);
+        background-size: 20px 20px;
+    }
+
+    .modal-preview-custom {
+        max-width: 92vw;
+        width: 650px;
+        /* Force 90dvh by overriding centering margins */
+        height: 90dvh;
+        min-height: 90dvh !important;
+        margin: 5dvh auto !important;
+        max-height: none !important;
+        display: flex;
+        align-items: center;
+    }
+
+    .modal-preview-custom .preview-modal-shell {
+        height: 100%;
+        width: 100%;
+        background: white;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    @media (max-width: 767px) {
+        .modal-preview-custom {
+            max-width: 95vw !important;
+            width: 95vw !important;
+            margin: 15dvh auto !important;
+            height: 70dvh !important;
+            min-height: 70dvh !important;
+        }
+
+        .modal-preview-custom .preview-modal-shell {
+            height: 100% !important;
+        }
+    }
+</style>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-// ── Template existence map (from server) ──
-var _templateExists = {
-    section: {{ 'true' if template_exists.section else 'false' }},
-    faculty: {{ 'true' if template_exists.faculty else 'false' }},
-    room:    {{ 'true' if template_exists.room else 'false' }},
-    course:  {{ 'true' if template_exists.course else 'false' }}
-};
+    // ── Template existence map (from server) ──
+    var _templateExists = {
+        section: "{{ 'true' if template_exists.section else 'false' }}",
+        faculty: "{{ 'true' if template_exists.faculty else 'false' }}",
+        room: "{{ 'true' if template_exists.room else 'false' }}",
+        course: "{{ 'true' if template_exists.course else 'false' }}"
+    };
 
-var _deleteUrls = {
-    section: "{{ url_for('delete_layout', layout_type='section') }}",
-    faculty: "{{ url_for('delete_layout', layout_type='faculty') }}",
-    room:    "{{ url_for('delete_layout', layout_type='room') }}",
-    course:  "{{ url_for('delete_layout', layout_type='course') }}"
-};
+    var _deleteUrls = {
+        section: "{{ url_for('delete_layout', layout_type='section') }}",
+        faculty: "{{ url_for('delete_layout', layout_type='faculty') }}",
+        room: "{{ url_for('delete_layout', layout_type='room') }}",
+        course: "{{ url_for('delete_layout', layout_type='course') }}"
+    };
 
-var _currentTab = 'section';
+    var _currentTab = 'section';
 
-function updateUploadCard(tab) {
-    _currentTab = tab;
-    var labels = { section: 'Section', faculty: 'Faculty', room: 'Room', course: 'Course' };
-    document.getElementById('uploadCardTitle').textContent = labels[tab] + ' Template';
-    document.getElementById('uploadTypeInput').value = tab;
+    function updateUploadCard(tab) {
+        _currentTab = tab;
+        var labels = { section: 'Section', faculty: 'Faculty', room: 'Room', course: 'Course' };
+        document.getElementById('uploadCardTitle').textContent = labels[tab] + ' Template';
+        document.getElementById('uploadTypeInput').value = tab;
 
-    // Status badge
-    var badge = document.getElementById('uploadStatusBadge');
-    if (_templateExists[tab]) {
-        badge.innerHTML = '<span class="badge bg-success template-badge"><i class="bi bi-check-circle me-1"></i>Template uploaded</span>';
-    } else {
-        badge.innerHTML = '<span class="badge bg-secondary template-badge"><i class="bi bi-x-circle me-1"></i>No template</span>';
-    }
-
-    // Show/hide actions
-    var actions = document.getElementById('templateActions');
-    if (_templateExists[tab]) {
-        actions.style.display = '';
-        document.getElementById('deleteForm').action = _deleteUrls[tab];
-    } else {
-        actions.style.display = 'none';
-    }
-}
-
-// Tab click events
-document.querySelectorAll('#layoutTabs .nav-link').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        updateUploadCard(this.dataset.tab);
-        document.getElementById('activeTabInput').value = this.dataset.tab;
-    });
-});
-
-// Preview button in upload card
-document.querySelector('.btn-preview-action').addEventListener('click', function() {
-    var frame = document.getElementById('previewFrame');
-    var label = document.getElementById('previewModalLabel');
-    frame.src = '/preview-layout/' + _currentTab;
-    label.textContent = _currentTab.charAt(0).toUpperCase() + _currentTab.slice(1) + ' Template Preview';
-    new bootstrap.Modal(document.getElementById('previewModal')).show();
-});
-
-// Clear iframe on modal close
-document.getElementById('previewModal').addEventListener('hidden.bs.modal', function() {
-    document.getElementById('previewFrame').src = '';
-});
-
-
-// ── Restore active tab from URL ?tab= param ──
-(function() {
-    var params = new URLSearchParams(window.location.search);
-    var tabParam = params.get('tab');
-    if (tabParam && ['section','faculty','room','course'].includes(tabParam)) {
-        var targetBtn = document.querySelector('[data-tab="' + tabParam + '"]');
-        if (targetBtn) {
-            var tabInstance = new bootstrap.Tab(targetBtn);
-            tabInstance.show();
-            updateUploadCard(tabParam);
+        // Status badge
+        var badge = document.getElementById('uploadStatusBadge');
+        if (_templateExists[tab] === 'true') {
+            badge.innerHTML = '<span class="badge bg-success template-badge"><i class="bi bi-check-circle me-1"></i>Template uploaded</span>';
+        } else {
+            badge.innerHTML = '<span class="badge bg-secondary template-badge"><i class="bi bi-x-circle me-1"></i>No template</span>';
         }
-        document.getElementById('activeTabInput').value = tabParam;
-    } else {
-        updateUploadCard('section');
-        document.getElementById('activeTabInput').value = 'section';
+
+        // Show/hide actions
+        var actions = document.getElementById('templateActions');
+        if (_templateExists[tab] === 'true') {
+            actions.style.display = '';
+            document.getElementById('deleteForm').action = _deleteUrls[tab];
+        } else {
+            actions.style.display = 'none';
+        }
     }
-})();
 
-// ── 100-character limit validation ──────────────────────────────────────────
-var CHAR_LIMIT = 100;
+    // Tab click events
+    document.querySelectorAll('#layoutTabs .nav-link').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            updateUploadCard(this.dataset.tab);
+            document.getElementById('activeTabInput').value = this.dataset.tab;
+        });
+    });
 
-function updateSaveButton() {
-    var btn = document.querySelector('button[form="settingsForm"]');
-    if (!btn) return;
-    var hasViolations = document.querySelectorAll(
-        '#settingsForm input[type="text"].is-invalid'
-    ).length > 0;
-    btn.disabled = hasViolations;
-    if (hasViolations) {
-        btn.classList.add('btn-danger');
-        btn.classList.remove('btn-success');
-    } else {
-        btn.classList.remove('btn-danger');
-        btn.classList.add('btn-success');
+    // ── Interactive Preview Logic ──
+    var _previewState = {
+        scale: 1,
+        x: 0,
+        y: 0,
+        isDragging: false,
+        startX: 0,
+        startY: 0,
+        initialPinchDist: 0,
+        initialScale: 1
+    };
+
+    function updatePreviewTransform() {
+        var wrapper = document.getElementById('zoomWrapper');
+        var zoomPercent = document.getElementById('zoomPercent');
+        if (!wrapper) return;
+        wrapper.style.transform = `translate(${_previewState.x}px, ${_previewState.y}px) scale(${_previewState.scale})`;
+        zoomPercent.textContent = Math.round(_previewState.scale * 100) + '%';
     }
-}
 
-function initCharCounters() {
-    var inputs = document.querySelectorAll(
-        '#settingsForm input[type="text"]:not([readonly]):not(.auto-field)'
-    );
-    inputs.forEach(function(input) {
-        var wrap = document.createElement('div');
-        wrap.className = 'char-limit-wrap d-flex justify-content-between align-items-start mt-1';
+    function resetZoom() {
+        var container = document.getElementById('previewContainer');
+        var iframe = document.getElementById('previewFrame');
+        if (!container || !iframe || iframe.offsetWidth <= 1) return;
 
-        var warn = document.createElement('small');
-        warn.className = 'char-warning text-danger d-none';
-        warn.textContent = 'Limit exceeded! Maximum 100 characters allowed for grid stability.';
+        var cRect = container.getBoundingClientRect();
+        // Dynamic dimensions based on the measured iframe
+        var iW = iframe.offsetWidth;
+        var iH = iframe.offsetHeight;
 
-        var counter = document.createElement('small');
-        counter.className = 'char-counter text-muted ms-auto';
-        counter.textContent = input.value.length + '/' + CHAR_LIMIT;
+        var scaleW = cRect.width / iW;
+        var scaleH = cRect.height / iH;
+        _previewState.scale = Math.min(scaleW, scaleH) * 0.98; // Tight fit
 
-        wrap.appendChild(warn);
-        wrap.appendChild(counter);
-        input.insertAdjacentElement('afterend', wrap);
+        // Perfect centering logic
+        _previewState.x = (cRect.width - (iW * _previewState.scale)) / 2;
+        _previewState.y = (cRect.height - (iH * _previewState.scale)) / 2;
 
-        function update() {
-            var len = input.value.length;
-            counter.textContent = len + '/' + CHAR_LIMIT;
-            if (len > CHAR_LIMIT) {
-                counter.classList.remove('text-muted');
-                counter.classList.add('text-danger');
-                input.classList.add('is-invalid');
-                warn.classList.remove('d-none');
-            } else {
-                counter.classList.remove('text-danger');
-                counter.classList.add('text-muted');
-                input.classList.remove('is-invalid');
-                warn.classList.add('d-none');
+        updatePreviewTransform();
+    }
+
+    // ── Dynamic Transparency & Sizing Hack for Iframe Content ──
+    document.getElementById('previewFrame').addEventListener('load', function () {
+        try {
+            var iframe = this;
+            var doc = iframe.contentDocument || iframe.contentWindow.document;
+
+            // 1. Inject Styles
+            var style = doc.createElement('style');
+            style.innerHTML = `
+            body { background: transparent !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; }
+            .a4, #a4Paper { 
+                background: white !important; 
+                display: block !important; 
+                margin: 0 !important; 
+                box-shadow: 0 4px 18px rgba(0,0,0,0.2) !important;
+                visibility: visible !important;
             }
-            updateSaveButton();
+            .container, .container-fluid { background: transparent !important; padding: 0 !important; max-width: none !important; }
+            .card { background: transparent !important; border: none !important; box-shadow: none !important; }
+            nav, footer, .navbar, .btn-group, .no-print, .header-wrap { display: none !important; }
+        `;
+            doc.head.appendChild(style);
+
+            // 2. Measure & Resize Iframe to match Internal Paper
+            var paper = doc.querySelector('.a4') || doc.getElementById('a4Paper') || doc.body;
+            if (paper) {
+                // Force a slight delay to ensure browser layout is stable
+                setTimeout(function () {
+                    iframe.style.width = paper.offsetWidth + 'px';
+                    iframe.style.height = paper.offsetHeight + 'px';
+                    resetZoom(); // Now fit it to the modal
+                }, 50);
+            }
+        } catch (e) {
+            console.warn("Cross-origin or other error injecting style into iframe preview:", e);
         }
-
-        input.addEventListener('input', update);
-        update(); // check initial value on page load
     });
-}
 
-// Block form submit if any field is over limit
-document.getElementById('settingsForm').addEventListener('submit', function(e) {
-    var violations = document.querySelectorAll(
-        '#settingsForm input[type="text"].is-invalid'
-    );
-    if (violations.length > 0) {
+    // Preview button in upload card
+    document.querySelector('.btn-preview-action').addEventListener('click', function () {
+        var frame = document.getElementById('previewFrame');
+        var label = document.getElementById('previewModalLabel');
+        frame.src = '/preview-layout/' + _currentTab;
+        label.textContent = _currentTab.charAt(0).toUpperCase() + _currentTab.slice(1) + ' Template Preview';
+
+        var modalEl = document.getElementById('previewModal');
+        var modal = new bootstrap.Modal(modalEl);
+        modal.show();
+
+        // Reset when modal is fully shown
+        modalEl.addEventListener('shown.bs.modal', function onShown() {
+            resetZoom();
+            modalEl.removeEventListener('shown.bs.modal', onShown);
+        });
+    });
+
+    // Clear iframe on modal close
+    document.getElementById('previewModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('previewFrame').src = '';
+        _previewState.scale = 1; _previewState.x = 0; _previewState.y = 0;
+    });
+
+    // ── Event Listeners for Zoom/Pan ──
+    var overlay = document.getElementById('previewOverlay');
+
+    // Mouse Wheel & Trackpad Pinch (Focal Point Zooming)
+    overlay.addEventListener('wheel', function (e) {
         e.preventDefault();
-        alert('Please fix all fields exceeding 100 characters before saving.');
-    }
-});
+        var container = document.getElementById('previewContainer');
+        if (!container) return;
 
-initCharCounters();
+        var containerRect = container.getBoundingClientRect();
+        var mouseX = e.clientX - containerRect.left;
+        var mouseY = e.clientY - containerRect.top;
+
+        // In a preview modal, we want the wheel to zoom directly
+        var zoomSpeed = 0.001;
+        var oldScale = _previewState.scale;
+        var newScale = oldScale * (1 - e.deltaY * zoomSpeed);
+        newScale = Math.max(0.1, Math.min(newScale, 4));
+
+        // Focal point logic: Keep the point under mouse stationary
+        _previewState.x = mouseX - (mouseX - _previewState.x) * (newScale / oldScale);
+        _previewState.y = mouseY - (mouseY - _previewState.y) * (newScale / oldScale);
+        _previewState.scale = newScale;
+
+        updatePreviewTransform();
+    }, { passive: false });
+
+    // Pan (Mouse)
+    overlay.addEventListener('mousedown', function (e) {
+        _previewState.isDragging = true;
+        _previewState.startX = e.clientX - _previewState.x;
+        _previewState.startY = e.clientY - _previewState.y;
+    });
+
+    window.addEventListener('mousemove', function (e) {
+        if (!_previewState.isDragging) return;
+        _previewState.x = e.clientX - _previewState.startX;
+        _previewState.y = e.clientY - _previewState.startY;
+        updatePreviewTransform();
+    });
+
+    window.addEventListener('mouseup', function () {
+        _previewState.isDragging = false;
+    });
+
+    // Touch (Pinch & Pan - Focal Point Zooming)
+    overlay.addEventListener('touchstart', function (e) {
+        if (e.touches.length === 2) {
+            _previewState.initialPinchDist = Math.hypot(
+                e.touches[0].pageX - e.touches[1].pageX,
+                e.touches[0].pageY - e.touches[1].pageY
+            );
+            _previewState.initialScale = _previewState.scale;
+
+            // Center of the pinch
+            var container = document.getElementById('previewContainer');
+            var containerRect = container.getBoundingClientRect();
+            _previewState.pinchCenterX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - containerRect.left;
+            _previewState.pinchCenterY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - containerRect.top;
+        } else if (e.touches.length === 1) {
+            _previewState.isDragging = true;
+            _previewState.startX = e.touches[0].clientX - _previewState.x;
+            _previewState.startY = e.touches[0].clientY - _previewState.y;
+        }
+    }, { passive: false });
+
+    overlay.addEventListener('touchmove', function (e) {
+        e.preventDefault();
+        if (e.touches.length === 2) {
+            var dist = Math.hypot(
+                e.touches[0].pageX - e.touches[1].pageX,
+                e.touches[0].pageY - e.touches[1].pageY
+            );
+            var factor = dist / _previewState.initialPinchDist;
+            var oldScale = _previewState.scale;
+            var newScale = Math.max(0.1, Math.min(_previewState.initialScale * factor, 4));
+
+            // Focal point logic for touch
+            var centerX = _previewState.pinchCenterX;
+            var centerY = _previewState.pinchCenterY;
+            _previewState.x = centerX - (centerX - _previewState.x) * (newScale / oldScale);
+            _previewState.y = centerY - (centerY - _previewState.y) * (newScale / oldScale);
+            _previewState.scale = newScale;
+
+        } else if (e.touches.length === 1 && _previewState.isDragging) {
+            _previewState.x = e.touches[0].clientX - _previewState.startX;
+            _previewState.y = e.touches[0].clientY - _previewState.startY;
+        }
+        updatePreviewTransform();
+    }, { passive: false });
+
+    overlay.addEventListener('touchend', function () {
+        _previewState.isDragging = false;
+    });
+
+
+    // ── Restore active tab from URL ?tab= param ──
+    (function () {
+        var params = new URLSearchParams(window.location.search);
+        var tabParam = params.get('tab');
+        if (tabParam && ['section', 'faculty', 'room', 'course'].includes(tabParam)) {
+            var targetBtn = document.querySelector('[data-tab="' + tabParam + '"]');
+            if (targetBtn) {
+                var tabInstance = new bootstrap.Tab(targetBtn);
+                tabInstance.show();
+                updateUploadCard(tabParam);
+            }
+            document.getElementById('activeTabInput').value = tabParam;
+        } else {
+            updateUploadCard('section');
+            document.getElementById('activeTabInput').value = 'section';
+        }
+    })();
+
+    // ── 100-character limit validation ──────────────────────────────────────────
+    var CHAR_LIMIT = 100;
+
+    function updateSaveButton() {
+        var btn = document.querySelector('button[form="settingsForm"]');
+        if (!btn) return;
+        var hasViolations = document.querySelectorAll(
+            '#settingsForm input[type="text"].is-invalid'
+        ).length > 0;
+        btn.disabled = hasViolations;
+        if (hasViolations) {
+            btn.classList.add('btn-danger');
+            btn.classList.remove('btn-success');
+        } else {
+            btn.classList.remove('btn-danger');
+            btn.classList.add('btn-success');
+        }
+    }
+
+    function initCharCounters() {
+        var inputs = document.querySelectorAll(
+            '#settingsForm input[type="text"]:not([readonly]):not(.auto-field)'
+        );
+        inputs.forEach(function (input) {
+            var wrap = document.createElement('div');
+            wrap.className = 'char-limit-wrap d-flex justify-content-between align-items-start mt-1';
+
+            var warn = document.createElement('small');
+            warn.className = 'char-warning text-danger d-none';
+            warn.textContent = 'Limit exceeded! Maximum 100 characters allowed for grid stability.';
+
+            var counter = document.createElement('small');
+            counter.className = 'char-counter text-muted ms-auto';
+            counter.textContent = input.value.length + '/' + CHAR_LIMIT;
+
+            wrap.appendChild(warn);
+            wrap.appendChild(counter);
+            input.insertAdjacentElement('afterend', wrap);
+
+            function update() {
+                var len = input.value.length;
+                counter.textContent = len + '/' + CHAR_LIMIT;
+                if (len > CHAR_LIMIT) {
+                    counter.classList.remove('text-muted');
+                    counter.classList.add('text-danger');
+                    input.classList.add('is-invalid');
+                    warn.classList.remove('d-none');
+                } else {
+                    counter.classList.remove('text-danger');
+                    counter.classList.add('text-muted');
+                    input.classList.remove('is-invalid');
+                    warn.classList.add('d-none');
+                }
+                updateSaveButton();
+            }
+
+            input.addEventListener('input', update);
+            update(); // check initial value on page load
+        });
+    }
+
+    // Block form submit if any field is over limit
+    document.getElementById('settingsForm').addEventListener('submit', function (e) {
+        var violations = document.querySelectorAll(
+            '#settingsForm input[type="text"].is-invalid'
+        );
+        if (violations.length > 0) {
+            e.preventDefault();
+            alert('Please fix all fields exceeding 100 characters before saving.');
+        }
+    });
+
+    initCharCounters();
 </script>
 
 <!-- HOW-TO GUIDE MODAL (Layout Settings) -->
@@ -1518,37 +2005,49 @@ initCharCounters();
                 <!-- 1. WHAT IS THIS? -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-primary small mb-1">1. LAYOUT TYPES & TABS</h6>
-                    <p class="small text-muted mb-0">Use the <strong>Left Sidebar</strong> to switch between different schedule document types (Course, Section, Faculty, Room). Each tab maintains its own independent set of templates and settings.</p>
+                    <p class="small text-muted mb-0">Use the <strong>Left Sidebar</strong> to switch between different
+                        schedule document types (Course, Section, Faculty, Room). Each tab maintains its own independent
+                        set of templates and settings.</p>
                 </div>
 
                 <!-- 2. TEMPLATE MANAGEMENT -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-success small mb-1">2. TEMPLATE MANAGEMENT</h6>
-                    <p class="small text-muted mb-0">Upload <code>.xlsx</code> files to set the visual base for your schedules. You can <strong>Preview</strong> the current template to see cell mappings or <strong>Delete</strong> it to upload a fresh version.</p>
+                    <p class="small text-muted mb-0">Upload <code>.xlsx</code> files to set the visual base for your
+                        schedules. You can <strong>Preview</strong> the current template to see cell mappings or
+                        <strong>Delete</strong> it to upload a fresh version.
+                    </p>
                 </div>
 
                 <!-- 3. PAPER & MARGINS -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-info small mb-1">3. PAPER SIZE & MARGINS</h6>
-                    <p class="small text-muted mb-0">Select your preferred paper size (e.g., A4, Legal) and adjust margins in inches. These settings directly affect the <strong>View Page</strong> scaling and layout alignment.</p>
+                    <p class="small text-muted mb-0">Select your preferred paper size (e.g., A4, Legal) and adjust
+                        margins in inches. These settings directly affect the <strong>View Page</strong> scaling and
+                        layout alignment.</p>
                 </div>
 
                 <!-- 4. IMAGE CALIBRATION -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-warning small mb-1">4. IMAGE CALIBRATION</h6>
-                    <p class="small text-muted mb-0">Fine-tune the placement of logos/seals from your Excel template. Adjust **X/Y Offsets** for position, **Scale** for size, and **Z-Order** to determine if images appear above or below the text grid.</p>
+                    <p class="small text-muted mb-0">Fine-tune the placement of logos/seals from your Excel template.
+                        Adjust **X/Y Offsets** for position, **Scale** for size, and **Z-Order** to determine if images
+                        appear above or below the text grid.</p>
                 </div>
 
                 <!-- 5. HEADER & SIGNATORIES -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-danger small mb-1">5. HEADER & SIGNATORIES</h6>
-                    <p class="small text-muted mb-0">Customize institutional details (Campus, Address, Contact) and set the display names and titles for the <strong>Signatory Blocks</strong> used in the printed schedules.</p>
+                    <p class="small text-muted mb-0">Customize institutional details (Campus, Address, Contact) and set
+                        the display names and titles for the <strong>Signatory Blocks</strong> used in the printed
+                        schedules.</p>
                 </div>
 
                 <!-- 6. AUTO-FILLED FIELDS -->
                 <div class="mb-0">
                     <h6 class="fw-bold text-secondary small mb-1">6. AUTO-FILLED FIELDS</h6>
-                    <p class="small text-muted mb-0">Fields marked with a dashed border (Gray background) are auto-populated during the actual export process and cannot be manually edited here.</p>
+                    <p class="small text-muted mb-0">Fields marked with a dashed border (Gray background) are
+                        auto-populated during the actual export process and cannot be manually edited here.</p>
                 </div>
             </div>
 
@@ -1560,15 +2059,20 @@ initCharCounters();
 </div>
 
 <style>
-    .text-muted-v2 { color: #adb5bd !important; }
+    .text-muted-v2 {
+        color: #adb5bd !important;
+    }
+
     .info-icon-hover {
         transition: all 0.2s ease;
         cursor: pointer;
     }
+
     .info-icon-hover:hover {
         color: #198754 !important;
         transform: scale(1.2);
     }
+
     #layoutInfoModal {
         z-index: 1070 !important;
     }

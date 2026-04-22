@@ -185,83 +185,280 @@ function initializeSemesterFilter() {
     }
 }
 
-// ==========================================
-// UNIVERSAL SCHEDULE MODAL LOGIC
-// ==========================================
-let currentSchedType = null;
-let currentSchedId = null;
+// ── UNIVERSAL SCHEDULE MODAL MANAGER (NUCLEAR CLEAN) ──────
+const UniversalModalManager = {
+    type: null,
+    id: null,
+    scale: 1.0,
+    tx: 0,
+    ty: 0,
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    lastPinchDist: null,
+    touchStartX: 0,
+    touchStartY: 0,
+    isSwiping: false,
 
-window.viewSchedule = function (type, id) {
-    currentSchedType = type;
-    currentSchedId = id;
+    init() {
+        const modalEl = document.getElementById('universalScheduleModal');
+        if (!modalEl) return;
 
-    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('universalScheduleModal'));
-    const contentDiv = document.getElementById('dynamicScheduleContent');
+        // ── ATTACH LISTENERS ONLY ONCE ──
 
-    // Update label based on row text
-    const activeRow = document.querySelector(`tr[data-id="${id}"]`);
-    if (activeRow) {
-        const nameCell = activeRow.querySelector('td.fw-bold') || activeRow.cells[1];
-        document.getElementById('universalScheduleLabel').textContent = nameCell ? nameCell.textContent.trim() : `ID: ${id}`;
-    }
-
-    // Show loading state
-    contentDiv.innerHTML = `
-        <div class="text-center py-5">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="mt-2 text-muted small">Loading schedule...</p>
-        </div>`;
-    modal.show();
-
-    // Fetch schedule
-    fetch(`/view-schedule-modal/${type}/${id}`)
-        .then(response => response.text())
-        .then(html => {
-            contentDiv.innerHTML = html;
-            // Execute any scripts inside the fetched HTML (like drag-and-drop initialize)
-            contentDiv.querySelectorAll('script').forEach(function (oldScript) {
-                const newScript = document.createElement('script');
-                if (oldScript.src) newScript.src = oldScript.src;
-                else newScript.textContent = oldScript.textContent;
-                document.head.appendChild(newScript);
-                document.head.removeChild(newScript);
-            });
-        })
-        .catch(err => {
-            console.error('Failed to load schedule:', err);
-            contentDiv.innerHTML = `<div class="alert alert-danger m-3">Failed to load schedule.</div>`;
+        // Arrow Key Support
+        document.addEventListener('keydown', (e) => {
+            if (!modalEl.classList.contains('show')) return;
+            if (e.key === 'ArrowLeft') this.navigate('prev');
+            if (e.key === 'ArrowRight') this.navigate('next');
         });
+
+        // Global Mouse Up
+        window.addEventListener('mouseup', () => {
+            this.isDragging = false;
+            const container = document.getElementById('schedGridContainer');
+            if (container) container.style.cursor = 'grab';
+        });
+
+        // Global Mouse Move
+        window.addEventListener('mousemove', (e) => {
+            if (!this.isDragging || !this.modalIsVisible()) return;
+            this.tx = e.clientX - this.startX;
+            this.ty = e.clientY - this.startY;
+            this.applyTransform();
+        });
+
+        // Handle Panning/Zooming via delegation from the container
+        modalEl.addEventListener('mousedown', (e) => {
+            const container = e.target.closest('#schedGridContainer');
+            if (!container) return;
+            this.isDragging = true;
+            this.startX = e.clientX - this.tx;
+            this.startY = e.clientY - this.ty;
+            container.style.cursor = 'grabbing';
+        });
+
+        // Touch Interaction (Pan + Zoom + Swipe)
+        modalEl.addEventListener('touchstart', (e) => {
+            const container = e.target.closest('#schedGridContainer');
+            if (!container) return;
+
+            if (e.touches.length === 1) {
+                this.isDragging = true;
+                this.touchStartX = e.touches[0].clientX;
+                this.touchStartY = e.touches[0].clientY;
+                this.startX = this.touchStartX - this.tx;
+                this.startY = this.touchStartY - this.ty;
+                this.isSwiping = true;
+            } else if (e.touches.length === 2) {
+                this.isDragging = false;
+                this.isSwiping = false;
+                this.lastPinchDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+        }, { passive: false });
+
+        modalEl.addEventListener('touchmove', (e) => {
+            if (!this.modalIsVisible()) return;
+            const container = e.target.closest('#schedGridContainer');
+            if (!container) return;
+
+            e.preventDefault(); 
+            if (e.touches.length === 1 && this.isDragging) {
+                this.tx = e.touches[0].clientX - this.startX;
+                this.ty = e.touches[0].clientY - this.startY;
+                this.applyTransform();
+            } else if (e.touches.length === 2 && this.lastPinchDist) {
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                const delta = dist / this.lastPinchDist;
+                const oldScale = this.scale;
+                this.scale = Math.max(0.08, Math.min(5.0, this.scale * delta));
+
+                const rect = container.getBoundingClientRect();
+                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+
+                this.tx -= (midX - this.tx) * (this.scale / oldScale - 1);
+                this.ty -= (midY - this.ty) * (this.scale / oldScale - 1);
+
+                this.lastPinchDist = dist;
+                this.applyTransform();
+            }
+        }, { passive: false });
+
+        modalEl.addEventListener('touchend', (e) => {
+            if (this.isSwiping && e.changedTouches.length === 1) {
+                const dx = e.changedTouches[0].clientX - this.touchStartX;
+                const dy = e.changedTouches[0].clientY - this.touchStartY;
+                if (Math.abs(dx) > 50 && Math.abs(dy) < 50) {
+                    this.navigate(dx > 0 ? 'prev' : 'next');
+                }
+            }
+            this.isDragging = false;
+            this.lastPinchDist = null;
+            this.isSwiping = false;
+        });
+    },
+
+    modalIsVisible() {
+        return document.getElementById('universalScheduleModal').classList.contains('show');
+    },
+
+    open(type, id) {
+        this.type = type;
+        this.id = id;
+        this.scale = 1.0;
+        this.tx = 0;
+        this.ty = 0;
+
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('universalScheduleModal'));
+        const container = document.getElementById('schedGridContainer');
+        const labelEl = document.getElementById('universalScheduleLabel');
+
+        if (!container) return;
+
+        const activeRow = document.querySelector(`tr[data-id="${id}"]`);
+        if (activeRow) {
+            const nameCell = activeRow.querySelector('td.fw-bold') || activeRow.cells[1];
+            labelEl.textContent = nameCell ? nameCell.textContent.trim() : `ID: ${id}`;
+        }
+
+        container.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted small">Loading...</p></div>`;
+        modal.show();
+
+        fetch(`/view-schedule-modal/${type}/${id}`)
+            .then(r => {
+                if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
+                return r.text();
+            })
+            .then(html => {
+                // Wrap in Virtual Canvas for Infinite Feel
+                container.innerHTML = `
+                    <div class="modal-paper-wrapper" id="modalPaperWrapper">
+                        <div class="modal-paper-content" id="modalPaperContent">
+                            ${html}
+                        </div>
+                    </div>`;
+                
+                const wrapper = container.querySelector('.dynamic-paper-wrapper');
+                const paperContent = document.getElementById('modalPaperContent');
+                
+                if (wrapper && paperContent) {
+                    const dw = parseInt(wrapper.getAttribute('data-width')) || 800;
+                    const dh = parseInt(wrapper.getAttribute('data-height')) || 1150;
+                    
+                    paperContent.style.width = dw + 'px';
+                    paperContent.style.height = dh + 'px';
+                    
+                    // Force wrapper to fill
+                    wrapper.style.width = '100%';
+                    wrapper.style.height = '100%';
+
+                    // Special case for iframes
+                    const iframe = paperContent.querySelector('iframe');
+                    if (iframe) {
+                        iframe.setAttribute('scrolling', 'no');
+                        iframe.style.pointerEvents = 'none'; 
+                        iframe.style.width = '100%';
+                        iframe.style.height = '100%';
+                        iframe.style.display = 'block';
+                        iframe.style.border = 'none';
+                    }
+                }
+
+                this.autoFit();
+            })
+            .catch(err => {
+                console.error('Schedule Load Error:', err);
+                container.innerHTML = `<div class="alert alert-danger m-3">Failed to load schedule.</div>`;
+            });
+    },
+
+    autoFit() {
+        const container = document.getElementById('schedGridContainer');
+        const wrapper = document.getElementById('modalPaperWrapper');
+        const content = document.getElementById('modalPaperContent');
+        if (!container || !wrapper || !content) return;
+        
+        setTimeout(() => {
+            const cw = container.clientWidth;
+            const ch = container.clientHeight;
+            const gw = content.offsetWidth || 800;
+            const gh = content.offsetHeight || 1150;
+
+            // Scale to fit width with safety margin
+            this.scale = Math.min(1.2, (cw - 40) / gw);
+            
+            // Adjust padding based on device
+            const wrapperPadding = window.innerWidth <= 768 ? 80 : 200;
+            
+            // Center Horizontally
+            this.tx = (cw / 2) - (gw / 2 * this.scale) - (wrapperPadding * this.scale);
+            
+            // Align exactly to top (0px) to avoid gray bar
+            this.ty = -(wrapperPadding * this.scale);
+            
+            this.applyTransform();
+        }, 350);
+    },
+
+    zoomManual(delta) {
+        const oldScale = this.scale;
+        this.scale = Math.max(0.1, Math.min(3.0, this.scale + delta));
+        
+        // Zoom relative to container center
+        const container = document.getElementById('schedGridContainer');
+        if (container) {
+            const cx = container.clientWidth / 2;
+            const cy = container.clientHeight / 2;
+            this.tx -= (cx - this.tx) * (this.scale / oldScale - 1);
+            this.ty -= (cy - this.ty) * (this.scale / oldScale - 1);
+        }
+        this.applyTransform();
+    },
+
+    applyTransform() {
+        const wrapper = document.getElementById('modalPaperWrapper');
+        if (wrapper) {
+            // Round coordinates to prevent sub-pixel blurring
+            const rtx = Math.round(this.tx);
+            const rty = Math.round(this.ty);
+            // Use translate3d/translateZ for sharper hardware acceleration
+            // Add a tiny scale offset (1.00001) to force Chrome to re-rasterize sharply
+            wrapper.style.transform = `translate3d(${rtx}px, ${rty}px, 0) scale(${this.scale * 1.00001})`;
+        }
+        // Update Zoom Percentage Badge
+        const zoomEl = document.getElementById('modal-zoom-percent');
+        if (zoomEl) {
+            zoomEl.textContent = Math.round(this.scale * 100) + '%';
+        }
+    },
+
+    navigate(dir) {
+        const rows = Array.from(document.querySelectorAll('tr[data-id]')).filter(r => r.style.display !== 'none');
+        const idx = rows.findIndex(r => r.getAttribute('data-id') == this.id);
+        if (idx === -1) return;
+
+        let nIdx = idx;
+        if (dir === 'prev' && idx > 0) nIdx = idx - 1;
+        if (dir === 'next' && idx < rows.length - 1) nIdx = idx + 1;
+
+        if (nIdx !== idx) {
+            this.open(this.type, rows[nIdx].getAttribute('data-id'));
+        }
+    }
 };
 
-// Handle Arrow Key Navigation for the Modal
-document.addEventListener('keydown', function (e) {
-    const modalEl = document.getElementById('universalScheduleModal');
-    if (!modalEl || !modalEl.classList.contains('show')) return;
+// Map global functions to Manager
+window.viewSchedule = (type, id) => UniversalModalManager.open(type, id);
+document.addEventListener('DOMContentLoaded', () => UniversalModalManager.init());
 
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-        const rows = Array.from(document.querySelectorAll('tr[data-id]')).filter(row => row.style.display !== 'none');
-        if (rows.length === 0) return;
-
-        const currentIndex = rows.findIndex(row => row.getAttribute('data-id') == currentSchedId);
-        if (currentIndex === -1) return;
-
-        let nextIndex = currentIndex;
-        if (e.key === 'ArrowLeft' && currentIndex > 0) {
-            nextIndex = currentIndex - 1;
-        } else if (e.key === 'ArrowRight' && currentIndex < rows.length - 1) {
-            nextIndex = currentIndex + 1;
-        }
-
-        if (nextIndex !== currentIndex) {
-            const nextId = rows[nextIndex].getAttribute('data-id');
-            viewSchedule(currentSchedType, parseInt(nextId));
-        }
-    }
-});
-
-// ── Shared Pagination: jumpToPage + Arrow Key Navigation ─────────────────────
-// Used by: manage_courses, manage_sections, manage_faculty, manage_rooms,
-//          manage_constraints, check_constraints, courses_archive
+// ── Shared Pagination ──────────────────────────────────────
 window.jumpToPage = function () {
     const input = document.getElementById('pageJumpInput');
     if (!input) return;

@@ -9,6 +9,11 @@
     .info-icon-hover { transition: all 0.2s ease; cursor: pointer; }
     .info-icon-hover:hover { color: #198754 !important; transform: scale(1.2); }
     #constraintInfoModal { z-index: 1080 !important; }
+    #offcanvasNavbar { z-index: 1090 !important; }
+    @media (min-width: 768px) {
+        .border-md-end { border-right: 1px solid #dee2e6 !important; }
+        .border-md-bottom-0 { border-bottom: 0 !important; }
+    }
 </style>
 
 <!-- 1. HEADER -->
@@ -39,19 +44,19 @@
 <!-- 2. LEGEND (Balanced Grid Layout) -->
 <div class="card border shadow-sm mb-4">
     <div class="card-body py-3 px-0"> 
-        <div class="row g-0 align-items-center">
+        <div class="row g-0 align-items-center text-center text-md-start">
             
             <!-- Label -->
-            <div class="col-auto px-4 border-end d-flex align-items-center" style="min-width: 150px;">
+            <div class="col-12 col-md-auto px-4 py-2 py-md-0 border-bottom border-md-bottom-0 border-md-end d-flex align-items-center justify-content-center justify-content-md-start" style="min-width: 150px;">
                 <span class="text-uppercase text-muted fw-bold" style="font-size: 0.75rem; letter-spacing: 1px;">
                     Priority Levels:
                 </span>
             </div>
 
-            <!-- Hard -->
-            <div class="col border-end d-flex justify-content-center align-items-center py-1">
+            <!-- Hard (HC) -->
+            <div class="col-6 col-md border-end border-bottom border-md-bottom-0 d-flex justify-content-center align-items-center py-2 py-md-1">
                 <div class="d-flex align-items-center">
-                    <span class="badge bg-danger rounded-pill me-3" style="width: 45px; height: 24px; display: flex; align-items: center; justify-content: center;">HC</span>
+                    <span class="badge bg-danger rounded-pill me-2 me-md-3" style="width: 45px; height: 24px; display: flex; align-items: center; justify-content: center;">HC</span>
                     <div class="d-flex flex-column lh-1 text-start">
                         <span class="fw-bold text-dark" style="font-size: 0.85rem;">Hard</span>
                         <span class="text-danger small fw-bold" style="font-size: 0.65rem;">Invalid</span>
@@ -59,10 +64,10 @@
                 </div>
             </div>
 
-            <!-- Soft I -->
-            <div class="col border-end d-flex justify-content-center align-items-center py-1">
+            <!-- Soft I (SC-I) -->
+            <div class="col-6 col-md border-bottom border-md-bottom-0 border-md-end d-flex justify-content-center align-items-center py-2 py-md-1">
                 <div class="d-flex align-items-center">
-                    <span class="badge bg-warning text-dark rounded-pill me-3" style="width: 45px; height: 24px; display: flex; align-items: center; justify-content: center;">SC-I</span>
+                    <span class="badge bg-warning text-dark rounded-pill me-2 me-md-3" style="width: 45px; height: 24px; display: flex; align-items: center; justify-content: center;">SC-I</span>
                     <div class="d-flex flex-column lh-1 text-start">
                         <span class="fw-bold text-dark" style="font-size: 0.85rem;">Soft I</span>
                         <span class="text-muted" style="font-size: 0.65rem;">High penalty</span>
@@ -70,10 +75,10 @@
                 </div>
             </div>
 
-            <!-- Soft II -->
-            <div class="col border-end d-flex justify-content-center align-items-center py-1">
+            <!-- Soft II (SC-II) -->
+            <div class="col-6 col-md border-end d-flex justify-content-center align-items-center py-2 py-md-1">
                 <div class="d-flex align-items-center">
-                    <span class="badge bg-info text-dark rounded-pill me-3" style="width: 45px; height: 24px; display: flex; align-items: center; justify-content: center;">SC-II</span>
+                    <span class="badge bg-info text-dark rounded-pill me-2 me-md-3" style="width: 45px; height: 24px; display: flex; align-items: center; justify-content: center;">SC-II</span>
                     <div class="d-flex flex-column lh-1 text-start">
                         <span class="fw-bold text-dark" style="font-size: 0.85rem;">Soft II</span>
                         <span class="text-muted" style="font-size: 0.65rem;">Low penalty</span>
@@ -81,10 +86,10 @@
                 </div>
             </div>
 
-            <!-- Not Constraint -->
-            <div class="col d-flex justify-content-center align-items-center py-1">
+            <!-- Not Constraint (NC) -->
+            <div class="col-6 col-md d-flex justify-content-center align-items-center py-2 py-md-1">
                 <div class="d-flex align-items-center">
-                    <span class="badge bg-secondary rounded-pill me-3" style="width: 45px; height: 24px; display: flex; align-items: center; justify-content: center;">NC</span>
+                    <span class="badge bg-secondary rounded-pill me-2 me-md-3" style="width: 45px; height: 24px; display: flex; align-items: center; justify-content: center;">NC</span>
                     <div class="d-flex flex-column lh-1 text-start">
                         <span class="fw-bold text-dark" style="font-size: 0.85rem;">None</span>
                         <span class="text-muted" style="font-size: 0.65rem;">Disabled</span>

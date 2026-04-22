@@ -50,7 +50,7 @@
         top: 0;
         left: 0;
         width: 100vw;
-        height: 100vh;
+        height: 100dvh;
         border: none;
         z-index: 0;
     }
@@ -61,7 +61,7 @@
         top: 0;
         left: 0;
         width: 100vw;
-        height: 100vh;
+        height: 100dvh;
         background: white;
         z-index: 10;
         display: grid;
@@ -241,14 +241,16 @@
         overflow: hidden;
     }
 
-    .panel-header {
-        padding: 10px 15px;
+    #dragHeader {
+        padding: 8px 12px;
         background: #f8f9fa;
         border-bottom: 1px solid var(--theme-border);
         cursor: move;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        touch-action: none;
+        /* Prevents scrolling while dragging on touch devices */
         font-size: 0.8rem;
         font-weight: 700;
         color: #5f6368;
@@ -321,9 +323,22 @@
         text-transform: uppercase;
         color: white;
     }
-    .hw-perf { background: #1a73e8; } /* Performance */
-    .hw-bal  { background: #188038; } /* Balanced */
-    .hw-eff  { background: #5f6368; } /* Efficiency */
+
+    .hw-perf {
+        background: #1a73e8;
+    }
+
+    /* Performance */
+    .hw-bal {
+        background: #188038;
+    }
+
+    /* Balanced */
+    .hw-eff {
+        background: #5f6368;
+    }
+
+    /* Efficiency */
 
     .speed-lbl {
         font-family: 'JetBrains Mono', monospace;
@@ -375,7 +390,7 @@
         top: 0;
         left: 0;
         width: 100%;
-        height: 100%;
+        height: 100dvh;
         background: rgba(255, 255, 255, 0.9);
         z-index: 100;
         display: flex;
@@ -391,6 +406,8 @@
         border: 1px solid var(--theme-border);
         border-radius: 8px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        /* overflow: visible allows dropdowns to float outside */
+        position: relative;
     }
 
     .btn-primary {
@@ -422,10 +439,126 @@
         backdrop-filter: blur(2px);
     }
 
-    .text-muted-v2 { color: #adb5bd; }
-    .info-icon-hover { transition: all 0.2s ease; cursor: pointer; }
-    .info-icon-hover:hover { color: #198754 !important; transform: scale(1.1); }
-    #generatorInfoModal { z-index: 2000 !important; }
+    .text-muted-v2 {
+        color: #adb5bd;
+    }
+
+    .info-icon-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .info-icon-hover:hover {
+        color: #198754 !important;
+        transform: scale(1.1);
+    }
+
+    #generatorInfoModal {
+        z-index: 2000 !important;
+    }
+
+    /* DROPDOWN STYLING */
+    .dropdown-item {
+        transition: all 0.1s;
+        border-radius: 4px !important;
+        margin: 2px 4px;
+        width: calc(100% - 8px);
+    }
+
+    .dropdown-item:hover,
+    .dropdown-item:focus,
+    .dropdown-item:active {
+        background-color: #f8f9fa !important;
+        color: #202124 !important;
+    }
+
+    .dropdown-item.active-selection {
+        background-color: #e6f4ea !important;
+        color: #137333 !important;
+        font-weight: 500;
+    }
+
+    .dropdown-item.active-selection:hover {
+        background-color: #d2ebd8 !important;
+    }
+
+    .dropdown-item.active-selection input.form-check-input {
+        background-color: #137333;
+        border-color: #137333;
+    }
+
+    /* MOBILE RESPONSIVENESS */
+    @media (max-width: 767px) {
+        .app-overlay {
+            grid-template-rows: auto auto 1fr auto;
+        }
+
+        .sheet-header {
+            padding: 10px;
+            flex-wrap: wrap;
+            height: auto;
+            min-height: 60px;
+        }
+
+        .header-left {
+            gap: 10px;
+        }
+
+        .file-title {
+            font-size: 0.95rem;
+            display: none;
+            /* Hide title to save space for Timer/Stop */
+        }
+
+        .header-right {
+            width: 100%;
+            justify-content: space-between;
+            margin-top: 5px;
+            border-top: 1px solid #eee;
+            padding-top: 5px;
+        }
+
+        .formula-bar {
+            font-size: 11px;
+            padding: 5px;
+        }
+
+        .modal-box {
+            width: 95% !important;
+            padding: 20px !important;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .modal-actions button {
+            flex: 1;
+            margin: 0 !important;
+        }
+
+        .draggable-panel {
+            width: 92% !important;
+            right: 4% !important;
+            bottom: 40px !important;
+            height: 280px !important;
+        }
+
+        .metric-val {
+            font-size: 1.2rem;
+        }
+
+        .log-window {
+            font-size: 0.6rem;
+        }
+
+        .btn-primary {
+            padding: 10px;
+            font-size: 0.9rem;
+        }
+    }
 </style>
 
 <!-- BACKGROUND DASHBOARD -->
@@ -502,12 +635,15 @@
                         <div style="margin-top:4px;">
                             <span id="hwBadge" class="hw-badge hw-eff">Initializing...</span>
                         </div>
-                        <div id="hwLabel" style="font-size:0.65rem; color:#888; margin-top:4px; font-family:'JetBrains Mono';">Profiling System...</div>
+                        <div id="hwLabel"
+                            style="font-size:0.65rem; color:#888; margin-top:4px; font-family:'JetBrains Mono';">
+                            Profiling System...</div>
                     </div>
                     <div style="text-align:right;">
                         <div style="font-size:0.7rem; color:#666; font-weight:bold;">PROGRESS</div>
                         <div class="metric-val" id="hudGen">0</div>
-                        <div style="font-size:0.65rem; color:#999; margin-top:2px;">target: <span id="hudTarget">--</span></div>
+                        <div style="font-size:0.65rem; color:#999; margin-top:2px;">target: <span
+                                id="hudTarget">--</span></div>
                     </div>
                 </div>
                 <div style="font-size:0.7rem; color:#666; font-weight:bold;">REAL-TIME OPERATIONS</div>
@@ -532,48 +668,78 @@
         <div class="mb-3"><i class="bi bi-grid-3x3-gap-fill text-success" style="font-size:3rem;"></i></div>
         <h3 class="d-flex align-items-center justify-content-center">
             Initialize Generator
-            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#generatorInfoModal" title="How to use this page">
-                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover" style="font-size: 1.2rem !important;"></i>
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal"
+                data-bs-target="#generatorInfoModal" title="How to use this page">
+                <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"
+                    style="font-size: 1.2rem !important;"></i>
             </button>
         </h3>
         <p style="color:#666;">Select semester and departments to schedule.</p>
 
-        <select id="semesterSelect"
-            style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; margin-top:10px;">
-            <option value="1st Semester">1st Semester</option>
-            <option value="2nd Semester">2nd Semester</option>
-            <option value="Midyear">Midyear</option>
-        </select>
+        <!-- SEMESTER DROPDOWN -->
+        <div class="dropdown w-100 mt-2 text-start">
+            <button
+                class="btn btn-outline-secondary dropdown-toggle w-100 d-flex justify-content-between align-items-center py-2 px-3"
+                type="button" id="semesterDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                style="border-color: #dadce0; color: #3c4043; font-size: 0.9rem;">
+                <span id="selectedSemesterLabel">1st Semester</span>
+            </button>
+            <ul class="dropdown-menu w-100 shadow-sm" aria-labelledby="semesterDropdown">
+                <li><a class="dropdown-item active-selection" href="#"
+                        onclick="selectSemester('1st Semester', this); return false;">1st Semester</a></li>
+                <li><a class="dropdown-item" href="#" onclick="selectSemester('2nd Semester', this); return false;">2nd
+                        Semester</a></li>
+                <li><a class="dropdown-item" href="#"
+                        onclick="selectSemester('Midyear', this); return false;">Midyear</a></li>
+            </ul>
+            <input type="hidden" id="semesterSelect" value="1st Semester">
+        </div>
 
-        <!-- DEPARTMENT CHECKLIST -->
-        <div style="margin-top: 16px; text-align: left; border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden;">
-            <div style="padding: 8px 12px; background: #f8f9fa; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.8rem; font-weight: 600; color: #444; text-transform: uppercase; letter-spacing: 0.04em;">Departments to Schedule</span>
-                <span style="font-size: 0.75rem; color: #888;">Unchecked = minor subjects</span>
-            </div>
-            <div style="padding: 8px 4px;">
+        <!-- DEPARTMENT DROPDOWN -->
+        <div class="dropdown w-100 mt-3 text-start">
+            <button
+                class="btn btn-outline-secondary dropdown-toggle w-100 d-flex justify-content-between align-items-center py-2 px-3"
+                type="button" id="deptDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                data-bs-display="static" aria-expanded="false"
+                style="border-color: #dadce0; color: #3c4043; font-size: 0.9rem;">
+                <span><i class="bi bi-building me-2"></i>Departments to Schedule</span>
+                <span class="badge bg-success ms-2" id="deptCountBadge" style="display: none;">0</span>
+            </button>
+            <div class="dropdown-menu w-100 shadow-sm p-2" aria-labelledby="deptDropdown"
+                style="max-height: 200px; overflow-y: auto;">
+                <div class="px-2 py-1 border-bottom mb-2">
+                    <small class="text-muted fw-bold text-uppercase" style="font-size: 0.65rem;">Select
+                        Departments</small>
+                </div>
                 {% for dept in known_departments %}
-                <label style="display: flex; align-items: center; padding: 6px 10px; cursor: pointer; border-radius: 4px; transition: background 0.15s;" onmouseover="this.style.background='#f1f8f4'" onmouseout="this.style.background='transparent'">
-                    <input type="checkbox" class="dept-checkbox" value="{{ dept }}"
-                        {% if dept in saved_depts %}checked{% endif %}
-                        style="width: 15px; height: 15px; cursor: pointer; accent-color: #188038; margin-right: 10px; flex-shrink: 0;">
+                <label class="dropdown-item d-flex align-items-center py-2 px-3 rounded" style="cursor: pointer;">
+                    <input type="checkbox" class="dept-checkbox form-check-input me-3" value="{{ dept }}" {% if dept in
+                        saved_depts %}checked{% endif %} style="accent-color: #188038; cursor: pointer;">
                     <span style="font-size: 0.88rem; color: #3c4043;">{{ dept }}</span>
                 </label>
                 {% endfor %}
             </div>
+            <div class="mt-1 px-1">
+                <small class="text-muted" style="font-size: 0.7rem;">* Unchecked = minor subjects</small>
+            </div>
         </div>
 
         <!-- FRESH START -->
-        <div style="margin-top: 12px; text-align: left; padding: 10px; background: #fff8e1; border-radius: 4px; border-left: 4px solid #ffc107;">
-            <label style="display: flex; align-items: center; cursor: pointer; font-size: 0.9rem; color: #555; gap: 10px;">
-                <input type="checkbox" id="freshStartCheck" style="width: 18px; height: 18px; cursor: pointer;">
-                <span><strong>Fresh Start</strong> (Burahin ang dating schedule ng semester na ito bago mag-start)</span>
+        <div
+            style="margin-top: 15px; text-align: left; padding: 12px; background: #fff8e1; border-radius: 6px; border-left: 4px solid #ffc107;">
+            <label
+                style="display: flex; align-items: center; cursor: pointer; font-size: 0.85rem; color: #555; gap: 12px; line-height: 1.3;">
+                <input type="checkbox" id="freshStartCheck"
+                    style="width: 18px; height: 18px; cursor: pointer; accent-color: #ffc107;">
+                <span><strong>Fresh Start</strong> (Burahin ang dating schedule ng semester na ito bago
+                    mag-start)</span>
             </label>
         </div>
 
-        <div class="modal-actions">
-            <button class="btn-outline" onclick="history.back()">Cancel</button>
-            <button class="btn-primary" id="igniteBtn" style="margin-top: 0;">Start</button>
+        <div class="modal-actions" style="margin-top: 20px; display: flex; gap: 10px;">
+            <button class="btn btn-outline-secondary px-4 py-2" onclick="history.back()"
+                style="border-radius: 4px; flex: 1;">Cancel</button>
+            <button class="btn-primary" id="igniteBtn" style="margin-top: 0; flex: 1;">Start</button>
         </div>
     </div>
 </div>
@@ -611,37 +777,52 @@
                 <!-- 1. INITIALIZATION -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-primary small mb-1">1. Initialization</h6>
-                    <p class="small text-muted mb-0">Before starting, select the target Semester and Departments. Use the <strong>'Fresh Start'</strong> toggle if you want to wipe the existing schedule for that semester and start from a blank canvas.</p>
+                    <p class="small text-muted mb-0">Before starting, select the target Semester and Departments. Use
+                        the <strong>'Fresh Start'</strong> toggle if you want to wipe the existing schedule for that
+                        semester and start from a blank canvas.</p>
                 </div>
 
                 <!-- 2. THE VISUAL GRID -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-success small mb-1">2. The Visual Grid</h6>
-                    <p class="small text-muted mb-0">The canvas shows a real-time map of the timetable. <strong>Red blocks</strong> mean a Hard Conflict (e.g., overlapping rooms), <strong>Blue blocks</strong> mean Soft Violations (minor preferences), and <strong>Green blocks</strong> are perfectly placed.</p>
+                    <p class="small text-muted mb-0">The canvas shows a real-time map of the timetable. <strong>Red
+                            blocks</strong> mean a Hard Conflict (e.g., overlapping rooms), <strong>Blue blocks</strong>
+                        mean Soft Violations (minor preferences), and <strong>Green blocks</strong> are perfectly
+                        placed.</p>
                 </div>
 
                 <!-- 3. CALCULATION THREAD -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-info small mb-1">3. Calculation Thread</h6>
-                    <p class="small text-muted mb-0">The draggable panel shows the "Calculation Thread." Monitor <strong>Throughput (Gen/Sec)</strong> to see how fast your hardware is solving the problem. "Performance Mode" uses more CPU for faster results.</p>
+                    <p class="small text-muted mb-0">The draggable panel shows the "Calculation Thread." Monitor
+                        <strong>Throughput (Gen/Sec)</strong> to see how fast your hardware is solving the problem.
+                        "Performance Mode" uses more CPU for faster results.
+                    </p>
                 </div>
 
                 <!-- 4. OPERATIONS LOG -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-warning small mb-1">4. Operations Log</h6>
-                    <p class="small text-muted mb-0">The terminal at the bottom-right tracks internal GA phases. It shows when the system is "Mutating" (trying new slots) or "Crossover" (combining good schedule parts) to resolve conflicts.</p>
+                    <p class="small text-muted mb-0">The terminal at the bottom-right tracks internal GA phases. It
+                        shows when the system is "Mutating" (trying new slots) or "Crossover" (combining good schedule
+                        parts) to resolve conflicts.</p>
                 </div>
 
                 <!-- 5. MINIMIZED VIEW -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-danger small mb-1">5. Minimized View</h6>
-                    <p class="small text-muted mb-0">Click the <strong>'Down Arrow'</strong> in the header to minimize this dashboard into a small widget. This allows you to browse other pages while the AI continues to solve the schedule in the background.</p>
+                    <p class="small text-muted mb-0">Click the <strong>'Down Arrow'</strong> in the header to minimize
+                        this dashboard into a small widget. This allows you to browse other pages while the AI continues
+                        to solve the schedule in the background.</p>
                 </div>
 
                 <!-- 6. COMPLETION -->
                 <div class="mb-0">
                     <h6 class="fw-bold text-secondary small mb-1">6. Completion</h6>
-                    <p class="small text-muted mb-0">Once the GA finds a solution or reaches its target, a <strong>'Resolved!'</strong> screen appears. From there, you can jump directly to the Timetable to review and publish the final result.</p>
+                    <p class="small text-muted mb-0">Once the GA finds a solution or reaches its target, a
+                        <strong>'Resolved!'</strong> screen appears. From there, you can jump directly to the Timetable
+                        to review and publish the final result.
+                    </p>
                 </div>
             </div>
 
@@ -658,9 +839,60 @@
 <script>
     function makeDraggable(el) {
         var p1 = 0, p2 = 0, p3 = 0, p4 = 0, hdr = document.getElementById('dragHeader');
-        if (hdr) hdr.onmousedown = function (e) { e = e || window.event; e.preventDefault(); p3 = e.clientX; p4 = e.clientY; document.onmouseup = function () { document.onmouseup = null; document.onmousemove = null; }; document.onmousemove = function (e) { e = e || window.event; e.preventDefault(); p1 = p3 - e.clientX; p2 = p4 - e.clientY; p3 = e.clientX; p4 = e.clientY; var nL = el.offsetLeft - p1, nT = el.offsetTop - p2, pr = document.querySelector('.grid-stage').getBoundingClientRect(), er = el.getBoundingClientRect(); nL = Math.max(0, Math.min(nL, pr.width - er.width)); nT = Math.max(0, Math.min(nT, pr.height - er.height)); el.style.left = nL + 'px'; el.style.top = nT + 'px'; }; };
+        if (!hdr) return;
+
+        function startDragging(e) {
+            e = e || window.event;
+            var clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+            var clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+            p3 = clientX; p4 = clientY;
+            document.onmouseup = stopDragging;
+            document.ontouchend = stopDragging;
+            document.onmousemove = moveElement;
+            document.ontouchmove = moveElement;
+        }
+
+        function moveElement(e) {
+            e = e || window.event;
+            if (e.type === 'touchmove') e.preventDefault(); // Prevent scrolling
+            var clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+            var clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+            p1 = p3 - clientX; p2 = p4 - clientY;
+            p3 = clientX; p4 = clientY;
+            var nL = el.offsetLeft - p1, nT = el.offsetTop - p2;
+            var pr = document.querySelector('.grid-stage').getBoundingClientRect(), er = el.getBoundingClientRect();
+            nL = Math.max(0, Math.min(nL, pr.width - er.width));
+            nT = Math.max(0, Math.min(nT, pr.height - er.height));
+            el.style.left = nL + 'px'; el.style.top = nT + 'px';
+        }
+
+        function stopDragging() {
+            document.onmouseup = null; document.ontouchend = null;
+            document.onmousemove = null; document.ontouchmove = null;
+        }
+
+        hdr.onmousedown = startDragging;
+        hdr.ontouchstart = startDragging;
     }
     makeDraggable(document.getElementById('dragPanel'));
+
+    function selectSemester(val, el) {
+        const label = document.getElementById('selectedSemesterLabel');
+        const input = document.getElementById('semesterSelect');
+        if (label) label.innerText = val;
+        if (input) input.value = val;
+
+        // Clear other active states in semester menu
+        if (el) {
+            const menu = el.closest('.dropdown-menu');
+            if (menu) {
+                menu.querySelectorAll('.dropdown-item').forEach(item => {
+                    item.classList.remove('active-selection');
+                });
+                el.classList.add('active-selection');
+            }
+        }
+    }
 
     document.addEventListener('DOMContentLoaded', function () {
         var cvs = document.getElementById('mainCanvas'), ctx = cvs.getContext('2d');
@@ -673,6 +905,30 @@
         var running = false, mat = null, t0, tInt, pInt, vP = 0, wC2 = 0;
         var SH = parseInt(cvs.dataset.startHour) || 7;
         var LOGS = ["Evaluating population fitness...", "Checking constraints HC-01 to HC-29...", "Resolving Room Overlaps...", "Optimizing Faculty Load...", "Mutating Gene Sequence...", "Calculating Penalty Score...", "Verifying Section Time Blocks...", "Swapping Time Slots...", "Cross-over phase initiated..."];
+
+        // Update Dept Selection Count & Row Styling
+        function updateDeptCount() {
+            const checkboxes = document.querySelectorAll('.dept-checkbox');
+            let count = 0;
+            checkboxes.forEach(cb => {
+                const row = cb.closest('.dropdown-item');
+                if (cb.checked) {
+                    count++;
+                    if (row) row.classList.add('active-selection');
+                } else {
+                    if (row) row.classList.remove('active-selection');
+                }
+            });
+            const badge = document.getElementById('deptCountBadge');
+            if (badge) {
+                badge.innerText = count;
+                badge.style.display = count > 0 ? 'inline-block' : 'none';
+            }
+        }
+        updateDeptCount();
+        document.querySelectorAll('.dept-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateDeptCount);
+        });
 
         window.toggleView = function () { ov.classList.toggle('minimized'); setTimeout(rsz, 400); };
         window.confirmAbort = function () { if (confirm('Stop generation?')) fetch('/stop-generation', { method: 'POST', headers: { 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content } }).then(function () { location.reload(); }); };
@@ -687,7 +943,9 @@
 
         function draw() {
             var d = window.devicePixelRatio || 1, W = cvs.width / d, H = cvs.height / d;
-            var rHW = 80, hH2 = 30;
+            var isMobile = window.innerWidth < 768;
+            var rHW = isMobile ? 40 : 80;
+            var hH2 = 30;
             ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
             if (!mat) {
                 ctx.fillStyle = '#f8f9fa'; ctx.fillRect(0, 0, W, H);
@@ -709,7 +967,8 @@
                 ctx.strokeStyle = '#e0e0e0'; ctx.strokeRect(x, 0, cW, hH2);
                 if (c % 2 === 0) {
                     var h24 = SH + c * 0.5, h12 = h24 === 12 ? 12 : h24 % 12 || 12, ap = h24 < 12 ? 'AM' : 'PM';
-                    ctx.fillText(Math.floor(h12) + ap, x + cW / 2, hH2 / 2);
+                    var timeText = Math.floor(h12) + (isMobile ? '' : ap);
+                    ctx.fillText(timeText, x + cW / 2, hH2 / 2);
                 }
             }
 
@@ -718,10 +977,12 @@
             for (var r = 0; r < rows; r++) {
                 var y = hH2 + r * cH;
                 ctx.strokeStyle = '#e0e0e0'; ctx.strokeRect(0, y, rHW, cH);
-                ctx.fillStyle = '#5f6368'; ctx.font = '9px Roboto';
+                ctx.fillStyle = '#5f6368';
+                ctx.font = isMobile ? '8px Roboto' : '9px Roboto';
                 var rLabel = rNames[r] || ('RM ' + (r + 1));
                 // Truncate long names
-                if (rLabel.length > 12) rLabel = rLabel.substring(0, 11) + '…';
+                var maxLen = isMobile ? 6 : 12;
+                if (rLabel.length > maxLen) rLabel = rLabel.substring(0, maxLen - 1) + '…';
                 ctx.fillText(rLabel, rHW / 2, y + cH / 2);
             }
 
@@ -739,15 +1000,15 @@
                 var y = hH2 + r * cH;
                 for (var bi = 0; bi < roomBlocks.length; bi++) {
                     var blk = roomBlocks[bi];
-                    var st  = blk.start, en = blk.end;
+                    var st = blk.start, en = blk.end;
                     // victory sweep animation
                     if (vP === 1 && st > wC2) continue;
                     var bx = rHW + st * cW, bw = (en - st) * cW;
                     var v = blk.status;
                     var bg, fg, bc;
-                    if (v === 2)      { bg = '#fce8e6'; fg = '#c5221f'; bc = '#c5221f'; }
+                    if (v === 2) { bg = '#fce8e6'; fg = '#c5221f'; bc = '#c5221f'; }
                     else if (v === 3) { bg = '#e8f0fe'; fg = '#1a73e8'; bc = '#1a73e8'; }
-                    else              { bg = '#e6f4ea'; fg = '#137333'; bc = '#137333'; }
+                    else { bg = '#e6f4ea'; fg = '#137333'; bc = '#137333'; }
                     ctx.fillStyle = bg; ctx.fillRect(bx + 1, y + 1, bw - 2, cH - 2);
                     // Conflict corner marker
                     if (v === 2) {
@@ -759,7 +1020,7 @@
                     if (cH > 20 && bw > 30) {
                         ctx.fillStyle = fg;
                         ctx.font = 'bold 9px Roboto';
-                        ctx.fillText(blk.course,  bx + bw / 2, y + cH / 2 - 6);
+                        ctx.fillText(blk.course, bx + bw / 2, y + cH / 2 - 6);
                         ctx.font = 'normal 8px Roboto';
                         ctx.fillText(blk.faculty, bx + bw / 2, y + cH / 2 + 6);
                     }
@@ -772,7 +1033,7 @@
         document.getElementById('igniteBtn').addEventListener('click', function () {
             var sem = document.getElementById('semesterSelect').value;
             var isFresh = document.getElementById('freshStartCheck').checked;
-            var selectedDepts = Array.from(document.querySelectorAll('.dept-checkbox:checked')).map(function(cb){ return cb.value; });
+            var selectedDepts = Array.from(document.querySelectorAll('.dept-checkbox:checked')).map(function (cb) { return cb.value; });
             ss.style.display = 'none'; running = true; stat.innerText = 'Running...'; rsz(); requestAnimationFrame(draw);
             while (log.firstChild) log.removeChild(log.firstChild);
             t0 = Date.now(); tInt = setInterval(function () { var d = Date.now() - t0, dt = new Date(d); tmr.innerText = dt.toISOString().substr(11, 8); }, 1000);
@@ -840,7 +1101,7 @@
                                 var fgen = document.getElementById('finalGenerations');
                                 if (fgen) fgen.innerText = ((d.total_generations || d.generation || 0)).toLocaleString() + ' gens';
                                 var ftm = document.getElementById('finalTime');
-                                if (ftm) { var secs = d.total_time ? Math.round(d.total_time) : Math.round((Date.now() - t0) / 1000); ftm.innerText = Math.floor(secs/60) + 'm ' + (secs%60) + 's'; }
+                                if (ftm) { var secs = d.total_time ? Math.round(d.total_time) : Math.round((Date.now() - t0) / 1000); ftm.innerText = Math.floor(secs / 60) + 'm ' + (secs % 60) + 's'; }
                                 vP = 1; setTimeout(function () { vs.style.display = 'flex'; }, 3000);
                             }
                         });
