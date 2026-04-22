@@ -233,7 +233,7 @@ body {
 
 /* System-wide modal centering and height limitation */
 .modal-content {
-    max-height: 80vh !important;
+    max-height: 70dvh !important;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -2868,18 +2868,21 @@ table.table tbody tr.irreg-row.selected:hover td {
 .google-sort-menu .dropdown-menu::-webkit-scrollbar {
     width: 5px;
 }
+
 .google-sort-menu .dropdown-menu::-webkit-scrollbar-track {
     background: transparent;
 }
+
 .google-sort-menu .dropdown-menu::-webkit-scrollbar-thumb {
     background: #dadce0;
     border-radius: 10px;
 }
+
 .google-sort-menu .dropdown-menu::-webkit-scrollbar-thumb:hover {
     background: #bcc1c8;
 }
 
-.google-sort-menu .dropdown-submenu > .dropdown-item {
+.google-sort-menu .dropdown-submenu>.dropdown-item {
     /* Mute the category header to look like a label */
     pointer-events: none;
     color: #5f6368 !important;

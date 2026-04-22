@@ -1044,7 +1044,9 @@ def handle_send_message(data):
         content = content[:1000]
     # 2. XSS Sanitization (Strip all HTML)
     content = sanitize_input(content)
-    semester          = data.get('semester', session.get('selected_semester', '1st Semester'))
+    # Ensure we always have a valid semester, even if mobile fails to send it
+    raw_sem          = data.get('semester') or session.get('selected_semester') or '1st Semester'
+    semester         = raw_sem.strip() if raw_sem else '1st Semester'
     recipient         = data.get('recipient', '').strip()
     attached_raw      = data.get('attached_draft_id')
     
@@ -1092,11 +1094,14 @@ def handle_send_message(data):
     }
 
     if recipient:
-        # Private: emit to target SID + echo back to sender
-        target_sid = next((s for s, u in hub_sid_map.items() if u['username'] == recipient), None)
+        # Private: emit to target SIDs + echo back to sender
+        # Important: A user might have multiple tabs open (multiple SIDs). 
+        # We broadcast to all SIDs associated with that username.
+        target_sids = [s for s, u in hub_sid_map.items() if u['username'] == recipient]
         emit('new_hub_message', payload) # echo to sender
-        if target_sid and target_sid != request.sid:
-            socketio.emit('new_hub_message', payload, to=target_sid)
+        for sid in target_sids:
+            if sid != request.sid:
+                socketio.emit('new_hub_message', payload, to=sid)
     else:
         # Broadcast to whole hub room
         room = f"hub_{semester.replace(' ', '_').lower()}"
@@ -1155,9 +1160,9 @@ def api_hub_chat():
 
     # Broadcast via Socket.io to others
     if recipient:
-        target_sid = next((s for s, u in hub_sid_map.items() if u['username'] == recipient), None)
-        if target_sid:
-            socketio.emit('new_hub_message', payload, to=target_sid)
+        target_sids = [s for s, u in hub_sid_map.items() if u['username'] == recipient]
+        for sid in target_sids:
+            socketio.emit('new_hub_message', payload, to=sid)
     else:
         room = f"hub_{semester.replace(' ', '_').lower()}"
         socketio.emit('new_hub_message', payload, room=room)
@@ -1211,12 +1216,8 @@ def api_hub_conversations():
     username = session.get('username')
     semester = session.get('selected_semester', '1st Semester')
     
-    # Get all users (for starting new chats)
-    role = session.get('role')
-    if role in ['admin', 'superadmin']:
-        all_potential = User.query.filter(User.username != username).all()
-    else:
-        all_potential = User.query.filter(User.role.in_(['admin', 'superadmin'])).all()
+    # Get all users for global search (No role restrictions)
+    all_potential = User.query.filter(User.username != username, User.is_deleted == False).all()
     
     potential_map = {u.username: u for u in all_potential}
     online_usernames = {v['username'] for v in hub_sid_map.values()}
@@ -1239,6 +1240,7 @@ def api_hub_conversations():
             
             convos[partner] = {
                 'name': partner,
+                'department': (potential_map[partner].department if partner in potential_map else 'System'),
                 'last_message': msg.content[:40] + ('...' if len(msg.content or '') > 40 else ''),
                 'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
                 'unread_count': unread,
@@ -1264,26 +1266,24 @@ def api_hub_conversations():
         'is_online': False
     }
     
-    results = [global_card]
-    
-    # Add participants from private msgs
-    results.extend(convos.values())
-    
-    # Add potential partners who haven't chatted yet (optional: Messenger often hides them until search)
-    for uname, u in potential_map.items():
-        if uname not in convos:
-            results.append({
-                'name': uname,
-                'last_message': 'No conversation yet',
-                'timestamp': '',
-                'unread_count': 0,
-                'is_global': False,
-                'role': u.role,
-                'profile_pic': u.profile_pic or 'default.png',
-                'is_online': uname in online_usernames
-            })
+    # 4. Separate history and searchable users
+    history_list = [global_card]
+    history_list.extend(convos.values())
 
-    return jsonify(results)
+    searchable_users = []
+    for uname, u in potential_map.items():
+        searchable_users.append({
+            'name': uname,
+            'department': u.department,
+            'role': u.role,
+            'profile_pic': u.profile_pic or 'default.png',
+            'is_online': uname in online_usernames
+        })
+
+    return jsonify({
+        'history': history_list,
+        'all_users': searchable_users
+    })
 
 @app.route('/api/hub/messages')
 @login_required
@@ -2989,7 +2989,7 @@ def code_rules_archive():
     else:
         query = query.order_by(CodePrefixRule.id.desc())
 
-    pagination = query.paginate(page=page, per_page=20, error_out=False)
+    pagination = query.paginate(page=page, per_page=10, error_out=False)
     archived_rules = pagination.items
 
     return render_template('code_rules_archive.html',

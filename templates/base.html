@@ -733,15 +733,20 @@
     <!-- JS SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
     <!-- Module 7: Live Status Tracking -->
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            if (typeof io !== 'undefined') {
-                const socket = io();
+        // Global socket initialization
+        console.log("Checking Socket.io library...", typeof io !== 'undefined' ? "Loaded" : "FAILED");
+        if (typeof io !== 'undefined' && !window.socket) {
+            window.socket = io();
+            console.log("Global window.socket initialized.");
+        }
 
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.socket) {
                 // Determine initial status based on route
                 let currentStatus = "Viewing";
                 const path = window.location.pathname;
@@ -751,12 +756,13 @@
                 }
 
                 // Periodically report status (or on change)
-                socket.on('connect', () => {
-                    socket.emit('status_update', { status: currentStatus });
-                });
-
-                // If we are in the editor, we might want to track finer state, 
-                // but for now route-based is a solid start.
+                if (window.socket.connected) {
+                    window.socket.emit('status_update', { status: currentStatus });
+                } else {
+                    window.socket.on('connect', () => {
+                        window.socket.emit('status_update', { status: currentStatus });
+                    });
+                }
             }
         });
     </script>
