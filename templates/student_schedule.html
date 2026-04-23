@@ -3,298 +3,756 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>My Schedule — {{ student.full_name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary-green: #188038;
+            --bg-gray: #f0f2f5;
+        }
+
+        /* ── Global Reset ───────────────────────────────────────── */
+        html,
         body {
-            background-color: #f8f9fa;
-            font-family: 'Roboto', sans-serif;
-            padding-top: 48px; /* match sheets-menubar height */
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            min-height: 100vh;
+            background-color: var(--bg-gray);
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            display: block !important;
         }
 
-        /* Top nav — matches .sheets-menubar exactly */
+        /* ── Header Nav ─────────────────────────────────────────── */
         .student-nav {
-            background-color: #ffffff;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
+            background: #fff;
+            height: 64px;
             border-bottom: 1px solid #e0e0e0;
-            position: fixed;
+            position: sticky;
             top: 0;
-            left: 0;
-            right: 0;
             z-index: 1055;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .student-nav .brand {
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: #3c4043;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .student-nav .brand i {
-            color: #188038;
-            font-size: 1.1rem;
-        }
-        .student-nav .back-btn {
-            font-size: 0.82rem;
-            color: #5f6368;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            padding: 4px 10px;
-            border-radius: 4px;
-            transition: background 0.15s;
-        }
-        .student-nav .back-btn:hover {
-            background: #f1f3f4;
-            color: #3c4043;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+            width: 100%;
         }
 
-        /* Student info card */
-        .student-info-card {
-            background: #fff;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            padding: 1rem 1.25rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-        }
-        .student-info-card .student-name {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #202124;
-            margin-bottom: 0.15rem;
-        }
-        .student-info-card .student-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            font-size: 0.82rem;
-            color: #5f6368;
-        }
-        .student-info-card .student-meta span {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        /* Timetable frame wrapper */
-        .timetable-wrapper {
-            background: #fff;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-            overflow: hidden;
-        }
-        .timetable-toolbar {
+        .nav-content {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto !important;
+            height: 100%;
+            padding: 0 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0.65rem 1rem;
-            border-bottom: 1px solid #e8eaed;
-            background: #f8f9fa;
         }
-        .timetable-toolbar .label {
-            font-size: 0.82rem;
+
+        .brand {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand i {
+            color: var(--primary-green);
+            font-size: 1.4rem;
+        }
+
+        .logout-btn {
+            font-size: 0.85rem;
+            color: #d32f2f;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 8px 18px;
+            border-radius: 30px;
+            background: rgba(211, 47, 47, 0.08);
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(211, 47, 47, 0.15);
+        }
+
+        /* ── Modern Custom Dropdown UI ───────────────────────────── */
+        .custom-dropdown {
+            position: relative;
+            user-select: none;
+        }
+
+        .dropdown-trigger {
+            background: #f1f3f4;
+            border: 1px solid transparent;
+            border-radius: 30px;
+            padding: 8px 18px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+            min-width: 180px;
+            justify-content: space-between;
+        }
+
+        .dropdown-trigger:hover {
+            background: #e8eaed;
+        }
+
+        .dropdown-trigger.active {
+            background: #fff;
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 3px rgba(24, 128, 56, 0.1);
+        }
+
+        .dropdown-menu-custom {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+            min-width: 220px;
+            padding: 8px;
+            display: none;
+            z-index: 1100;
+            transform-origin: top right;
+            animation: dropdownFade 0.2s ease;
+        }
+
+        @keyframes dropdownFade {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .dropdown-menu-custom.show {
+            display: block;
+        }
+
+        .dropdown-item-custom {
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.15s;
+        }
+
+        .dropdown-item-custom:hover {
+            background: rgba(24, 128, 56, 0.08);
+            color: var(--primary-green);
+        }
+
+        .dropdown-item.active,
+        .dropdown-item-custom.selected {
+            background: #e6f4ea !important;
+            color: #188038 !important;
+            font-weight: 600;
+        }
+
+        .dropdown-item-custom i {
+            font-size: 1rem;
+        }
+
+        /* ── Main Container ─────────────────────────────────────── */
+        .main-container {
+            width: 100% !important;
+            max-width: 1200px !important;
+            margin: 0 auto !important;
+            padding: 2rem 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            box-sizing: border-box;
+        }
+
+        /* ── Info Card ──────────────────────────────────────────── */
+        .glass-card {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .student-title {
+            font-weight: 800;
+            font-size: 1.6rem;
+            color: #111;
+            margin: 0;
+            text-transform: capitalize !important;
+            letter-spacing: -0.02em;
+            display: inline-flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .student-sub {
+            font-size: 1rem;
             color: #5f6368;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 28px;
+            margin-top: 4px;
         }
-        #scheduleFrame {
+
+        .student-sub span {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .student-sub i {
+            color: var(--primary-green);
+            font-size: 1.2rem;
+        }
+
+        .badge-irreg {
+            background: #8b5cf6 !important;
+            color: #fff !important;
+            padding: 6px 16px !important;
+            font-weight: 800 !important;
+            font-size: 0.85rem !important;
+            letter-spacing: 0.05em;
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+        }
+
+        /* ── Timetable Viewer Card ──────────────────────────────── */
+        .viewer-card {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.08);
             width: 100%;
-            border: none;
+        }
+
+        .viewer-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #eee;
+            background: #fafafa;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* ── Main Canvas Viewport ────────────────────────────────── */
+        .viewport {
+            position: relative;
+            overflow: hidden;
+            background: #f1f3f4;
+            touch-action: none;
+            cursor: grab;
+            height: 80vh;
+            width: 100%;
+        }
+
+        .viewport:active {
+            cursor: grabbing;
+        }
+
+        #canvasContainer {
+            position: absolute;
+            transform-origin: 0 0;
+            will-change: transform;
+            transform: translate3d(0, 0, 0) scale(1.00001);
+            transition: transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1);
+            visibility: hidden;
+        }
+
+        .paper-content {
+            background: white;
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.15);
+            position: relative;
+            overflow: hidden;
             display: block;
-            min-height: 200px;
         }
 
-        /* Empty state */
-        .empty-state {
-            padding: 3.5rem 2rem;
+        #loadingOverlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(241, 243, 244, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 50;
+            transition: opacity 0.4s ease;
+        }
+
+        .spinner-ring {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(24, 128, 56, 0.1);
+            border-top: 4px solid var(--primary-green);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ── HUD ────────────────────────────────────────────────── */
+        .zoom-hud {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            color: #333;
+            z-index: 1000;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .zoom-hud button {
+            background: rgba(0, 0, 0, 0.06);
+            border: none;
+            color: #333;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .zoom-hud button:hover {
+            background: rgba(0, 0, 0, 0.12);
+            transform: scale(1.1);
+        }
+
+        .zoom-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            min-width: 55px;
             text-align: center;
-            color: #9aa0a6;
+            font-weight: 800;
+            color: var(--primary-green);
         }
-        .empty-state i { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; opacity: 0.4; }
 
-        @media print {
-            .student-nav, .timetable-toolbar .print-btn { display: none !important; }
-            body { padding-top: 0; background: #fff; }
-            .student-info-card, .timetable-wrapper { box-shadow: none; border-radius: 0; }
+        @media (max-width: 768px) {
+            .nav-content {
+                padding: 0 16px;
+            }
+
+            .brand span {
+                display: none;
+            }
+
+            .main-container {
+                padding: 1rem 12px;
+                gap: 1rem;
+            }
+
+            .glass-card {
+                display: grid !important;
+                grid-template-columns: 1fr auto;
+                text-align: left !important;
+                gap: 12px !important;
+                padding: 20px !important;
+                align-items: start;
+            }
+
+            .student-info-group {
+                grid-column: 1;
+            }
+
+            .action-btns {
+                grid-column: 2;
+                grid-row: 1;
+            }
+
+            .student-sub {
+                grid-column: 1 / span 2;
+                flex-direction: row !important;
+                flex-wrap: wrap;
+                gap: 15px !important;
+                margin-top: 5px;
+            }
+
+            .excel-text {
+                display: none;
+            }
+
+            .excel-btn {
+                padding: 10px !important;
+                width: 42px;
+                height: 42px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .excel-btn i {
+                margin: 0 !important;
+                font-size: 1.2rem;
+            }
+
+            .student-title {
+                font-size: 1.2rem;
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 14px;
+            }
+
+            .viewport {
+                height: 60dvh !important;
+            }
+
+            .zoom-hud {
+                bottom: 20px;
+                width: max-content !important;
+                max-width: 90%;
+                left: 50% !important;
+                transform: translateX(-50%) scale(0.9) !important;
+                justify-content: center;
+            }
+
+            .dropdown-trigger {
+                min-width: 140px;
+                font-size: 0.75rem;
+            }
+
+            .dropdown-menu-custom {
+                width: 100%;
+                right: auto;
+                left: 0;
+            }
         }
     </style>
 </head>
 
 <body>
 
-    <!-- Nav (matches admin .sheets-menubar) -->
     <nav class="student-nav">
-        <div class="brand">
-            <i class="bi bi-calendar3-fill"></i>
-            CvSU-CCAT Scheduling System
+        <div class="nav-content">
+            <div class="brand">
+                <i class="bi bi-calendar3-fill"></i>
+                <span>CvSU-CCAT DCS Student Portal</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+
+                <!-- Custom Modern Dropdown -->
+                <div class="custom-dropdown" id="termDropdown">
+                    <div class="dropdown-trigger" id="dropdownTrigger">
+                        <span>
+                            {% if term_id == 'live' %}
+                            Current Semester
+                            {% else %}
+                            {% for archive in archives %}
+                            {% if term_id|string == archive.id|string %}AY {{ archive.academic_year }}{% endif %}
+                            {% endfor %}
+                            {% endif %}
+                        </span>
+                        <i class="bi bi-chevron-down ms-2"></i>
+                    </div>
+                    <div class="dropdown-menu-custom" id="dropdownMenu">
+                        <div class="dropdown-item-custom {% if term_id == 'live' %}selected{% endif %}"
+                            onclick="selectTerm('live')">
+                            <span>Current Semester</span>
+                            {% if term_id == 'live' %}<i class="bi bi-check2"></i>{% endif %}
+                        </div>
+                        {% for archive in archives %}
+                        <div class="dropdown-item-custom {% if term_id|string == archive.id|string %}selected{% endif %}"
+                            onclick="selectTerm('{{ archive.id }}')">
+                            <span>AY {{ archive.academic_year }}</span>
+                            {% if term_id|string == archive.id|string %}<i class="bi bi-check2"></i>{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <a href="{{ url_for('student_portal') }}" class="logout-btn">Logout</a>
+            </div>
         </div>
-        <a href="{{ url_for('student_portal') }}" class="back-btn">
-            <i class="bi bi-box-arrow-left"></i> Logout
-        </a>
     </nav>
 
-    <!-- Main content (matches .main-content padding) -->
-    <div style="max-width:1200px; margin:0 auto; padding:1.5rem 2rem;">
-
-        <!-- Flash messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        <div class="mb-3">
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show border-0 shadow-sm py-2 small" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        {% endwith %}
-
-        <!-- Archive View Banner -->
-        {% if is_archive %}
-        <div class="alert alert-success border-0 shadow-sm d-flex align-items-center gap-3 mb-3 py-2" 
-             style="background-color: #d1e7dd; color: #0f5132; border-left: 4px solid #198754 !important;">
-            <i class="bi bi-clock-history fs-5"></i>
-            <div>
-                <span class="fw-bold">Viewing Archived Schedule:</span> 
-                AY {{ active_archive.academic_year }} — {{ active_archive.semester }}
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Student Info Card -->
-        <div class="student-info-card">
-            <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="student-name">{{ student.full_name }}</span>
-                {% if student.is_irregular %}
-                <span class="badge" style="background:#7c3aed;font-size:0.7rem;">IRREGULAR</span>
-                {% endif %}
-            </div>
-            <div class="student-meta">
-                <span><i class="bi bi-person-badge"></i> {{ student.student_id }}</span>
-                {% if section %}
-                <span><i class="bi bi-people-fill"></i> {{ section.section_name }}</span>
-                {% elif assignment %}
-                <span class="text-muted fst-italic" style="font-size:0.8rem;"><i class="bi bi-puzzle me-1"></i>Custom irregular schedule ({{ assignment.semester }})</span>
-                {% endif %}
-                <span><i class="bi bi-mortarboard-fill"></i>
-                    {% if student.year_level == 1 %}1st Year
-                    {% elif student.year_level == 2 %}2nd Year
-                    {% elif student.year_level == 3 %}3rd Year
-                    {% elif student.year_level == 4 %}4th Year
-                    {% else %}Year {{ student.year_level }}{% endif %}
-                </span>
-                {% if student.email %}
-                <span><i class="bi bi-envelope"></i> {{ student.email }}</span>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Timetable Card -->
-        <div class="timetable-wrapper">
-            <div class="timetable-toolbar">
-                    {% if is_archive %}
-                    Archived Schedule — {{ active_archive.semester }}
-                    {% elif student.is_irregular %}
-                    Custom Irregular Schedule
-                    {% else %}
-                    Class Schedule{% if section %} — {{ section.section_name }}{% endif %}
+    <div class="main-container">
+        <div class="glass-card">
+            <div class="student-info-group">
+                <div class="student-title">
+                    {{ student.full_name }}
+                    {% if student.is_irregular %}
+                    <span class="badge rounded-pill badge-irreg">IRREGULAR</span>
                     {% endif %}
-                </span>
-                
-                <div class="d-flex align-items-center gap-2">
-                    <!-- Term Selector Dropdown -->
-                    <select class="form-select form-select-sm rounded-pill px-3" 
-                            style="width: 250px; font-size: 0.78rem; border-color: #e0e0e0; cursor: pointer;"
-                            onchange="window.location.href = '{{ url_for('student_schedule', student_id=student.student_id) }}?term_id=' + this.value">
-                        <option value="live" {% if term_id == 'live' %}selected{% endif %}>Current Session (Live)</option>
-                        {% for archive in archives %}
-                        <option value="{{ archive.id }}" {% if term_id|string == archive.id|string %}selected{% endif %}>
-                            AY {{ archive.academic_year }} — {{ archive.semester }}
-                        </option>
-                        {% endfor %}
-                    </select>
-
-                    {% if schedules %}
-                    <div class="d-flex gap-2">
-                           class="btn btn-sm btn-outline-success rounded-pill px-3 print-btn"
-                            style="font-size:0.78rem;">
-                        </a>
-                        <a href="{{ url_for('public_student_schedule_excel', student_id=student.student_id) }}{% if term_id != 'live' %}?term_id={{ term_id }}{% endif %}" 
-                           class="btn btn-sm btn-success rounded-pill px-3 print-btn"
-                            style="font-size:0.78rem; background-color: #198754; color: white;">
-                            <i class="bi bi-file-earmark-excel me-1"></i> Excel
-                        </a>
-                    </div>
+                </div>
+                <div class="student-sub">
+                    <span><i class="bi bi-person-badge"></i> {{ student.student_id }}</span>
+                    {% if section %}
+                    <span><i class="bi bi-people-fill"></i> {{ section.section_name }}</span>
                     {% endif %}
                 </div>
             </div>
-
-            {% if is_archive %}
-            <iframe id="scheduleFrame"
-                src="{{ url_for('public_archived_timetable_html', archive_id=active_archive.id, student_id=student.student_id) }}"
-                onload="autoResizeFrame(this)">
-            </iframe>
-            {% elif student.is_irregular %}
-                {% if not assignment or not assignment.assignments_json or assignment.assignments_json == '[]' %}
-                <div class="empty-state">
-                    <i class="bi bi-puzzle"></i>
-                    <p class="mb-1 fw-bold text-dark" style="font-size:0.95rem;">No irregular schedule assigned yet</p>
-                    <p class="small mb-0">Please ask your administrator to set up your schedule using the Irregular Schedule Finder.</p>
-                </div>
-                {% else %}
-                <iframe id="scheduleFrame"
-                    src="{{ url_for('irregular_timetable_html', student_id=student.student_id) }}"
-                    onload="autoResizeFrame(this)">
-                </iframe>
-                {% endif %}
-            {% elif not section %}
-            <div class="empty-state">
-                <i class="bi bi-people"></i>
-                <p class="mb-1 fw-bold text-dark" style="font-size:0.95rem;">No section assigned</p>
-                <p class="small mb-0">Your account has not been assigned to a section yet.<br>Please contact your administrator.</p>
+            <div class="action-btns">
+                <a href="{{ url_for('public_student_schedule_excel', student_id=student.student_id) }}{% if term_id != 'live' %}?term_id={{ term_id }}{% endif %}"
+                    class="btn btn-success text-white shadow-sm rounded-pill px-4 py-2 excel-btn"
+                    style="background: var(--primary-green); font-size: 0.9rem;">
+                    <i class="bi bi-file-earmark-excel-fill me-2"></i> <span class="excel-text">EXPORT TO EXCEL</span>
+                </a>
             </div>
-            {% elif not schedules %}
-            <div class="empty-state">
-                <i class="bi bi-calendar-x"></i>
-                <p class="mb-1 fw-bold text-dark" style="font-size:0.95rem;">No schedule yet</p>
-                <p class="small mb-0">No classes have been scheduled for <strong>{{ section.section_name }}</strong> yet.<br>Check back after the schedule is generated.</p>
-            </div>
-            {% else %}
-            <iframe id="scheduleFrame"
-                src="{{ url_for('public_section_timetable', section_id=section.id) }}"
-                onload="autoResizeFrame(this)">
-            </iframe>
-            {% endif %}
         </div>
 
-        <div class="text-center mt-4 text-muted" style="font-size:0.75rem;">
-            © {% if is_archive %}{{ active_archive.academic_year }}{% else %}2025–2026{% endif %} CvSU-CCAT Scheduling System
+        <div class="viewer-card">
+            <div class="viewer-header">
+                <span class="fw-bold text-dark" style="font-size: 0.95rem; letter-spacing: 0.02em;">
+                    <i class="bi bi-calendar-check-fill me-2 text-success"></i>CLASS SCHEDULE
+                </span>
+            </div>
+
+            <div class="viewport" id="viewport">
+                <div id="loadingOverlay">
+                    <div class="spinner-ring"></div>
+                    <div class="fw-bold text-muted" style="font-size: 0.9rem; letter-spacing: 0.05em;">OPTIMIZING
+                        LAYOUT...</div>
+                </div>
+
+                <div id="canvasContainer">
+                    <div id="paperContent" class="paper-content"></div>
+                </div>
+
+                <div class="zoom-hud">
+                    <button onclick="zoomOut()"><i class="bi bi-dash-lg"></i></button>
+                    <div class="zoom-val" id="zoomVal">100%</div>
+                    <button onclick="zoomIn()"><i class="bi bi-plus-lg"></i></button>
+                    <div style="width: 1px; height: 20px; background: rgba(0,0,0,0.1);"></div>
+                    <button onclick="autoFit()"><i class="bi bi-fullscreen"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-3 text-muted" style="font-size: 0.8rem; opacity: 0.6;">
+            CvSU-CCAT DCS Scheduling System
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function autoResizeFrame(iframe) {
-            try {
-                var h = iframe.contentDocument.documentElement.scrollHeight;
-                if (h > 100) iframe.style.height = h + 'px';
-            } catch (e) {}
+        const CONFIG = {
+            studentId: "{{ student.student_id }}",
+            termId: "{{ term_id }}",
+            isIrregular: JSON.parse('{{ student.is_irregular | tojson }}'),
+            sectionId: JSON.parse('{{ (section.id if section else None) | tojson }}'),
+            isArchive: JSON.parse('{{ is_archive | tojson }}'),
+            archiveId: JSON.parse('{{ (active_archive.id if is_archive else None) | tojson }}')
+        };
+
+        // Custom Dropdown Logic
+        const trigger = document.getElementById('dropdownTrigger');
+        const menu = document.getElementById('dropdownMenu');
+
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            menu.classList.toggle('show');
+            trigger.classList.toggle('active');
+        });
+
+        window.addEventListener('click', () => {
+            menu.classList.remove('show');
+            trigger.classList.remove('active');
+        });
+
+        function selectTerm(id) {
+            window.location.href = "{{ url_for('student_schedule', student_id=student.student_id) }}?term_id=" + id;
         }
+    </script>
+
+    <script>
+        let scale = 1.0;
+        let tx = 0, ty = 0;
+        let isDragging = false;
+        let startX, startY;
+        let paperW = 800, paperH = 1123;
+
+        const viewport = document.getElementById('viewport');
+        const container = document.getElementById('canvasContainer');
+        const paper = document.getElementById('paperContent');
+        const zoomVal = document.getElementById('zoomVal');
+        const overlay = document.getElementById('loadingOverlay');
+
+        function applyTransform() {
+            const rtx = Math.round(tx);
+            const rty = Math.round(ty);
+            container.style.transform = `translate3d(${rtx}px, ${rty}px, 0) scale(${scale * 1.00001})`;
+            zoomVal.textContent = Math.round(scale * 100) + '%';
+        }
+
+        function changeScale(delta, centerX, centerY) {
+            const newScale = Math.min(Math.max(scale + delta, 0.05), 4.0);
+            if (newScale === scale) return;
+            const rect = viewport.getBoundingClientRect();
+            const x = centerX !== undefined ? centerX : rect.width / 2;
+            const y = centerY !== undefined ? centerY : rect.height / 2;
+            const gx = (x - tx) / scale;
+            const gy = (y - ty) / scale;
+            scale = newScale;
+            tx = x - gx * scale;
+            ty = y - gy * scale;
+            applyTransform();
+        }
+
+        viewport.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.zoom-hud') || e.target.closest('#loadingOverlay')) return;
+            isDragging = true;
+            startX = e.clientX - tx;
+            startY = e.clientY - ty;
+            viewport.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            tx = e.clientX - startX;
+            ty = e.clientY - startY;
+            applyTransform();
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+            viewport.style.cursor = 'grab';
+        });
+
+        viewport.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            const rect = viewport.getBoundingClientRect();
+            changeScale(delta, e.clientX - rect.left, e.clientY - rect.top);
+        }, { passive: false });
+
+        let lastTouchDist = 0;
+        viewport.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                startX = e.touches[0].clientX - tx;
+                startY = e.touches[0].clientY - ty;
+            } else if (e.touches.length === 2) {
+                lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            }
+        });
+
+        viewport.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1 && isDragging) {
+                tx = e.touches[0].clientX - startX;
+                ty = e.touches[0].clientY - startY;
+                applyTransform();
+            } else if (e.touches.length === 2) {
+                const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                const newScale = Math.min(Math.max(scale * (dist / lastTouchDist), 0.05), 4.0);
+                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                const rect = viewport.getBoundingClientRect();
+                const gx = (midX - rect.left - tx) / scale;
+                const gy = (midY - rect.top - ty) / scale;
+                scale = newScale;
+                tx = (midX - rect.left) - gx * scale;
+                ty = (midY - rect.top) - gy * scale;
+                lastTouchDist = dist;
+                applyTransform();
+            }
+        }, { passive: false });
+
+        viewport.addEventListener('touchend', () => isDragging = false);
+
+        function zoomIn() { changeScale(0.1); }
+        function zoomOut() { changeScale(-0.1); }
+
+        function autoFit() {
+            const vw = viewport.clientWidth;
+            const vh = viewport.clientHeight;
+            scale = 0.6;
+            tx = (vw - paperW * scale) / 2;
+            const targetBottom = vh - 120;
+            ty = targetBottom - (paperH * scale);
+            if (ty < 40) ty = 40;
+            applyTransform();
+        }
+
+        async function loadSchedule() {
+            let url = "";
+            if (CONFIG.isArchive) {
+                url = `/public/archived-timetable-html/${CONFIG.archiveId}/${CONFIG.studentId}?canvas=true`;
+            } else if (CONFIG.isIrregular) {
+                url = `/irregular-timetable/${CONFIG.studentId}?canvas=true`;
+            } else if (CONFIG.sectionId) {
+                url = `/public/section-timetable/${CONFIG.sectionId}?canvas=true`;
+            }
+
+            if (!url) return;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const styles = doc.querySelectorAll('style');
+                styles.forEach(s => document.head.appendChild(s.cloneNode(true)));
+                const wrapper = doc.querySelector('.dynamic-paper-wrapper') || doc.querySelector('.a4');
+                if (wrapper) {
+                    paper.innerHTML = wrapper.outerHTML;
+                    const actualWrapper = paper.querySelector('.a4');
+                    if (actualWrapper) {
+                        setTimeout(() => {
+                            const style = window.getComputedStyle(actualWrapper);
+                            paperW = parseFloat(style.width) || 800;
+                            paperH = parseFloat(style.height) || 1123;
+                            paper.style.width = paperW + 'px';
+                            paper.style.height = paperH + 'px';
+                            autoFit();
+                            container.style.visibility = 'visible';
+                            overlay.style.opacity = '0';
+                            setTimeout(() => overlay.style.display = 'none', 400);
+                        }, 100);
+                    }
+                } else {
+                    paper.innerHTML = html;
+                    container.style.visibility = 'visible';
+                    overlay.style.display = 'none';
+                    autoFit();
+                }
+            } catch (err) {
+                overlay.innerHTML = `<div class="p-4 text-center text-danger fw-bold">FAILED TO LOAD SCHEDULE<br><span style="font-size:0.8rem; font-weight:normal;">${err.message}</span></div>`;
+            }
+        }
+        window.onload = loadSchedule;
     </script>
 </body>
 

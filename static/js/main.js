@@ -503,3 +503,21 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
+
+/**
+ * Toggles the visibility of a password input field.
+ * Expects a button inside a container along with the input.
+ */
+function togglePasswordVisibility(btn) {
+    const container = btn.parentElement;
+    const input = container.querySelector('input');
+    const icon = btn.querySelector('i');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.replace('bi-eye-fill', 'bi-eye-slash-fill');
+    } else {
+        input.type = 'password';
+        icon.classList.replace('bi-eye-slash-fill', 'bi-eye-fill');
+    }
+}

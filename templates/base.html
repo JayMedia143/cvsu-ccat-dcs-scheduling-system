@@ -27,6 +27,8 @@
             color: #198754 !important;
             transform: scale(1.2) !important;
         }
+
+
     </style>
     <script>if (sessionStorage.getItem('loginPending')) { document.documentElement.classList.add('login-loading'); }</script>
 </head>
@@ -892,7 +894,12 @@
                         <p class="text-muted small mb-4">Update your display username below.</p>
                         <div class="mb-3">
                             <label class="form-label text-muted small fw-bold">Current Password</label>
-                            <input type="password" name="current_password" class="form-control" required>
+                            <div class="password-group">
+                                <input type="password" name="current_password" required>
+                                <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility(this)">
+                                    <i class="bi bi-eye-fill"></i>
+                                </button>
+                            </div>
                             <div class="form-text">Verify your identity first.</div>
                         </div>
                         <div class="mb-3">
@@ -926,16 +933,31 @@
 
                         <div class="mb-3">
                             <label class="form-label text-muted small fw-bold">Current Password</label>
-                            <input type="password" name="current_password" class="form-control" required>
+                            <div class="password-group">
+                                <input type="password" name="current_password" required>
+                                <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility(this)">
+                                    <i class="bi bi-eye-fill"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-muted small fw-bold">New Password</label>
-                            <input type="password" name="new_password" class="form-control" minlength="4" required>
+                            <div class="password-group">
+                                <input type="password" name="new_password" minlength="4" required>
+                                <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility(this)">
+                                    <i class="bi bi-eye-fill"></i>
+                                </button>
+                            </div>
                             <div class="form-text">Must be at least 4 characters long.</div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-muted small fw-bold">Confirm New Password</label>
-                            <input type="password" name="confirm_password" class="form-control" minlength="4" required>
+                            <div class="password-group">
+                                <input type="password" name="confirm_password" minlength="4" required>
+                                <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility(this)">
+                                    <i class="bi bi-eye-fill"></i>
+                                </button>
+                            </div>
                         </div>
 
                     </div>
@@ -1454,6 +1476,7 @@
             </div>
         </div>
     </div>
+
 </body>
 
 </html>

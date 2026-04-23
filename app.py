@@ -12703,7 +12703,9 @@ def irregular_timetable_html(student_id):
         margins=_margins,
         img_settings=_img_settings,
     )
-    return render_a4_page(html_content, table_px, margins=_margins)
+    # Infinite Canvas support
+    for_canvas = request.args.get('canvas', 'false') == 'true'
+    return render_a4_page(html_content, table_px, margins=_margins, for_canvas=for_canvas)
 
 
 
@@ -15037,8 +15039,8 @@ def student_schedule(student_id):
         schedules = [_mock_archived_schedule(as_obj) for as_obj in schedules_raw]
         schedules.sort(key=lambda sc: (sc.day, sc.start_time))
         
-        # For display, we might also want to mock the section for the header
-        if not student.is_irregular and hasattr(student, 'section_name'):
+        # For display, fetch section info for the header
+        if hasattr(student, 'section_name') and student.section_name:
             section = SimpleNamespace(section_name=student.section_name)
 
     else:
@@ -15064,7 +15066,6 @@ def student_schedule(student_id):
                 schedules.sort(key=lambda sc: (sc.day, sc.start_time))
         else:
             if student.section_id:
-                section = Section.query.get(student.section_id)
                 schedules = ScheduledClass.query.options(
                     joinedload(ScheduledClass.course),
                     joinedload(ScheduledClass.faculty),
@@ -15073,6 +15074,10 @@ def student_schedule(student_id):
                 ).filter_by(section_id=student.section_id).order_by(
                     ScheduledClass.day, ScheduledClass.start_time
                 ).all()
+
+        # Always fetch section info if section_id exists for the header
+        if student.section_id:
+            section = Section.query.get(student.section_id)
 
     # Build simple day->slot grid
     days_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']

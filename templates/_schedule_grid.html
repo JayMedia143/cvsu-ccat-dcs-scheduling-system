@@ -1,354 +1,422 @@
 <style>
-/* ── Grid wrapper ──────────────────────────────────────────── */
-#schedGrid {
-    border-collapse: collapse;
-    min-width: 560px;
-    table-layout: fixed;
-}
-#schedGrid thead th {
-    background: #1a1a2e;
-    color: #fff;
-    font-size: 0.72rem;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    padding: 6px 4px;
-    text-align: center;
-    position: sticky;
-    top: 0;
-    z-index: 2;
-}
-#schedGrid th.time-col,
-#schedGrid td.time-label {
-    width: 72px;
-    min-width: 72px;
-    background: #f8f9fa;
-    color: #6c757d;
-    font-size: 0.68rem;
-    text-align: right;
-    padding-right: 6px;
-    white-space: nowrap;
-    border-right: 2px solid #dee2e6 !important;
-}
-#schedGrid tbody tr { height: 22px; }
-#schedGrid tbody tr:nth-child(even) td.time-label { background: #f1f3f5; }
+    /* ── Grid wrapper ──────────────────────────────────────────── */
+    #schedGrid {
+        width: 100% !important;
+        height: 100% !important;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
 
-/* ── Scheduled class cell ──────────────────────────────────── */
-.sched-class-cell {
-    background: #dbeafe;
-    border: 2px solid #3b82f6 !important;
-    cursor: grab;
-    vertical-align: middle;
-    text-align: center;
-    padding: 3px 4px;
-    user-select: none;
-    transition: filter 0.1s;
-    position: relative;
-}
-.sched-class-cell:active  { cursor: grabbing; }
-.sched-class-cell:hover   { filter: brightness(0.93); }
-.sched-class-cell.dragging { opacity: 0.45; }
+    /* Fixed Column Widths for Paper Proportions */
+    #schedGrid .time-col {
+        width: 10% !important;
+    }
 
-.sched-cell-inner {
-    font-size: 0.68rem;
-    line-height: 1.35;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    gap: 1px;
-}
-.sched-cell-inner .c-code { font-weight: 700; font-size: 0.72rem; }
-.sched-cell-inner .c-sub  { color: #374151; font-size: 0.63rem; }
+    #schedGrid thead th:not(.time-col) {
+        width: 15% !important;
+    }
 
-/* ── Drop targets ──────────────────────────────────────────── */
-.drop-target {
-    vertical-align: middle;
-    transition: background 0.08s;
-}
-.drop-target.dz-free  { background: rgba(25,135,84,0.22)  !important; }
-.drop-target.dz-hard  { background: rgba(220,53,69,0.22)  !important; }
-.drop-target.dz-sat   { background: rgba(255,193,7,0.22)  !important; }
-.drop-target.dz-span  { background: rgba(25,135,84,0.10)  !important; }
-.drop-target.dz-span-hard { background: rgba(220,53,69,0.10) !important; }
+    #schedGrid thead th {
+        background: #1a1a2e;
+        color: #fff;
+        font-size: 0.72rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        padding: 6px 4px;
+        text-align: center;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
 
-/* ── Legend ────────────────────────────────────────────────── */
-.sg-legend { display:flex; gap:14px; font-size:0.7rem; color:#555; }
-.sg-dot    { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:3px; }
+    .justify-content-between {
+        justify-content: center !important;
+    }
 
-/* ── Overlap badge ─────────────────────────────────────────── */
-.overlap-badge {
-    position: absolute;
-    top: 3px;
-    right: 3px;
-    background: #dc3545;
-    color: #fff;
-    font-size: 0.6rem;
-    font-weight: 700;
-    width: 17px;
-    height: 17px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 5;
-    line-height: 1;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-}
+    #schedGrid th.time-col,
+    #schedGrid td.time-label {
+        width: 72px;
+        min-width: 72px;
+        background: #f8f9fa;
+        color: #6c757d;
+        font-size: 0.68rem;
+        text-align: right;
+        padding-right: 6px;
+        white-space: nowrap;
+        border-right: 2px solid #dee2e6 !important;
+    }
 
-/* ── Success toast ─────────────────────────────────────────── */
-#sgToast {
-    position: fixed; bottom: 24px; right: 24px;
-    background: #198754; color: #fff; padding: 8px 16px;
-    border-radius: 8px; font-size: 0.8rem; font-weight: 600;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2); z-index: 9999;
-    opacity: 0; transition: opacity 0.3s; pointer-events: none;
-}
+    #schedGrid tbody tr {
+        height: auto;
+    }
+
+    #schedGrid tbody tr:nth-child(even) td.time-label {
+        background: #f1f3f5;
+    }
+
+    /* ── Scheduled class cell ──────────────────────────────────── */
+    .sched-class-cell {
+        background: #dbeafe;
+        border: 2px solid #3b82f6 !important;
+        cursor: grab;
+        vertical-align: middle;
+        text-align: center;
+        padding: 3px 4px;
+        user-select: none;
+        transition: filter 0.1s;
+        position: relative;
+    }
+
+    .sched-class-cell:active {
+        cursor: grabbing;
+    }
+
+    .sched-class-cell:hover {
+        filter: brightness(0.93);
+    }
+
+    .sched-class-cell.dragging {
+        opacity: 0.45;
+    }
+
+    .sched-cell-inner {
+        font-size: 0.68rem;
+        line-height: 1.35;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        gap: 1px;
+    }
+
+    .sched-cell-inner .c-code {
+        font-weight: 700;
+        font-size: 0.72rem;
+    }
+
+    .sched-cell-inner .c-sub {
+        color: #374151;
+        font-size: 0.63rem;
+    }
+
+    /* ── Drop targets ──────────────────────────────────────────── */
+    .drop-target {
+        vertical-align: middle;
+        transition: background 0.08s;
+    }
+
+    .drop-target.dz-free {
+        background: rgba(25, 135, 84, 0.22) !important;
+    }
+
+    .drop-target.dz-hard {
+        background: rgba(220, 53, 69, 0.22) !important;
+    }
+
+    .drop-target.dz-sat {
+        background: rgba(255, 193, 7, 0.22) !important;
+    }
+
+    .drop-target.dz-span {
+        background: rgba(25, 135, 84, 0.10) !important;
+    }
+
+    .drop-target.dz-span-hard {
+        background: rgba(220, 53, 69, 0.10) !important;
+    }
+
+    /* ── Legend ────────────────────────────────────────────────── */
+    .sg-legend {
+        display: flex;
+        gap: 14px;
+        font-size: 0.7rem;
+        color: #555;
+    }
+
+    .sg-dot {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        margin-right: 3px;
+    }
+
+    /* ── Overlap badge ─────────────────────────────────────────── */
+    .overlap-badge {
+        position: absolute;
+        top: 3px;
+        right: 3px;
+        background: #dc3545;
+        color: #fff;
+        font-size: 0.6rem;
+        font-weight: 700;
+        width: 17px;
+        height: 17px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 5;
+        line-height: 1;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    /* ── Success toast ─────────────────────────────────────────── */
+    #sgToast {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: #198754;
+        color: #fff;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+    }
+
+    /* Ensure the container fills the A4 paper wrapper using Flexbox */
+    .dynamic-paper-wrapper {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    #schedGridContainer {
+        flex-grow: 1 !important;
+        width: 100% !important;
+        background: white;
+        overflow: hidden !important;
+    }
 </style>
 
 {% macro fmt_time(t) -%}
-  {%- set h = t.split(':')[0] | int -%}
-  {%- set m = t.split(':')[1] -%}
-  {%- if h == 0 -%}12:{{ m }} AM
-  {%- elif h < 12 -%}{{ h }}:{{ m }} AM
-  {%- elif h == 12 -%}12:{{ m }} PM
-  {%- else -%}{{ h - 12 }}:{{ m }} PM
-  {%- endif -%}
-{%- endmacro %}
-
-<!-- ── HEADER ─────────────────────────────────────────────────── -->
-<div class="d-flex justify-content-between align-items-center px-4 py-2 bg-light border-bottom">
-    <div>
-        <strong class="text-dark">{{ entity_label }}</strong>
-        <span class="badge bg-secondary ms-2" style="font-size:0.65rem;">{{ view_type | title }}</span>
+{%- set h = t.split(':')[0] | int -%}
+{%- set m = t.split(':')[1] -%}
+{%- if h == 0 -%}12:{{ m }} AM
+{%- elif h < 12 -%}{{ h }}:{{ m }} AM {%- elif h==12 -%}12:{{ m }} PM {%- else -%}{{ h - 12 }}:{{ m }} PM {%- endif -%}
+    {%- endmacro %} <!-- ── HEADER ─────────────────────────────────────────────────── -->
+    <div class="d-flex justify-content-between align-items-center px-4 py-2 bg-light border-bottom">
+        <div>
+            <strong class="text-dark">{{ entity_label }}</strong>
+            <span class="badge bg-secondary ms-2" style="font-size:0.65rem;">{{ view_type | title }}</span>
+        </div>
     </div>
-    <div class="sg-legend d-none d-sm-flex">
-        <span><span class="sg-dot" style="background:#198754;"></span>Free</span>
-        <span><span class="sg-dot" style="background:#ffc107;"></span>Saturday</span>
-        <span><span class="sg-dot" style="background:#dc3545;"></span>Conflict</span>
-        <span class="text-muted"><i class="bi bi-arrows-move me-1"></i>Drag to reschedule</span>
-    </div>
-</div>
 
-<!-- ── GRID ───────────────────────────────────────────────────── -->
-<div class="table-responsive"
-     id="schedGridContainer"
-     data-view-type="{{ view_type }}"
-     data-entity-id="{{ entity_id }}">
-    <table class="table table-bordered mb-0" id="schedGrid">
-        <thead>
-            <tr>
-                <th class="time-col">TIME</th>
-                {% for day in days %}
-                <th>{{ day[:3].upper() }}</th>
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in grid_rows %}
-            <tr data-time="{{ row.time }}">
-                <td class="time-label align-middle">{{ fmt_time(row.time) }}</td>
-                {% for cell in row.cells %}
+    <!-- ── GRID ───────────────────────────────────────────────────── -->
+    <div class="table-responsive" id="schedGridContainer" data-view-type="{{ view_type }}"
+        data-entity-id="{{ entity_id }}">
+        <table class="table table-bordered mb-0" id="schedGrid">
+            <thead>
+                <tr>
+                    <th class="time-col">TIME</th>
+                    {% for day in days %}
+                    <th>{{ day[:3].upper() }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in grid_rows %}
+                <tr data-time="{{ row.time }}">
+                    <td class="time-label align-middle">{{ fmt_time(row.time) }}</td>
+                    {% for cell in row.cells %}
                     {% if cell.type == 'skip' %}
-                        {# covered by rowspan — emit nothing #}
+                    {# covered by rowspan — emit nothing #}
                     {% elif cell.type == 'sched' %}
-                        <td rowspan="{{ cell.rowspan }}"
-                            class="sched-class-cell"
-                            draggable="true"
-                            data-sched-id="{{ cell.sched_id }}"
-                            data-day="{{ cell.day }}"
-                            data-start="{{ cell.start }}"
-                            data-end="{{ cell.end }}"
-                            data-slots="{{ cell.rowspan }}">
-                            {% if cell.overlap_count > 1 %}
-                            <span class="overlap-badge"
-                                  data-bs-toggle="popover"
-                                  data-bs-trigger="hover focus"
-                                  data-bs-placement="right"
-                                  data-bs-html="true"
-                                  data-bs-content="{{ cell.pop_lines | join('<br>') | e }}"
-                                  title="All classes ({{ cell.overlap_count }})">{{ cell.overlap_count }}</span>
+                    <td rowspan="{{ cell.rowspan }}" class="sched-class-cell" draggable="true"
+                        data-sched-id="{{ cell.sched_id }}" data-day="{{ cell.day }}" data-start="{{ cell.start }}"
+                        data-end="{{ cell.end }}" data-slots="{{ cell.rowspan }}">
+                        {% if cell.overlap_count > 1 %}
+                        <span class="overlap-badge" data-bs-toggle="popover" data-bs-trigger="hover focus"
+                            data-bs-placement="right" data-bs-html="true"
+                            data-bs-content="{{ cell.pop_lines | join('<br>') | e }}"
+                            title="All classes ({{ cell.overlap_count }})">{{ cell.overlap_count }}</span>
+                        {% endif %}
+                        <div class="sched-cell-inner" style="min-height:{{ (cell.rowspan * 22) - 8 }}px;">
+                            <span class="c-code">{{ cell.line1 }}</span>
+                            {% if cell.line2 %}<span class="c-sub">{{ cell.line2 }}</span>{% endif %}
+                            {% if cell.line3 %}<span class="c-sub">{{ cell.line3 }}</span>{% endif %}
+                            {% if cell.rowspan >= 3 %}
+                            <span class="c-sub" style="color:#6b7280;font-size:0.6rem;margin-top:1px;">{{
+                                fmt_time(cell.start) }}–{{ fmt_time(cell.end) }}</span>
                             {% endif %}
-                            <div class="sched-cell-inner" style="min-height:{{ (cell.rowspan * 22) - 8 }}px;">
-                                <span class="c-code">{{ cell.line1 }}</span>
-                                {% if cell.line2 %}<span class="c-sub">{{ cell.line2 }}</span>{% endif %}
-                                {% if cell.line3 %}<span class="c-sub">{{ cell.line3 }}</span>{% endif %}
-                                {% if cell.rowspan >= 3 %}
-                                <span class="c-sub" style="color:#6b7280;font-size:0.6rem;margin-top:1px;">{{ fmt_time(cell.start) }}–{{ fmt_time(cell.end) }}</span>
-                                {% endif %}
-                            </div>
-                        </td>
+                        </div>
+                    </td>
                     {% elif cell.type == 'empty' %}
-                        <td class="drop-target"
-                            data-day="{{ cell.day }}"
-                            data-time="{{ cell.time }}"></td>
+                    <td class="drop-target" data-day="{{ cell.day }}" data-time="{{ cell.time }}"></td>
                     {% endif %}
+                    {% endfor %}
+                </tr>
                 {% endfor %}
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+            </tbody>
+        </table>
+    </div>
 
-<!-- ── SUCCESS TOAST ──────────────────────────────────────────── -->
-<div id="sgToast"></div>
+    <!-- ── SUCCESS TOAST ──────────────────────────────────────────── -->
+    <div id="sgToast"></div>
 
-<!-- ── OVERLAP BADGE POPOVERS ─────────────────────────────────── -->
-<script>
-(function () {
-    document.querySelectorAll('.overlap-badge[data-bs-toggle="popover"]').forEach(el => {
-        new bootstrap.Popover(el, { sanitize: false });
-    });
-})();
-</script>
+    <!-- ── OVERLAP BADGE POPOVERS ─────────────────────────────────── -->
+    <script>
+        (function () {
+            document.querySelectorAll('.overlap-badge[data-bs-toggle="popover"]').forEach(el => {
+                new bootstrap.Popover(el, { sanitize: false });
+            });
+        })();
+    </script>
 
-<!-- ── DRAG-AND-DROP SCRIPT ───────────────────────────────────── -->
-<script>
-(function () {
-    const grid  = document.getElementById('schedGrid');
-    const cont  = document.getElementById('schedGridContainer');
-    const vtype = cont.dataset.viewType;
-    const eid   = parseInt(cont.dataset.entityId);
+    <!-- ── DRAG-AND-DROP SCRIPT ───────────────────────────────────── -->
+    <script>
+        (function () {
+            const grid = document.getElementById('schedGrid');
+            const cont = document.getElementById('schedGridContainer');
+            const vtype = cont.dataset.viewType;
+            const eid = parseInt(cont.dataset.entityId);
 
-    let dragging = null; // { schedId, slots }
+            let dragging = null; // { schedId, slots }
 
-    // ── helpers ──────────────────────────────────────────────────
-    function addMins(t, mins) {
-        const [h, m] = t.split(':').map(Number);
-        const tot = h * 60 + m + mins;
-        return String(Math.floor(tot / 60)).padStart(2,'0') + ':' + String(tot % 60).padStart(2,'0');
-    }
-
-    function getRows() { return grid.querySelectorAll('tbody tr'); }
-
-    function rowIndexOf(timeStr) {
-        const rows = getRows();
-        for (let i = 0; i < rows.length; i++)
-            if (rows[i].dataset.time === timeStr) return i;
-        return -1;
-    }
-
-    function dropTargetAt(day, rowIdx) {
-        const rows = getRows();
-        if (rowIdx < 0 || rowIdx >= rows.length) return null;
-        return rows[rowIdx].querySelector(`.drop-target[data-day="${day}"]`);
-    }
-
-    function isOccupied(day, rowIdx) {
-        // If no drop-target exists for this day at this row,
-        // the slot is covered by a rowspan (i.e., another class).
-        return !dropTargetAt(day, rowIdx);
-    }
-
-    function clearHighlights() {
-        grid.querySelectorAll('.dz-free,.dz-hard,.dz-sat,.dz-span,.dz-span-hard')
-            .forEach(el => el.classList.remove('dz-free','dz-hard','dz-sat','dz-span','dz-span-hard'));
-    }
-
-    function showToast(msg, isErr) {
-        const t = document.getElementById('sgToast');
-        t.textContent = msg;
-        t.style.background = isErr ? '#dc3545' : '#198754';
-        t.style.opacity = '1';
-        setTimeout(() => { t.style.opacity = '0'; }, 2800);
-    }
-
-    // ── drag start ───────────────────────────────────────────────
-    grid.addEventListener('dragstart', e => {
-        const cell = e.target.closest('.sched-class-cell');
-        if (!cell) { e.preventDefault(); return; }
-        dragging = {
-            schedId: cell.dataset.schedId,
-            slots:   parseInt(cell.dataset.slots) || 1,
-        };
-        cell.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', cell.dataset.schedId);
-    });
-
-    grid.addEventListener('dragend', e => {
-        const cell = e.target.closest('.sched-class-cell');
-        if (cell) cell.classList.remove('dragging');
-        clearHighlights();
-        dragging = null;
-    });
-
-    // ── drag over ────────────────────────────────────────────────
-    grid.addEventListener('dragover', e => {
-        const target = e.target.closest('.drop-target');
-        if (!target || !dragging) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-
-        clearHighlights();
-
-        const day   = target.dataset.day;
-        const time  = target.dataset.time;
-        const rIdx  = rowIndexOf(time);
-        const isSat = day === 'Saturday';
-
-        // Check if all N slots of the class would fit without conflict
-        let conflict = false;
-        for (let i = 0; i < dragging.slots; i++) {
-            if (isOccupied(day, rIdx + i)) { conflict = true; break; }
-        }
-
-        // Primary drop slot
-        const primCls = conflict ? 'dz-hard' : isSat ? 'dz-sat' : 'dz-free';
-        target.classList.add(primCls);
-
-        // Remaining span slots
-        const spanCls = conflict ? 'dz-span-hard' : 'dz-span';
-        for (let i = 1; i < dragging.slots; i++) {
-            const el = dropTargetAt(day, rIdx + i);
-            if (el) el.classList.add(spanCls);
-        }
-    });
-
-    grid.addEventListener('dragleave', e => {
-        // Only clear when leaving the entire table
-        if (!e.relatedTarget || !e.relatedTarget.closest('#schedGrid'))
-            clearHighlights();
-    });
-
-    // ── drop ─────────────────────────────────────────────────────
-    grid.addEventListener('drop', e => {
-        const target = e.target.closest('.drop-target');
-        if (!target || !dragging) return;
-        e.preventDefault();
-        clearHighlights();
-
-        const newDay   = target.dataset.day;
-        const newStart = target.dataset.time;
-        const newEnd   = addMins(newStart, dragging.slots * 30);
-
-        // Optimistic: show loading state
-        const modal = document.getElementById('dynamicScheduleContent');
-
-        fetch('/api/move-class', {
-            method:  'POST',
-            headers: {'Content-Type': 'application/json'},
-            body:    JSON.stringify({ sched_id: dragging.schedId,
-                                      day: newDay, start: newStart, end: newEnd })
-        })
-        .then(r => r.json())
-        .then(resp => {
-            if (resp.success) {
-                showToast('✓ ' + resp.message);
-                // Reload grid
-                modal.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-success"></div><p class="mt-2 text-muted small">Updating grid…</p></div>';
-                fetch(`/get-schedule-grid/${vtype}/${eid}`)
-                    .then(r => r.text())
-                    .then(html => { modal.innerHTML = html; });
-            } else {
-                showToast('✗ ' + resp.error, true);
+            // ── helpers ──────────────────────────────────────────────────
+            function addMins(t, mins) {
+                const [h, m] = t.split(':').map(Number);
+                const tot = h * 60 + m + mins;
+                return String(Math.floor(tot / 60)).padStart(2, '0') + ':' + String(tot % 60).padStart(2, '0');
             }
-        })
-        .catch(() => showToast('✗ Network error', true));
 
-        dragging = null;
-    });
-})();
-</script>
+            function getRows() { return grid.querySelectorAll('tbody tr'); }
+
+            function rowIndexOf(timeStr) {
+                const rows = getRows();
+                for (let i = 0; i < rows.length; i++)
+                    if (rows[i].dataset.time === timeStr) return i;
+                return -1;
+            }
+
+            function dropTargetAt(day, rowIdx) {
+                const rows = getRows();
+                if (rowIdx < 0 || rowIdx >= rows.length) return null;
+                return rows[rowIdx].querySelector(`.drop-target[data-day="${day}"]`);
+            }
+
+            function isOccupied(day, rowIdx) {
+                // If no drop-target exists for this day at this row,
+                // the slot is covered by a rowspan (i.e., another class).
+                return !dropTargetAt(day, rowIdx);
+            }
+
+            function clearHighlights() {
+                grid.querySelectorAll('.dz-free,.dz-hard,.dz-sat,.dz-span,.dz-span-hard')
+                    .forEach(el => el.classList.remove('dz-free', 'dz-hard', 'dz-sat', 'dz-span', 'dz-span-hard'));
+            }
+
+            function showToast(msg, isErr) {
+                const t = document.getElementById('sgToast');
+                t.textContent = msg;
+                t.style.background = isErr ? '#dc3545' : '#198754';
+                t.style.opacity = '1';
+                setTimeout(() => { t.style.opacity = '0'; }, 2800);
+            }
+
+            // ── drag start ───────────────────────────────────────────────
+            grid.addEventListener('dragstart', e => {
+                const cell = e.target.closest('.sched-class-cell');
+                if (!cell) { e.preventDefault(); return; }
+                dragging = {
+                    schedId: cell.dataset.schedId,
+                    slots: parseInt(cell.dataset.slots) || 1,
+                };
+                cell.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', cell.dataset.schedId);
+            });
+
+            grid.addEventListener('dragend', e => {
+                const cell = e.target.closest('.sched-class-cell');
+                if (cell) cell.classList.remove('dragging');
+                clearHighlights();
+                dragging = null;
+            });
+
+            // ── drag over ────────────────────────────────────────────────
+            grid.addEventListener('dragover', e => {
+                const target = e.target.closest('.drop-target');
+                if (!target || !dragging) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+
+                clearHighlights();
+
+                const day = target.dataset.day;
+                const time = target.dataset.time;
+                const rIdx = rowIndexOf(time);
+                const isSat = day === 'Saturday';
+
+                // Check if all N slots of the class would fit without conflict
+                let conflict = false;
+                for (let i = 0; i < dragging.slots; i++) {
+                    if (isOccupied(day, rIdx + i)) { conflict = true; break; }
+                }
+
+                // Primary drop slot
+                const primCls = conflict ? 'dz-hard' : isSat ? 'dz-sat' : 'dz-free';
+                target.classList.add(primCls);
+
+                // Remaining span slots
+                const spanCls = conflict ? 'dz-span-hard' : 'dz-span';
+                for (let i = 1; i < dragging.slots; i++) {
+                    const el = dropTargetAt(day, rIdx + i);
+                    if (el) el.classList.add(spanCls);
+                }
+            });
+
+            grid.addEventListener('dragleave', e => {
+                // Only clear when leaving the entire table
+                if (!e.relatedTarget || !e.relatedTarget.closest('#schedGrid'))
+                    clearHighlights();
+            });
+
+            // ── drop ─────────────────────────────────────────────────────
+            grid.addEventListener('drop', e => {
+                const target = e.target.closest('.drop-target');
+                if (!target || !dragging) return;
+                e.preventDefault();
+                clearHighlights();
+
+                const newDay = target.dataset.day;
+                const newStart = target.dataset.time;
+                const newEnd = addMins(newStart, dragging.slots * 30);
+
+                // Optimistic: show loading state
+                const modal = document.getElementById('dynamicScheduleContent');
+
+                fetch('/api/move-class', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sched_id: dragging.schedId,
+                        day: newDay, start: newStart, end: newEnd
+                    })
+                })
+                    .then(r => r.json())
+                    .then(resp => {
+                        if (resp.success) {
+                            showToast('✓ ' + resp.message);
+                            // Reload grid
+                            modal.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-success"></div><p class="mt-2 text-muted small">Updating grid…</p></div>';
+                            fetch(`/get-schedule-grid/${vtype}/${eid}`)
+                                .then(r => r.text())
+                                .then(html => { modal.innerHTML = html; });
+                        } else {
+                            showToast('✗ ' + resp.error, true);
+                        }
+                    })
+                    .catch(() => showToast('✗ Network error', true));
+
+                dragging = null;
+            });
+        })();
+    </script>
