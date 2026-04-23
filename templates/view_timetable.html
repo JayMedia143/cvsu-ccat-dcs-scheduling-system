@@ -566,22 +566,22 @@
     /* ── MINIMAP ────────────────────────────────────────────── */
     #minimap-container {
         position: fixed;
-        bottom: 25px;
-        right: 25px;
-        width: 200px;
-        height: 150px;
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(10px);
-        border-radius: 12px;
+        bottom: 20px;
+        right: 20px;
+        width: 180px;
+        height: 135px;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(8px);
+        border-radius: 10px;
         border: 1px solid rgba(0, 0, 0, 0.1);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         z-index: 1000;
         overflow: hidden;
     }
 
     #minimap-viewport-box {
         position: absolute;
-        border: 2px solid var(--accent-green);
+        border: 2px solid #198754;
         background: rgba(25, 135, 84, 0.1);
         pointer-events: none;
     }
@@ -595,10 +595,11 @@
 
     .minimap-dot {
         position: absolute;
-        width: 10px;
-        height: 8px;
-        background: #cbd5e1;
-        border-radius: 1px;
+        width: 8px;
+        height: 10px;
+        background: #198754;
+        opacity: 0.7;
+        border-radius: 2px;
     }
 
     /* ── ZOOM INDICATOR ───────────────────────────────────────── */
@@ -654,7 +655,11 @@
         }
 
         #minimap-container {
-            display: none !important;
+            width: 140px !important;
+            height: 105px !important;
+            bottom: 15px !important;
+            right: 15px !important;
+            border-radius: 10px;
         }
         
         .hud-nav-btn {
@@ -677,7 +682,9 @@
     <div class="hud-pill-segment">
         <span class="hud-pill-label d-none d-md-inline">View:</span>
         <input type="hidden" id="typeSelect" value="{{ current_type }}">
-        <div class="dropdown d-inline-block">
+        
+        <!-- Desktop Dropdown -->
+        <div class="dropdown d-none d-md-inline-block">
             <button class="btn hud-pill-select dropdown-toggle p-0" type="button" id="typeDropdown"
                 data-bs-toggle="dropdown" aria-expanded="false" style="width: auto; text-align: left;">
                 <span id="typeLabel">{% if current_type == 'section' %}Sections{% elif current_type == 'faculty' %}Faculty{% elif current_type == 'room' %}Rooms{% elif current_type == 'course' %}Courses{% else %}Sections{% endif %}</span>
@@ -689,6 +696,16 @@
                 <li><a class="dropdown-item google-sort-item {% if current_type == 'course' %}active{% endif %}" href="javascript:void(0);" onclick="changeViewType('course', 'Courses', this)">Courses</a></li>
             </ul>
         </div>
+
+        <!-- Mobile Native Select -->
+        <select id="viewTypeSelNative" class="hud-pill-select d-inline-block d-md-none" 
+            style="appearance: none; -webkit-appearance: none; border: none; background: transparent; padding-right: 15px;"
+            onchange="changeViewType(this.value, this.options[this.selectedIndex].text)">
+            <option value="section" {% if current_type == 'section' %}selected{% endif %}>Sections</option>
+            <option value="faculty" {% if current_type == 'faculty' %}selected{% endif %}>Faculty</option>
+            <option value="room" {% if current_type == 'room' %}selected{% endif %}>Rooms</option>
+            <option value="course" {% if current_type == 'course' %}selected{% endif %}>Courses</option>
+        </select>
     </div>
 
     <div class="hud-pill-segment">
@@ -725,11 +742,14 @@
             </ul>
         </div>
         
-        <!-- MOBILE CYCLE TOGGLE -->
-        <button class="btn hud-pill-select p-0 d-flex d-md-none align-items-center" type="button" id="sortMobileBtn"
-            onclick="cycleSortMobile()" style="width: max-content; gap: 4px;">
-            <i class="bi bi-filter"></i> <span>:</span> <span id="sortMobileText">Newest</span>
-        </button>
+        <!-- MOBILE NATIVE SELECT -->
+        <select id="sortSelNative" class="hud-pill-select d-inline-block d-md-none" 
+            style="appearance: none; -webkit-appearance: none; border: none; background: transparent; padding-right: 15px;"
+            onchange="applySort(this.value)">
+            <option value="newest">Newest</option>
+            <option value="asc">A — Z</option>
+            <option value="desc">Z — A</option>
+        </select>
     </div>
 
     <div class="hud-search-pill">
@@ -804,17 +824,16 @@
     const layoutConfigs = {{ layout_configs | tojson | safe }};
     const listMap = { section: [..._sec], faculty: [..._fac], room: [..._rom], course: [..._crs] };
 
-    window.cycleSortMobile = function() {
-        const states = ['newest', 'asc', 'desc'];
-        let current = localStorage.getItem('vt_sort_pref') || 'newest';
-        let nextIdx = (states.indexOf(current) + 1) % states.length;
-        window.applySort(states[nextIdx], null);
-    };
+    // Removed cycleSortMobile in favor of native selection modal
 
     window.changeViewType = function (val, label, el) {
         document.getElementById('typeSelect').value = val;
         const labelEl = document.getElementById('typeLabel');
         if (labelEl) labelEl.textContent = label;
+
+        // Sync Native Select
+        const nativeSel = document.getElementById('viewTypeSelNative');
+        if (nativeSel) nativeSel.value = val;
 
         // Update active class
         if (el) {
@@ -845,21 +864,19 @@
             localStorage.setItem('vt_sort_pref', dir);
         }
 
+        // Sync Native Select
+        const nativeSel = document.getElementById('sortSelNative');
+        if (nativeSel) nativeSel.value = dir;
+
         // Update UI state
         const toggleDesktop = document.getElementById('sortDropdown');
-        const toggleMobile = document.getElementById('sortMobileBtn');
         
         let labelText = '';
-        let mobileText = '';
-        if (dir === 'newest') { labelText = 'Sort by: Newest'; mobileText = 'Newest'; }
-        else if (dir === 'asc') { labelText = 'Sort by: A — Z'; mobileText = 'A-Z'; }
-        else if (dir === 'desc') { labelText = 'Sort by: Z — A'; mobileText = 'Z-A'; }
+        if (dir === 'newest') { labelText = 'Sort by: Newest'; }
+        else if (dir === 'asc') { labelText = 'Sort by: A — Z'; }
+        else if (dir === 'desc') { labelText = 'Sort by: Z — A'; }
 
         if (toggleDesktop) toggleDesktop.textContent = labelText;
-        if (toggleMobile) {
-            const spanText = document.getElementById('sortMobileText');
-            if (spanText) spanText.textContent = mobileText;
-        }
 
         // Update active class dynamically
         if (el) {
@@ -1355,8 +1372,9 @@
     });
 
     function updateMinimapViewport() {
+        const mm = document.getElementById('minimap-container');
         const box = document.getElementById('minimap-viewport-box');
-        if (!box || !window.miniBounds) return;
+        if (!mm || !box || !window.miniBounds) return;
 
         const { totalW, totalH, startX, startY } = window.miniBounds;
         const viewRect = viewport.getBoundingClientRect();
@@ -1366,12 +1384,12 @@
         const vW = viewRect.width / scale;
         const vH = viewRect.height / scale;
 
-        // Map canvas visible area to minimap 200x150 container
-        const miniW = 200;
-        const miniH = 150;
+        // Map canvas visible area to dynamic minimap container size
+        const miniW = mm.offsetWidth;
+        const miniH = mm.offsetHeight;
 
-        box.style.width = (vW / totalW) * miniW + 'px';
-        box.style.height = (vH / totalH) * miniH + 'px';
+        box.style.width = Math.min((vW / totalW) * miniW, miniW) + 'px';
+        box.style.height = Math.min((vH / totalH) * miniH, miniH) + 'px';
         box.style.left = ((vX - startX) / totalW) * miniW + 'px';
         box.style.top = ((vY - startY) / totalH) * miniH + 'px';
     }

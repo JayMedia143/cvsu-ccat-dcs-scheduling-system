@@ -1125,7 +1125,6 @@
         display: flex;
         align-items: center;
     }
-
     .pv-close-x:hover {
         color: #333;
     }
@@ -1144,6 +1143,71 @@
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         z-index: 20;
         pointer-events: none;
+    }
+
+    /* ── MOBILE HUD RESPONSIVENESS (Draft Preview) ────────────────── */
+    @media (max-width: 768px) {
+        .pv-topbar {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            justify-content: flex-start;
+            padding: 8px 12px;
+            gap: 10px;
+            border-radius: 0;
+            scrollbar-width: none;
+        }
+
+        /* Hide sidebar toggle when PV is active */
+        body.pv-active .mobile-sidebar-toggle {
+            display: none !important;
+        }
+
+        .pv-topbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .pv-pill-select-wrap {
+            padding: 4px 10px;
+            gap: 4px;
+        }
+
+        .pv-search-pill {
+            min-width: 130px;
+            padding: 4px 12px;
+        }
+
+        .pv-pill-btn {
+            padding: 6px 12px !important;
+        }
+
+        .pv-nav-pill {
+            padding: 3px;
+            gap: 2px;
+        }
+
+        .pv-nav-btn {
+            padding: 4px 8px;
+            font-size: 0.7rem;
+        }
+
+        .pv-zoom-pill {
+            padding: 4px 6px;
+            gap: 6px;
+        }
+
+        .pv-zoom-val {
+            min-width: 35px;
+            font-size: 0.75rem;
+        }
+
+        #pvMinimap {
+            width: 140px !important;
+            height: 105px !important;
+            bottom: 15px !important;
+            right: 15px !important;
+        }
     }
 
     /* Cinema Overlay (scoped to preview modal) */
@@ -1564,7 +1628,9 @@
                 {% for s in semesters %}<option>{{ s }}</option>{% endfor %}
             </select>
             <input type="hidden" id="viewTypeSel" value="section">
-            <div class="dropdown" style="width:auto">
+            
+            <!-- View Type Selection (Desktop: Custom Dropdown, Mobile: Native Select) -->
+            <div class="dropdown d-none d-md-inline-block" style="width:auto">
                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="viewTypeDropdown"
                     data-bs-toggle="dropdown" aria-expanded="false"
                     style="min-width: 100px; text-align: left; background: white;">
@@ -1581,6 +1647,14 @@
                             onclick="changeViewType('course', 'Course')">Course</a></li>
                 </ul>
             </div>
+            <select id="viewTypeSelNative" class="form-select form-select-sm d-inline-block d-md-none" 
+                style="width:auto; background-color: white;" 
+                onchange="changeViewType(this.value, this.options[this.selectedIndex].text)">
+                <option value="section">Section</option>
+                <option value="faculty">Faculty</option>
+                <option value="room">Room</option>
+                <option value="course">Course</option>
+            </select>
             <select id="entitySel" class="form-select form-select-sm" style="width:auto;min-width:140px"
                 onchange="loadGrid()">
                 <option value="">— Select —</option>
@@ -2429,6 +2503,10 @@
     window.changeViewType = function (val, label) {
         document.getElementById('viewTypeSel').value = val;
         document.getElementById('viewTypeLabel').textContent = label;
+        
+        // Sync Native Select
+        const nativeSel = document.getElementById('viewTypeSelNative');
+        if (nativeSel) nativeSel.value = val;
 
         // Update active class
         const menu = document.querySelector('#viewTypeDropdown')?.nextElementSibling;
@@ -4533,6 +4611,10 @@
         const labelEl = document.getElementById('pvViewLabel');
         if (labelEl) labelEl.textContent = label;
 
+        // Sync Native Select
+        const nativeSel = document.getElementById('pvViewSelNative');
+        if (nativeSel) nativeSel.value = type;
+
         // Update active class
         const menu = document.querySelector('#pvViewDropdown')?.nextElementSibling;
         if (menu) {
@@ -4551,6 +4633,10 @@
         // Update UI state
         const toggle = document.getElementById('pvSortDropdown');
         if (toggle) toggle.textContent = (dir === 'asc') ? 'Sort by: A — Z' : 'Sort by: Z — A';
+
+        // Sync Native Select
+        const nativeSel = document.getElementById('pvSortSelNative');
+        if (nativeSel) nativeSel.value = dir;
 
         if (el) {
             const menu = el.closest('.google-sort-menu');
@@ -4753,6 +4839,10 @@
         const pvModal = document.getElementById('draftPreviewModal');
         if (!pvModal) return;
 
+        // Manage sidebar toggle visibility
+        pvModal.addEventListener('shown.bs.modal', () => document.body.classList.add('pv-active'));
+        pvModal.addEventListener('hidden.bs.modal', () => document.body.classList.remove('pv-active'));
+
         // Viewport pan + zoom
         const vp = document.getElementById('pvViewport');
         if (vp) {
@@ -4882,12 +4972,14 @@
             <!-- Redesigned Topbar (Pill Design) -->
             <div class="pv-topbar">
                 <div class="pv-title-pill">
-                    <i class="bi bi-calendar3-fill me-2"></i>Draft Preview
+                    <i class="bi bi-calendar3-fill me-2"></i><span class="d-none d-md-inline">Draft Preview</span>
                 </div>
 
                 <div class="pv-pill-select-wrap">
-                    <span class="pv-pill-label">View:</span>
-                    <div class="dropdown d-inline-block">
+                    <span class="pv-pill-label d-none d-md-inline">View:</span>
+                    
+                    <!-- Desktop Dropdown -->
+                    <div class="dropdown d-none d-md-inline-block">
                         <button class="btn pv-pill-select dropdown-toggle p-0" type="button" id="pvViewDropdown"
                             data-bs-toggle="dropdown" aria-expanded="false" style="width: auto; text-align: left;">
                             <span id="pvViewLabel">Sections</span>
@@ -4903,11 +4995,23 @@
                                     onclick="pvChangeView('course', 'Course')">Course</a></li>
                         </ul>
                     </div>
+
+                    <!-- Mobile Native Select -->
+                    <select id="pvViewSelNative" class="pv-pill-select d-inline-block d-md-none" 
+                        style="appearance: none; -webkit-appearance: none; border: none; background: transparent; padding-right: 15px;"
+                        onchange="pvChangeView(this.value, this.options[this.selectedIndex].text)">
+                        <option value="section">Sections</option>
+                        <option value="faculty">Faculty</option>
+                        <option value="room">Rooms</option>
+                        <option value="course">Course</option>
+                    </select>
                 </div>
 
                 <div class="pv-pill-select-wrap">
-                    <span class="pv-pill-label">Sort:</span>
-                    <div class="dropdown d-inline-block">
+                    <span class="pv-pill-label d-none d-md-inline">Sort:</span>
+                    
+                    <!-- Desktop Dropdown -->
+                    <div class="dropdown d-none d-md-inline-block">
                         <button class="btn pv-pill-select dropdown-toggle p-0" type="button" id="pvSortDropdown"
                             data-bs-toggle="dropdown" aria-expanded="false" style="width: auto; text-align: left;">
                             Sort by: A — Z
@@ -4927,6 +5031,14 @@
                             </li>
                         </ul>
                     </div>
+
+                    <!-- Mobile Native Select -->
+                    <select id="pvSortSelNative" class="pv-pill-select d-inline-block d-md-none" 
+                        style="appearance: none; -webkit-appearance: none; border: none; background: transparent; padding-right: 15px;"
+                        onchange="pvApplySort(this.value)">
+                        <option value="asc">A — Z</option>
+                        <option value="desc">Z — A</option>
+                    </select>
                 </div>
 
                 <div class="pv-search-pill">
@@ -4937,7 +5049,7 @@
                 <div class="ms-auto d-flex align-items-center gap-2">
                     <button class="btn btn-outline-success pv-pill-btn d-flex align-items-center gap-2"
                         onclick="pvFitView()">
-                        <i class="bi bi-arrows-angle-contract"></i> <span>Fit All</span>
+                        <i class="bi bi-arrows-angle-contract"></i> <span class="d-none d-md-inline">Fit All</span>
                     </button>
 
                     <div class="pv-nav-pill">
