@@ -27,8 +27,6 @@
             color: #198754 !important;
             transform: scale(1.2) !important;
         }
-
-
     </style>
     <script>if (sessionStorage.getItem('loginPending')) { document.documentElement.classList.add('login-loading'); }</script>
 </head>
@@ -627,12 +625,7 @@
                 </div>
                 {% endif %}
 
-                <!-- AI-Lock Badge -->
-                {% if lock_status %}
-                <span class="lock-badge-nav d-none d-sm-inline-flex" title="Sync Locked">
-                    <i class="bi bi-lock-fill me-1"></i>Locked
-                </span>
-                {% endif %}
+
 
                 <!-- Profile Dropdown -->
                 <div class="dropdown">
@@ -896,7 +889,8 @@
                             <label class="form-label text-muted small fw-bold">Current Password</label>
                             <div class="password-group">
                                 <input type="password" name="current_password" required>
-                                <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility(this)">
+                                <button type="button" class="password-toggle-btn"
+                                    onclick="togglePasswordVisibility(this)">
                                     <i class="bi bi-eye-fill"></i>
                                 </button>
                             </div>
@@ -935,7 +929,8 @@
                             <label class="form-label text-muted small fw-bold">Current Password</label>
                             <div class="password-group">
                                 <input type="password" name="current_password" required>
-                                <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility(this)">
+                                <button type="button" class="password-toggle-btn"
+                                    onclick="togglePasswordVisibility(this)">
                                     <i class="bi bi-eye-fill"></i>
                                 </button>
                             </div>
@@ -944,7 +939,8 @@
                             <label class="form-label text-muted small fw-bold">New Password</label>
                             <div class="password-group">
                                 <input type="password" name="new_password" minlength="4" required>
-                                <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility(this)">
+                                <button type="button" class="password-toggle-btn"
+                                    onclick="togglePasswordVisibility(this)">
                                     <i class="bi bi-eye-fill"></i>
                                 </button>
                             </div>
@@ -954,7 +950,8 @@
                             <label class="form-label text-muted small fw-bold">Confirm New Password</label>
                             <div class="password-group">
                                 <input type="password" name="confirm_password" minlength="4" required>
-                                <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility(this)">
+                                <button type="button" class="password-toggle-btn"
+                                    onclick="togglePasswordVisibility(this)">
                                     <i class="bi bi-eye-fill"></i>
                                 </button>
                             </div>
@@ -1394,18 +1391,6 @@
                     label.innerHTML = locked
                         ? '<span class="text-danger fw-semibold"><i class="bi bi-lock-fill me-1"></i>Lock ON \u2014 Protected Mode</span>'
                         : '<span class="text-success"><i class="bi bi-unlock me-1"></i>Lock OFF \u2014 Open Collaborative Mode</span>';
-                }
-                // Update nav badge without full reload
-                var badge = document.querySelector('.lock-badge-nav');
-                if (locked && !badge) {
-                    var b = document.createElement('span');
-                    b.className = 'lock-badge-nav';
-                    b.title = 'Generated Schedules Lock is ON \u2014 Protected Mode';
-                    b.innerHTML = '<i class="bi bi-lock-fill me-1"></i>Locked';
-                    var rightBar = document.querySelector('.sheets-menubar .d-flex.align-items-center.gap-3');
-                    if (rightBar) rightBar.prepend(b);
-                } else if (!locked && badge) {
-                    badge.remove();
                 }
             }).catch(function () { cb.checked = !locked; });
         };

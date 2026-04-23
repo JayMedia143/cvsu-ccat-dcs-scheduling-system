@@ -8870,9 +8870,9 @@ def check_constraints():
         if s.day == 'Sunday':
             add_v('GLOBAL_DAY_RESTRICTION', 'Global Day Restriction', 'No classes on Sunday.', s)
 
-        # HC-23: Operating Hours (7:00 AM ---- 8:00 PM)
-        if start_m < 420 or end_m > 1200:
-            add_v('OPERATING_HOURS', 'Operating Hours Compliance', 'Class scheduled outside 7 AM----8 PM.', s)
+        # HC-23: Operating Hours (7:00 AM — 9:00 PM)
+        if start_m < 420 or end_m > 1260:
+            add_v('OPERATING_HOURS', 'Operating Hours Compliance', 'Class scheduled outside 7 AM—9 PM.', s)
 
         # HC-24: Hourly Alignment (start on the hour or half-hour)
         if start_m % 30 != 0:

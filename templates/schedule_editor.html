@@ -14,6 +14,23 @@
         overflow: hidden
     }
 
+    /* ── FULLSCREEN OVERRIDES (DRAFT PREVIEW) ── */
+    #draftPreviewModal .modal-content {
+        max-height: 100dvh !important;
+        height: 100dvh !important;
+        width: 100dvw !important;
+        border-radius: 0 !important;
+        border: none !important;
+        background: #f1f5f9 !important;
+    }
+
+    #draftPreviewModal .modal-dialog {
+        margin: 0 !important;
+        max-width: 100dvw !important;
+        width: 100dvw !important;
+        height: 100dvh !important;
+    }
+
     .editor-topbar {
         padding: 8px 16px;
         border-bottom: 1px solid #e0e0e0;
@@ -1452,40 +1469,133 @@
             /* Force minimum width for horizontal scrolling experience */
         }
     }
+
+    @media (min-width: 769px) {
+        .mobile-topbar-row {
+            display: contents;
+        }
+
+        .editor-topbar {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 8px !important;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .editor-topbar {
+            flex-direction: column !important;
+            height: auto !important;
+            padding: 12px 16px !important;
+            gap: 12px !important;
+            align-items: stretch !important;
+        }
+
+        .mobile-topbar-row {
+            display: flex !important;
+            width: 100% !important;
+            align-items: center;
+        }
+
+        .mobile-topbar-row.row-1 {
+            justify-content: space-between;
+        }
+
+        .mobile-topbar-row.row-2 {
+            gap: 8px;
+        }
+
+        .mobile-topbar-row.row-2 select {
+            flex: 1 !important;
+            min-width: 0 !important;
+            width: auto !important;
+            font-size: 0.85rem;
+        }
+
+        .mobile-topbar-row.row-3 {
+            width: 100% !important;
+        }
+
+        /* Style the mode badge button to be full width on mobile */
+        .mobile-topbar-row.row-3 #modeBadge {
+            width: 100% !important;
+            justify-content: center !important;
+            margin: 0 !important;
+            padding: 8px !important;
+            display: flex !important;
+            /* Force display if it was hidden */
+        }
+
+        .mobile-topbar-row.row-4 {
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 4px;
+        }
+    }
 </style>
 
 <div class="editor-wrapper">
 
     <!-- TOP BAR -->
     <div class="editor-topbar">
-        <span class="page-title"><i class="bi bi-pencil-square me-2 text-success"></i>Schedule Editor</span>
-        {% if not is_hist %}
-        {% if session.get('role') in ['admin','superadmin'] %}
-        <button id="lockToggleBtn" class="btn-lock-toggle {% if lock_status %}lock-on{% else %}lock-off{% endif %}"
-            onclick="toggleLock()" title="{% if lock_status %}Unlock Schedule{% else %}Lock Schedule{% endif %}">
-            <i class="bi {% if lock_status %}bi-lock-fill{% else %}bi-unlock-fill{% endif %}" id="lockToggleIcon"></i>
-        </button>
-        {% else %}
-        {% if lock_status %}<span class="lock-badge-nav" title="GA Locked"><i class="bi bi-lock-fill"></i></span>{% endif %}
-        {% endif %}
-        {% endif %}
-        <div class="d-flex align-items-center gap-2 ms-auto flex-wrap">
-            <select id="semesterSel" class="form-select form-select-sm" style="width:auto" onchange="loadGrid()">
+        <!-- ROW 1: Title & Lock -->
+        <div class="mobile-topbar-row row-1">
+            <span class="page-title"><i class="bi bi-pencil-square me-2 text-success"></i>Schedule Editor</span>
+            {% if not is_hist %}
+            {% if session.get('role') in ['admin','superadmin'] %}
+            <button id="lockToggleBtn" class="btn-lock-toggle {% if lock_status %}lock-on{% else %}lock-off{% endif %}"
+                onclick="toggleLock()" title="{% if lock_status %}Unlock Schedule{% else %}Lock Schedule{% endif %}">
+                <i class="bi {% if lock_status %}bi-lock-fill{% else %}bi-unlock-fill{% endif %}"
+                    id="lockToggleIcon"></i>
+            </button>
+            {% else %}
+            {% if lock_status %}<span class="lock-badge-nav" title="GA Locked"><i class="bi bi-lock-fill"></i></span>{%
+            endif %}
+            {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- ROW 2: Selects -->
+        <div class="mobile-topbar-row row-2">
+            <select id="semesterSel" class="form-select form-select-sm ms-md-auto" style="width:auto"
+                onchange="loadGrid()">
                 <option value="">— Semester —</option>
                 {% for s in semesters %}<option>{{ s }}</option>{% endfor %}
             </select>
-            <select id="viewTypeSel" class="form-select form-select-sm" style="width:auto"
-                onchange="onViewTypeChange()">
-                <option value="section">Section</option>
-                <option value="faculty">Faculty</option>
-                <option value="room">Room</option>
-                <option value="course">Course</option>
-            </select>
-            <select id="entitySel" class="form-select form-select-sm" style="width:auto;max-width:200px"
+            <input type="hidden" id="viewTypeSel" value="section">
+            <div class="dropdown" style="width:auto">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="viewTypeDropdown"
+                    data-bs-toggle="dropdown" aria-expanded="false"
+                    style="min-width: 100px; text-align: left; background: white;">
+                    <span id="viewTypeLabel">Section</span>
+                </button>
+                <ul class="dropdown-menu shadow-sm" aria-labelledby="viewTypeDropdown">
+                    <li><a class="dropdown-item active" href="javascript:void(0);"
+                            onclick="changeViewType('section', 'Section')">Section</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0);"
+                            onclick="changeViewType('faculty', 'Faculty')">Faculty</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0);"
+                            onclick="changeViewType('room', 'Room')">Room</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0);"
+                            onclick="changeViewType('course', 'Course')">Course</a></li>
+                </ul>
+            </div>
+            <select id="entitySel" class="form-select form-select-sm" style="width:auto;min-width:140px"
                 onchange="loadGrid()">
+                <option value="">— Select —</option>
                 {% for sec in sections %}<option value="{{ sec.id }}">{{ sec.section_name }}</option>{% endfor %}
             </select>
-            <!-- Hidden draft select — still drives currentDraftId internally -->
+        </div>
+
+        <!-- ROW 3: Mode Badge -->
+        <div class="mobile-topbar-row row-3">
+            <button id="modeBadge" class="mode-badge badge-direct ms-md-2" onclick="openModePicker()"
+                style="display:none">
+                <i class="bi bi-pencil-fill" id="modeBadgeIcon"></i>
+                <span id="modeBadgeLabel">Direct Edit Mode</span>
+                <i class="bi bi-chevron-down" style="font-size:.65rem;opacity:.6"></i>
+            </button>
             <select id="draftSel" style="display:none" onchange="onDraftChange()">
                 <option value="">— Master only —</option>
                 {% for dv in drafts %}
@@ -1493,12 +1603,10 @@
                     dv.is_published %} ✓{% endif %}</option>
                 {% endfor %}
             </select>
-            <!-- Mode badge — shows current mode, click to re-open picker -->
-            <button id="modeBadge" class="mode-badge badge-direct" onclick="openModePicker()" style="display:none">
-                <i class="bi bi-pencil-fill" id="modeBadgeIcon"></i>
-                <span id="modeBadgeLabel">Direct Edit Mode</span>
-                <i class="bi bi-chevron-down" style="font-size:.65rem;opacity:.6"></i>
-            </button>
+        </div>
+
+        <!-- ROW 4: Action Buttons -->
+        <div class="mobile-topbar-row row-4">
             {% if not is_hist %}
             <button class="btn btn-sm btn-success" id="publishDraftBtn" style="display:none" onclick="publishDraft()"><i
                     class="bi bi-cloud-upload me-1"></i>Publish</button>
@@ -1521,6 +1629,7 @@
             </button>
         </div>
     </div>
+
 
     <!-- LEGEND -->
     <div class="editor-legend">
@@ -2162,11 +2271,12 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div class="mb-2">
+                        <div class="mb-3">
                             <label class="form-label fw-semibold">Notes <span
                                     class="text-muted fw-normal">(optional)</span></label>
                             <textarea class="form-control" id="mdfNotes" rows="2"></textarea>
                         </div>
+                    </form>
                 </div>
             </div>
             <!-- Standard Footer (Shown only in Form View) -->
@@ -2206,7 +2316,7 @@
     // ════════════════════════════════════════
     const ALLOWED_DAYS = {{ allowed_days | tojson }};
     const START_HOUR = {{ start_hour }};
-    const END_HOUR = {{ end_hour }};
+    const END_HOUR = Math.max({{ end_hour }}, 21);
     const LOCK_STATUS = {{ 'true' if lock_status else 'false' }};
     const USER_ROLE = '{{ session.get("role","user") }}';
     const CELL_H = 60; // px per hour = 1 px per minute
@@ -2240,13 +2350,13 @@
     let editorMode = null; // 'direct' | 'draft' — null until picker is used
     const IS_ADMIN = {{ 'true' if session.get('role') in ['admin', 'superadmin'] else 'false' }};
     const IS_HIST = {{ 'true' if is_hist else 'false' }};
-    let DRAFTS_DATA = [{% for dv in drafts %}{ 
-        id: Number('{{ dv.id }}'), 
-        name: decodeURIComponent('{{ dv.name | urlencode }}'), 
-        semester: decodeURIComponent('{{ dv.semester | urlencode }}'), 
-        department: decodeURIComponent('{{ (dv.department or "") | urlencode }}'), 
-        notes: decodeURIComponent('{{ (dv.notes or "") | urlencode }}'), 
-        is_published: Boolean(Number('{{ "1" if dv.is_published else "0" }}')) 
+    let DRAFTS_DATA = [{% for dv in drafts %}{
+        id: Number('{{ dv.id }}'),
+            name: decodeURIComponent('{{ dv.name | urlencode }}'),
+                semester: decodeURIComponent('{{ dv.semester | urlencode }}'),
+                    department: decodeURIComponent('{{ (dv.department or "") | urlencode }}'),
+                        notes: decodeURIComponent('{{ (dv.notes or "") | urlencode }}'),
+                            is_published: Boolean(Number('{{ "1" if dv.is_published else "0" }}'))
     } {% if not loop.last %}, {% endif %} {% endfor %}];
     let _editDraftId = null;
     let _newDraftCtx = 'picker'; // 'picker' | 'manage'
@@ -2315,6 +2425,21 @@
         currentViewType = vt;
         loadGrid();
     }
+
+    window.changeViewType = function (val, label) {
+        document.getElementById('viewTypeSel').value = val;
+        document.getElementById('viewTypeLabel').textContent = label;
+
+        // Update active class
+        const menu = document.querySelector('#viewTypeDropdown')?.nextElementSibling;
+        if (menu) {
+            menu.querySelectorAll('.dropdown-item').forEach(el => {
+                el.classList.toggle('active', el.textContent.trim() === label);
+            });
+        }
+
+        onViewTypeChange();
+    };
 
     function onDraftChange() {
         const val = document.getElementById('draftSel').value;
@@ -2541,22 +2666,22 @@
         const lockIco = (lockStatus && entry.source === 'ga') ? '<i class="bi bi-lock-fill ms-1" style="font-size:.6rem"></i>' : '';
         // Only admins/superadmins can delete master entries; users can only delete their own draft entries
         const canDelete = USER_ROLE !== 'user' || entry.is_draft;
-        // In Draft Mode, master (non-draft) entries are read-only — clicking edit/delete shows toast
-        const isMasterInDraftMode = (editorMode === 'draft' && !entry.is_draft);
+        // In Draft Mode, master (non-draft) entries are read-only ONLY IF locked
+        const isMasterInDraftMode = (editorMode === 'draft' && !entry.is_draft && lockStatus);
         const editOnclick = isMasterInDraftMode
-            ? `showToast('Switch to Direct Edit Mode to modify master entries.','error');event.stopPropagation()`
+            ? `showToast('Schedule is locked. Unlock to allow modifications in draft.','error');event.stopPropagation()`
             : `openEditModal(${entry.id},event)`;
 
         block.onclick = (e) => {
             if (isMasterInDraftMode) {
-                showToast('Switch to Direct Edit Mode to modify master entries.', 'error');
+                showToast('Schedule is locked. Unlock to allow modifications in draft.', 'error');
             } else {
                 setSidebarMode('edit', entry);
             }
         };
 
         const deleteOnclick = isMasterInDraftMode
-            ? `showToast('Switch to Direct Edit Mode to delete master entries.','error');event.stopPropagation()`
+            ? `showToast('Schedule is locked. Unlock to allow deletions in draft.','error');event.stopPropagation()`
             : `confirmDeleteEntry(${entry.id},event)`;
 
         block.innerHTML = `
@@ -4273,7 +4398,6 @@
             if (savedType && savedType !== pvCurrentType) {
                 // Restore their last used module (Section, Faculty, or Room)
                 pvCurrentType = savedType;
-                document.getElementById('viewTypeSel').value = savedType;
                 pvApplySort();
             } else {
                 if (!pvLoadViewState()) {
@@ -4402,6 +4526,21 @@
         }
         data.element = null;
         data.isMounted = false;
+    }
+
+    window.pvChangeView = function (type, label) {
+        pvCurrentType = type;
+        const labelEl = document.getElementById('pvViewLabel');
+        if (labelEl) labelEl.textContent = label;
+
+        // Update active class
+        const menu = document.querySelector('#pvViewDropdown')?.nextElementSibling;
+        if (menu) {
+            menu.querySelectorAll('.dropdown-item').forEach(el => {
+                el.classList.toggle('active', el.textContent.trim() === label);
+            });
+        }
+        pvApplySort();
     }
 
     function pvApplySort(dir, el) {
@@ -4614,11 +4753,6 @@
         const pvModal = document.getElementById('draftPreviewModal');
         if (!pvModal) return;
 
-        // Type change
-        document.getElementById('pvTypeSelect')?.addEventListener('change', function () {
-            pvCurrentType = this.value; pvApplySort();
-        });
-
         // Viewport pan + zoom
         const vp = document.getElementById('pvViewport');
         if (vp) {
@@ -4753,12 +4887,22 @@
 
                 <div class="pv-pill-select-wrap">
                     <span class="pv-pill-label">View:</span>
-                    <select id="pvTypeSelect" class="form-select form-select-sm pv-pill-select">
-                        <option value="section">Sections</option>
-                        <option value="faculty">Faculty</option>
-                        <option value="room">Rooms</option>
-                        <option value="course">Course</option>
-                    </select>
+                    <div class="dropdown d-inline-block">
+                        <button class="btn pv-pill-select dropdown-toggle p-0" type="button" id="pvViewDropdown"
+                            data-bs-toggle="dropdown" aria-expanded="false" style="width: auto; text-align: left;">
+                            <span id="pvViewLabel">Sections</span>
+                        </button>
+                        <ul class="dropdown-menu google-sort-menu" aria-labelledby="pvViewDropdown">
+                            <li><a class="dropdown-item google-sort-item active" href="javascript:void(0);"
+                                    onclick="pvChangeView('section', 'Sections')">Sections</a></li>
+                            <li><a class="dropdown-item google-sort-item" href="javascript:void(0);"
+                                    onclick="pvChangeView('faculty', 'Faculty')">Faculty</a></li>
+                            <li><a class="dropdown-item google-sort-item" href="javascript:void(0);"
+                                    onclick="pvChangeView('room', 'Rooms')">Rooms</a></li>
+                            <li><a class="dropdown-item google-sort-item" href="javascript:void(0);"
+                                    onclick="pvChangeView('course', 'Course')">Course</a></li>
+                        </ul>
+                    </div>
                 </div>
 
                 <div class="pv-pill-select-wrap">
