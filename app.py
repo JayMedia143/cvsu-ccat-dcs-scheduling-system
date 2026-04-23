@@ -11192,6 +11192,16 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False, domin
   </script>
 </body></html>"""
 
+def render_blank_timetable_fallback(entity_name, semester, sem_ay, layout_type, for_canvas=False):
+    settings = get_settings()
+    if layout_type == 'faculty':
+        _margins = _get_faculty_margins(settings)
+    else:
+        _margins = _get_margins(settings)
+    html_content = render_template('_blank_timetable.html', entity_name=entity_name, semester=semester, sem_ay=sem_ay)
+    return render_a4_page(html_content, 960, margins=_margins, for_canvas=for_canvas)
+
+
 
 
 
@@ -11945,6 +11955,16 @@ def render_viewer_page(html_content, table_px, margins=None, for_canvas=False, d
   </script>
 </body></html>"""
 
+def render_blank_timetable_fallback(entity_name, semester, sem_ay, layout_type, for_canvas=False):
+    settings = get_settings()
+    if layout_type == 'faculty':
+        _margins = _get_faculty_margins(settings)
+    else:
+        _margins = _get_margins(settings)
+    html_content = render_template('_blank_timetable.html', entity_name=entity_name, semester=semester, sem_ay=sem_ay)
+    return render_a4_page(html_content, 960, margins=_margins, for_canvas=for_canvas)
+
+
 
 
 
@@ -12493,13 +12513,16 @@ def section_timetable_html(section_id):
         sem_ay    = request.args.get('sem_ay', '')
 
     path = os.path.join(basedir, 'static', 'assets', 'section_template.xlsx')
+    for_canvas = request.args.get('canvas', 'false') == 'true'
+    
     if not os.path.exists(path):
-        return (
-            "<div style='padding:40px;color:#dc3545;font-family:Arial,sans-serif;'>"
-            "<strong>No section template uploaded.</strong><br>"
-            "Go to <a href='/manage/layouts'>Layout Settings</a> and upload a section template."
-            "</div>"
-        ), 404
+        return render_blank_timetable_fallback(
+            entity_name=section.section_name,
+            semester=semester,
+            sem_ay=sem_ay,
+            layout_type='section',
+            for_canvas=for_canvas
+        )
 
     is_archive = session.get('historical_mode_active', False)
     if not is_archive:
@@ -12583,13 +12606,16 @@ def public_section_timetable(section_id):
     semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
     sem_ay    = request.args.get('sem_ay', '')
     path = os.path.join(basedir, 'static', 'assets', 'section_template.xlsx')
+    for_canvas = request.args.get('canvas', 'false') == 'true'
+    
     if not os.path.exists(path):
-        return (
-            "<div style='padding:40px;color:#dc3545;font-family:Arial,sans-serif;'>"
-            "<strong>No section template uploaded.</strong><br>"
-            "Please ask the administrator to upload a section template."
-            "</div>"
-        ), 404
+        return render_blank_timetable_fallback(
+            entity_name=section.section_name,
+            semester=semester,
+            sem_ay=sem_ay,
+            layout_type='section',
+            for_canvas=for_canvas
+        )
 
     # Safe handling for unassigned sections in public portal
     if not section:
@@ -12667,13 +12693,16 @@ def irregular_timetable_html(student_id):
         schedules.extend(slots)
 
     path = os.path.join(basedir, 'static', 'assets', 'section_template.xlsx')
+    for_canvas = request.args.get('canvas', 'false') == 'true'
+    
     if not os.path.exists(path):
-        return (
-            "<div style='padding:40px;color:#dc3545;font-family:Arial,sans-serif;'>"
-            "<strong>No section template uploaded.</strong><br>"
-            "Please ask the administrator to upload a section template."
-            "</div>"
-        ), 404
+        return render_blank_timetable_fallback(
+            entity_name=section.section_name,
+            semester=semester,
+            sem_ay=sem_ay,
+            layout_type='section',
+            for_canvas=for_canvas
+        )
 
     ws, grid_info, bounds = _get_cached_template(path)
     if grid_info:
@@ -13364,9 +13393,16 @@ def faculty_timetable_html(faculty_id):
 
     # Define path to faculty template
     path = os.path.join(basedir, 'static', 'assets', 'faculty_template.xlsx')
+    for_canvas = request.args.get('canvas', 'false') == 'true'
+    
     if not os.path.exists(path):
-        flash('No faculty template uploaded.', 'danger')
-        return redirect(url_for('manage_layouts'))
+        return render_blank_timetable_fallback(
+            entity_name=getattr(faculty, 'full_name', 'Faculty'),
+            semester=semester,
+            sem_ay=sem_ay,
+            layout_type='faculty',
+            for_canvas=for_canvas
+        )
 
     total_hours = 0.0
     for sc in schedules:
@@ -13461,9 +13497,16 @@ def room_timetable_html(room_id):
 
     # Define path to room template
     path = os.path.join(basedir, 'static', 'assets', 'room_template.xlsx')
+    for_canvas = request.args.get('canvas', 'false') == 'true'
+    
     if not os.path.exists(path):
-        flash('No room template uploaded.', 'danger')
-        return redirect(url_for('manage_layouts'))
+        return render_blank_timetable_fallback(
+            entity_name=room.room_name,
+            semester=semester,
+            sem_ay=sem_ay,
+            layout_type='room',
+            for_canvas=for_canvas
+        )
 
     ws, grid_info, bounds = _get_cached_template(path)
     if grid_info:
@@ -13525,11 +13568,20 @@ def course_timetable_html(course_id):
         ).filter_by(course_id=course_id, semester=semester, is_draft=False).all()
     # Define path to course template
     path = os.path.join(basedir, 'static', 'assets', 'course_template.xlsx')
+    for_canvas = request.args.get('canvas', 'false') == 'true'
+    
     if not os.path.exists(path):
-        # Fallback to section template
-        path = os.path.join(basedir, 'static', 'assets', 'section_template.xlsx')
-        if not os.path.exists(path):
-            return "No template found for Course (and no section fallback).", 404
+        # Fallback to section template as last resort
+        sec_path = os.path.join(basedir, 'static', 'assets', 'section_template.xlsx')
+        if not os.path.exists(sec_path):
+            return render_blank_timetable_fallback(
+                entity_name=course.course_code,
+                semester=semester,
+                sem_ay=sem_ay,
+                layout_type='course',
+                for_canvas=for_canvas
+            )
+        path = sec_path
 
     ws, grid_info, bounds = _get_cached_template(path)
     if grid_info:

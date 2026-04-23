@@ -1,24 +1,93 @@
 <!-- templates/_blank_timetable.html -->
-<div class="table-responsive">
-    <table class="table table-bordered timetable-grid">
-        <thead>
-            <tr class="text-center">
-                <th class="time-header">Time</th>
-                {% for day in current_days %}
-                <th>{{ day }}</th>
+<style>
+    .blank-timetable-container {
+        padding: 40px;
+        font-family: 'Inter', sans-serif;
+        color: #333;
+    }
+    .blank-header {
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #188038;
+        padding-bottom: 15px;
+    }
+    .blank-header h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        color: #188038;
+        text-transform: uppercase;
+    }
+    .blank-header p {
+        margin: 5px 0 0;
+        color: #666;
+        font-size: 0.9rem;
+    }
+    .timetable-grid {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+    .timetable-grid th, .timetable-grid td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        font-size: 0.8rem;
+        text-align: center;
+        height: 40px;
+    }
+    .timetable-grid th {
+        background-color: #f8f9fa;
+        font-weight: 700;
+        color: #444;
+    }
+    .time-slot {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        width: 100px;
+    }
+    .no-template-badge {
+        display: inline-block;
+        background: #fff3cd;
+        color: #856404;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        border: 1px solid #ffeeba;
+    }
+</style>
+
+<div class="blank-timetable-container">
+    <div class="text-center">
+        <span class="no-template-badge"><i class="bi bi-exclamation-triangle-fill me-1"></i> No specialized template assigned. Showing default view.</span>
+    </div>
+    
+    <div class="blank-header">
+        <h2>{{ entity_name | default('TIMETABLE') }}</h2>
+        <p>{{ semester | default('Current Semester') }} {{ sem_ay | default('') }}</p>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered timetable-grid">
+            <thead>
+                <tr class="text-center">
+                    <th class="time-header">Time</th>
+                    {% for day in current_days | default(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']) %}
+                    <th>{{ day }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% set time_slots = ["7:00-8:00", "8:00-9:00", "9:00-10:00", "10:00-11:00", "11:00-12:00", "12:00-1:00", "1:00-2:00", "2:00-3:00", "3:00-4:00", "4:00-5:00", "5:00-6:00", "6:00-7:00", "7:00-8:00"] %}
+                {% for time in time_slots %}
+                <tr>
+                    <td class="time-slot">{{ time }}</td>
+                    {% for day in current_days | default(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']) %}
+                    <td></td>
+                    {% endfor %}
+                </tr>
                 {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% set time_slots = ["7:00-8:00", "8:00-9:00", "9:00-10:00", "10:00-11:00", "11:00-12:00", "12:00-1:00", "1:00-2:00", "2:00-3:00", "3:00-4:00", "4:00-5:00", "5:00-6:00", "6:00-7:00", "7:00-8:00"] %}
-            {% for time in time_slots %}
-            <tr>
-                <td class="time-slot">{{ time }}</td>
-                {% for day in current_days %}
-                <td></td>
-                {% endfor %}
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+    </div>
 </div>

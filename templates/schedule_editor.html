@@ -255,6 +255,20 @@
         pointer-events: none
     }
 
+    /* ── SELECTION HIGHLIGHT ── */
+    .selected-line-marker {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 120px;
+        background: rgba(25, 135, 84, 0.1);
+        border: 2px dashed #198754;
+        border-radius: 6px;
+        pointer-events: none;
+        z-index: 1;
+        transition: opacity 0.2s, top 0.1s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
     .blk-title {
         font-weight: 700;
         font-size: .73rem;
@@ -1019,6 +1033,58 @@
         transform: translateX(2px);
     }
 
+    /* ── MAIN HEADER PREMIUM DROPDOWNS (1:1 DRAFT PREVIEW SORT UI) ── */
+    @media (min-width: 768px) {
+        .header-premium-menu {
+            border: none !important;
+            border-radius: 15px !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12) !important;
+            padding: 8px 0 !important;
+            min-width: 220px !important;
+            position: absolute !important;
+            left: 50% !important;
+            top: 100% !important;
+            transform: translateX(-50%) translateY(10px) !important;
+            background: white !important;
+            z-index: 1100 !important;
+            animation: googleDropdownFade 0.2s ease-out forwards;
+        }
+
+        .header-premium-menu .dropdown-item {
+            padding: 10px 20px !important;
+            font-size: 0.85rem !important;
+            font-weight: 500 !important;
+            color: #333 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            transition: all 0.2s !important;
+            position: relative !important;
+        }
+
+        /* The Checkmark Icon */
+        .header-premium-menu .dropdown-item .check-icon {
+            width: 16px;
+            color: #198754;
+            opacity: 0;
+            transition: opacity 0.2s;
+            font-weight: bold;
+        }
+
+        .header-premium-menu .dropdown-item.active {
+            background-color: #e8f5e9 !important;
+            color: #198754 !important;
+        }
+
+        .header-premium-menu .dropdown-item.active .check-icon {
+            opacity: 1;
+        }
+
+        .header-premium-menu .dropdown-item:hover:not(.active) {
+            background-color: #f8f9fa !important;
+        }
+    }
+
     .pv-nav-btn:active {
         transform: scale(0.95);
     }
@@ -1125,6 +1191,7 @@
         display: flex;
         align-items: center;
     }
+
     .pv-close-x:hover {
         color: #333;
     }
@@ -1622,44 +1689,73 @@
 
         <!-- ROW 2: Selects -->
         <div class="mobile-topbar-row row-2">
-            <select id="semesterSel" class="form-select form-select-sm ms-md-auto" style="width:auto"
-                onchange="loadGrid()">
+            <!-- Semester Dropdown (Desktop: Custom, Mobile: Native) -->
+            <div class="dropdown d-none d-md-inline-block" style="width:auto">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="semesterDropdown"
+                    data-bs-toggle="dropdown" aria-expanded="false" data-bs-display="static"
+                    style="min-width: 120px; text-align: left; background: white;">
+                    <span id="semesterLabel">— Semester —</span>
+                </button>
+                <ul class="dropdown-menu header-premium-menu" id="semesterMenu" aria-labelledby="semesterDropdown">
+                    <li><a class="dropdown-item" href="javascript:void(0);" onclick="changeSemester('', '— Semester —')" data-value=""><span class="check-icon">✓</span>— Semester —</a></li>
+                    {% for s in semesters %}
+                    <li><a class="dropdown-item" href="javascript:void(0);" onclick="changeSemester('{{ s }}', '{{ s }}')" data-value="{{ s }}"><span class="check-icon">✓</span>{{ s }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <select id="semesterSel" class="form-select form-select-sm d-md-none" style="width:auto"
+                onchange="syncSemester(this.value, this.options[this.selectedIndex].text)">
                 <option value="">— Semester —</option>
                 {% for s in semesters %}<option>{{ s }}</option>{% endfor %}
             </select>
+            <input type="hidden" id="semesterSelValue" value="">
+
             <input type="hidden" id="viewTypeSel" value="section">
-            
+
             <!-- View Type Selection (Desktop: Custom Dropdown, Mobile: Native Select) -->
             <div class="dropdown d-none d-md-inline-block" style="width:auto">
                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="viewTypeDropdown"
-                    data-bs-toggle="dropdown" aria-expanded="false"
+                    data-bs-toggle="dropdown" aria-expanded="false" data-bs-display="static"
                     style="min-width: 100px; text-align: left; background: white;">
                     <span id="viewTypeLabel">Section</span>
                 </button>
-                <ul class="dropdown-menu shadow-sm" aria-labelledby="viewTypeDropdown">
+                <ul class="dropdown-menu header-premium-menu" id="viewTypeMenu" aria-labelledby="viewTypeDropdown">
                     <li><a class="dropdown-item active" href="javascript:void(0);"
-                            onclick="changeViewType('section', 'Section')">Section</a></li>
+                            onclick="changeViewType('section', 'Section')" data-value="section"><span class="check-icon">✓</span>Section</a></li>
                     <li><a class="dropdown-item" href="javascript:void(0);"
-                            onclick="changeViewType('faculty', 'Faculty')">Faculty</a></li>
+                            onclick="changeViewType('faculty', 'Faculty')" data-value="faculty"><span class="check-icon">✓</span>Faculty</a></li>
                     <li><a class="dropdown-item" href="javascript:void(0);"
-                            onclick="changeViewType('room', 'Room')">Room</a></li>
+                            onclick="changeViewType('room', 'Room')" data-value="room"><span class="check-icon">✓</span>Room</a></li>
                     <li><a class="dropdown-item" href="javascript:void(0);"
-                            onclick="changeViewType('course', 'Course')">Course</a></li>
+                            onclick="changeViewType('course', 'Course')" data-value="course"><span class="check-icon">✓</span>Course</a></li>
                 </ul>
             </div>
-            <select id="viewTypeSelNative" class="form-select form-select-sm d-inline-block d-md-none" 
-                style="width:auto; background-color: white;" 
+            <select id="viewTypeSelNative" class="form-select form-select-sm d-inline-block d-md-none"
+                style="width:auto; background-color: white;"
                 onchange="changeViewType(this.value, this.options[this.selectedIndex].text)">
                 <option value="section">Section</option>
                 <option value="faculty">Faculty</option>
                 <option value="room">Room</option>
                 <option value="course">Course</option>
             </select>
-            <select id="entitySel" class="form-select form-select-sm" style="width:auto;min-width:140px"
-                onchange="loadGrid()">
+
+            <!-- Entity Dropdown (Desktop: Custom, Mobile: Native) -->
+            <div class="dropdown d-none d-md-inline-block" style="width:auto">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="entityDropdown"
+                    data-bs-toggle="dropdown" aria-expanded="false" data-bs-display="static"
+                    style="min-width: 140px; text-align: left; background: white;">
+                    <span id="entityLabel">— Select —</span>
+                </button>
+                <ul class="dropdown-menu header-premium-menu" id="entityMenu" aria-labelledby="entityDropdown" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Populated by JS -->
+                </ul>
+            </div>
+            <select id="entitySel" class="form-select form-select-sm d-md-none" style="width:auto;min-width:140px"
+                onchange="syncEntity(this.value, this.options[this.selectedIndex].text)">
                 <option value="">— Select —</option>
                 {% for sec in sections %}<option value="{{ sec.id }}">{{ sec.section_name }}</option>{% endfor %}
             </select>
+            <input type="hidden" id="entitySelValue" value="">
         </div>
 
         <!-- ROW 3: Mode Badge -->
@@ -2394,6 +2490,7 @@
     const LOCK_STATUS = {{ 'true' if lock_status else 'false' }};
     const USER_ROLE = '{{ session.get("role","user") }}';
     const CELL_H = 60; // px per hour = 1 px per minute
+    let selectedLineMarker = null;
 
     const SECTIONS = {{ sections   | map(attribute = 'id') | list | tojson }};
     const SEC_NAMES = {{ sections   | map(attribute = 'section_name') | list | tojson }};
@@ -2490,34 +2587,95 @@
     function onViewTypeChange() {
         const vt = document.getElementById('viewTypeSel').value;
         const sel = document.getElementById('entitySel');
+        const menu = document.getElementById('entityMenu');
+        
         sel.innerHTML = '';
+        if (menu) menu.innerHTML = '';
+
         const [ids, names] = vt === 'section' ? [SECTIONS, SEC_NAMES] :
             vt === 'faculty' ? [FAC_IDS, FAC_NAMES] :
                 vt === 'room' ? [ROOM_IDS, ROOM_NAMES] :
                     [CRS_IDS, CRS_NAMES];
-        ids.forEach((id, i) => sel.add(new Option(names[i], id)));
+        
+        // Add default option
+        sel.add(new Option('— Select —', ''));
+        if (menu) {
+            const li = document.createElement('li');
+            li.innerHTML = `<a class="dropdown-item" href="javascript:void(0);" onclick="changeEntity('', '— Select —')" data-value=""><span class="check-icon">✓</span>— Select —</a>`;
+            menu.appendChild(li);
+        }
+
+        ids.forEach((id, i) => {
+            sel.add(new Option(names[i], id));
+            if (menu) {
+                const li = document.createElement('li');
+                li.innerHTML = `<a class="dropdown-item" href="javascript:void(0);" onclick="changeEntity('${id}', '${names[i]}')" data-value="${id}"><span class="check-icon">✓</span>${names[i]}</a>`;
+                menu.appendChild(li);
+            }
+        });
+
+        // Reset Entity selection on view change
+        window.syncEntity('', '— Select —', false); 
+
         currentViewType = vt;
         loadGrid();
     }
 
+    // Custom Dropdown UI Sync Helper (1:1 Draft Preview Sort UI)
+    window.updateActiveUI = function(menuId, val) {
+        const menu = document.getElementById(menuId);
+        if (!menu) return;
+        menu.querySelectorAll('.dropdown-item').forEach(el => {
+            const itemVal = el.getAttribute('data-value');
+            el.classList.toggle('active', itemVal === String(val));
+        });
+    };
+
+    // Custom Dropdown Sync Helpers
+    window.changeSemester = function(val, label) {
+        document.getElementById('semesterSelValue').value = val;
+        document.getElementById('semesterLabel').textContent = label;
+        const native = document.getElementById('semesterSel');
+        if (native) native.value = val;
+        updateActiveUI('semesterMenu', val);
+        loadGrid();
+    };
+    window.syncSemester = function(val, label) {
+        document.getElementById('semesterSelValue').value = val;
+        document.getElementById('semesterLabel').textContent = label;
+        updateActiveUI('semesterMenu', val);
+        loadGrid();
+    };
+
+    window.changeEntity = function(val, label) {
+        document.getElementById('entitySelValue').value = val;
+        document.getElementById('entityLabel').textContent = label;
+        const native = document.getElementById('entitySel');
+        if (native) native.value = val;
+        updateActiveUI('entityMenu', val);
+        loadGrid();
+    };
+    window.syncEntity = function(val, label, triggerLoad = true) {
+        document.getElementById('entitySelValue').value = val;
+        document.getElementById('entityLabel').textContent = label;
+        updateActiveUI('entityMenu', val);
+        if (triggerLoad) loadGrid();
+    };
+
     window.changeViewType = function (val, label) {
         document.getElementById('viewTypeSel').value = val;
         document.getElementById('viewTypeLabel').textContent = label;
-        
+
         // Sync Native Select
         const nativeSel = document.getElementById('viewTypeSelNative');
         if (nativeSel) nativeSel.value = val;
 
-        // Update active class
-        const menu = document.querySelector('#viewTypeDropdown')?.nextElementSibling;
-        if (menu) {
-            menu.querySelectorAll('.dropdown-item').forEach(el => {
-                el.classList.toggle('active', el.textContent.trim() === label);
-            });
-        }
+        // Update active UI (checkmark/bg)
+        updateActiveUI('viewTypeMenu', val);
 
         onViewTypeChange();
     };
+
 
     function onDraftChange() {
         const val = document.getElementById('draftSel').value;
@@ -2545,8 +2703,8 @@
         if (syncBtn) syncBtn.classList.add('spinning');
 
         const vt = document.getElementById('viewTypeSel').value;
-        const entityId = parseInt(document.getElementById('entitySel').value);
-        currentSemester = document.getElementById('semesterSel').value;
+        const entityId = parseInt(document.getElementById('entitySelValue').value);
+        currentSemester = document.getElementById('semesterSelValue').value;
         currentViewType = vt;
         currentEntityId = entityId;
         if (!entityId) {
@@ -2963,6 +3121,20 @@
                 setTimeout(() => inp.classList.remove('field-pulse'), 1500);
             }
         });
+
+        // Grid Selection Highlight (Single Line)
+        const col = document.querySelector(`.cal-day-col[data-day="${day}"]`);
+        if (col) {
+            if (!selectedLineMarker) {
+                selectedLineMarker = document.createElement('div');
+                selectedLineMarker.className = 'selected-line-marker';
+            }
+            const baseMin = START_HOUR * 60;
+            const top = toMin(time) - baseMin;
+            selectedLineMarker.style.top = top + 'px';
+            col.appendChild(selectedLineMarker);
+            selectedLineMarker.style.opacity = '1';
+        }
     }
 
     function showAddError(msg) {
@@ -3008,13 +3180,25 @@
             // Reset to defaults or current grid context
             document.getElementById('addCourse').value = '';
             const vt = document.getElementById('viewTypeSel').value;
-            const ent = document.getElementById('entitySel').value;
+            const ent = document.getElementById('entitySelValue').value;
             document.getElementById('addSection').value = (vt === 'section') ? ent : '';
             document.getElementById('addFaculty').value = (vt === 'faculty') ? ent : '';
             document.getElementById('addRoom').value = (vt === 'room') ? ent : '';
             document.getElementById('addDay').selectedIndex = 0;
             document.getElementById('addType').selectedIndex = 0;
             // Time defaults are handled by initSelectors generally, but good to reset if needed
+        }
+
+        // Clear Selection Highlight if not in 'add' mode or if resetting
+        if (mode !== 'add' || !entry) {
+            if (selectedLineMarker) {
+                selectedLineMarker.style.opacity = '0';
+                setTimeout(() => {
+                    if (selectedLineMarker && selectedLineMarker.parentNode) {
+                        selectedLineMarker.parentNode.removeChild(selectedLineMarker);
+                    }
+                }, 200);
+            }
         }
     }
     async function submitAddSchedule() {
@@ -4961,6 +5145,22 @@
             backdrop.classList.toggle('active');
         }
     }
+
+    // ══════════════════════════════════════════════════════════════════
+    //  INITIALIZATION (At the end to ensure all functions are defined)
+    // ══════════════════════════════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize Premium Dropdowns UI
+        onViewTypeChange(); // Populates Entity list
+        window.updateActiveUI('viewTypeMenu', 'section');
+        window.updateActiveUI('semesterMenu', '');
+        
+        // Open Mode Picker on Load
+        const modeModal = document.getElementById('editorModeModal');
+        if (modeModal) {
+            bootstrap.Modal.getOrCreateInstance(modeModal).show();
+        }
+    });
 </script>
 
 <!-- ══════════════════════════════════════════════════════════════════ -->
@@ -4977,7 +5177,7 @@
 
                 <div class="pv-pill-select-wrap">
                     <span class="pv-pill-label d-none d-md-inline">View:</span>
-                    
+
                     <!-- Desktop Dropdown -->
                     <div class="dropdown d-none d-md-inline-block">
                         <button class="btn pv-pill-select dropdown-toggle p-0" type="button" id="pvViewDropdown"
@@ -4997,7 +5197,7 @@
                     </div>
 
                     <!-- Mobile Native Select -->
-                    <select id="pvViewSelNative" class="pv-pill-select d-inline-block d-md-none" 
+                    <select id="pvViewSelNative" class="pv-pill-select d-inline-block d-md-none"
                         style="appearance: none; -webkit-appearance: none; border: none; background: transparent; padding-right: 15px;"
                         onchange="pvChangeView(this.value, this.options[this.selectedIndex].text)">
                         <option value="section">Sections</option>
@@ -5009,7 +5209,7 @@
 
                 <div class="pv-pill-select-wrap">
                     <span class="pv-pill-label d-none d-md-inline">Sort:</span>
-                    
+
                     <!-- Desktop Dropdown -->
                     <div class="dropdown d-none d-md-inline-block">
                         <button class="btn pv-pill-select dropdown-toggle p-0" type="button" id="pvSortDropdown"
@@ -5033,7 +5233,7 @@
                     </div>
 
                     <!-- Mobile Native Select -->
-                    <select id="pvSortSelNative" class="pv-pill-select d-inline-block d-md-none" 
+                    <select id="pvSortSelNative" class="pv-pill-select d-inline-block d-md-none"
                         style="appearance: none; -webkit-appearance: none; border: none; background: transparent; padding-right: 15px;"
                         onchange="pvApplySort(this.value)">
                         <option value="asc">A — Z</option>
