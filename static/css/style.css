@@ -1985,7 +1985,7 @@ table.table tbody tr.irreg-row.selected:hover td {
     border: none;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    padding: 8px 0;
+    padding: 4px 0 !important;
 
     /* WIDTH FIX: Match the button width exactly */
     width: 100%;
@@ -2023,7 +2023,8 @@ table.table tbody tr.irreg-row.selected:hover td {
 .google-sort-item {
     /* SPACING FIX: Malaking padding-left para sa Checkmark */
     padding: 10px 20px 10px 45px;
-
+    margin: 0 !important;
+    border-radius: 0 !important;
     font-size: 0.9rem;
     color: #3c4043;
     transition: background-color 0.1s;
@@ -2031,9 +2032,7 @@ table.table tbody tr.irreg-row.selected:hover td {
     text-decoration: none;
     display: block;
     position: relative;
-    /* For absolute positioning of checkmark */
     white-space: nowrap;
-    /* Prevent text wrap */
 }
 
 /* Hover State */

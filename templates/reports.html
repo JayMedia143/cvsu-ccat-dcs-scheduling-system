@@ -5,8 +5,9 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">Reports & Analytics 
-            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#reportsInfoModal" title="How to use this page">
+        <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">Reports
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal"
+                data-bs-target="#reportsInfoModal" title="How to use this page">
                 <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
             </button>
         </h1>
@@ -14,60 +15,153 @@
     </div>
 </div>
 
-<!-- STAT CARDS ROW -->
-<div class="row g-4 mb-4">
-    <div class="col-md-2">
-        <div class="card border shadow-sm h-100 p-3">
-            <div class="d-flex align-items-center mb-3">
-                <div class="stat-icon-bg bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
-                    <i class="bi bi-calendar-check"></i>
-                </div>
-                <h6 class="text-secondary mb-0 fw-bold ms-3">CLASSES</h6>
+<!-- STAT CARDS & BULK EXPORT ROW -->
+<div class="row g-3 mb-4">
+    <!-- Stat: Classes -->
+    <div class="col-6 col-md-auto">
+        <div class="reports-stat-pill h-100 p-3 d-flex align-items-center shadow-sm">
+            <div class="stat-mini-icon bg-primary text-primary bg-opacity-10 flex-shrink-0"
+                style="width: 48px; height: 48px; font-size: 1.5rem;">
+                <i class="bi bi-calendar-check"></i>
             </div>
-            <h2 class="display-6 fw-bold text-dark mb-0" id="stat-classes">—</h2>
-            <small class="text-muted">Total Scheduled</small>
+            <div class="ms-2 ms-md-3 overflow-hidden">
+                <div class="stat-label text-uppercase fw-bold"
+                    style="font-size: 0.65rem; letter-spacing: 0.05em; color: #64748b;">CLASSES</div>
+                <h2 class="stat-value fw-bold mb-0" id="stat-classes"
+                    style="font-size: 1.6rem; color: #1e293b; line-height: 1;">—</h2>
+            </div>
         </div>
     </div>
-    <div class="col-md-2">
-        <div class="card border shadow-sm h-100 p-3">
-            <div class="d-flex align-items-center mb-3">
-                <div class="stat-icon-bg bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
-                    <i class="bi bi-building-check"></i>
-                </div>
-                <h6 class="text-secondary mb-0 fw-bold ms-3">UTILIZATION</h6>
+
+    <!-- Stat: Utilization -->
+    <div class="col-6 col-md-auto">
+        <div class="reports-stat-pill h-100 p-3 d-flex align-items-center shadow-sm">
+            <div class="stat-mini-icon bg-success text-success bg-opacity-10 flex-shrink-0"
+                style="width: 48px; height: 48px; font-size: 1.5rem;">
+                <i class="bi bi-building-check"></i>
             </div>
-            <h2 class="display-6 fw-bold text-dark mb-0" id="stat-utilization">—</h2>
-            <small class="text-muted">Room Occupancy</small>
+            <div class="ms-2 ms-md-3 overflow-hidden">
+                <div class="stat-label text-uppercase fw-bold"
+                    style="font-size: 0.65rem; letter-spacing: 0.05em; color: #64748b;">UTILIZATION</div>
+                <h2 class="stat-value fw-bold mb-0" id="stat-utilization"
+                    style="font-size: 1.6rem; color: #1e293b; line-height: 1;">—</h2>
+            </div>
         </div>
     </div>
-    <div class="col-md-8">
-        <div class="card border shadow-sm h-100 px-4 py-3 d-flex flex-column justify-content-center">
+
+    <!-- Bulk Export Pill Card -->
+    <div class="col-12 col-lg">
+        <div class="reports-stat-pill h-100 d-flex flex-column justify-content-center py-4 px-3">
             <div class="d-flex align-items-center mb-2">
-                <div class="bg-success bg-opacity-10 text-success rounded-circle d-flex align-items-center justify-content-center me-2" style="width:32px;height:32px;flex-shrink:0;">
-                    <i class="bi bi-file-earmark-excel"></i>
-                </div>
-                <h6 class="text-secondary mb-0 fw-bold">BULK EXPORT</h6>
-                <small class="text-muted ms-2">— Download Excel schedules per semester</small>
+                <span class="stat-label text-info"><i class="bi bi-file-earmark-excel-fill me-1"></i> EXPORT</span>
+                <span class="text-muted small ms-2 d-none d-md-inline">— Download formatted schedules</span>
             </div>
+
             <form id="bulkExportForm" action="{{ url_for('export_excel_bulk') }}" method="GET">
-                <div class="d-flex gap-2 align-items-center">
-                    <select name="semester" class="form-select form-select-sm border-secondary bg-light fw-bold" style="width:145px;flex-shrink:0;">
-                        {% for sem in available_semesters %}
-                        <option value="{{ sem }}">{{ sem }}</option>
-                        {% else %}
-                        <option value="1st Semester">1st Semester</option>
-                        {% endfor %}
-                    </select>
-                    <select name="type" class="form-select form-select-sm border-secondary" style="flex:1;">
-                        <option value="section">All Section Schedules (By Block)</option>
-                        <option value="faculty">All Faculty Loads (By Instructor)</option>
-                        <option value="room">All Room Utilizations (By Room)</option>
-                        <option value="course">All Course Schedules (By Subject)</option>
-                    </select>
-                    <div class="d-flex gap-2">
-                        <button type="submit" form="bulkExportForm" onclick="this.form.action='{{ url_for('export_excel_bulk') }}'" class="btn btn-sm btn-success px-3 text-nowrap">
-                            <i class="bi bi-file-earmark-excel me-1"></i> Excel
-                        </button>
+                <!-- Hidden Inputs for Form -->
+                <input type="hidden" name="semester" id="exportSemester"
+                    value="{{ available_semesters[0] if available_semesters else '1st Semester' }}">
+                <input type="hidden" name="type" id="exportType" value="section">
+
+                <div class="row g-2 align-items-center w-100 mx-0">
+                    <!-- Semester Selector -->
+                    <div class="col-4 col-md-auto">
+                        <div class="dropdown w-100">
+                            <!-- Desktop Pill -->
+                            <button class="pill-selector-btn dropdown-toggle d-none d-md-flex w-100" type="button"
+                                id="semExportPill" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="pill-btn-label">Semester:</span>
+                                <span class="pill-btn-value text-dark" id="semExportValue">{{ available_semesters[0] if
+                                    available_semesters else '1st Semester' }}</span>
+                            </button>
+                            <!-- Mobile Native Select -->
+                            <select class="form-select d-md-none w-100"
+                                style="border-radius: 6px; height: 38px; font-size: 0.8rem;"
+                                onchange="updateExportPill('semester', this.value, this.options[this.selectedIndex].text, this)">
+                                {% for sem in available_semesters %}
+                                <option value="{{ sem }}">{{ sem }}</option>
+                                {% else %}
+                                <option value="1st Semester">1st Semester</option>
+                                {% endfor %}
+                            </select>
+                            <!-- Desktop Menu -->
+                            <ul class="dropdown-menu google-sort-menu shadow-sm border-0 mt-2"
+                                aria-labelledby="semExportPill">
+                                {% for sem in available_semesters %}
+                                <li>
+                                    <a class="dropdown-item google-sort-item {% if loop.first %}active{% endif %}"
+                                        href="javascript:void(0);"
+                                        onclick="updateExportPill('semester', '{{ sem }}', '{{ sem }}', this)">
+                                        <span>{{ sem }}</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <li>
+                                    <a class="dropdown-item google-sort-item active" href="javascript:void(0);"
+                                        onclick="updateExportPill('semester', '1st Semester', '1st Semester', this)">
+                                        <span>1st Semester</span>
+                                    </a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Report Type Selector -->
+                    <div class="col-4 col-md-auto">
+                        <div class="dropdown w-100">
+                            <!-- Desktop Pill -->
+                            <button class="pill-selector-btn dropdown-toggle d-none d-md-flex w-100" type="button"
+                                id="typeExportPill" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="pill-btn-label">Report:</span>
+                                <span class="pill-btn-value text-dark" id="typeExportValue">All Section Schedules</span>
+                            </button>
+                            <!-- Mobile Native Select -->
+                            <select class="form-select d-md-none w-100"
+                                style="border-radius: 6px; height: 38px; font-size: 0.8rem;"
+                                onchange="updateExportPill('type', this.value, this.options[this.selectedIndex].text, this)">
+                                <option value="section">All Section Schedules</option>
+                                <option value="faculty">All Faculty Loads</option>
+                                <option value="room">All Room Utilizations</option>
+                                <option value="course">All Course Schedules</option>
+                            </select>
+                            <!-- Desktop Menu -->
+                            <ul class="dropdown-menu google-sort-menu shadow-sm border-0 mt-2"
+                                aria-labelledby="typeExportPill">
+                                <li>
+                                    <a class="dropdown-item google-sort-item active" href="javascript:void(0);"
+                                        onclick="updateExportPill('type', 'section', 'All Section Schedules', this)">
+                                        <span>All Section Schedules</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item google-sort-item" href="javascript:void(0);"
+                                        onclick="updateExportPill('type', 'faculty', 'All Faculty Loads', this)">
+                                        <span>All Faculty Loads</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item google-sort-item" href="javascript:void(0);"
+                                        onclick="updateExportPill('type', 'room', 'All Room Utilizations', this)">
+                                        <span>All Room Utilizations</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item google-sort-item" href="javascript:void(0);"
+                                        onclick="updateExportPill('type', 'course', 'All Course Schedules', this)">
+                                        <span>All Course Schedules</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="col-4 col-md-auto ms-md-auto">
+                        <button type="submit"
+                            class="btn btn-success w-100 d-flex align-items-center justify-content-center gap-2 shadow-sm"
+                            style="border-radius: 6px !important; height: 38px;">
+                            <i class="bi bi-file-earmark-excel"></i>
+                            <span class="d-none d-md-inline">Download Excel</span>
                         </button>
                     </div>
                 </div>
@@ -78,8 +172,10 @@
 
 <!-- ROOM UTILIZATION TABLE -->
 <div class="card border shadow-sm mb-4">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 fw-bold text-primary"><i class="bi bi-building me-2"></i>Room Utilization Breakdown</h6>
+    <div class="card-header bg-white py-3 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
+        <h6 class="m-0 fw-bold text-primary">
+            <i class="bi bi-building me-2"></i>Room Utilization Breakdown
+        </h6>
         <small class="text-muted" id="util-subtitle">Loading…</small>
     </div>
     <div class="card-body p-0">
@@ -96,7 +192,9 @@
                     </tr>
                 </thead>
                 <tbody id="util-table-body">
-                    <tr><td colspan="6" class="text-center text-muted py-4">Loading utilization data…</td></tr>
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">Loading utilization data…</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -105,31 +203,30 @@
 
 
 <script>
-(function () {
-    fetch('/api/room-utilization')
-        .then(r => r.json())
-        .then(data => {
-            // Overall stat card
-            document.getElementById('stat-utilization').textContent = data.overall_utilization + '%';
+    (function () {
+        fetch('/api/room-utilization')
+            .then(r => r.json())
+            .then(data => {
+                // Overall stat card
+                document.getElementById('stat-utilization').textContent = data.overall_utilization + '%';
 
-            // Subtitle
-            const s = data.settings;
-            document.getElementById('util-subtitle').textContent =
-                `Operating hours: ${s.start_hour}:00–${s.end_hour}:00 · ${s.active_days} days/week (${s.day_hours}h/day per room)`;
+                // Subtitle
+                const s = data.settings;
+                document.getElementById('util-subtitle').innerHTML = `Operating hours: ${s.start_hour}:00–${s.end_hour}:00 · <br class="d-md-none"> ${s.active_days} days/week (${s.day_hours}h/day per room)`;
 
-            // Classes stat (Use grand total from API)
-            document.getElementById('stat-classes').textContent = data.total_scheduled_classes || 0;
+                // Classes stat (Use grand total from API)
+                document.getElementById('stat-classes').textContent = data.total_scheduled_classes || 0;
 
-            // Table
-            const tbody = document.getElementById('util-table-body');
-            if (!data.rooms || data.rooms.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No scheduled classes found.</td></tr>';
-                return;
-            }
-            tbody.innerHTML = data.rooms.map(r => {
-                const pct = r.utilization;
-                const barColor = pct >= 80 ? 'bg-danger' : pct >= 50 ? 'bg-warning' : 'bg-success';
-                return `<tr>
+                // Table
+                const tbody = document.getElementById('util-table-body');
+                if (!data.rooms || data.rooms.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No scheduled classes found.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = data.rooms.map(r => {
+                    const pct = r.utilization;
+                    const barColor = pct >= 80 ? 'bg-danger' : pct >= 50 ? 'bg-warning' : 'bg-success';
+                    return `<tr>
                     <td class="fw-semibold">${r.room_name}</td>
                     <td class="text-muted">${r.building}</td>
                     <td>${r.used_hours}h</td>
@@ -141,15 +238,32 @@
                     </td>
                     <td class="text-end fw-bold">${pct}%</td>
                 </tr>`;
-            }).join('');
-        })
-        .catch(err => {
-            console.error('Room utilization API error:', err);
-            document.getElementById('stat-utilization').textContent = 'N/A';
-            document.getElementById('util-table-body').innerHTML =
-                '<tr><td colspan="6" class="text-center text-danger py-4">Failed to load utilization data.</td></tr>';
-        });
-})();
+                }).join('');
+            })
+            .catch(err => {
+                console.error('Room utilization API error:', err);
+                document.getElementById('stat-utilization').textContent = 'N/A';
+                document.getElementById('util-table-body').innerHTML =
+                    '<tr><td colspan="6" class="text-center text-danger py-4">Failed to load utilization data.</td></tr>';
+            });
+
+        window.updateExportPill = function (type, value, label, el) {
+            if (type === 'semester') {
+                document.getElementById('exportSemester').value = value;
+                document.getElementById('semExportValue').textContent = label;
+            } else {
+                document.getElementById('exportType').value = value;
+                document.getElementById('typeExportValue').textContent = label;
+            }
+
+            // Update active class in dropdown (Desktop Only)
+            if (el.tagName === 'A') {
+                const menu = el.closest('.dropdown-menu');
+                menu.querySelectorAll('.google-sort-item').forEach(item => item.classList.remove('active'));
+                el.classList.add('active');
+            }
+        };
+    })();
 </script>
 
 <!-- HOW-TO GUIDE MODAL (Reports & Analytics) -->
@@ -167,37 +281,49 @@
                 <!-- 1. ANALYTICS OVERVIEW -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-primary small mb-1">1. ANALYTICS OVERVIEW</h6>
-                    <p class="small text-muted mb-0">This dashboard provides <strong>live data</strong> on system performance, specifically tracking how many classes are scheduled and how efficiently your campus rooms are being utilized.</p>
+                    <p class="small text-muted mb-0">This dashboard provides <strong>live data</strong> on system
+                        performance, specifically tracking how many classes are scheduled and how efficiently your
+                        campus rooms are being utilized.</p>
                 </div>
 
                 <!-- 2. SYSTEM STAT CARDS -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-success small mb-1">2. SYSTEM STAT CARDS</h6>
-                    <p class="small text-muted mb-0">The <strong>Classes</strong> card shows the total number of approved schedule blocks. The <strong>Utilization</strong> card displays the global percentage of room usage across all active days.</p>
+                    <p class="small text-muted mb-0">The <strong>Classes</strong> card shows the total number of
+                        approved schedule blocks. The <strong>Utilization</strong> card displays the global percentage
+                        of room usage across all active days.</p>
                 </div>
 
                 <!-- 3. BULK EXPORT TOOLS -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-info small mb-1">3. BULK EXPORT TOOLS</h6>
-                    <p class="small text-muted mb-0">Use the <strong>Excel Download</strong> form to generate complete schedule reports. Select your <strong>Semester</strong> and <strong>Report Type</strong> (Sections, Faculty, or Rooms) to download a formatted spreadsheet.</p>
+                    <p class="small text-muted mb-0">Use the <strong>Excel Download</strong> form to generate complete
+                        schedule reports. Select your <strong>Semester</strong> and <strong>Report Type</strong>
+                        (Sections, Faculty, or Rooms) to download a formatted spreadsheet.</p>
                 </div>
 
                 <!-- 4. ROOM UTILIZATION -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-warning small mb-1">4. ROOM UTILIZATION</h6>
-                    <p class="small text-muted mb-0">The table breaks down usage per room. <strong>Hours Used</strong> counts actual scheduled time, while <strong>Available</strong> reflects the system's operating capacity (e.g., 7am-7pm, 6 days/week).</p>
+                    <p class="small text-muted mb-0">The table breaks down usage per room. <strong>Hours Used</strong>
+                        counts actual scheduled time, while <strong>Available</strong> reflects the system's operating
+                        capacity (e.g., 7am-7pm, 6 days/week).</p>
                 </div>
 
                 <!-- 5. COLOR INDICATORS -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-danger small mb-1">5. COLOR INDICATORS</h6>
-                    <p class="small text-muted mb-0">The progress bars use color-coding: <strong>Green</strong> for healthy usage (<50%), <strong>Yellow</strong> for high demand (50-80%), and <strong>Red</strong> for critically saturated rooms (>80%).</p>
+                    <p class="small text-muted mb-0">The progress bars use color-coding: <strong>Green</strong> for
+                        healthy usage (<50%), <strong>Yellow</strong> for high demand (50-80%), and <strong>Red</strong>
+                            for critically saturated rooms (>80%).</p>
                 </div>
 
                 <!-- 6. LIVE DATA REFRESH -->
                 <div class="mb-0">
                     <h6 class="fw-bold text-secondary small mb-1">6. LIVE DATA REFRESH</h6>
-                    <p class="small text-muted mb-0">Reports are generated in real-time. Any changes made in the <strong>Schedule Editor</strong> or <strong>Proposal Hub</strong> are reflected here immediately upon refreshing the page.</p>
+                    <p class="small text-muted mb-0">Reports are generated in real-time. Any changes made in the
+                        <strong>Schedule Editor</strong> or <strong>Proposal Hub</strong> are reflected here immediately
+                        upon refreshing the page.</p>
                 </div>
             </div>
 
@@ -209,14 +335,105 @@
 </div>
 
 <style>
-    .text-muted-v2 { color: #adb5bd !important; }
+    .text-muted-v2 {
+        color: #adb5bd !important;
+    }
+
     .info-icon-hover {
         transition: all 0.2s ease;
         cursor: pointer;
     }
+
     .info-icon-hover:hover {
         color: #198754 !important;
         transform: scale(1.2);
+    }
+
+    /* Modern Report Stats */
+    .reports-stat-pill {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        /* Sharp modern box */
+        padding: 1.25rem;
+        transition: all 0.2s ease;
+    }
+
+    .reports-stat-pill:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .stat-mini-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .stat-label {
+        font-size: 0.65rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        color: #64748b;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .stat-unit {
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    /* Box Selector Button (Replaces Pill) */
+    .pill-selector-btn {
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        /* Boxy */
+        padding: 8px 16px;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+    }
+
+    .pill-selector-btn:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+    }
+
+    .pill-btn-label {
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .pill-btn-value {
+        font-weight: 700;
+    }
+
+    @media (max-width: 768px) {
+        .pill-selector-btn {
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .reports-stat-pill {
+            border-radius: 10px;
+            padding: 0.75rem;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+        }
     }
 </style>
 
