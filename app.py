@@ -1,3 +1,5 @@
+import eventlet
+eventlet.monkey_patch()
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, make_response, abort
 from datetime import datetime, timezone, timedelta
 from flask_wtf.csrf import CSRFProtect
@@ -16239,5 +16241,6 @@ def public_student_schedule_excel(student_id):
 if __name__ == '__main__':
 
 
-    socketio.run(app, host='0.0.0.0', port=5000, debug=os.environ.get('FLASK_DEBUG', 'False') == 'True', allow_unsafe_werkzeug=True)
+    port = int(os.environ.get('PORT', 5000))
+    socketio.run(app, host='0.0.0.0', port=port, debug=os.environ.get('FLASK_DEBUG', 'False') == 'True', allow_unsafe_werkzeug=True)
 
