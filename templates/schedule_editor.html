@@ -4762,8 +4762,10 @@
         if (q && !data.lowerLabel.includes(q)) card.classList.add('pv-dimmed');
 
         card.addEventListener('dblclick', (e) => {
-            e.stopPropagation();
-            pvOpenPresentation(data.index);
+            if (window.innerWidth > 768) {
+                e.stopPropagation();
+                pvOpenPresentation(data.index);
+            }
         });
 
         card.innerHTML = `
@@ -4943,6 +4945,10 @@
         pvUpdateTransform();
     };
 
+    function pvGetDistance(t1, t2) {
+        return Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
+    }
+
     function pvFocusData(data) {
         const vp = document.getElementById('pvViewport');
         if (!vp || !data) return;
@@ -5059,6 +5065,49 @@
                 pvUpdateTransform();
             }, { passive: false });
             vp.addEventListener('contextmenu', e => e.preventDefault());
+
+            // --- TOUCH SUPPORT ---
+            let initialPinchDist = null;
+            let initialPinchScale = 1.0;
+
+            vp.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    pvIsDragging = true;
+                    pvStartX = e.touches[0].clientX - pvTranslateX;
+                    pvStartY = e.touches[0].clientY - pvTranslateY;
+                } else if (e.touches.length === 2) {
+                    pvIsDragging = false;
+                    initialPinchDist = pvGetDistance(e.touches[0], e.touches[1]);
+                    initialPinchScale = pvScale;
+                }
+            }, { passive: false });
+
+            vp.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1 && pvIsDragging) {
+                    pvTranslateX = e.touches[0].clientX - pvStartX;
+                    pvTranslateY = e.touches[0].clientY - pvStartY;
+                    pvUpdateTransform();
+                } else if (e.touches.length === 2 && initialPinchDist) {
+                    e.preventDefault();
+                    const dist = pvGetDistance(e.touches[0], e.touches[1]);
+                    const zoomFactor = dist / initialPinchDist;
+                    const oldScale = pvScale;
+                    pvScale = Math.max(0.05, Math.min(3.0, initialPinchScale * zoomFactor));
+
+                    const rect = vp.getBoundingClientRect();
+                    const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+                    const my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+
+                    pvTranslateX -= (mx - pvTranslateX) * (pvScale / oldScale - 1);
+                    pvTranslateY -= (my - pvTranslateY) * (pvScale / oldScale - 1);
+                    pvUpdateTransform();
+                }
+            }, { passive: false });
+
+            vp.addEventListener('touchend', () => {
+                pvIsDragging = false;
+                initialPinchDist = null;
+            });
         }
 
         // Minimap click-to-navigate

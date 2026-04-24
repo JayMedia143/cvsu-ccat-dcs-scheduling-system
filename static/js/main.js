@@ -245,18 +245,11 @@ const UniversalModalManager = {
 
             if (e.touches.length === 1) {
                 this.isDragging = true;
-                this.touchStartX = e.touches[0].clientX;
-                this.touchStartY = e.touches[0].clientY;
-                this.startX = this.touchStartX - this.tx;
-                this.startY = this.touchStartY - this.ty;
-                this.isSwiping = true;
+                this.startX = e.touches[0].clientX - this.tx;
+                this.startY = e.touches[0].clientY - this.ty;
             } else if (e.touches.length === 2) {
                 this.isDragging = false;
-                this.isSwiping = false;
-                this.lastPinchDist = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
+                this.lastPinchDist = this.getDistance(e.touches[0], e.touches[1]);
             }
         }, { passive: false });
 
@@ -265,19 +258,16 @@ const UniversalModalManager = {
             const container = e.target.closest('#schedGridContainer');
             if (!container) return;
 
-            e.preventDefault(); 
             if (e.touches.length === 1 && this.isDragging) {
                 this.tx = e.touches[0].clientX - this.startX;
                 this.ty = e.touches[0].clientY - this.startY;
                 this.applyTransform();
             } else if (e.touches.length === 2 && this.lastPinchDist) {
-                const dist = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
+                e.preventDefault(); 
+                const dist = this.getDistance(e.touches[0], e.touches[1]);
                 const delta = dist / this.lastPinchDist;
                 const oldScale = this.scale;
-                this.scale = Math.max(0.08, Math.min(5.0, this.scale * delta));
+                this.scale = Math.max(0.1, Math.min(4.0, this.scale * delta));
 
                 const rect = container.getBoundingClientRect();
                 const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
@@ -292,17 +282,13 @@ const UniversalModalManager = {
         }, { passive: false });
 
         modalEl.addEventListener('touchend', (e) => {
-            if (this.isSwiping && e.changedTouches.length === 1) {
-                const dx = e.changedTouches[0].clientX - this.touchStartX;
-                const dy = e.changedTouches[0].clientY - this.touchStartY;
-                if (Math.abs(dx) > 50 && Math.abs(dy) < 50) {
-                    this.navigate(dx > 0 ? 'prev' : 'next');
-                }
-            }
             this.isDragging = false;
             this.lastPinchDist = null;
-            this.isSwiping = false;
         });
+    },
+
+    getDistance(t1, t2) {
+        return Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
     },
 
     modalIsVisible() {
