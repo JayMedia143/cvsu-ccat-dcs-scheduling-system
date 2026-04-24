@@ -7,8 +7,6 @@ __pycache__/
 .pytest_cache/
 .vscode/
 .idea/
-*.db
-*.sqlite3
 instance/
 static/uploads/
 static/temp/
