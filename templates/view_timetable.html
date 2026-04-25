@@ -633,7 +633,7 @@
     }
 
     /* ── MOBILE HUD RESPONSIVENESS ────────────────────────────── */
-    @media (max-width: 768px) {
+    @media (max-width: 1165px) {
         .hud-controls {
             width: 95vw !important;
             max-width: 95vw !important;
@@ -643,13 +643,19 @@
             padding: 8px 12px;
             gap: 10px;
             border-radius: 30px;
-            scrollbar-width: none; /* Firefox */
+            scrollbar-width: none;
+            /* Firefox */
         }
-        
+    }
+
+    @media (max-width: 768px) {
+
+
         .hud-controls::-webkit-scrollbar {
-            display: none; /* Chrome/Safari */
+            display: none;
+            /* Chrome/Safari */
         }
-        
+
         .hud-search-pill {
             min-width: 140px;
         }
@@ -661,7 +667,7 @@
             right: 15px !important;
             border-radius: 10px;
         }
-        
+
         .hud-nav-btn {
             padding: 4px 8px;
             font-size: 0.8rem;
@@ -682,35 +688,42 @@
     <div class="hud-pill-segment">
         <span class="hud-pill-label d-none d-md-inline">View:</span>
         <input type="hidden" id="typeSelect" value="{{ current_type }}">
-        
+
         <!-- Desktop Dropdown -->
         <div class="dropdown d-none d-md-inline-block">
             <button class="btn hud-pill-select dropdown-toggle p-0" type="button" id="typeDropdown"
                 data-bs-toggle="dropdown" aria-expanded="false" style="width: auto; text-align: left;">
-                <span id="typeLabel">{% if current_type == 'section' %}Sections{% elif current_type == 'faculty' %}Faculty{% elif current_type == 'room' %}Rooms{% elif current_type == 'course' %}Courses{% else %}Sections{% endif %}</span>
+                <span id="typeLabel">{% if current_type == 'section' %}Sections{% elif current_type == 'faculty'
+                    %}Faculty{% elif current_type == 'room' %}Rooms{% elif current_type == 'course' %}Courses{% else
+                    %}Sections{% endif %}</span>
             </button>
             <ul class="dropdown-menu google-sort-menu" aria-labelledby="typeDropdown">
-                <li><a class="dropdown-item google-sort-item {% if current_type == 'section' %}active{% endif %}" href="javascript:void(0);" onclick="changeViewType('section', 'Sections', this)">Sections</a></li>
-                <li><a class="dropdown-item google-sort-item {% if current_type == 'faculty' %}active{% endif %}" href="javascript:void(0);" onclick="changeViewType('faculty', 'Faculty', this)">Faculty</a></li>
-                <li><a class="dropdown-item google-sort-item {% if current_type == 'room' %}active{% endif %}" href="javascript:void(0);" onclick="changeViewType('room', 'Rooms', this)">Rooms</a></li>
-                <li><a class="dropdown-item google-sort-item {% if current_type == 'course' %}active{% endif %}" href="javascript:void(0);" onclick="changeViewType('course', 'Courses', this)">Courses</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_type == 'section' %}active{% endif %}"
+                        href="javascript:void(0);" onclick="changeViewType('section', 'Sections', this)">Sections</a>
+                </li>
+                <li><a class="dropdown-item google-sort-item {% if current_type == 'faculty' %}active{% endif %}"
+                        href="javascript:void(0);" onclick="changeViewType('faculty', 'Faculty', this)">Faculty</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_type == 'room' %}active{% endif %}"
+                        href="javascript:void(0);" onclick="changeViewType('room', 'Rooms', this)">Rooms</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_type == 'course' %}active{% endif %}"
+                        href="javascript:void(0);" onclick="changeViewType('course', 'Courses', this)">Courses</a></li>
             </ul>
         </div>
 
         <!-- Mobile Native Select -->
-        <select id="viewTypeSelNative" class="hud-pill-select d-inline-block d-md-none" 
+        <select id="viewTypeSelNative" class="hud-pill-select d-inline-block d-md-none"
             style="appearance: none; -webkit-appearance: none; border: none; background: transparent; padding-right: 15px;"
             onchange="changeViewType(this.value, this.options[this.selectedIndex].text)">
-            <option value="section" {% if current_type == 'section' %}selected{% endif %}>Sections</option>
-            <option value="faculty" {% if current_type == 'faculty' %}selected{% endif %}>Faculty</option>
-            <option value="room" {% if current_type == 'room' %}selected{% endif %}>Rooms</option>
-            <option value="course" {% if current_type == 'course' %}selected{% endif %}>Courses</option>
+            <option value="section" {% if current_type=='section' %}selected{% endif %}>Sections</option>
+            <option value="faculty" {% if current_type=='faculty' %}selected{% endif %}>Faculty</option>
+            <option value="room" {% if current_type=='room' %}selected{% endif %}>Rooms</option>
+            <option value="course" {% if current_type=='course' %}selected{% endif %}>Courses</option>
         </select>
     </div>
 
     <div class="hud-pill-segment">
         <span class="hud-pill-label d-none d-md-inline">Sort:</span>
-        
+
         <!-- DESKTOP DROPDOWN -->
         <div class="dropdown d-none d-md-inline-block">
             <button class="btn hud-pill-select dropdown-toggle p-0" type="button" id="sortDropdown"
@@ -741,9 +754,9 @@
                 </li>
             </ul>
         </div>
-        
+
         <!-- MOBILE NATIVE SELECT -->
-        <select id="sortSelNative" class="hud-pill-select d-inline-block d-md-none" 
+        <select id="sortSelNative" class="hud-pill-select d-inline-block d-md-none"
             style="appearance: none; -webkit-appearance: none; border: none; background: transparent; padding-right: 15px;"
             onchange="applySort(this.value)">
             <option value="newest">Newest</option>
@@ -870,7 +883,7 @@
 
         // Update UI state
         const toggleDesktop = document.getElementById('sortDropdown');
-        
+
         let labelText = '';
         if (dir === 'newest') { labelText = 'Sort by: Newest'; }
         else if (dir === 'asc') { labelText = 'Sort by: A — Z'; }
@@ -1023,18 +1036,18 @@
     });
 
     // ── ZOOM BUTTON LOGIC ──────────────────────────────────────
-    window.zoomCanvas = function(delta) {
+    window.zoomCanvas = function (delta) {
         const oldScale = scale;
         scale = Math.max(0.05, Math.min(3.0, scale + delta));
-        
+
         // Zoom relative to viewport center
         const rect = viewport.getBoundingClientRect();
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
-        
+
         translateX -= (centerX - translateX) * (scale / oldScale - 1);
         translateY -= (centerY - translateY) * (scale / oldScale - 1);
-        
+
         updateTransform();
     };
 
@@ -1064,7 +1077,7 @@
 
     window.addEventListener('touchmove', (e) => {
         if (!isTouching) return;
-        
+
         if (e.touches.length === 1 && isDragging) {
             // Pan
             translateX = e.touches[0].clientX - startX;

@@ -1212,8 +1212,8 @@
         pointer-events: none;
     }
 
-    /* ── MOBILE HUD RESPONSIVENESS (Draft Preview) ────────────────── */
-    @media (max-width: 768px) {
+    /* ── COMPACT UI BREAKPOINT (1365px) ────────────────────────── */
+    @media (max-width: 1365px) {
         .pv-topbar {
             width: 100vw !important;
             max-width: 100vw !important;
@@ -1225,6 +1225,18 @@
             border-radius: 0;
             scrollbar-width: none;
         }
+
+        /* Hide labels for Preview Modal and Main Editor Topbar */
+        .pv-topbar .d-md-inline, 
+        .pv-topbar .pv-pill-label.d-md-inline,
+        .editor-topbar .d-md-inline,
+        .editor-topbar .d-none.d-md-inline,
+        .mobile-topbar-row.row-4 .d-md-inline {
+            display: none !important;
+        }
+    }
+
+    @media (max-width: 768px) {
 
         /* Hide sidebar toggle when PV is active */
         body.pv-active .mobile-sidebar-toggle {
@@ -1664,6 +1676,7 @@
             margin-top: 4px;
         }
     }
+
 </style>
 
 <div class="editor-wrapper">
@@ -1784,14 +1797,14 @@
         <div class="mobile-topbar-row row-4">
             {% if not is_hist %}
             <button class="btn btn-sm btn-primary" id="saveDraftBtn" style="display:none" onclick="handleGlobalSave()">
-                <i class="bi bi-cloud-check-fill me-1"></i>Save as Draft
+                <i class="bi bi-cloud-check-fill me-1"></i><span class="d-none d-md-inline">Save as Draft</span>
             </button>
             <button class="btn btn-sm btn-success" id="attachDraftBtn" style="display:none" onclick="openAttachModal()">
-                <i class="bi bi-paperclip me-1"></i>Attach
+                <i class="bi bi-paperclip me-1"></i><span class="d-none d-md-inline">Attach</span>
             </button>
             <button id="previewDraftBtn" class="btn btn-sm btn-success d-none" onclick="openDraftPreview()"
                 title="Full-Screen Draft Preview">
-                <i class="bi bi-eye-fill me-1"></i> Preview
+                <i class="bi bi-eye-fill me-1"></i><span class="d-none d-md-inline"> Preview</span>
             </button>
             {% endif %}
             <button id="undoBtn" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="undoLast()"
@@ -3513,7 +3526,7 @@
         document.getElementById('saveDraftModalTitle').textContent = 'Save as Draft';
         document.getElementById('saveDraftModalSubtext').textContent = 'Create a snapshot of the current live schedule.';
         document.getElementById('saveDraftInputName').value = `Snapshot ${new Date().toLocaleString()}`;
-        
+
         const modal = new bootstrap.Modal(document.getElementById('saveDraftNameModal'));
         modal.show();
     }
@@ -3527,19 +3540,19 @@
         _saveDraftAction = 'clone';
         document.getElementById('saveDraftModalTitle').textContent = 'Save as Copy';
         document.getElementById('saveDraftModalSubtext').textContent = 'Create a duplicate version of your current draft.';
-        
+
         const currentName = document.getElementById('draftSel')?.selectedOptions[0]?.textContent?.trim() || 'Draft';
         document.getElementById('saveDraftInputName').value = `Copy of ${currentName}`;
-        
+
         const modal = new bootstrap.Modal(document.getElementById('saveDraftNameModal'));
         modal.show();
     }
 
     // Modal Confirmation Handler
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const btnConfirm = document.getElementById('btnConfirmSaveDraft');
         if (btnConfirm) {
-            btnConfirm.onclick = async function() {
+            btnConfirm.onclick = async function () {
                 const name = document.getElementById('saveDraftInputName').value.trim();
                 if (!name) {
                     showToast("Please enter a name for the draft.", "error");
@@ -4107,7 +4120,7 @@
             // Topbar
             if (saveBtn) {
                 saveBtn.style.display = '';
-                saveBtn.innerHTML = '<i class="bi bi-cloud-check-fill me-1"></i>Save as Draft';
+                saveBtn.innerHTML = '<i class="bi bi-cloud-check-fill me-1"></i><span class="d-none d-md-inline">Save as Draft</span>';
             }
             if (attachBtn) attachBtn.style.display = 'none';
             if (previewBtn) previewBtn.classList.add('d-none');
@@ -4121,7 +4134,7 @@
             // Topbar
             if (saveBtn) {
                 saveBtn.style.display = currentDraftId ? '' : 'none';
-                saveBtn.innerHTML = '<i class="bi bi-cloud-check-fill me-1"></i>Save as Copy';
+                saveBtn.innerHTML = '<i class="bi bi-cloud-check-fill me-1"></i><span class="d-none d-md-inline">Save as Copy</span>';
             }
             if (attachBtn) attachBtn.style.display = currentDraftId ? '' : 'none';
             if (previewBtn) previewBtn.classList.toggle('d-none', !currentDraftId);
@@ -5463,6 +5476,40 @@
                 bootstrap.Modal.getOrCreateInstance(modeModal).show();
             }
         }
+
+        // --- SMART DRAFT NAME VALIDATION (Layout Management Style) ---
+        const draftInput = document.getElementById('saveDraftInputName');
+        const draftCounter = document.getElementById('saveDraftCounter');
+        const draftWarn = document.getElementById('saveDraftWarn');
+        const confirmBtn = document.getElementById('btnConfirmSaveDraft');
+
+        if (draftInput && draftCounter && confirmBtn) {
+            const LIMIT = 50;
+            draftInput.addEventListener('input', () => {
+                const len = draftInput.value.length;
+                draftCounter.textContent = `${len}/${LIMIT}`;
+
+                if (len > LIMIT) {
+                    draftInput.classList.add('is-invalid');
+                    draftCounter.classList.add('text-danger');
+                    draftCounter.classList.remove('text-muted');
+                    if (draftWarn) draftWarn.classList.remove('d-none');
+
+                    confirmBtn.disabled = true;
+                    confirmBtn.classList.add('btn-danger');
+                    confirmBtn.classList.remove('btn-success');
+                } else {
+                    draftInput.classList.remove('is-invalid');
+                    draftCounter.classList.add('text-muted');
+                    draftCounter.classList.remove('text-danger');
+                    if (draftWarn) draftWarn.classList.add('d-none');
+
+                    confirmBtn.disabled = false;
+                    confirmBtn.classList.remove('btn-danger');
+                    confirmBtn.classList.add('btn-success');
+                }
+            });
+        }
     });
 </script>
 
@@ -5752,10 +5799,10 @@
 <div class="modal fade" id="saveDraftNameModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
-
             <div class="modal-header border-bottom-0 p-4">
                 <h5 class="modal-title fw-bold text-dark d-flex align-items-center">
-                    <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 38px; height: 38px;">
+                    <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center me-3"
+                        style="width: 38px; height: 38px;">
                         <i class="bi bi-pencil-square text-success"></i>
                     </div>
                     <span id="saveDraftModalTitle">Save as Draft</span>
@@ -5763,17 +5810,25 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body px-4 py-0">
-                <p class="text-muted small mb-3" id="saveDraftModalSubtext">Give this draft version a recognizable name.</p>
+                <p class="text-muted small mb-3" id="saveDraftModalSubtext">Give this draft version a recognizable name.
+                </p>
                 <div class="mb-4">
                     <label class="form-label text-muted small fw-bold mb-1">Draft Name</label>
-                    <input type="text" id="saveDraftInputName" class="form-control form-control-lg fs-6" 
-                           placeholder="e.g. Mid-Semester Backup" 
-                           style="border-radius: 7px; border: 1.5px solid #eee; background: #fdfdfd;">
+                    <input type="text" id="saveDraftInputName" class="form-control form-control-lg fs-6"
+                        placeholder="e.g. Mid-Semester Backup" maxlength="100"
+                        style="border-radius: 7px; border: 1.5px solid #eee; background: #fdfdfd;">
+                    <div class="d-flex justify-content-between align-items-start mt-1 px-1">
+                        <small id="saveDraftWarn" class="text-danger d-none" style="font-size: 0.7rem;">Limit reached!
+                            Max 50 chars.</small>
+                        <small id="saveDraftCounter" class="text-muted ms-auto" style="font-size: 0.7rem;">0/50</small>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer bg-light border-top-0 px-4 py-3">
-                <button type="button" class="btn btn-light px-4 fw-bold text-muted" data-bs-dismiss="modal" style="border-radius: 7px;">Cancel</button>
-                <button type="button" id="btnConfirmSaveDraft" class="btn btn-success px-4 fw-bold" style="border-radius: 7px;">Save Draft</button>
+                <button type="button" class="btn btn-light px-4 fw-bold text-muted" data-bs-dismiss="modal"
+                    style="border-radius: 7px;">Cancel</button>
+                <button type="button" id="btnConfirmSaveDraft" class="btn btn-success px-4 fw-bold"
+                    style="border-radius: 7px;">Save Draft</button>
             </div>
         </div>
     </div>

@@ -17,8 +17,12 @@
                 <div class="mb-0">
                     <label class="form-label text-muted small fw-bold mb-1">Draft Name</label>
                     <input type="text" id="saveDraftInputName" class="form-control form-control-lg fs-6" 
-                           placeholder="e.g. Mid-Semester Backup" 
+                           placeholder="e.g. Mid-Semester Backup" maxlength="100"
                            style="border-radius: 7px; border: 1.5px solid #eee; background: #fdfdfd;">
+                    <div class="d-flex justify-content-between align-items-start mt-1 px-1">
+                        <small id="saveDraftWarn" class="text-danger d-none" style="font-size: 0.7rem;">Limit reached! Max 50 chars.</small>
+                        <small id="saveDraftCounter" class="text-muted ms-auto" style="font-size: 0.7rem;">0/50</small>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer border-top-0 px-4 pb-4 pt-0">

@@ -1817,13 +1817,15 @@ def proposal_hub():
     sections  = Section.query.filter_by(is_archived=False).order_by(Section.section_name).all()
     faculties = Faculty.query.filter_by(is_archived=False).order_by(Faculty.full_name).all()
     rooms     = Room.query.filter_by(is_archived=False).order_by(Room.room_name).all()
+    courses   = Course.query.filter_by(is_archived=False).order_by(Course.course_code).all()
     return render_template('proposal_hub.html',
                           messages=messages,
                           selected_semester=semester,
                           pending_proposals=pending_proposals,
                           sections=sections,
                           faculties=faculties,
-                          rooms=rooms)
+                          rooms=rooms,
+                          courses=courses)
 
 @app.route('/api/hub/propose', methods=['POST'])
 @login_required
@@ -8373,13 +8375,16 @@ def api_draft_entities(draft_id):
     sec_ids  = sorted({e.section_id for e in entries if e.section_id})
     fac_ids  = sorted({e.faculty_id for e in entries if e.faculty_id})
     room_ids = sorted({e.room_id    for e in entries if e.room_id})
+    crs_ids  = sorted({e.course_id  for e in entries if e.course_id})
     sections  = Section.query.filter(Section.id.in_(sec_ids)).order_by(Section.section_name).all()  if sec_ids  else []
     faculties = Faculty.query.filter(Faculty.id.in_(fac_ids)).order_by(Faculty.full_name).all()     if fac_ids  else []
     rooms     = Room.query.filter(Room.id.in_(room_ids)).order_by(Room.room_name).all()              if room_ids else []
+    courses   = Course.query.filter(Course.id.in_(crs_ids)).order_by(Course.course_code).all()      if crs_ids  else []
     return jsonify({
         'sections':  [{'id': s.id, 'label': s.section_name} for s in sections],
         'faculties': [{'id': f.id, 'label': f.full_name}    for f in faculties],
-        'rooms':     [{'id': r.id, 'label': r.room_name}    for r in rooms]
+        'rooms':     [{'id': r.id, 'label': r.room_name}    for r in rooms],
+        'courses':   [{'id': c.id, 'label': c.course_code}   for c in courses]
     })
 
 

@@ -239,6 +239,13 @@ body {
     overflow: hidden;
 }
 
+/* DECISION HUB PREVIEW MODAL OVERRIDE (100dvh) */
+#hubPreviewModal .modal-content {
+    max-height: 100dvh !important;
+    height: 100dvh !important;
+    border-radius: 0; /* Optional: make it truly fullscreen look */
+}
+
 /* Ensure forms or wizard steps inside modals also behave as flex containers to allow body scrolling */
 .modal-content>form,
 .modal-content>.wizard-step-1,

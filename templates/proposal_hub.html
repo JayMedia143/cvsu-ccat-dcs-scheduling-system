@@ -27,9 +27,9 @@
                     <div id="sidebarMoreSkeleton">
                         <div class="skeleton skeleton-circle" style="width: 32px; height: 32px;"></div>
                     </div>
-                    <button id="sidebarMoreReal" class="btn btn-messenger-icon d-none" type="button" data-bs-toggle="offcanvas"
-                        data-bs-target="#offcanvasPendingReview" aria-controls="offcanvasPendingReview"
-                        title="More Options / Pending Review">
+                    <button id="sidebarMoreReal" class="btn btn-messenger-icon d-none" type="button"
+                        data-bs-toggle="offcanvas" data-bs-target="#offcanvasPendingReview"
+                        aria-controls="offcanvasPendingReview" title="More Options / Pending Review">
                         <i class="bi bi-three-dots-vertical info-icon-hover"></i>
                     </button>
                 </div>
@@ -49,7 +49,9 @@
                 <div class="convo-item opacity-50" style="cursor: default;">
                     <div class="position-relative">
                         <div class="skeleton skeleton-circle" style="width: 50px; height: 50px;"></div>
-                        <div class="skeleton skeleton-circle" style="width: 12px; height: 12px; position: absolute; bottom: 2px; right: 2px; border: 2px solid #fff;"></div>
+                        <div class="skeleton skeleton-circle"
+                            style="width: 12px; height: 12px; position: absolute; bottom: 2px; right: 2px; border: 2px solid #fff;">
+                        </div>
                     </div>
                     <div class="convo-body">
                         <div class="skeleton skeleton-text" style="width: 60%;"></div>
@@ -74,7 +76,8 @@
                 <div id="chatHeaderSkeleton" class="d-flex align-items-center gap-2">
                     <div class="skeleton skeleton-circle" style="width: 40px; height: 40px;"></div>
                     <div>
-                        <div class="skeleton skeleton-text" style="width: 100px; height: 14px; margin-bottom: 4px;"></div>
+                        <div class="skeleton skeleton-text" style="width: 100px; height: 14px; margin-bottom: 4px;">
+                        </div>
                         <div class="skeleton skeleton-text-sm" style="width: 60px; height: 10px;"></div>
                     </div>
                 </div>
@@ -93,12 +96,12 @@
                     <div class="skeleton skeleton-circle" style="width: 32px; height: 32px;"></div>
                 </div>
                 <div id="chatActionsReal" class="d-none d-flex align-items-center gap-2">
-                    <button id="chatInfoReal" class="btn btn-messenger-icon btn-responsive-offcanvas" data-bs-toggle="offcanvas"
-                        data-bs-target="#offcanvasDetails" title="Show Details">
+                    <button id="chatInfoReal" class="btn btn-messenger-icon btn-responsive-offcanvas"
+                        data-bs-toggle="offcanvas" data-bs-target="#offcanvasDetails" title="Show Details">
                         <i class="bi bi-info-circle-fill fs-5 text-primary"></i>
                     </button>
-                    <button id="chatSidebarToggleReal" class="btn btn-messenger-icon btn-responsive-sidebar" onclick="toggleProfileSidebar()"
-                        title="Show/Hide Details">
+                    <button id="chatSidebarToggleReal" class="btn btn-messenger-icon btn-responsive-sidebar"
+                        onclick="toggleProfileSidebar()" title="Show/Hide Details">
                         <i class="bi bi-info-circle-fill fs-5 text-primary"></i>
                     </button>
                 </div>
@@ -106,7 +109,7 @@
         </div>
 
         <!-- Log -->
-        <div class="chat-log-main custom-scrollbar" id="chatLog">
+        <div class="chat-log-main custom-scrollbar d-flex flex-column-reverse" id="chatLog">
             <!-- Chat Skeleton -->
             <div id="chatLogSkeleton">
                 {% for i in range(1) %}
@@ -118,8 +121,8 @@
                 </div>
                 {% endfor %}
             </div>
-            <div id="chatLogReal" class="d-none">
-                <!-- Messages pop here -->
+            <div id="chatLogReal" class="d-none w-100 d-flex flex-column-reverse">
+                <!-- Messages pop here (Latest first in DOM will be bottom visually) -->
             </div>
         </div>
 
@@ -186,20 +189,23 @@
                 style="cursor: pointer;">
                 {% set p_pic = session.get('profile_pic', 'default.png') %}
                 <img src="{{ url_for('static', filename='uploads/profile_pics/' + p_pic) }}" alt="Profile"
-                    class="profile-avatar-large shadow {% if not p_pic or p_pic == 'default.png' %}d-none{% endif %}" 
+                    class="profile-avatar-large shadow {% if not p_pic or p_pic == 'default.png' %}d-none{% endif %}"
                     id="mainProfileImg" onerror="handleAvatarError(this)">
                 <div id="mainProfileFallback"
                     class="profile-avatar-large shadow {% if p_pic and p_pic != 'default.png' %}d-none{% endif %} align-items-center justify-content-center fw-bold text-white h2">
                     <!-- Initial Letter -->
                 </div>
             </div>
-            <h5 class="fw-bold mb-1" id="profileNameDisplay">{{ session.get('full_name', session.get('username')) }}</h5>
-            <p class="text-muted small mb-1" id="profileDeptDisplay">{{ session.get('department', 'No Department') }}</p>
+            <h5 class="fw-bold mb-1" id="profileNameDisplay">{{ session.get('full_name', session.get('username')) }}
+            </h5>
+            <p class="text-muted small mb-1" id="profileDeptDisplay">{{ session.get('department', 'No Department') }}
+            </p>
             <div class="small mb-3" id="activePartnerProfileStatus">
                 <span class="status-dot offline"></span> Offline
             </div>
             <div class="badge bg-light text-dark rounded-pill px-3 py-2 mb-4 border">
-                <span class="text-uppercase x-small fw-bold opacity-75" id="profileRoleDisplay">{{ session.get('role', 'User') }}</span>
+                <span class="text-uppercase x-small fw-bold opacity-75" id="profileRoleDisplay">{{ session.get('role',
+                    'User') }}</span>
             </div>
 
             <hr class="my-4 op-10">
@@ -209,7 +215,8 @@
                 <div class="small">
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Status</span>
-                        <span class="fw-semibold text-warning" id="scanningStatus"><i class="bi bi-search me-1"></i>Scanning...</span>
+                        <span class="fw-semibold text-warning" id="scanningStatus"><i
+                                class="bi bi-search me-1"></i>Scanning...</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Socket</span>
@@ -264,16 +271,38 @@
                         <i class="bi bi-calendar3-fill me-2"></i><span id="pvDraftName">Draft Preview</span>
                     </div>
                     <div class="pv-pill-select-wrap">
-                        <span class="pv-pill-label">View:</span>
-                        <select id="pvTypeSelect" class="form-select form-select-sm pv-pill-select">
-                            <option value="section">Sections</option>
-                            <option value="faculty">Faculty</option>
-                            <option value="room">Rooms</option>
-                        </select>
+                        <span class="pv-pill-label d-none d-md-inline">View:</span>
+                        <!-- Desktop Dropdown -->
+                        <div class="dropdown d-none d-md-inline-block">
+                            <button class="btn pv-pill-select dropdown-toggle p-0" type="button" id="pvViewDropdown"
+                                data-bs-toggle="dropdown" aria-expanded="false" style="width: auto; text-align: left;">
+                                <span id="pvViewLabel">Sections</span>
+                            </button>
+                            <ul class="dropdown-menu google-sort-menu" aria-labelledby="pvViewDropdown">
+                                <li><a class="dropdown-item google-sort-item active" href="javascript:void(0);"
+                                        onclick="pvChangeView('section', 'Sections')">Sections</a></li>
+                                <li><a class="dropdown-item google-sort-item" href="javascript:void(0);"
+                                        onclick="pvChangeView('faculty', 'Faculty')">Faculty</a></li>
+                                <li><a class="dropdown-item google-sort-item" href="javascript:void(0);"
+                                        onclick="pvChangeView('room', 'Rooms')">Rooms</a></li>
+                                <li><a class="dropdown-item google-sort-item" href="javascript:void(0);"
+                                        onclick="pvChangeView('course', 'Course')">Course</a></li>
+                            </ul>
+                        </div>
+                        <!-- Mobile Native Select -->
+                            <select id="pvViewSelNative" class="pv-pill-select d-inline-block d-md-none"
+                                style="appearance: none; -webkit-appearance: none; border: none; background: transparent; padding-right: 15px;"
+                                onchange="pvChangeView(this.value, this.options[this.selectedIndex].text)">
+                                <option value="section">Sections</option>
+                                <option value="faculty">Faculty</option>
+                                <option value="room">Rooms</option>
+                                <option value="course">Course</option>
+                            </select>
                     </div>
                     <div class="pv-pill-select-wrap">
-                        <span class="pv-pill-label">Sort:</span>
-                        <div class="dropdown d-inline-block">
+                        <span class="pv-pill-label d-none d-md-inline">Sort:</span>
+                        <!-- Desktop Dropdown -->
+                        <div class="dropdown d-none d-md-inline-block">
                             <button class="btn pv-pill-select dropdown-toggle p-0" type="button" id="pvSortDropdown"
                                 data-bs-toggle="dropdown" aria-expanded="false" style="width: auto; text-align: left;">
                                 Sort by: Newest
@@ -284,9 +313,6 @@
                                         onclick="pvApplySort('newest', this)">
                                         Sort by: Newest
                                     </a>
-                                </li>
-                                <li>
-                                    <hr class="dropdown-divider op-0">
                                 </li>
                                 <li>
                                     <a class="dropdown-item google-sort-item" href="javascript:void(0);"
@@ -302,6 +328,14 @@
                                 </li>
                             </ul>
                         </div>
+                        <!-- Mobile Native Select -->
+                        <select id="pvSortSelNative" class="pv-pill-select d-inline-block d-md-none"
+                            style="appearance: none; -webkit-appearance: none; border: none; background: transparent; padding-right: 15px;"
+                            onchange="pvApplySort(this.value)">
+                            <option value="newest">Newest</option>
+                            <option value="asc">A — Z</option>
+                            <option value="desc">Z — A</option>
+                        </select>
                     </div>
                     <div class="pv-search-pill">
                         <i class="bi bi-search" style="color:#999;font-size:0.8rem;"></i>
@@ -311,7 +345,7 @@
                     <div class="ms-auto d-flex align-items-center gap-2">
                         <button class="btn btn-outline-success pv-pill-btn d-flex align-items-center gap-2"
                             onclick="pvFitView()">
-                            <i class="bi bi-arrows-angle-contract"></i> <span>Fit All</span>
+                            <i class="bi bi-arrows-angle-contract"></i> <span class="d-none d-md-inline">Fit All</span>
                         </button>
 
                         <div class="pv-nav-pill">
@@ -478,26 +512,44 @@
         /* 🦴 SKELETON LOADERS */
         .skeleton {
             background-color: var(--skeleton-bg);
-            background-image: linear-gradient(
-                90deg,
-                var(--skeleton-bg) 0px,
-                #e8e8e8 40px,
-                var(--skeleton-bg) 80px
-            );
+            background-image: linear-gradient(90deg,
+                    var(--skeleton-bg) 0px,
+                    #e8e8e8 40px,
+                    var(--skeleton-bg) 80px);
             background-size: 600px;
             animation: shimmer 1.5s infinite linear;
             border-radius: 4px;
         }
 
         @keyframes shimmer {
-            0% { background-position: -200px 0; }
-            100% { background-position: 400px 0; }
+            0% {
+                background-position: -200px 0;
+            }
+
+            100% {
+                background-position: 400px 0;
+            }
         }
 
-        .skeleton-circle { border-radius: 50%; }
-        .skeleton-text { height: 12px; margin-bottom: 8px; width: 100%; }
-        .skeleton-text-sm { height: 8px; width: 60%; }
-        .skeleton-text-md { height: 10px; width: 80%; }
+        .skeleton-circle {
+            border-radius: 50%;
+        }
+
+        .skeleton-text {
+            height: 12px;
+            margin-bottom: 8px;
+            width: 100%;
+        }
+
+        .skeleton-text-sm {
+            height: 8px;
+            width: 60%;
+        }
+
+        .skeleton-text-md {
+            height: 10px;
+            width: 80%;
+        }
 
         .text-muted-v2 {
             color: #adb5bd;
@@ -894,6 +946,8 @@
             margin-top: 0;
             text-decoration: none !important;
             width: 100%;
+            max-width: 200px;
+            /* Constrain inner content to trigger truncation */
             transition: background 0.2s, transform 0.15s, box-shadow 0.15s;
             box-sizing: border-box;
         }
@@ -1219,6 +1273,17 @@
             border-radius: 10px;
             padding: 12px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            max-width: 280px;
+            /* Back to original constrained width for sidebar */
+        }
+
+        .proposal-mini-card strong,
+        .proposal-mini-card .draft-name-display {
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
         }
 
         .btn-messenger-sm {
@@ -1473,6 +1538,10 @@
             gap: 6px;
             padding-right: 15px;
             border-right: 1px solid #eee;
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
+            max-width: none !important;
+            width: auto !important;
         }
 
         .pv-pill-select-wrap {
@@ -2022,6 +2091,84 @@
             color: #8e9194;
             font-size: 0.9rem;
         }
+
+        /* ── MOBILE HUD RESPONSIVENESS (Draft Preview) ────────────────── */
+
+        @media (max-width: 1365px) {
+            .pv-topbar {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                justify-content: flex-start;
+                padding: 8px 12px;
+                gap: 10px;
+                border-radius: 0;
+                scrollbar-width: none;
+            }
+            /* Hide labels for icons-only mode */
+            .pv-topbar .d-md-inline,
+            .pv-topbar .pv-pill-label.d-md-inline {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+
+            /* Hide elements when PV is active */
+            body.pv-active .messenger-sidebar,
+            body.pv-active .messenger-chat-pane,
+            body.pv-active .messenger-details-pane,
+            body.pv-active .btn-responsive-sidebar {
+                display: none !important;
+            }
+
+            .pv-topbar::-webkit-scrollbar {
+                display: none;
+            }
+
+            .pv-pill-select-wrap {
+                padding: 4px 10px;
+                gap: 4px;
+            }
+
+            .pv-search-pill {
+                min-width: 130px;
+                padding: 4px 12px;
+            }
+
+            .pv-pill-btn {
+                padding: 6px 12px !important;
+            }
+
+            .pv-nav-pill {
+                padding: 3px;
+                gap: 2px;
+            }
+
+            .pv-nav-btn {
+                padding: 4px 8px;
+                font-size: 0.7rem;
+            }
+
+            .pv-zoom-pill {
+                padding: 4px 6px;
+                gap: 6px;
+            }
+
+            .pv-zoom-val {
+                min-width: 35px;
+                font-size: 0.75rem;
+            }
+
+            #pvMinimap {
+                width: 140px !important;
+                height: 105px !important;
+                bottom: 15px !important;
+                right: 15px !important;
+            }
+        }
+
     </style>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -2033,6 +2180,8 @@
         const FAC_NAMES = {{ faculties | map(attribute = 'full_name') | list | tojson }};
         const ROOM_IDS = {{ rooms     | map(attribute = 'id') | list | tojson }};
         const ROOM_NAMES = {{ rooms     | map(attribute = 'room_name') | list | tojson }};
+        const CRS_IDS = {{ courses | map(attribute = 'id') | list | tojson }};
+        const CRS_NAMES = {{ courses | map(attribute = 'course_code') | list | tojson }};
 
         // Chat State
         let socket = null;
@@ -2222,7 +2371,7 @@
                     console.log(`Routing message: Channel=${msgChannel}, ActivePartner=${activePartner}`);
 
                     if (activePartner.toLowerCase() === msgChannel.toLowerCase()) {
-                        appendMessage(data);
+                        appendMessage(data, true);
                         if (sender !== me) markRead(msgChannel);
                     }
 
@@ -2372,7 +2521,7 @@
             const chatForm = document.getElementById('chatForm');
             const chatActionsSkeleton = document.getElementById('chatActionsSkeleton');
             const chatActionsReal = document.getElementById('chatActionsReal');
-            
+
             // Profile Pane Skeletons
             const profSkeleton = document.getElementById('profileSkeleton');
             const profReal = document.getElementById('profileRealContent');
@@ -2388,7 +2537,7 @@
             toggleReal(chatForm, isLoading);
             toggle(chatActionsSkeleton, isLoading);
             toggleReal(chatActionsReal, isLoading);
-            
+
             toggle(profSkeleton, isLoading);
             toggleReal(profReal, isLoading);
         }
@@ -2411,7 +2560,7 @@
             if (!convoList) return;
             convoList.innerHTML = '';
             const listToRender = filteredResults || conversationsHistory;
-            
+
             if (listToRender.length === 0) {
                 convoList.innerHTML = '<div class="p-4 text-center text-muted small">No conversations yet</div>';
                 return;
@@ -2477,7 +2626,7 @@
             }
 
             if (headName) headName.textContent = partner === 'Everyone' ? 'Announcements' : partner;
-            
+
             if (headAvatar) {
                 if (partner === 'Everyone') {
                     headAvatar.innerHTML = '<i class="bi bi-megaphone-fill"></i>';
@@ -2510,7 +2659,9 @@
                 if (msgs.length === 0) {
                     logReal.innerHTML = `<div class="text-muted text-center mt-5 small">No messages yet. Say hi!</div>`;
                 } else {
-                    msgs.forEach(m => appendMessage(m));
+                    // Messenger-style: Append latest messages first in DOM (they'll appear at bottom due to flex-column-reverse)
+                    const latestFirst = [...msgs].reverse();
+                    latestFirst.forEach(m => appendMessage(m, false)); // false = use appendChild for batch loading
                 }
             }
 
@@ -2663,7 +2814,7 @@
         /**
          * Appends a message to the chat log with Messenger-style features.
          */
-        function appendMessage(data) {
+        function appendMessage(data, isNew = false) {
             if (!chatLog) return;
 
             const isMe = data.sender === currentUsername;
@@ -2744,8 +2895,12 @@
             const textContainer = wrap.querySelector('.bubble-content-text');
             if (textContainer) textContainer.textContent = data.content || '';
 
-            if (chatLogReal) chatLogReal.appendChild(wrap);
-            chatLog.scrollTop = chatLog.scrollHeight;
+            if (chatLogReal) {
+                if (isNew) chatLogReal.prepend(wrap);
+                else chatLogReal.appendChild(wrap);
+            }
+            // For column-reverse, new items at the bottom (prepend) stay in view automatically.
+            // No manual scrollTop needed.
         }
 
         /**
@@ -3046,12 +3201,14 @@
         const pvListMap = {
             section: SECTIONS.map((id, i) => ({ id, label: SEC_NAMES[i] })),
             faculty: FAC_IDS.map((id, i) => ({ id, label: FAC_NAMES[i] })),
-            room: ROOM_IDS.map((id, i) => ({ id, label: ROOM_NAMES[i] }))
+            room: ROOM_IDS.map((id, i) => ({ id, label: ROOM_NAMES[i] })),
+            course: CRS_IDS.map((id, i) => ({ id, label: CRS_NAMES[i] }))
         };
         const pvUrlMap = {
             section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&draft_id=${pvActiveDraft}`,
             faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&draft_id=${pvActiveDraft}`,
-            room: id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&draft_id=${pvActiveDraft}`
+            room: id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&draft_id=${pvActiveDraft}`,
+            course: id => `/course-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&draft_id=${pvActiveDraft}`
         };
 
         let pvEntityMap = null;
@@ -3062,29 +3219,55 @@
             pvEntityMap = null;
             const nameEl = document.getElementById('pvDraftName');
             if (nameEl) nameEl.textContent = name;
-            document.getElementById('pvTypeSelect').value = 'section';
+            const typeSel = document.getElementById('pvViewSelNative');
+            if (typeSel) typeSel.value = 'section';
             const pvSearchEl = document.getElementById('pvSearch');
             if (pvSearchEl) pvSearchEl.value = '';
             try {
                 const r = await fetch(`/api/draft/${id}/entities`);
                 pvEntityMap = await r.json();
             } catch (e) { pvEntityMap = null; }
+
+            document.body.classList.add('pv-active');
             const modal = new bootstrap.Modal(document.getElementById('hubPreviewModal'));
             modal.show();
+
             document.getElementById('hubPreviewModal').addEventListener('shown.bs.modal', () => {
                 pvModalOpen = true;
                 pvLoadCanvas(); // This now calls pvInitViewState() internally
             }, { once: true });
             document.getElementById('hubPreviewModal').addEventListener('hidden.bs.modal', () => {
                 pvModalOpen = false;
+                document.body.classList.remove('pv-active');
             }, { once: true });
         };
+
+        window.pvChangeView = function (type, label) {
+            pvCurrentType = type;
+            const labelEl = document.getElementById('pvViewLabel');
+            if (labelEl) labelEl.textContent = label;
+
+            // Sync Native Select
+            const nativeSel = document.getElementById('pvViewSelNative');
+            if (nativeSel) nativeSel.value = type;
+
+            // Update active class in dropdown menu
+            const btn = document.getElementById('pvViewDropdown');
+            const menu = btn ? btn.nextElementSibling : null;
+            if (menu) {
+                menu.querySelectorAll('.google-sort-item').forEach(el => {
+                    el.classList.toggle('active', el.textContent.trim() === label);
+                });
+            }
+            pvLoadCanvas();
+        }
 
         function pvGetCurrentList() {
             let base;
             if (pvEntityMap) {
                 base = pvEntityMap[pvCurrentType === 'section' ? 'sections'
-                    : pvCurrentType === 'faculty' ? 'faculties' : 'rooms'] || [];
+                    : pvCurrentType === 'faculty' ? 'faculties'
+                        : pvCurrentType === 'room' ? 'rooms' : 'courses'] || [];
             } else {
                 base = pvListMap[pvCurrentType] || [];
             }
@@ -3171,6 +3354,7 @@
             if (q && !data.lowerLabel.includes(q)) card.classList.add('pv-dimmed');
 
             card.addEventListener('dblclick', (e) => {
+                if (window.innerWidth <= 1365) return; // Disable maximization on screens <= 1365px
                 e.stopPropagation();
                 pvOpenPresentation(data.index);
             });
@@ -3300,7 +3484,8 @@
                 if (savedType && savedType !== pvCurrentType) {
                     // Restore the specific module (Section, Faculty, or Room)
                     pvCurrentType = savedType;
-                    document.getElementById('pvTypeSelect').value = savedType;
+                    const displayNames = { section: 'Sections', faculty: 'Faculty', room: 'Rooms' };
+                    pvChangeView(savedType, displayNames[savedType] || 'Sections');
                     pvLoadCanvas();
                 } else {
                     if (!pvLoadViewState()) {
@@ -3375,6 +3560,10 @@
                     else if (sortKey === 'asc') toggle.textContent = 'Sort by: A — Z';
                     else if (sortKey === 'desc') toggle.textContent = 'Sort by: Z — A';
                 }
+
+                // Sync Native Select
+                const nativeSort = document.getElementById('pvSortSelNative');
+                if (nativeSort) nativeSort.value = sortKey;
 
                 if (el) {
                     const menu = el.closest('.google-sort-menu');
@@ -3456,6 +3645,10 @@
             box.style.top = ((vY - startY) / totalH) * mmH + 'px';
         }
 
+        function pvGetDistance(t1, t2) {
+            return Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
+        }
+
         // Viewport drag + pan + zoom
         document.addEventListener('DOMContentLoaded', () => {
             const pvVp = document.getElementById('pvViewport');
@@ -3492,6 +3685,49 @@
                     }
                     pvUpdateTransform();
                 }, { passive: false });
+
+                // --- TOUCH SUPPORT (Panning & Pinch-to-Zoom) ---
+                let initialPinchDist = null;
+                let initialPinchScale = 1.0;
+
+                pvVp.addEventListener('touchstart', (e) => {
+                    if (e.touches.length === 1) {
+                        pvIsDragging = true;
+                        pvStartX = e.touches[0].clientX - pvTranslateX;
+                        pvStartY = e.touches[0].clientY - pvTranslateY;
+                    } else if (e.touches.length === 2) {
+                        pvIsDragging = false;
+                        initialPinchDist = pvGetDistance(e.touches[0], e.touches[1]);
+                        initialPinchScale = pvScale;
+                    }
+                }, { passive: false });
+
+                pvVp.addEventListener('touchmove', (e) => {
+                    if (e.touches.length === 1 && pvIsDragging) {
+                        pvTranslateX = e.touches[0].clientX - pvStartX;
+                        pvTranslateY = e.touches[0].clientY - pvStartY;
+                        pvUpdateTransform();
+                    } else if (e.touches.length === 2 && initialPinchDist) {
+                        e.preventDefault();
+                        const dist = pvGetDistance(e.touches[0], e.touches[1]);
+                        const zoomFactor = dist / initialPinchDist;
+                        const oldScale = pvScale;
+                        pvScale = Math.max(0.04, Math.min(2.0, initialPinchScale * zoomFactor));
+
+                        const rect = pvVp.getBoundingClientRect();
+                        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+                        const my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+
+                        pvTranslateX -= (mx - pvTranslateX) * (pvScale / oldScale - 1);
+                        pvTranslateY -= (my - pvTranslateY) * (pvScale / oldScale - 1);
+                        pvUpdateTransform();
+                    }
+                }, { passive: false });
+
+                pvVp.addEventListener('touchend', () => {
+                    pvIsDragging = false;
+                    initialPinchDist = null;
+                });
             }
 
             // Minimap click-to-navigate
@@ -3542,6 +3778,12 @@
                 cinemaOverlay.addEventListener('click', e => {
                     if (e.target.id === 'pvPresBackdrop' || e.target.id === 'pvCinemaOverlay') pvClosePresentation();
                 });
+                const nativeTypeSel = document.getElementById('pvViewSelNative');
+                if (nativeTypeSel) {
+                    nativeTypeSel.addEventListener('change', function () {
+                        pvChangeView(this.value, this.options[this.selectedIndex].text);
+                    });
+                }
                 const pvPresWrapEl = document.getElementById('pvPresWrap');
                 if (pvPresWrapEl) pvPresWrapEl.addEventListener('click', e => e.stopPropagation());
             }
@@ -3555,10 +3797,7 @@
                 else if (e.key === 'Escape') pvClosePresentation();
             });
 
-            // Type select
-            document.getElementById('pvTypeSelect')?.addEventListener('change', function () {
-                pvCurrentType = this.value; pvApplySort();
-            });
+            // Type select (already handled by pvViewSelNative listener above)
         });
 
         // ── Presentation Mode ───────────────────────────────────────
@@ -3671,6 +3910,42 @@
         // Close on click outside or escape
         document.getElementById('profileFullscreenOverlay')?.addEventListener('click', (e) => {
             if (e.target.id === 'profileFullscreenOverlay') closeProfileFullscreen();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- SMART DRAFT NAME VALIDATION (Layout Management Style) ---
+            const draftInput = document.getElementById('saveDraftInputName');
+            const draftCounter = document.getElementById('saveDraftCounter');
+            const draftWarn = document.getElementById('saveDraftWarn');
+            const confirmBtn = document.getElementById('btnConfirmSaveDraft');
+
+            if (draftInput && draftCounter && confirmBtn) {
+                const LIMIT = 50;
+                draftInput.addEventListener('input', () => {
+                    const len = draftInput.value.length;
+                    draftCounter.textContent = `${len}/${LIMIT}`;
+
+                    if (len > LIMIT) {
+                        draftInput.classList.add('is-invalid');
+                        draftCounter.classList.add('text-danger');
+                        draftCounter.classList.remove('text-muted');
+                        if (draftWarn) draftWarn.classList.remove('d-none');
+
+                        confirmBtn.disabled = true;
+                        confirmBtn.classList.add('btn-danger');
+                        confirmBtn.classList.remove('btn-success');
+                    } else {
+                        draftInput.classList.remove('is-invalid');
+                        draftCounter.classList.add('text-muted');
+                        draftCounter.classList.remove('text-danger');
+                        if (draftWarn) draftWarn.classList.add('d-none');
+
+                        confirmBtn.disabled = false;
+                        confirmBtn.classList.remove('btn-danger');
+                        confirmBtn.classList.add('btn-success');
+                    }
+                });
+            }
         });
     </script>
 
