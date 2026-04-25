@@ -733,6 +733,10 @@ class ArchivedCourse(db.Model):
     department = db.Column(db.String(255), index=True)
     lec_units = db.Column(db.Integer)
     lab_units = db.Column(db.Integer)
+    synchronous_lec_hours = db.Column(db.Integer, default=0)
+    synchronous_lab_hours = db.Column(db.Integer, default=0)
+    asynchronous_lec_hours = db.Column(db.Integer, default=0)
+    asynchronous_lab_hours = db.Column(db.Integer, default=0)
     semester_offered = db.Column(db.String(100))
     term_archive = db.relationship('TermArchive', backref=db.backref('courses', lazy=True, cascade="all, delete-orphan"))
 
@@ -751,6 +755,11 @@ class ArchivedFaculty(db.Model):
     full_name = db.Column(db.String(255), index=True)
     department = db.Column(db.String(255), index=True)
     employment_status = db.Column(db.String(100))
+    highest_educational_attainment = db.Column(db.String(200), nullable=True)
+    academic_rank = db.Column(db.String(100), nullable=True)
+    sex = db.Column(db.String(1), nullable=True)
+    max_weekly_hours = db.Column(db.Integer, default=35)
+    available_days = db.Column(db.Text, default='')
     term_archive = db.relationship('TermArchive', backref=db.backref('faculty', lazy=True, cascade="all, delete-orphan"))
 
 class ArchivedRoom(db.Model):
@@ -758,8 +767,12 @@ class ArchivedRoom(db.Model):
     term_archive_id = db.Column(db.Integer, db.ForeignKey('term_archive.id'), nullable=False, index=True)
     room_name = db.Column(db.String(255), index=True)
     building = db.Column(db.String(255))
+    capabilities = db.Column(db.String(255))
     capacity = db.Column(db.Integer)
+    functional_computers = db.Column(db.Integer, default=0)
     status = db.Column(db.String(100))
+    special_course_ids = db.Column(db.Text, default='')
+    room_departments = db.Column(db.Text, default='')
     term_archive = db.relationship('TermArchive', backref=db.backref('rooms', lazy=True, cascade="all, delete-orphan"))
 
 class ArchivedStudent(db.Model):
@@ -769,6 +782,7 @@ class ArchivedStudent(db.Model):
     full_name = db.Column(db.String(255), index=True)
     year_level = db.Column(db.Integer)
     is_irregular = db.Column(db.Boolean, default=False)
+    assignments_json = db.Column(db.Text, nullable=True) # For irregular student data
     term_archive = db.relationship('TermArchive', backref=db.backref('students', lazy=True, cascade="all, delete-orphan"))
 
 
@@ -3605,7 +3619,20 @@ def manage_sections():
             query = query.filter(ArchivedSection.section_name.ilike(f"%{search_query}%"))
             
         pagination = query.paginate(page=page, per_page=10, error_out=False)
-        return render_template('manage_sections.html', sections=pagination.items, pagination=pagination, search_query=search_query)
+        
+        # ADDED: courses_by_sem for template compatibility (though it might not be used in read-only mode)
+        courses = ArchivedCourse.query.filter_by(term_archive_id=archive_id).all()
+        courses_by_sem = {
+            '1st Semester': [c for c in courses if c.semester_offered == '1st Semester' or c.semester_offered == 'Both'],
+            '2nd Semester': [c for c in courses if c.semester_offered == '2nd Semester' or c.semester_offered == 'Both'],
+            'Midyear': [c for c in courses if c.semester_offered == 'Midyear']
+        }
+
+        return render_template('manage_sections.html', 
+                             sections=pagination.items, 
+                             pagination=pagination, 
+                             search_query=search_query,
+                             courses_by_sem=courses_by_sem)
 
     # 2. Base Query (exclude T.B.A. system section)
     query = Section.query.filter_by(is_archived=False).filter(Section.section_name != 'T.B.A.')
@@ -8423,6 +8450,8 @@ def api_archive_stats():
         'counts': {
             'courses': Course.query.filter_by(is_archived=False).count(),
             'sections': Section.query.filter_by(is_archived=False).count(),
+            'students': Student.query.filter_by(is_archived=False).count(),
+            'irregular': Student.query.filter_by(is_archived=False, is_irregular=True).count(),
             'faculty': Faculty.query.filter_by(is_archived=False).count(),
             'rooms': Room.query.filter_by(is_archived=False).count(),
             'scheduled': ScheduledClass.query.filter_by(is_draft=False).count()
@@ -8508,37 +8537,75 @@ def api_archive_capture():
         # 5. Snapshot Entities for 1:1 Reconstruction (Time Machine)
         # Capture Courses
         for c in Course.query.filter_by(is_archived=False).all():
-            data = {col.name: getattr(c, col.name) for col in c.__table__.columns if col.name != 'deleted_at'}
-            db.session.add(ArchivedEntity(term_archive_id=new_archive.id, entity_type='Course', data_json=json.dumps(data, default=str)))
+            db.session.add(ArchivedCourse(
+                term_archive_id=new_archive.id,
+                course_code=c.course_code,
+                course_name=c.course_name,
+                year_level=c.year_level,
+                program=c.program,
+                department=c.department if c.department else "None",
+                lec_units=c.lec_units,
+                lab_units=c.lab_units,
+                synchronous_lec_hours=c.synchronous_lec_hours,
+                synchronous_lab_hours=c.synchronous_lab_hours,
+                asynchronous_lec_hours=c.asynchronous_lec_hours,
+                asynchronous_lab_hours=c.asynchronous_lab_hours,
+                semester_offered=c.semester_offered
+            ))
 
         # Capture Sections
         for s in Section.query.filter_by(is_archived=False).all():
-            data = {col.name: getattr(s, col.name) for col in s.__table__.columns if col.name != 'deleted_at'}
-            db.session.add(ArchivedEntity(term_archive_id=new_archive.id, entity_type='Section', data_json=json.dumps(data, default=str)))
+            db.session.add(ArchivedSection(
+                term_archive_id=new_archive.id,
+                section_name=s.section_name,
+                year_level=s.year_level,
+                number_of_students=s.number_of_students
+            ))
 
         # Capture Faculty
         for f in Faculty.query.filter_by(is_archived=False).all():
-            data = {col.name: getattr(f, col.name) for col in f.__table__.columns if col.name != 'deleted_at'}
-            db.session.add(ArchivedEntity(term_archive_id=new_archive.id, entity_type='Faculty', data_json=json.dumps(data, default=str)))
+            db.session.add(ArchivedFaculty(
+                term_archive_id=new_archive.id,
+                employee_id=f.employee_id,
+                full_name=f.full_name,
+                department=f.department if f.department else "None",
+                employment_status=f.employment_status,
+                highest_educational_attainment=f.highest_educational_attainment,
+                academic_rank=f.academic_rank,
+                sex=f.sex,
+                max_weekly_hours=f.max_weekly_hours,
+                available_days=f.available_days
+            ))
 
         # Capture Rooms
         for r in Room.query.filter_by(is_archived=False).all():
-            data = {col.name: getattr(r, col.name) for col in r.__table__.columns if col.name != 'deleted_at'}
-            db.session.add(ArchivedEntity(term_archive_id=new_archive.id, entity_type='Room', data_json=json.dumps(data, default=str)))
+            db.session.add(ArchivedRoom(
+                term_archive_id=new_archive.id,
+                room_name=r.room_name,
+                building=r.building,
+                capabilities=r.capabilities,
+                capacity=r.capacity,
+                functional_computers=r.functional_computers,
+                status=r.status,
+                special_course_ids=r.special_course_ids,
+                room_departments=r.room_departments
+            ))
 
-        # Capture Students (Regular) - Include live-archived students as well
-        for st in Student.query.filter(Student.deleted_at.is_(None), Student.is_irregular.is_(False)).all():
-            data = {col.name: getattr(st, col.name) for col in st.__table__.columns if col.name != 'deleted_at'}
-            db.session.add(ArchivedEntity(term_archive_id=new_archive.id, entity_type='Student', data_json=json.dumps(data, default=str)))
+        # Capture Students
+        for st in Student.query.filter(Student.deleted_at.is_(None)).all():
+            asgn_data = None
+            if st.is_irregular:
+                asgn = IrregularAssignment.query.filter_by(student_id_fk=st.id, semester=sem).first()
+                asgn_data = asgn.assignments_json if asgn else "[]"
 
-        # Capture Irregular Students (Student + Assignment) - Include live-archived too
-        for ist in Student.query.filter(Student.deleted_at.is_(None), Student.is_irregular.is_(True)).all():
-            st_data = {col.name: getattr(ist, col.name) for col in ist.__table__.columns if col.name != 'deleted_at'}
-            # Get assignment for current semester
-            asgn = IrregularAssignment.query.filter_by(student_id_fk=ist.id, semester=sem).first()
-            asgn_data = json.loads(asgn.assignments_json) if asgn else []
-            data = {**st_data, 'assignments': asgn_data}
-            db.session.add(ArchivedEntity(term_archive_id=new_archive.id, entity_type='IrregularStudent', data_json=json.dumps(data, default=str)))
+            db.session.add(ArchivedStudent(
+                term_archive_id=new_archive.id,
+                student_id=st.student_id,
+                full_name=st.full_name,
+                year_level=st.year_level,
+                is_irregular=st.is_irregular,
+                assignments_json=asgn_data
+            ))
 
         # Capture Pre-Assignments
         for pa in PreAssignment.query.filter_by(is_archived=False).all():
