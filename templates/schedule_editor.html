@@ -1697,9 +1697,12 @@
                     <span id="semesterLabel">— Semester —</span>
                 </button>
                 <ul class="dropdown-menu header-premium-menu" id="semesterMenu" aria-labelledby="semesterDropdown">
-                    <li><a class="dropdown-item" href="javascript:void(0);" onclick="changeSemester('', '— Semester —')" data-value=""><span class="check-icon">✓</span>— Semester —</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0);" onclick="changeSemester('', '— Semester —')"
+                            data-value=""><span class="check-icon">✓</span>— Semester —</a></li>
                     {% for s in semesters %}
-                    <li><a class="dropdown-item" href="javascript:void(0);" onclick="changeSemester('{{ s }}', '{{ s }}')" data-value="{{ s }}"><span class="check-icon">✓</span>{{ s }}</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0);"
+                            onclick="changeSemester('{{ s }}', '{{ s }}')" data-value="{{ s }}"><span
+                                class="check-icon">✓</span>{{ s }}</a></li>
                     {% endfor %}
                 </ul>
             </div>
@@ -1721,13 +1724,15 @@
                 </button>
                 <ul class="dropdown-menu header-premium-menu" id="viewTypeMenu" aria-labelledby="viewTypeDropdown">
                     <li><a class="dropdown-item active" href="javascript:void(0);"
-                            onclick="changeViewType('section', 'Section')" data-value="section"><span class="check-icon">✓</span>Section</a></li>
+                            onclick="changeViewType('section', 'Section')" data-value="section"><span
+                                class="check-icon">✓</span>Section</a></li>
                     <li><a class="dropdown-item" href="javascript:void(0);"
-                            onclick="changeViewType('faculty', 'Faculty')" data-value="faculty"><span class="check-icon">✓</span>Faculty</a></li>
-                    <li><a class="dropdown-item" href="javascript:void(0);"
-                            onclick="changeViewType('room', 'Room')" data-value="room"><span class="check-icon">✓</span>Room</a></li>
-                    <li><a class="dropdown-item" href="javascript:void(0);"
-                            onclick="changeViewType('course', 'Course')" data-value="course"><span class="check-icon">✓</span>Course</a></li>
+                            onclick="changeViewType('faculty', 'Faculty')" data-value="faculty"><span
+                                class="check-icon">✓</span>Faculty</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0);" onclick="changeViewType('room', 'Room')"
+                            data-value="room"><span class="check-icon">✓</span>Room</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0);" onclick="changeViewType('course', 'Course')"
+                            data-value="course"><span class="check-icon">✓</span>Course</a></li>
                 </ul>
             </div>
             <select id="viewTypeSelNative" class="form-select form-select-sm d-inline-block d-md-none"
@@ -1746,7 +1751,8 @@
                     style="min-width: 140px; text-align: left; background: white;">
                     <span id="entityLabel">— Select —</span>
                 </button>
-                <ul class="dropdown-menu header-premium-menu" id="entityMenu" aria-labelledby="entityDropdown" style="max-height: 400px; overflow-y: auto;">
+                <ul class="dropdown-menu header-premium-menu" id="entityMenu" aria-labelledby="entityDropdown"
+                    style="max-height: 400px; overflow-y: auto;">
                     <!-- Populated by JS -->
                 </ul>
             </div>
@@ -1775,11 +1781,14 @@
             </select>
         </div>
 
-        <!-- ROW 4: Action Buttons -->
         <div class="mobile-topbar-row row-4">
             {% if not is_hist %}
-            <button class="btn btn-sm btn-success" id="publishDraftBtn" style="display:none" onclick="publishDraft()"><i
-                    class="bi bi-cloud-upload me-1"></i>Publish</button>
+            <button class="btn btn-sm btn-primary" id="saveDraftBtn" style="display:none" onclick="handleGlobalSave()">
+                <i class="bi bi-cloud-check-fill me-1"></i>Save as Draft
+            </button>
+            <button class="btn btn-sm btn-success" id="attachDraftBtn" style="display:none" onclick="openAttachModal()">
+                <i class="bi bi-paperclip me-1"></i>Attach
+            </button>
             <button id="previewDraftBtn" class="btn btn-sm btn-success d-none" onclick="openDraftPreview()"
                 title="Full-Screen Draft Preview">
                 <i class="bi bi-eye-fill me-1"></i> Preview
@@ -2265,27 +2274,6 @@
         <div class="modal-content">
             <div class="modal-header d-flex align-items-center py-3">
                 <div class="d-flex align-items-center gap-2 w-100">
-                    <!-- Sync Button -->
-                    <button class="btn btn-sync d-flex align-items-center gap-2" id="syncGridBtn" onclick="syncGrid()"
-                        title="Sync and Resolve">
-                        <i class="bi bi-arrow-repeat fs-5"></i>
-                        <span class="d-none d-xl-inline fw-semibold">Sync Grid</span>
-                    </button>
-
-                    <button class="btn btn-primary d-flex align-items-center gap-2 px-3 d-none" id="publishDraftBtn"
-                        onclick="initiateSubmission()">
-                        <i class="bi bi-send-check-fill fs-5"></i>
-                        <span id="publishBtnLabel" class="fw-semibold">{% if session.role == 'user' %}Submit for
-                            Approval{% else %}Publish Draft{% endif %}</span>
-                    </button>
-
-                    <button class="btn btn-outline-info d-flex align-items-center gap-2 px-3 d-none"
-                        id="previewDraftBtn" onclick="previewDraft()">
-                        <i class="bi bi-eye fs-5"></i>
-                    </button>
-
-                    <div class="vr mx-2"></div>
-
                     <button id="mdBackBtn" class="btn btn-link link-secondary p-0 me-3 d-none shadow-none" type="button"
                         onclick="closeMdfForm()" title="Go back">
                         <i class="bi bi-arrow-left fs-5"></i>
@@ -2461,6 +2449,45 @@
     </div>
 </div>
 
+<!-- ATTACH RECIPIENT MODAL (Premium UI Refined) -->
+<div class="modal fade" id="attachRecipientModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+            <div class="modal-header border-bottom px-4 py-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-success bg-opacity-10 p-2 rounded-3">
+                        <i class="bi bi-paperclip fs-4 text-success"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0">Attach to Chat</h5>
+                        <p class="text-muted small mb-0" style="font-size: 0.8rem;">Select a recipient to share this
+                            draft</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-2" style="overflow-y:hidden;">
+                <!-- Live Search Bar -->
+                <div class="google-search-bar d-flex align-items-center mb-4"
+                    style="background: #f1f3f4; border-radius: 8px; padding: 10px 16px;">
+                    <i class="bi bi-search text-secondary me-3"></i>
+                    <input type="text" id="recipientSearch" class="google-search-input w-100"
+                        placeholder="Search by name or role..." oninput="filterRecipients(this.value)"
+                        style="background: transparent; border: none; outline: none; font-size: 0.95rem;">
+                </div>
+
+                <div id="recipientList" class="overflow-auto"
+                    style="max-height: 367px; scrollbar-width: thin; padding-right: .5rem !important; padding-left: 1rem; padding-bottom: 1rem !important;">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-success spinner-border-sm mb-2" role="status"></div>
+                        <p class="text-muted small">Loading recipients...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- DELETE CONFIRM MODAL -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -2588,7 +2615,7 @@
         const vt = document.getElementById('viewTypeSel').value;
         const sel = document.getElementById('entitySel');
         const menu = document.getElementById('entityMenu');
-        
+
         sel.innerHTML = '';
         if (menu) menu.innerHTML = '';
 
@@ -2596,7 +2623,7 @@
             vt === 'faculty' ? [FAC_IDS, FAC_NAMES] :
                 vt === 'room' ? [ROOM_IDS, ROOM_NAMES] :
                     [CRS_IDS, CRS_NAMES];
-        
+
         // Add default option
         sel.add(new Option('— Select —', ''));
         if (menu) {
@@ -2615,14 +2642,14 @@
         });
 
         // Reset Entity selection on view change
-        window.syncEntity('', '— Select —', false); 
+        window.syncEntity('', '— Select —', false);
 
         currentViewType = vt;
         loadGrid();
     }
 
     // Custom Dropdown UI Sync Helper (1:1 Draft Preview Sort UI)
-    window.updateActiveUI = function(menuId, val) {
+    window.updateActiveUI = function (menuId, val) {
         const menu = document.getElementById(menuId);
         if (!menu) return;
         menu.querySelectorAll('.dropdown-item').forEach(el => {
@@ -2632,7 +2659,7 @@
     };
 
     // Custom Dropdown Sync Helpers
-    window.changeSemester = function(val, label) {
+    window.changeSemester = function (val, label) {
         document.getElementById('semesterSelValue').value = val;
         document.getElementById('semesterLabel').textContent = label;
         const native = document.getElementById('semesterSel');
@@ -2640,14 +2667,14 @@
         updateActiveUI('semesterMenu', val);
         loadGrid();
     };
-    window.syncSemester = function(val, label) {
+    window.syncSemester = function (val, label) {
         document.getElementById('semesterSelValue').value = val;
         document.getElementById('semesterLabel').textContent = label;
         updateActiveUI('semesterMenu', val);
         loadGrid();
     };
 
-    window.changeEntity = function(val, label) {
+    window.changeEntity = function (val, label) {
         document.getElementById('entitySelValue').value = val;
         document.getElementById('entityLabel').textContent = label;
         const native = document.getElementById('entitySel');
@@ -2655,7 +2682,7 @@
         updateActiveUI('entityMenu', val);
         loadGrid();
     };
-    window.syncEntity = function(val, label, triggerLoad = true) {
+    window.syncEntity = function (val, label, triggerLoad = true) {
         document.getElementById('entitySelValue').value = val;
         document.getElementById('entityLabel').textContent = label;
         updateActiveUI('entityMenu', val);
@@ -3451,51 +3478,247 @@
     }
 
 
-    async function initiateSubmission() {
-        if (!currentDraftId) return;
-
-        // ADMINS can still publish directly if they want, but let's encourage hub usage
-        const isUser = "{{ session.role }}" === 'user';
-
-        if (isUser) {
-            const justification = prompt("Please provide a short justification for this schedule proposal:");
-            if (justification === null) return; // Cancelled
-            if (!justification.trim()) {
-                showToast("Justification is required for submission.", "error");
-                return;
-            }
-
-            try {
-                const res = await fetch(`/api/hub/propose/${currentDraftId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
-                    body: JSON.stringify({ justification: justification })
-                }).then(r => r.json());
-
-                if (!res.ok) { showToast(res.error || 'Submission failed.', 'error'); return; }
-
-                showToast("Proposal submitted to Decision Hub. This draft is now locked.", "success");
-                setTimeout(() => location.reload(), 1500);
-            } catch (e) {
-                showToast("Network error during submission.", "error");
-            }
+    // ════════════════════════════════════════
+    //  ATTACH & VERSION CONTROL (GLOBAL SAVE)
+    // ════════════════════════════════════════
+    async function handleGlobalSave() {
+        // Double check mode before proceeding
+        const draftSel = document.getElementById('draftSel');
+        if (draftSel && draftSel.value) {
+            editorMode = 'draft';
+            currentDraftId = parseInt(draftSel.value);
         } else {
-            // ADMIN direct publish (Legacy style for superuser convenience)
-            if (!confirm('Publish this draft directly to master?')) return;
-            try {
-                const res = await fetch(`/api/draft/${currentDraftId}/publish`, {
-                    method: 'POST', headers: { 'X-CSRFToken': getCsrf() },
-                }).then(r => r.json());
-                if (!res.ok) {
-                    const msg = res.error || 'Publish failed';
-                    const detail = res.conflicts && res.conflicts.length ? ` — ${res.conflicts[0]}` : '';
-                    showToast(msg + detail, 'error');
+            editorMode = 'direct';
+            currentDraftId = null;
+        }
+
+        if (editorMode === 'direct') {
+            await saveAsDraft();
+        } else if (editorMode === 'draft') {
+            await cloneDraft();
+        }
+    }
+
+    let _saveDraftAction = 'snapshot'; // 'snapshot' or 'clone'
+
+    async function saveAsDraft() {
+        // 1. Validation: Check if semester is selected
+        const semVal = document.getElementById('semesterSelValue')?.value;
+        if (!semVal) {
+            showToast("Please select a semester first before saving a draft.", "error");
+            return;
+        }
+
+        _saveDraftAction = 'snapshot';
+        document.getElementById('saveDraftModalTitle').textContent = 'Save as Draft';
+        document.getElementById('saveDraftModalSubtext').textContent = 'Create a snapshot of the current live schedule.';
+        document.getElementById('saveDraftInputName').value = `Snapshot ${new Date().toLocaleString()}`;
+        
+        const modal = new bootstrap.Modal(document.getElementById('saveDraftNameModal'));
+        modal.show();
+    }
+
+    async function cloneDraft() {
+        if (!currentDraftId) {
+            showToast("Error: No active draft detected. Please reload the page.", "error");
+            return;
+        }
+
+        _saveDraftAction = 'clone';
+        document.getElementById('saveDraftModalTitle').textContent = 'Save as Copy';
+        document.getElementById('saveDraftModalSubtext').textContent = 'Create a duplicate version of your current draft.';
+        
+        const currentName = document.getElementById('draftSel')?.selectedOptions[0]?.textContent?.trim() || 'Draft';
+        document.getElementById('saveDraftInputName').value = `Copy of ${currentName}`;
+        
+        const modal = new bootstrap.Modal(document.getElementById('saveDraftNameModal'));
+        modal.show();
+    }
+
+    // Modal Confirmation Handler
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnConfirm = document.getElementById('btnConfirmSaveDraft');
+        if (btnConfirm) {
+            btnConfirm.onclick = async function() {
+                const name = document.getElementById('saveDraftInputName').value.trim();
+                if (!name) {
+                    showToast("Please enter a name for the draft.", "error");
                     return;
                 }
-                showToast("Published to master schedule.", "success");
-                setTimeout(() => location.reload(), 1300);
-            } catch { showToast('Network error — publish failed.', 'error'); }
+
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('saveDraftNameModal')).hide();
+
+                if (_saveDraftAction === 'snapshot') {
+                    await executeSnapshot(name);
+                } else {
+                    await executeClone(name);
+                }
+            };
         }
+    });
+
+    async function executeSnapshot(name) {
+        const semVal = document.getElementById('semesterSelValue')?.value;
+        showLoadingOverlay("Creating draft snapshot...");
+        try {
+            const resp = await fetch('/api/draft/snapshot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                body: JSON.stringify({ name: name, semester: semVal })
+            });
+            const res = await resp.json();
+
+            if (resp.ok && res.ok) {
+                showToast("Snapshot created! Switching to Draft Mode...", "success");
+                setTimeout(() => {
+                    window.location.href = `/schedule-editor?draft_id=${res.draft_id}`;
+                }, 1000);
+            } else {
+                showToast(res.error || 'Failed to create snapshot', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('Network error — please try again.', 'error');
+        } finally {
+            hideLoadingOverlay();
+        }
+    }
+
+    // ── LOADING OVERLAY HELPERS ──
+    function showLoadingOverlay(msg = 'Processing...') {
+        const loader = document.getElementById('page-loader');
+        if (loader) {
+            loader.style.display = 'flex';
+        }
+    }
+    function hideLoadingOverlay() {
+        const loader = document.getElementById('page-loader');
+        if (loader) loader.style.display = 'none';
+    }
+
+    async function executeClone(name) {
+        showLoadingOverlay("Cloning draft...");
+        try {
+            const resp = await fetch(`/api/draft/${currentDraftId}/clone`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+                body: JSON.stringify({ name: name })
+            });
+            const res = await resp.json();
+
+            if (resp.ok && res.ok) {
+                showToast("Draft duplicated! Switching to the new copy...", "success");
+                setTimeout(() => {
+                    window.location.href = `/schedule-editor?draft_id=${res.draft_id}`;
+                }, 1000);
+            } else {
+                showToast(res.error || 'Failed to clone draft', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('Network error — please try again.', 'error');
+        } finally {
+            hideLoadingOverlay();
+        }
+    }
+
+    let _allRecipients = [];
+    async function openAttachModal() {
+        if (!currentDraftId) {
+            showToast('Please save your work as a draft first.', 'error');
+            return;
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('attachRecipientModal'));
+        modal.show();
+
+        const list = document.getElementById('recipientList');
+        list.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-success spinner-border-sm mb-2"></div><p class="text-muted small">Fetching recipients...</p></div>`;
+
+        try {
+            const resp = await fetch('/api/hub/users');
+            if (resp.ok) {
+                _allRecipients = await resp.json();
+                renderRecipients(_allRecipients);
+            } else {
+                list.innerHTML = `<div class="alert alert-danger mx-3">Failed to load users.</div>`;
+            }
+        } catch (e) {
+            list.innerHTML = `<div class="alert alert-danger mx-3">Network error.</div>`;
+        }
+    }
+
+    function renderRecipients(users) {
+        const list = document.getElementById('recipientList');
+        if (!users.length) {
+            list.innerHTML = `<div class="text-center py-4 text-muted small">No recipients found.</div>`;
+            return;
+        }
+
+        list.innerHTML = users.map(u => {
+            const initials = u.username.substring(0, 2).toUpperCase();
+            const colors = ['#1a73e8', '#d93025', '#188038', '#f9ab00', '#7627bb', '#007b83'];
+            const color = colors[Math.abs(u.username.hashCode()) % colors.length];
+
+            // Role Badge Mapping (Matching User Management Premium Style)
+            let roleBadge = '';
+            if (u.role === 'superadmin') {
+                roleBadge = `<span class="badge-clean"><i class="bi bi-shield-lock-fill text-danger me-1"></i> Superadmin</span>`;
+            } else if (u.role === 'admin') {
+                roleBadge = `<span class="badge-clean"><i class="bi bi-tools text-primary me-1"></i> Admin</span>`;
+            } else {
+                roleBadge = `<span class="badge-clean"><i class="bi bi-person-fill text-success me-1"></i> User</span>`;
+            }
+
+            return `
+                <div class="d-flex align-items-center justify-content-between p-3 mb-2 rounded-3 hover-bg-light border border-transparent" 
+                     style="transition: all 0.2s; cursor: default;">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-sm" 
+                             style="width: 42px; height: 42px; background: ${color}; font-size: 0.9rem;">
+                            ${initials}
+                        </div>
+                        <div>
+                            <div class="fw-bold text-dark">${u.username}</div>
+                            <div class="mt-1">${roleBadge}</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-success px-3 fw-bold d-flex align-items-center gap-2" 
+                            style="border-radius: 7px; height: 36px;"
+                            onclick="selectRecipientAndRedirect('${u.username}')">
+                        <i class="bi bi-paperclip"></i>Attach
+                    </button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    if (!String.prototype.hashCode) {
+        String.prototype.hashCode = function () {
+            var hash = 0, i, chr;
+            if (this.length === 0) return hash;
+            for (i = 0; i < this.length; i++) {
+                chr = this.charCodeAt(i);
+                hash = ((hash << 5) - hash) + chr;
+                hash |= 0;
+            }
+            return hash;
+        };
+    }
+
+    function filterRecipients(q) {
+        const filtered = _allRecipients.filter(u =>
+            u.username.toLowerCase().includes(q.toLowerCase()) ||
+            u.role.toLowerCase().includes(q.toLowerCase())
+        );
+        renderRecipients(filtered);
+    }
+
+    function selectRecipientAndRedirect(username) {
+        const draftName = document.getElementById('draftSel').selectedOptions[0]?.textContent?.trim() || 'Schedule Draft';
+        const url = `/proposal-hub?partner=${encodeURIComponent(username)}&attach_draft_id=${currentDraftId}&attach_draft_name=${encodeURIComponent(draftName)}`;
+        window.location.href = url;
     }
 
     async function deleteDraft() {
@@ -3867,21 +4090,40 @@
         const badge = document.getElementById('modeBadge');
         const icon = document.getElementById('modeBadgeIcon');
         const label = document.getElementById('modeBadgeLabel');
-        const publishBtn = document.getElementById('publishDraftBtn');
+
+        // Buttons
+        const saveBtn = document.getElementById('saveDraftBtn');
+        const attachBtn = document.getElementById('attachDraftBtn');
+        const previewBtn = document.getElementById('previewDraftBtn');
+
         if (!badge) return;
         badge.style.display = '';
+
         if (editorMode === 'direct') {
             badge.className = 'mode-badge badge-direct';
             icon.className = 'bi bi-pencil-fill';
             label.textContent = 'Direct Edit Mode';
-            if (publishBtn) publishBtn.style.display = 'none';
+
+            // Topbar
+            if (saveBtn) {
+                saveBtn.style.display = '';
+                saveBtn.innerHTML = '<i class="bi bi-cloud-check-fill me-1"></i>Save as Draft';
+            }
+            if (attachBtn) attachBtn.style.display = 'none';
+            if (previewBtn) previewBtn.classList.add('d-none');
+
         } else if (editorMode === 'draft') {
             const draftName = document.getElementById('draftSel').selectedOptions[0]?.textContent?.trim() || 'Draft';
             badge.className = 'mode-badge badge-draft';
             icon.className = 'bi bi-layers';
             label.textContent = `Draft: ${draftName}`;
-            if (publishBtn) publishBtn.style.display = currentDraftId ? '' : 'none';
-            const previewBtn = document.getElementById('previewDraftBtn');
+
+            // Topbar
+            if (saveBtn) {
+                saveBtn.style.display = currentDraftId ? '' : 'none';
+                saveBtn.innerHTML = '<i class="bi bi-cloud-check-fill me-1"></i>Save as Copy';
+            }
+            if (attachBtn) attachBtn.style.display = currentDraftId ? '' : 'none';
             if (previewBtn) previewBtn.classList.toggle('d-none', !currentDraftId);
         }
         updateLockBanner();
@@ -5203,11 +5445,23 @@
         onViewTypeChange(); // Populates Entity list
         window.updateActiveUI('viewTypeMenu', 'section');
         window.updateActiveUI('semesterMenu', '');
-        
-        // Open Mode Picker on Load
-        const modeModal = document.getElementById('editorModeModal');
-        if (modeModal) {
-            bootstrap.Modal.getOrCreateInstance(modeModal).show();
+
+        // Initialize editorMode based on dropdown/URL
+        const draftSel = document.getElementById('draftSel');
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlDraftId = urlParams.get('draft_id');
+
+        if (urlDraftId || (draftSel && draftSel.value)) {
+            editorMode = 'draft';
+            currentDraftId = parseInt(urlDraftId || draftSel.value);
+            updateModeBadge();
+            // Don't open picker if already in a draft
+        } else {
+            // Open Mode Picker on Load if no draft is selected
+            const modeModal = document.getElementById('editorModeModal');
+            if (modeModal) {
+                bootstrap.Modal.getOrCreateInstance(modeModal).show();
+            }
         }
     });
 </script>
@@ -5488,6 +5742,38 @@
             </div>
             <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Save Draft Name Modal -->
+<div class="modal fade" id="saveDraftNameModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 15px;">
+
+            <div class="modal-header border-bottom-0 p-4">
+                <h5 class="modal-title fw-bold text-dark d-flex align-items-center">
+                    <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center me-3" style="width: 38px; height: 38px;">
+                        <i class="bi bi-pencil-square text-success"></i>
+                    </div>
+                    <span id="saveDraftModalTitle">Save as Draft</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 py-0">
+                <p class="text-muted small mb-3" id="saveDraftModalSubtext">Give this draft version a recognizable name.</p>
+                <div class="mb-4">
+                    <label class="form-label text-muted small fw-bold mb-1">Draft Name</label>
+                    <input type="text" id="saveDraftInputName" class="form-control form-control-lg fs-6" 
+                           placeholder="e.g. Mid-Semester Backup" 
+                           style="border-radius: 7px; border: 1.5px solid #eee; background: #fdfdfd;">
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-top-0 px-4 py-3">
+                <button type="button" class="btn btn-light px-4 fw-bold text-muted" data-bs-dismiss="modal" style="border-radius: 7px;">Cancel</button>
+                <button type="button" id="btnConfirmSaveDraft" class="btn btn-success px-4 fw-bold" style="border-radius: 7px;">Save Draft</button>
             </div>
         </div>
     </div>

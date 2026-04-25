@@ -9,31 +9,54 @@
     <div class="messenger-sidebar">
         <div class="sidebar-header-main p-3">
             <h4 class="fw-bold mb-3 d-flex align-items-center">
-                Chats
+                <div id="chatsTitleSkeleton">
+                    <div class="skeleton skeleton-text" style="width: 80px; height: 24px; margin: 0;"></div>
+                </div>
+                <span id="chatsTitleReal" class="d-none">Chats</span>
                 <!-- Info Button (Existing) -->
-                <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal"
+                <div id="sidebarInfoSkeleton" class="ms-2">
+                    <div class="skeleton skeleton-circle" style="width: 18px; height: 18px;"></div>
+                </div>
+                <button id="sidebarInfoReal" class="btn btn-link link-secondary p-0 ms-2 d-none" data-bs-toggle="modal"
                     data-bs-target="#decisionHubInfoModal" title="How to use Decision Hub">
                     <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
                 </button>
 
                 <!-- Relocated Pending Review (Three Dots) -->
-                <div class="ms-auto">
-                    <button class="btn btn-messenger-icon" type="button" data-bs-toggle="offcanvas"
+                <div class="ms-auto d-flex align-items-center">
+                    <div id="sidebarMoreSkeleton">
+                        <div class="skeleton skeleton-circle" style="width: 32px; height: 32px;"></div>
+                    </div>
+                    <button id="sidebarMoreReal" class="btn btn-messenger-icon d-none" type="button" data-bs-toggle="offcanvas"
                         data-bs-target="#offcanvasPendingReview" aria-controls="offcanvasPendingReview"
                         title="More Options / Pending Review">
                         <i class="bi bi-three-dots-vertical info-icon-hover"></i>
                     </button>
                 </div>
             </h4>
-            <div class="messenger-search">
+            <div id="searchBarSkeleton">
+                <div class="skeleton" style="width: 100%; height: 36px; border-radius: 20px;"></div>
+            </div>
+            <div class="messenger-search d-none" id="searchBarReal">
                 <i class="bi bi-search"></i>
                 <input type="text" placeholder="Search Messenger" oninput="filterConvos(this.value)" maxlength="100">
             </div>
         </div>
         <div class="messenger-convo-list custom-scrollbar" id="convoList">
-            <!-- Loading state -->
-            <div class="p-4 text-center">
-                <div class="spinner-border text-primary spinner-border-sm"></div>
+            <!-- Skeleton Loading State -->
+            <div id="convoSkeleton">
+                {% for i in range(6) %}
+                <div class="convo-item opacity-50" style="cursor: default;">
+                    <div class="position-relative">
+                        <div class="skeleton skeleton-circle" style="width: 50px; height: 50px;"></div>
+                        <div class="skeleton skeleton-circle" style="width: 12px; height: 12px; position: absolute; bottom: 2px; right: 2px; border: 2px solid #fff;"></div>
+                    </div>
+                    <div class="convo-body">
+                        <div class="skeleton skeleton-text" style="width: 60%;"></div>
+                        <div class="skeleton skeleton-text-sm" style="width: 40%;"></div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
@@ -48,29 +71,56 @@
             </button>
 
             <div class="d-flex align-items-center gap-2">
-                <div class="avatar-header" id="activeAvatarHeader">
-                    <i class="bi bi-megaphone-fill"></i>
+                <div id="chatHeaderSkeleton" class="d-flex align-items-center gap-2">
+                    <div class="skeleton skeleton-circle" style="width: 40px; height: 40px;"></div>
+                    <div>
+                        <div class="skeleton skeleton-text" style="width: 100px; height: 14px; margin-bottom: 4px;"></div>
+                        <div class="skeleton skeleton-text-sm" style="width: 60px; height: 10px;"></div>
+                    </div>
                 </div>
-                <div>
-                    <div class="fw-bold fs-6" id="activePartnerName">Everyone</div>
-                    <div class="small text-muted" id="activePartnerStatus">Online</div>
+                <div id="chatHeaderReal" class="d-none d-flex align-items-center gap-2">
+                    <div class="avatar-header" id="activeAvatarHeader" style="background: #31a24c;">
+                        <i class="bi bi-megaphone-fill"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold fs-6" id="activePartnerName">Announcements</div>
+                        <div class="small text-muted" id="activePartnerStatus">Online</div>
+                    </div>
                 </div>
             </div>
             <div class="ms-auto d-flex align-items-center gap-2">
-                <button class="btn btn-messenger-icon btn-responsive-offcanvas" data-bs-toggle="offcanvas"
-                    data-bs-target="#offcanvasDetails" title="Show Details">
-                    <i class="bi bi-info-circle-fill fs-5 text-primary"></i>
-                </button>
-                <button class="btn btn-messenger-icon btn-responsive-sidebar" onclick="toggleProfileSidebar()"
-                    title="Show/Hide Details">
-                    <i class="bi bi-info-circle-fill fs-5 text-primary"></i>
-                </button>
+                <div id="chatActionsSkeleton">
+                    <div class="skeleton skeleton-circle" style="width: 32px; height: 32px;"></div>
+                </div>
+                <div id="chatActionsReal" class="d-none d-flex align-items-center gap-2">
+                    <button id="chatInfoReal" class="btn btn-messenger-icon btn-responsive-offcanvas" data-bs-toggle="offcanvas"
+                        data-bs-target="#offcanvasDetails" title="Show Details">
+                        <i class="bi bi-info-circle-fill fs-5 text-primary"></i>
+                    </button>
+                    <button id="chatSidebarToggleReal" class="btn btn-messenger-icon btn-responsive-sidebar" onclick="toggleProfileSidebar()"
+                        title="Show/Hide Details">
+                        <i class="bi bi-info-circle-fill fs-5 text-primary"></i>
+                    </button>
+                </div>
             </div>
         </div>
 
         <!-- Log -->
         <div class="chat-log-main custom-scrollbar" id="chatLog">
-            <!-- Messages pop here -->
+            <!-- Chat Skeleton -->
+            <div id="chatLogSkeleton">
+                {% for i in range(1) %}
+                <div class="bubble-wrap them">
+                    <div class="skeleton" style="width: 60%; height: 40px; border-radius: 18px;"></div>
+                </div>
+                <div class="bubble-wrap me">
+                    <div class="skeleton" style="width: 45%; height: 35px; border-radius: 18px;"></div>
+                </div>
+                {% endfor %}
+            </div>
+            <div id="chatLogReal" class="d-none">
+                <!-- Messages pop here -->
+            </div>
         </div>
 
         <!-- Input -->
@@ -90,10 +140,18 @@
                 <button type="button" class="btn-cancel-edit" onclick="cancelEditMode()"><i
                         class="bi bi-x"></i></button>
             </div>
-            <form id="chatForm" class="chat-form-main">
+            <div id="chatInputSkeleton">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="skeleton skeleton-circle" style="width: 38px; height: 38px;"></div>
+                    <div class="skeleton flex-grow-1" style="height: 40px; border-radius: 20px;"></div>
+                    <div class="skeleton skeleton-circle" style="width: 34px; height: 34px;"></div>
+                </div>
+            </div>
+
+            <form id="chatForm" class="chat-form-main d-none">
                 <div class="input-tools">
                     <button type="button" class="btn-messenger-icon text-primary" onclick="toggleDraftPicker(true)"><i
-                            class="bi bi-plus-circle-fill"></i></button>
+                            class="bi bi-plus-circle-fill" style=" height: 25px;"></i></button>
                 </div>
                 <div class="flex-grow-1 position-relative">
                     <textarea id="chatInput" rows="1" placeholder="Aa" class="form-control messenger-textarea"
@@ -111,29 +169,37 @@
 
     <!-- 3. RIGHT SIDEBAR (USER PROFILE) -->
     <div class="messenger-details-pane custom-scrollbar" id="detailsPane">
-        <div class="p-4 text-center">
+        <!-- Profile Skeleton -->
+        <div id="profileSkeleton" class="p-4 text-center">
+            <div class="skeleton skeleton-circle mb-3 mx-auto" style="width: 120px; height: 120px;"></div>
+            <div class="skeleton skeleton-text mx-auto" style="width: 70%;"></div>
+            <div class="skeleton skeleton-text-sm mx-auto mb-4" style="width: 40%;"></div>
+            <hr class="my-4 op-10">
+            <div class="skeleton skeleton-text-sm mb-2" style="width: 30%;"></div>
+            <div class="skeleton skeleton-text mb-2"></div>
+            <div class="skeleton skeleton-text mb-2"></div>
+        </div>
+
+        <!-- Real Profile Content (Hidden initially) -->
+        <div id="profileRealContent" class="p-4 text-center d-none">
             <div class="profile-avatar-wrap mb-3" id="profileAvatarContainer" title="Double click to enlarge"
                 style="cursor: pointer;">
                 {% set p_pic = session.get('profile_pic', 'default.png') %}
-                {% if p_pic and p_pic != 'default.png' %}
                 <img src="{{ url_for('static', filename='uploads/profile_pics/' + p_pic) }}" alt="Profile"
-                    class="profile-avatar-large shadow" id="mainProfileImg" onerror="handleAvatarError(this)">
-                {% endif %}
+                    class="profile-avatar-large shadow {% if not p_pic or p_pic == 'default.png' %}d-none{% endif %}" 
+                    id="mainProfileImg" onerror="handleAvatarError(this)">
                 <div id="mainProfileFallback"
-                    class="profile-avatar-large shadow d-none align-items-center justify-content-center fw-bold text-white h2">
+                    class="profile-avatar-large shadow {% if p_pic and p_pic != 'default.png' %}d-none{% endif %} align-items-center justify-content-center fw-bold text-white h2">
                     <!-- Initial Letter -->
                 </div>
             </div>
-            <h5 class="fw-bold mb-1" id="profileNameDisplay">{{ session.get('full_name', session.get('username')) }}
-            </h5>
-            <p class="text-muted small mb-1" id="profileDeptDisplay">{{ session.get('department', 'No Department') }}
-            </p>
+            <h5 class="fw-bold mb-1" id="profileNameDisplay">{{ session.get('full_name', session.get('username')) }}</h5>
+            <p class="text-muted small mb-1" id="profileDeptDisplay">{{ session.get('department', 'No Department') }}</p>
             <div class="small mb-3" id="activePartnerProfileStatus">
                 <span class="status-dot offline"></span> Offline
             </div>
             <div class="badge bg-light text-dark rounded-pill px-3 py-2 mb-4 border">
-                <span class="text-uppercase x-small fw-bold opacity-75" id="profileRoleDisplay">{{ session.get('role',
-                    'User') }}</span>
+                <span class="text-uppercase x-small fw-bold opacity-75" id="profileRoleDisplay">{{ session.get('role', 'User') }}</span>
             </div>
 
             <hr class="my-4 op-10">
@@ -143,8 +209,7 @@
                 <div class="small">
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Status</span>
-                        <span class="fw-semibold text-warning" id="scanningStatus"><i
-                                class="bi bi-search me-1"></i>Scanning...</span>
+                        <span class="fw-semibold text-warning" id="scanningStatus"><i class="bi bi-search me-1"></i>Scanning...</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Socket</span>
@@ -156,7 +221,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="mt-auto pt-5 pb-4 opacity-50">
                 <div class="badge bg-light text-muted border py-2 px-3 rounded-pill" style="font-size: 0.65rem;">
                     <i class="bi bi-shield-lock-fill me-1"></i> Secure End-to-End Chat
@@ -408,7 +472,32 @@
             --ms-text-me: #fff;
             --ms-text-them: #050505;
             --ms-border: #f0f0f0;
+            --skeleton-bg: #f2f2f2;
         }
+
+        /* 🦴 SKELETON LOADERS */
+        .skeleton {
+            background-color: var(--skeleton-bg);
+            background-image: linear-gradient(
+                90deg,
+                var(--skeleton-bg) 0px,
+                #e8e8e8 40px,
+                var(--skeleton-bg) 80px
+            );
+            background-size: 600px;
+            animation: shimmer 1.5s infinite linear;
+            border-radius: 4px;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200px 0; }
+            100% { background-position: 400px 0; }
+        }
+
+        .skeleton-circle { border-radius: 50%; }
+        .skeleton-text { height: 12px; margin-bottom: 8px; width: 100%; }
+        .skeleton-text-sm { height: 8px; width: 60%; }
+        .skeleton-text-md { height: 10px; width: 80%; }
 
         .text-muted-v2 {
             color: #adb5bd;
@@ -644,7 +733,7 @@
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            background: var(--ms-blue);
+            background: #31a24c;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1961,6 +2050,7 @@
 
         // DOM Elements
         const chatLog = document.getElementById('chatLog');
+        const chatLogReal = document.getElementById('chatLogReal');
         const chatInput = document.getElementById('chatInput');
         const convoList = document.getElementById('convoList');
         const draftPickerList = document.getElementById('draftPickerList');
@@ -1984,8 +2074,49 @@
                 }
             }, 1500);
 
-            loadConversations();
+            // Unified Initial Load
+            async function initialHubLoad() {
+                setSidebarLoading(true);
+                setChatPaneLoading(true);
+
+                try {
+                    // Load conversations first, THEN switch to default channel
+                    // This ensures conversationsHistory is populated before switchConversation runs
+                    await loadConversations();
+                    if (window.innerWidth >= 768) {
+                        await switchConversation('Everyone');
+                    }
+                } catch (err) {
+                    console.error("Hub Load Error:", err);
+                } finally {
+                    setSidebarLoading(false);
+                    setChatPaneLoading(false);
+                }
+            }
+
+            initialHubLoad();
             loadPendingDrafts();
+
+            // Auto-Attach Logic from URL Parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const partner = urlParams.get('partner');
+            const attachId = urlParams.get('attach_draft_id');
+            const attachName = urlParams.get('attach_draft_name');
+
+            if (partner) {
+                setTimeout(() => {
+                    if (typeof switchConversation === 'function') {
+                        switchConversation(partner);
+                        if (attachId && attachName) {
+                            if (typeof attachDraft === 'function') {
+                                attachDraft(parseInt(attachId), attachName);
+                                const ci = document.getElementById('chatInput');
+                                if (ci) ci.focus();
+                            }
+                        }
+                    }
+                }, 1000);
+            }
 
             // PENDING REVIEW LOGIC (Global List)
             document.getElementById('offcanvasPendingReview')?.addEventListener('show.bs.offcanvas', async function () {
@@ -2033,10 +2164,6 @@
                 dPane.classList.add('details-collapsed');
             }
 
-            // Auto-switch to default channel only on Desktop
-            if (window.innerWidth >= 768) {
-                switchConversation('Everyone');
-            }
 
             if (socket) {
                 // Join hub if already connected
@@ -2210,21 +2337,81 @@
             return `<div style="${base}background:${bg};font-size:calc(${size} * 0.4);">${initial}${dotHtml || ''}</div>`;
         }
 
+        // ──────────────── LOADING HELPERS ────────────────
+        function setSidebarLoading(isLoading) {
+            const convoSkeleton = document.getElementById('convoSkeleton');
+            const chatsTitleSkeleton = document.getElementById('chatsTitleSkeleton');
+            const chatsTitleReal = document.getElementById('chatsTitleReal');
+            const searchBarSkeleton = document.getElementById('searchBarSkeleton');
+            const searchBarReal = document.getElementById('searchBarReal');
+            const sidebarInfoSkeleton = document.getElementById('sidebarInfoSkeleton');
+            const sidebarInfoReal = document.getElementById('sidebarInfoReal');
+            const sidebarMoreSkeleton = document.getElementById('sidebarMoreSkeleton');
+            const sidebarMoreReal = document.getElementById('sidebarMoreReal');
+
+            const toggle = (el, show) => { if (el) el.classList[show ? 'remove' : 'add']('d-none'); };
+            const toggleReal = (el, show) => { if (el) el.classList[show ? 'add' : 'remove']('d-none'); };
+
+            toggle(convoSkeleton, isLoading);
+            toggle(chatsTitleSkeleton, isLoading);
+            toggleReal(chatsTitleReal, isLoading);
+            toggle(searchBarSkeleton, isLoading);
+            toggleReal(searchBarReal, isLoading);
+            toggle(sidebarInfoSkeleton, isLoading);
+            toggleReal(sidebarInfoReal, isLoading);
+            toggle(sidebarMoreSkeleton, isLoading);
+            toggleReal(sidebarMoreReal, isLoading);
+        }
+
+        function setChatPaneLoading(isLoading) {
+            const logSkeleton = document.getElementById('chatLogSkeleton');
+            const logReal = document.getElementById('chatLogReal');
+            const headSkeleton = document.getElementById('chatHeaderSkeleton');
+            const headReal = document.getElementById('chatHeaderReal');
+            const inputSkeleton = document.getElementById('chatInputSkeleton');
+            const chatForm = document.getElementById('chatForm');
+            const chatActionsSkeleton = document.getElementById('chatActionsSkeleton');
+            const chatActionsReal = document.getElementById('chatActionsReal');
+            
+            // Profile Pane Skeletons
+            const profSkeleton = document.getElementById('profileSkeleton');
+            const profReal = document.getElementById('profileRealContent');
+
+            const toggle = (el, show) => { if (el) el.classList[show ? 'remove' : 'add']('d-none'); };
+            const toggleReal = (el, show) => { if (el) el.classList[show ? 'add' : 'remove']('d-none'); };
+
+            toggle(logSkeleton, isLoading);
+            toggleReal(logReal, isLoading);
+            toggle(headSkeleton, isLoading);
+            toggleReal(headReal, isLoading);
+            toggle(inputSkeleton, isLoading);
+            toggleReal(chatForm, isLoading);
+            toggle(chatActionsSkeleton, isLoading);
+            toggleReal(chatActionsReal, isLoading);
+            
+            toggle(profSkeleton, isLoading);
+            toggleReal(profReal, isLoading);
+        }
+
         // ──────────────── DATA FETCHING ────────────────
         async function loadConversations() {
-            const r = await fetch('/api/hub/conversations');
-            const data = await r.json();
-            conversationsHistory = data.history || [];
-            allUsers = data.all_users || [];
-            renderConvoList();
+            setSidebarLoading(true);
+            try {
+                const r = await fetch('/api/hub/conversations');
+                const data = await r.json();
+                conversationsHistory = data.history || [];
+                allUsers = data.all_users || [];
+                renderConvoList();
+            } finally {
+                // We'll hide sidebar loading after all initial tasks done or if called alone
+            }
         }
 
         window.renderConvoList = function (filteredResults = null) {
             if (!convoList) return;
             convoList.innerHTML = '';
-
             const listToRender = filteredResults || conversationsHistory;
-
+            
             if (listToRender.length === 0) {
                 convoList.innerHTML = '<div class="p-4 text-center text-muted small">No conversations yet</div>';
                 return;
@@ -2273,21 +2460,24 @@
 
         async function switchConversation(partner) {
             activePartner = partner;
+            setChatPaneLoading(true);
 
-            // Header Update
+            // Message Loading
+            const r = await fetch(`/api/hub/messages?partner=${encodeURIComponent(partner)}`);
+            const msgs = await r.json();
+
+            // Header & Profile Data Update (NOW after fetch for unified transition)
             const headName = document.getElementById('activePartnerName');
             const headAvatar = document.getElementById('activeAvatarHeader');
+            const headStatus = document.getElementById('activePartnerStatus');
 
-            // Ensure partner info is available (might be from global users)
             let activeConvo = conversationsHistory.find(c => c.name === partner);
             if (!activeConvo) {
                 activeConvo = allUsers.find(u => u.name === partner);
             }
 
-            if (headName) {
-                headName.textContent = partner === 'Everyone' ? 'Announcements' : partner;
-            }
-
+            if (headName) headName.textContent = partner === 'Everyone' ? 'Announcements' : partner;
+            
             if (headAvatar) {
                 if (partner === 'Everyone') {
                     headAvatar.innerHTML = '<i class="bi bi-megaphone-fill"></i>';
@@ -2303,7 +2493,6 @@
                 }
             }
 
-            const headStatus = document.getElementById('activePartnerStatus');
             if (headStatus) {
                 if (partner === 'Everyone') {
                     headStatus.textContent = 'Online';
@@ -2315,132 +2504,145 @@
                 }
             }
 
-            // Message Loading
-            chatLog.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary"></div></div>';
-            const r = await fetch(`/api/hub/messages?partner=${encodeURIComponent(partner)}`);
-            const msgs = await r.json();
-
-            chatLog.innerHTML = '';
-            if (msgs.length === 0) {
-                chatLog.innerHTML = `<div class="text-muted text-center mt-5 small">No messages yet. Say hi!</div>`;
-            } else {
-                msgs.forEach(m => appendMessage(m));
+            const logReal = document.getElementById('chatLogReal');
+            if (logReal) {
+                logReal.innerHTML = '';
+                if (msgs.length === 0) {
+                    logReal.innerHTML = `<div class="text-muted text-center mt-5 small">No messages yet. Say hi!</div>`;
+                } else {
+                    msgs.forEach(m => appendMessage(m));
+                }
             }
+
+            // Update Sidebar Details
+            await updateRightSidebar(partner);
+
+            // Hide Skeletons after ALL data is applied
+            setChatPaneLoading(false);
 
             if (partner !== 'Everyone') markRead(partner);
             renderConvoList();
             const hubWrapper = document.querySelector('.messenger-hub-wrapper');
             if (hubWrapper) hubWrapper.classList.add('show-chat');
-
-            // Update Sidebar Details
-            updateRightSidebar(partner);
         }
 
         // PENDING REVIEW LOGIC (Strict Trigger)
         // Logic moved to DOMContentLoaded above
 
         window.updateRightSidebar = function (partner) {
-            const dPane = document.getElementById('detailsPane');
-            const offPane = document.getElementById('offcanvasDetails');
-            if (!dPane && !offPane) return;
+            return new Promise((resolve) => {
+                const dPane = document.getElementById('detailsPane');
+                const offPane = document.getElementById('offcanvasDetails');
+                if (!dPane && !offPane) return resolve();
 
-            let activeConvo = conversationsHistory.find(c => c.name === partner);
-            if (!activeConvo) {
-                activeConvo = allUsers.find(u => u.name === partner);
-            }
+                let activeConvo = conversationsHistory.find(c => c.name === partner) || allUsers.find(u => u.name === partner);
 
-            const nameDisplay = document.getElementById('profileNameDisplay');
-            const nameMobile = document.getElementById('profileNameMobile');
-            const mainImg = document.getElementById('mainProfileImg');
-            const mainImgMobile = document.getElementById('mainProfileImgMobile');
-            const mainFallback = document.getElementById('mainProfileFallback');
-            const mainFallbackMobile = document.getElementById('mainProfileFallbackMobile');
-            const deptDisplay = dPane ? dPane.querySelector('p.text-muted.small') : null;
-            const deptMobile = document.getElementById('profileDeptMobile');
-            const roleDisplay = dPane ? dPane.querySelector('.badge span') : null;
-            const roleMobile = document.getElementById('profileRoleMobile');
+                const nameDisplay = document.getElementById('profileNameDisplay');
+                const nameMobile = document.getElementById('profileNameMobile');
+                const mainImg = document.getElementById('mainProfileImg');
+                const mainImgMobile = document.getElementById('mainProfileImgMobile');
+                const mainFallback = document.getElementById('mainProfileFallback');
+                const mainFallbackMobile = document.getElementById('mainProfileFallbackMobile');
+                const deptDisplay = dPane ? dPane.querySelector('p.text-muted.small') : null;
+                const deptMobile = document.getElementById('profileDeptMobile');
+                const roleDisplay = dPane ? dPane.querySelector('.badge span') : null;
+                const roleMobile = document.getElementById('profileRoleMobile');
 
-            if (partner === 'Everyone') {
-                const title = "Announcements";
-                const dept = "Global Channel";
-                const role = "System";
+                if (partner === 'Everyone') {
+                    const title = "Announcements";
+                    const dept = "Global Channel";
+                    const role = "System";
 
-                if (nameDisplay) nameDisplay.textContent = title;
-                if (nameMobile) nameMobile.textContent = title;
-                if (deptDisplay) deptDisplay.textContent = dept;
-                if (deptMobile) deptMobile.textContent = dept;
-                if (roleDisplay) roleDisplay.textContent = role;
-                if (roleMobile) roleMobile.textContent = role;
+                    if (nameDisplay) nameDisplay.textContent = title;
+                    if (nameMobile) nameMobile.textContent = title;
+                    if (deptDisplay) deptDisplay.textContent = dept;
+                    if (deptMobile) deptMobile.textContent = dept;
+                    if (roleDisplay) roleDisplay.textContent = role;
+                    if (roleMobile) roleMobile.textContent = role;
 
-                // Status Dots
-                const pStatus = document.getElementById('activePartnerProfileStatus');
-                const pStatusMobile = document.getElementById('activePartnerProfileStatusMobile');
-                const statusHtml = '<span class="status-dot online"></span> Online';
-                if (pStatus) pStatus.innerHTML = statusHtml;
-                if (pStatusMobile) pStatusMobile.innerHTML = statusHtml;
+                    // Status Dots
+                    const pStatus = document.getElementById('activePartnerProfileStatus');
+                    const pStatusMobile = document.getElementById('activePartnerProfileStatusMobile');
+                    const statusHtml = '<span class="status-dot online"></span> Online';
+                    if (pStatus) pStatus.innerHTML = statusHtml;
+                    if (pStatusMobile) pStatusMobile.innerHTML = statusHtml;
 
-                if (mainImg) mainImg.classList.add('d-none');
-                if (mainImgMobile) mainImgMobile.classList.add('d-none');
-                if (mainFallback) {
-                    mainFallback.classList.remove('d-none');
-                    mainFallback.innerHTML = '<i class="bi bi-megaphone-fill"></i>';
-                    mainFallback.style.backgroundColor = '#31a24c';
-                }
-                if (mainFallbackMobile) {
-                    mainFallbackMobile.classList.remove('d-none');
-                    mainFallbackMobile.innerHTML = '<i class="bi bi-megaphone-fill"></i>';
-                    mainFallbackMobile.style.backgroundColor = '#31a24c';
-                }
-            } else if (activeConvo) {
-                const title = activeConvo.name;
-                const dept = activeConvo.department || "No Department";
-                const role = activeConvo.role || "User";
-                const isOnline = activeConvo.is_online || false;
-
-                if (nameDisplay) nameDisplay.textContent = title;
-                if (nameMobile) nameMobile.textContent = title;
-                if (deptDisplay) deptDisplay.textContent = dept;
-                if (deptMobile) deptMobile.textContent = dept;
-                if (roleDisplay) roleDisplay.textContent = role;
-                if (roleMobile) roleMobile.textContent = role;
-
-                // Status Dots
-                const pStatus = document.getElementById('activePartnerProfileStatus');
-                const pStatusMobile = document.getElementById('activePartnerProfileStatusMobile');
-                const statusHtml = `<span class="status-dot ${isOnline ? 'online' : 'offline'}"></span> ${isOnline ? 'Online' : 'Offline'}`;
-                if (pStatus) pStatus.innerHTML = statusHtml;
-                if (pStatusMobile) pStatusMobile.innerHTML = statusHtml;
-
-                const pic = activeConvo.profile_pic;
-                const initial = activeConvo.name.charAt(0).toUpperCase();
-                const color = getColorFromName(activeConvo.name);
-
-                if (pic && pic !== 'default.png') {
-                    if (mainImg) {
-                        mainImg.src = `/static/profile_pics/${pic}`;
-                        mainImg.classList.remove('d-none');
-                    }
-                    if (mainImgMobile) {
-                        mainImgMobile.src = `/static/profile_pics/${pic}`;
-                        mainImgMobile.classList.remove('d-none');
-                    }
-                    if (mainFallback) mainFallback.classList.add('d-none');
-                    if (mainFallbackMobile) mainFallbackMobile.classList.add('d-none');
-                } else {
                     if (mainImg) mainImg.classList.add('d-none');
                     if (mainImgMobile) mainImgMobile.classList.add('d-none');
                     if (mainFallback) {
                         mainFallback.classList.remove('d-none');
-                        mainFallback.textContent = initial;
-                        mainFallback.style.backgroundColor = color;
+                        mainFallback.innerHTML = '<i class="bi bi-megaphone-fill"></i>';
+                        mainFallback.style.backgroundColor = '#31a24c';
                     }
                     if (mainFallbackMobile) {
                         mainFallbackMobile.classList.remove('d-none');
-                        mainFallbackMobile.textContent = initial;
-                        mainFallbackMobile.style.backgroundColor = color;
+                        mainFallbackMobile.innerHTML = '<i class="bi bi-megaphone-fill"></i>';
+                        mainFallbackMobile.style.backgroundColor = '#31a24c';
                     }
+                    resolve();
+                } else if (activeConvo) {
+                    const title = activeConvo.name;
+                    const dept = activeConvo.department || "No Department";
+                    const role = activeConvo.role || "User";
+                    const isOnline = activeConvo.is_online || false;
+
+                    if (nameDisplay) nameDisplay.textContent = title;
+                    if (nameMobile) nameMobile.textContent = title;
+                    if (deptDisplay) deptDisplay.textContent = dept;
+                    if (deptMobile) deptMobile.textContent = dept;
+                    if (roleDisplay) roleDisplay.textContent = role;
+                    if (roleMobile) roleMobile.textContent = role;
+
+                    // Status Dots
+                    const pStatus = document.getElementById('activePartnerProfileStatus');
+                    const pStatusMobile = document.getElementById('activePartnerProfileStatusMobile');
+                    const statusHtml = `<span class="status-dot ${isOnline ? 'online' : 'offline'}"></span> ${isOnline ? 'Online' : 'Offline'}`;
+                    if (pStatus) pStatus.innerHTML = statusHtml;
+                    if (pStatusMobile) pStatusMobile.innerHTML = statusHtml;
+
+                    const pic = activeConvo.profile_pic;
+                    const initial = activeConvo.name.charAt(0).toUpperCase();
+                    const color = getColorFromName(activeConvo.name);
+
+                    if (pic && pic !== 'default.png') {
+                        const img = new Image();
+                        img.src = `/static/profile_pics/${pic}`;
+                        img.onload = () => {
+                            if (mainImg) { mainImg.src = img.src; mainImg.classList.remove('d-none'); }
+                            if (mainImgMobile) { mainImgMobile.src = img.src; mainImgMobile.classList.remove('d-none'); }
+                            if (mainFallback) mainFallback.classList.add('d-none');
+                            if (mainFallbackMobile) mainFallbackMobile.classList.add('d-none');
+                            resolve();
+                        };
+                        img.onerror = () => {
+                            if (mainImg) mainImg.classList.add('d-none');
+                            if (mainImgMobile) mainImgMobile.classList.add('d-none');
+                            if (mainFallback) {
+                                mainFallback.classList.remove('d-none');
+                                mainFallback.textContent = initial;
+                                mainFallback.style.backgroundColor = color;
+                            }
+                            resolve();
+                        };
+                    } else {
+                        if (mainImg) mainImg.classList.add('d-none');
+                        if (mainImgMobile) mainImgMobile.classList.add('d-none');
+                        if (mainFallback) {
+                            mainFallback.classList.remove('d-none');
+                            mainFallback.textContent = initial;
+                            mainFallback.style.backgroundColor = color;
+                        }
+                        if (mainFallbackMobile) {
+                            mainFallbackMobile.classList.remove('d-none');
+                            mainFallbackMobile.textContent = initial;
+                            mainFallbackMobile.style.backgroundColor = color;
+                        }
+                        resolve();
+                    }
+                } else {
+                    resolve();
                 }
-            }
+            });
         }
 
         window.toggleProfileSidebar = function () {
@@ -2542,7 +2744,7 @@
             const textContainer = wrap.querySelector('.bubble-content-text');
             if (textContainer) textContainer.textContent = data.content || '';
 
-            chatLog.appendChild(wrap);
+            if (chatLogReal) chatLogReal.appendChild(wrap);
             chatLog.scrollTop = chatLog.scrollHeight;
         }
 

@@ -8131,6 +8131,102 @@ def api_draft_create():
         'notes': dv.notes
     }})
 
+@app.route('/api/draft/snapshot', methods=['POST'])
+@login_required
+def api_draft_snapshot():
+    """Clones all master schedule entries into a new draft version."""
+    data      = request.get_json(force=True) or {}
+    name      = (data.get('name') or '').strip()
+    if not name:
+        name = f"Snapshot {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}"
+    
+    semester  = data.get('semester') or session.get('selected_semester') or '1st Semester'
+    user_id   = session.get('user_id')
+    user_dept = session.get('department')
+
+    # 1. Create New Draft Version
+    dv = DraftVersion(
+        name=name,
+        semester=semester,
+        department=user_dept,
+        created_by=user_id,
+        notes=f"Snapshot from Master on {datetime.utcnow()}"
+    )
+    db.session.add(dv)
+    db.session.flush() # Get ID before commit
+
+    # 2. Clone Master Entries (is_draft=False)
+    master_entries = ScheduledClass.query.filter_by(semester=semester, is_draft=False).all()
+    for item in master_entries:
+        clone = ScheduledClass(
+            course_id=item.course_id,
+            section_id=item.section_id,
+            faculty_id=item.faculty_id,
+            room_id=item.room_id,
+            day=item.day,
+            start_time=item.start_time,
+            end_time=item.end_time,
+            semester=item.semester,
+            has_conflict=item.has_conflict,
+            session_type=item.session_type,
+            source=item.source,
+            is_draft=True,
+            draft_version_id=dv.id
+        )
+        db.session.add(clone)
+
+    db.session.commit()
+    return jsonify({'ok': True, 'draft_id': dv.id, 'name': dv.name})
+
+@app.route('/api/draft/<int:draft_id>/clone', methods=['POST'])
+@login_required
+def api_draft_clone(draft_id):
+    """Duplicates an existing draft version and its entries."""
+    source_dv = DraftVersion.query.get(draft_id)
+    if not source_dv:
+        return jsonify({'ok': False, 'error': 'Source draft not found'}), 404
+
+    user_id = session.get('user_id')
+    
+    data = request.get_json(force=True) or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        name = f"{source_dv.name} (Copy)"
+
+    # 1. Create New Clone Draft Version
+    new_dv = DraftVersion(
+        name=name,
+        semester=source_dv.semester,
+        department=source_dv.department,
+        created_by=user_id,
+        notes=f"Cloned from {source_dv.name} (ID: {source_dv.id})"
+    )
+    db.session.add(new_dv)
+    db.session.flush()
+
+    # 2. Clone Entries from Source Draft
+    source_entries = ScheduledClass.query.filter_by(draft_version_id=draft_id).all()
+    for item in source_entries:
+        clone = ScheduledClass(
+            course_id=item.course_id,
+            section_id=item.section_id,
+            faculty_id=item.faculty_id,
+            room_id=item.room_id,
+            day=item.day,
+            start_time=item.start_time,
+            end_time=item.end_time,
+            semester=item.semester,
+            has_conflict=item.has_conflict,
+            session_type=item.session_type,
+            source=item.source,
+            is_draft=True,
+            draft_version_id=new_dv.id
+        )
+        db.session.add(clone)
+
+    db.session.commit()
+    return jsonify({'ok': True, 'draft_id': new_dv.id, 'name': new_dv.name})
+
 
 @app.route('/api/draft/<int:draft_id>/entries')
 @login_required
