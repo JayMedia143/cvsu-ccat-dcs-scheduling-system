@@ -271,14 +271,14 @@
             align-items: center;
             gap: 8px;
             transition: all 0.2s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
         }
 
         .btn-fullscreen-trigger:hover {
             background: #f8f9fa;
             border-color: #ccc;
             transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
         }
 
         .btn-fullscreen-trigger i {
@@ -709,7 +709,7 @@
         </div>
 
         <div class="pres-footer">
-             Schedule Viewer &nbsp;|&nbsp; 
+            Schedule Viewer &nbsp;|&nbsp;
             <span id="pres-zoom-val">40%</span> &nbsp;|&nbsp;
             Press <kbd>ESC</kbd> to exit &nbsp;|&nbsp; Drag to Pan &nbsp;|&nbsp; Scroll to Zoom
         </div>
@@ -965,7 +965,7 @@
                 // Iframe Stylizer
                 const iframe = document.getElementById('pres-iframe');
                 if (iframe) {
-                    iframe.addEventListener('load', function() {
+                    iframe.addEventListener('load', function () {
                         try {
                             const doc = iframe.contentDocument || iframe.contentWindow.document;
                             const style = doc.createElement('style');
@@ -982,7 +982,7 @@
                                 nav, footer, .navbar, .btn-group, .no-print, .header-wrap { display: none !important; }
                             `;
                             doc.head.appendChild(style);
-                            
+
                             const paper = doc.querySelector('.a4') || doc.getElementById('a4Paper') || doc.body;
                             if (paper) {
                                 setTimeout(() => {
@@ -990,7 +990,7 @@
                                     iframe.style.height = paper.offsetHeight + 'px';
                                 }, 50);
                             }
-                        } catch(e) {}
+                        } catch (e) { }
                     });
                 }
             },
@@ -1020,7 +1020,7 @@
                 } else if (CONFIG.sectionId) {
                     url = `/public/section-timetable/${CONFIG.sectionId}?canvas=true`;
                 }
-                
+
                 iframe.src = url;
                 overlay.classList.add('active');
                 document.body.style.overflow = 'hidden';
