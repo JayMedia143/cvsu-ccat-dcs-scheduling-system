@@ -1612,48 +1612,8 @@
         });
     });
 
-    // ── Global Viewer Stylizer (specifically for template preview) ──
+    // ── Global Viewer Trigger (Preview Button) ──
     document.addEventListener('DOMContentLoaded', function() {
-        const presIframe = document.getElementById('pres-iframe');
-        if (presIframe) {
-            presIframe.addEventListener('load', function () {
-                if (typeof GlobalSchedulePresenter === 'undefined' || GlobalSchedulePresenter.type !== 'preview') return;
-                try {
-                    var iframe = this;
-                    var doc = iframe.contentDocument || iframe.contentWindow.document;
-
-                    // 1. Inject Styles
-                    var style = doc.createElement('style');
-                    style.innerHTML = `
-                        body { background: transparent !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; }
-                        .a4, #a4Paper { 
-                            background: white !important; 
-                            display: block !important; 
-                            margin: 0 !important; 
-                            box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
-                            visibility: visible !important;
-                        }
-                        .container, .container-fluid { background: transparent !important; padding: 0 !important; max-width: none !important; }
-                        .card { background: transparent !important; border: none !important; box-shadow: none !important; }
-                        nav, footer, .navbar, .btn-group, .no-print, .header-wrap { display: none !important; }
-                    `;
-                    doc.head.appendChild(style);
-
-                    // 2. Measure & Resize Iframe to match Internal Paper
-                    var paper = doc.querySelector('.a4') || doc.getElementById('a4Paper') || doc.body;
-                    if (paper) {
-                        setTimeout(function () {
-                            iframe.style.width = paper.offsetWidth + 'px';
-                            iframe.style.height = paper.offsetHeight + 'px';
-                        }, 50);
-                    }
-                } catch (e) {
-                    console.warn("Cross-origin error on iframe preview:", e);
-                }
-            });
-        }
-
-        // Preview button in upload card
         const previewBtn = document.querySelector('.btn-preview-action');
         if (previewBtn) {
             previewBtn.addEventListener('click', function () {

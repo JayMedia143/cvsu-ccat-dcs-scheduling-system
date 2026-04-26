@@ -136,7 +136,7 @@
             z-index: 1075 !important;
         }
 
-        .sheets-menubar .menu-item:hover {
+        .sheets-menubar .0menu-item:hover {
             background-color: rgba(0, 0, 0, 0.04) !important;
         }
 
@@ -176,7 +176,8 @@
         #global-schedule-presenter {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(25px);
             z-index: 5000;
             display: none;
             flex-direction: column;
@@ -186,6 +187,8 @@
             transition: opacity 0.4s ease;
             cursor: grab;
             user-select: none;
+            touch-action: none;
+            /* Required for custom pinch/pan handling on mobile */
         }
 
         #global-schedule-presenter.active {
@@ -208,22 +211,20 @@
         }
 
         .pres-iframe-wrap {
-            width: 800px;
-            height: 1130px;
+            width: auto;
+            height: auto;
             background: white;
             box-shadow: 0 0 100px rgba(0, 0, 0, 0.8);
             transform-origin: center center;
             transition: transform 0.05s linear;
             pointer-events: auto;
             border-radius: 4px;
-            overflow: hidden;
         }
 
         .pres-iframe-wrap iframe {
-            width: 100%;
-            height: 100%;
             border: none;
             pointer-events: none;
+            display: block;
         }
 
         .pres-nav-btn {
@@ -261,6 +262,21 @@
 
         .pres-nav-next {
             right: 30px;
+        }
+
+        /* Hide footer text on mobile, but keep nav buttons */
+        @media (max-width: 767px) {
+            .pres-footer {
+                display: none !important;
+            }
+            .pres-nav-btn {
+                width: 45px !important;
+                height: 45px !important;
+                font-size: 1.2rem !important;
+                background: rgba(0, 0, 0, 0.5) !important;
+            }
+            .pres-nav-prev { left: 10px !important; }
+            .pres-nav-next { right: 10px !important; }
         }
 
         .pres-close {
@@ -1139,7 +1155,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v={{ range(1000, 9999) | random }}"></script>
 
     <!-- Module 7: Live Status Tracking -->
     <script>

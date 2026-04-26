@@ -194,7 +194,8 @@
                         <th class="text-start" style="width: 26%;">FULL NAME</th>
                         <th class="text-center" style="width: 9%;">YEAR</th>
                         <th class="text-start" style="width: 16%;">HOME SECTION</th>
-                        <th class="text-start" style="width: 14%;">SUBJECTS</th>
+                        <th class="text-start" style="width: 18%;">EMAIL</th>
+                        <th class="text-start" style="width: 12%;">SUBJECTS</th>
                         <th class="text-start" style="width: 10%;">SEMESTER</th>
                         <th class="text-center pe-0" style="width: 1%; white-space: nowrap;">ACTIONS</th>
                     </tr>
@@ -224,11 +225,18 @@
                             </span>
                         </td>
                         <td class="text-start">
-                            {% if student.section %}
+                            {% if student.section_name %}
+                            <span class="badge-clean">{{ student.section_name }}</span>
+                            {% elif student.archived_section_name %}
+                            <span class="badge-clean">{{ student.archived_section_name }}</span>
+                            {% elif student.section %}
                             <span class="badge-clean">{{ student.section.section_name }}</span>
                             {% else %}
                             <span class="text-muted small fst-italic">Unassigned</span>
                             {% endif %}
+                        </td>
+                        <td class="text-muted small text-start">
+                            {{ student.email or '—' }}
                         </td>
                         <td class="text-start">
                             {% if a and a.assignments_json and a.assignments_json != '[]' %}

@@ -216,7 +216,9 @@
                                 </span>
                             </td>
                             <td class="text-start">
-                                {% if student.archived_section_name %}
+                                {% if student.section_name %}
+                                <span class="badge-clean">{{ student.section_name }}</span>
+                                {% elif student.archived_section_name %}
                                 <span class="badge-clean">{{ student.archived_section_name }}</span>
                                 {% elif student.section %}
                                 <span class="badge-clean">{{ student.section.section_name }}</span>

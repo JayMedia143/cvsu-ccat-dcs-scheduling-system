@@ -782,6 +782,8 @@ class ArchivedStudent(db.Model):
     full_name = db.Column(db.String(255), index=True)
     year_level = db.Column(db.Integer)
     is_irregular = db.Column(db.Boolean, default=False)
+    section_name = db.Column(db.String(255), nullable=True)
+    email = db.Column(db.String(255), nullable=True)
     assignments_json = db.Column(db.Text, nullable=True) # For irregular student data
     term_archive = db.relationship('TermArchive', backref=db.backref('students', lazy=True, cascade="all, delete-orphan"))
 
@@ -2066,15 +2068,21 @@ def dashboard():
         result = db.session.execute(sa_text(sql), params).fetchone()
         total_needed = int(result[0] or 0)
 
-    # total_scheduled calculation
+    # total_scheduled calculation (Deduplicated for AI training data)
     total_scheduled = 0
     if target_depts:
-        sched_q = (db.session.query(ScheduledClass)
+        sched_q = (db.session.query(
+                       ScheduledClass.course_id,
+                       ScheduledClass.section_id,
+                       ScheduledClass.day,
+                       ScheduledClass.start_time,
+                       ScheduledClass.end_time
+                   )
                    .join(Course, ScheduledClass.course_id == Course.id)
-                   .filter(Course.department.in_(target_depts)))
+                   .filter(Course.department.in_(target_depts), ScheduledClass.is_draft == False))
         if selected_semester != 'All':
             sched_q = sched_q.filter(ScheduledClass.semester == selected_semester)
-        total_scheduled = sched_q.count()
+        total_scheduled = sched_q.distinct().count()
 
     completion_rate = 0
     if total_needed > 0:
@@ -4031,6 +4039,27 @@ def manage_faculty():
         all_archives_sections = get_archive_entities(archive_id, 'Section')
         all_sections_json = [{'id': s.id, 'name': getattr(s, 'section_name', ''), 'course_ids': getattr(s, 'course_ids', [])} for s in all_archives_sections]
         unique_depts = sorted(list(set(getattr(o, 'department', '') for o in all_objs if getattr(o, 'department', None))))
+        
+        # Calculate workload_map for historical mode
+        # Keyed by faculty_name since ArchivedSchedule only stores names
+        workload_map = {}
+        all_archived_schedules = get_archive_entities(archive_id, 'ArchivedSchedule')
+        
+        def _sc_hours(start, end):
+            try:
+                sh, sm = map(int, start.split(':'))
+                eh, em = map(int, end.split(':'))
+                return ((eh * 60 + em) - (sh * 60 + sm)) / 60.0
+            except Exception:
+                return 0.0
+
+        for sc in all_archived_schedules:
+            if sc.faculty_name and sc.start_time and sc.end_time:
+                h = _sc_hours(sc.start_time, sc.end_time)
+                workload_map[sc.faculty_name] = workload_map.get(sc.faculty_name, 0) + h
+        
+        # Convert to int
+        workload_map = {k: int(v) for k, v in workload_map.items()}
 
         return render_template(
             'manage_faculty.html',
@@ -4039,6 +4068,7 @@ def manage_faculty():
             courses_by_sem=courses_by_sem,
             all_sections_json=all_sections_json,
             unique_depts=unique_depts,
+            workload_map=workload_map,
             current_sort=sort_by,
             search_query=search_query,
             selected_semester=selected_semester,
@@ -4046,7 +4076,6 @@ def manage_faculty():
             current_filter_val=filter_val,
             split_data_by_faculty={}, # Assignment logic hidden in Ghost Mode
             faculty_profiles=[],
-            workload_map={},
             sc_course_ids_by_faculty={},
             sc_pairs_by_faculty={},
             others_taken_by_faculty={},
@@ -4146,7 +4175,7 @@ def manage_faculty():
     # Pre-fetch ScheduledClass assignments for all faculty on this page (single query, no N+1)
     # Used for workload_map (Fix B) and the "Assigned Courses" list in the View Profile offcanvas
     from sqlalchemy.orm import joinedload as _jl
-    _sc_all = (
+    _sc_all = _dedup_schedules(
         ScheduledClass.query
         .options(_jl(ScheduledClass.course), _jl(ScheduledClass.section))
         .filter(ScheduledClass.faculty_id.in_(_fids))
@@ -4770,6 +4799,39 @@ def view_timetable():
                     target_field = 'course_code'
                     target_name = match.course_code
                     selected_name = f"Schedule for {match.course_code}"
+            elif filter_type in ('student', 'irregular'):
+                # 1. Fetch archived student record
+                st_match = ArchivedStudent.query.filter_by(term_archive_id=archive_id, id=filter_id).first()
+                if st_match:
+                    selected_name = f"Schedule for {st_match.full_name}"
+                    if st_match.is_irregular:
+                        # Irregular student: use assignments_json (list of signatures)
+                        import json
+                        try:
+                            pairs = json.loads(st_match.assignments_json or "[]")
+                            # pairs is list of strings like "COURSE CODE - SECTION NAME"
+                            schedules_raw = []
+                            for p in pairs:
+                                parts = p.split(' - ')
+                                if len(parts) == 2:
+                                    cc, sn = parts
+                                    matches = ArchivedSchedule.query.filter_by(
+                                        term_archive_id=archive_id, 
+                                        course_code=cc.strip(), 
+                                        section_name=sn.strip()
+                                    ).all()
+                                    schedules_raw.extend(matches)
+                        except:
+                            schedules_raw = []
+                    else:
+                        # Regular student: follow their archived section_name
+                        if st_match.section_name:
+                            schedules_raw = ArchivedSchedule.query.filter_by(
+                                term_archive_id=archive_id, 
+                                section_name=st_match.section_name
+                            ).all()
+                        else:
+                            schedules_raw = []
         else:
             if all_sections:
                 match = all_sections[0]
@@ -5108,26 +5170,55 @@ def api_room_utilization():
 
     # 1. Get Global Semester Filter
     selected_sem = session.get('selected_semester', 'All')
+    is_archive = session.get('historical_mode_active', False)
+    archive_id = session.get('active_archive_id')
 
-    # 2. Count Total Scheduled Classes (Regardless of room)
-    total_q = ScheduledClass.query
-    if selected_sem != 'All':
-        total_q = total_q.filter_by(semester=selected_sem)
-    total_scheduled_classes = total_q.count()
+    # 2. Gather schedules based on mode
+    if is_archive and archive_id:
+        # Historical Mode: Query ArchivedSchedule
+        total_q = ArchivedSchedule.query.filter_by(term_archive_id=archive_id)
+        room_q = ArchivedSchedule.query.filter_by(term_archive_id=archive_id)
+        schedules = room_q.all()
+        total_scheduled_classes = total_q.count()
+    else:
+        # Live Mode: Query ScheduledClass with DEDUPLICATION
+        # The ScheduledClass table accumulates records across AI generations (intentional).
+        # We count only DISTINCT class slots so reports are not inflated.
+        total_cols = db.session.query(
+            ScheduledClass.course_id,
+            ScheduledClass.section_id,
+            ScheduledClass.day,
+            ScheduledClass.start_time,
+            ScheduledClass.end_time
+        ).filter(ScheduledClass.is_draft == False)
+        if selected_sem != 'All':
+            total_cols = total_cols.filter(ScheduledClass.semester == selected_sem)
+        total_scheduled_classes = total_cols.distinct().count()
 
-    # 3. Gather room schedules filtered by semester
-    room_q = ScheduledClass.query.filter(ScheduledClass.room_id.isnot(None))
-    if selected_sem != 'All':
-        room_q = room_q.filter_by(semester=selected_sem)
-    schedules = room_q.all()
+        room_q = ScheduledClass.query.filter(ScheduledClass.room_id.isnot(None), ScheduledClass.is_draft == False)
+        if selected_sem != 'All':
+            room_q = room_q.filter_by(semester=selected_sem)
+        schedules = room_q.all()
 
     # Accumulate used hours and class counts per room
-    room_used  = {}   # room_id -> float hours
+    # For live mode: deduplicate by (room_id/name, day, start_time, end_time) to
+    # avoid counting the same slot multiple times across AI generations.
+    room_used  = {}   # room_id -> float hours (Live) or room_name -> float (Archive)
     room_count = {}   # room_id -> int
     room_names = {}   # room_id -> str
+    seen_slots  = set()  # Tracks unique time slots to skip duplicates (live mode only)
 
     for sc in schedules:
-        rid = sc.room_id
+        # In Archive, room_id might not match live room_id, so we use room_name as key
+        key = sc.room_id if not is_archive else sc.room_name
+
+        # DEDUPLICATION: skip if we already processed this exact slot in live mode
+        if not is_archive:
+            slot_sig = (key, sc.day, sc.start_time, sc.end_time)
+            if slot_sig in seen_slots:
+                continue
+            seen_slots.add(slot_sig)
+
         try:
             sh, sm = map(int, sc.start_time.split(':'))
             eh, em = map(int, sc.end_time.split(':'))
@@ -5135,29 +5226,37 @@ def api_room_utilization():
         except Exception:
             dur_h = 0.0
         
-        room_used[rid] = room_used.get(rid, 0.0) + dur_h
-        room_count[rid] = room_count.get(rid, 0) + 1
-        if rid not in room_names and sc.room:
-            room_names[rid] = sc.room.room_name
+        room_used[key] = room_used.get(key, 0.0) + dur_h
+        room_count[key] = room_count.get(key, 0) + 1
+        if not is_archive:
+            if key not in room_names and sc.room:
+                room_names[key] = sc.room.room_name
+        else:
+            room_names[key] = sc.room_name
 
-    # All active rooms (non-TBA)
-    all_rooms = Room.query.filter(
-        Room.is_archived == False,
-        Room.room_name != 'T.B.A.'
-    ).order_by(Room.room_name).all()
+    if is_archive:
+        # Fetch rooms from the archive to ensure we match the historical data
+        all_rooms = ArchivedRoom.query.filter_by(term_archive_id=archive_id).filter(ArchivedRoom.room_name != 'T.B.A.').order_by(ArchivedRoom.room_name).all()
+    else:
+        # Live Mode: Fetch current rooms
+        all_rooms = Room.query.filter(
+            Room.is_archived == False,
+            Room.room_name != 'T.B.A.'
+        ).order_by(Room.room_name).all()
 
     rooms_data = []
     total_used_sum = 0.0
     total_avail_sum = 0.0
 
     for r in all_rooms:
-        used_h  = room_used.get(r.id, 0.0)
-        c_count = room_count.get(r.id, 0)
-        pct     = round(min(used_h / total_avail_h * 100, 100), 1) if total_avail_h > 0 else 0.0
+        key = r.id if not is_archive else r.room_name
+        used_h  = room_used.get(key, 0.0)
+        c_count = room_count.get(key, 0)
+        pct     = round((used_h / total_avail_h * 100), 1) if total_avail_h > 0 else 0.0
         rooms_data.append({
             'room_id':   r.id,
             'room_name': r.room_name,
-            'building':  r.building,
+            'building':  getattr(r, 'building', 'N/A'),
             'used_hours':  round(used_h, 1),
             'avail_hours': total_avail_h,
             'utilization': pct,
@@ -5166,7 +5265,7 @@ def api_room_utilization():
         total_used_sum  += used_h
         total_avail_sum += total_avail_h
 
-    overall_pct = round(min(total_used_sum / total_avail_sum * 100, 100), 1) if total_avail_sum > 0 else 0.0
+    overall_pct = round((total_used_sum / total_avail_sum * 100), 1) if total_avail_sum > 0 else 0.0
 
     return jsonify({
         'overall_utilization': overall_pct,
@@ -5189,8 +5288,8 @@ def archive_semester():
     semester = request.form.get('semester', '1st Semester')
     academic_year = request.form.get('academic_year', '2024-2025')
     
-    # Kuhanin lahat ng APPROVED (nasa ScheduledClass na)
-    active_schedules = ScheduledClass.query.filter_by(semester=semester).all()
+    # Kuhanin lahat ng APPROVED (nasa ScheduledClass na) - Deduplicated for AI training data
+    active_schedules = _dedup_schedules(ScheduledClass.query.filter_by(semester=semester, is_draft=False).all())
     
     if not active_schedules:
         flash(f'No approved schedules found to archive for {semester}.', 'warning')
@@ -5420,13 +5519,13 @@ def export_excel_bulk():
 
     for item in items:
         if report_type == 'section':
-            schedules = ScheduledClass.query.filter_by(section_id=item.id, semester=export_semester).all()
+            schedules = _dedup_schedules(ScheduledClass.query.filter_by(section_id=item.id, semester=export_semester).all())
         elif report_type == 'faculty':
-            schedules = ScheduledClass.query.filter_by(faculty_id=item.id, semester=export_semester).all()
+            schedules = _dedup_schedules(ScheduledClass.query.filter_by(faculty_id=item.id, semester=export_semester).all())
         elif report_type == 'room':
-            schedules = ScheduledClass.query.filter_by(room_id=item.id, semester=export_semester).all()
+            schedules = _dedup_schedules(ScheduledClass.query.filter_by(room_id=item.id, semester=export_semester).all())
         else: # course
-            schedules = ScheduledClass.query.filter_by(course_id=item.id, semester=export_semester).all()
+            schedules = _dedup_schedules(ScheduledClass.query.filter_by(course_id=item.id, semester=export_semester).all())
         
         for sc in schedules:
             master_ws.append([
@@ -7278,21 +7377,21 @@ def get_schedule_grid(view_type, entity_id):
         h += 1
     slots.append(f"{end_h + 1:02d}:00")
 
-    # Fetch schedules + entity label
+    # Fetch schedules + entity label (deduplicated for multi-generation AI data)
     if view_type == 'room':
-        schedules    = ScheduledClass.query.filter_by(room_id=entity_id).all()
+        schedules    = _dedup_schedules(ScheduledClass.query.filter_by(room_id=entity_id).all())
         entity       = Room.query.get(entity_id)
         entity_label = entity.room_name if entity else ''
     elif view_type == 'faculty':
-        schedules    = ScheduledClass.query.filter_by(faculty_id=entity_id).all()
+        schedules    = _dedup_schedules(ScheduledClass.query.filter_by(faculty_id=entity_id).all())
         entity       = Faculty.query.get(entity_id)
         entity_label = entity.full_name if entity else ''
     elif view_type == 'section':
-        schedules    = ScheduledClass.query.filter_by(section_id=entity_id).all()
+        schedules    = _dedup_schedules(ScheduledClass.query.filter_by(section_id=entity_id).all())
         entity       = Section.query.get(entity_id)
         entity_label = entity.section_name if entity else ''
     elif view_type == 'course':
-        schedules    = ScheduledClass.query.filter_by(course_id=entity_id).all()
+        schedules    = _dedup_schedules(ScheduledClass.query.filter_by(course_id=entity_id).all())
         entity       = Course.query.get(entity_id)
         entity_label = entity.course_code if entity else ''
     else:
@@ -7702,7 +7801,7 @@ def api_check_conflicts():
                 ScheduledClass.draft_version_id == draft_version_id)
         )
 
-    candidates = q.all()
+    candidates = _dedup_schedules(q.all())
     hard_conflicts = []
 
     def _fmt12(t_str):
@@ -7842,7 +7941,8 @@ def api_schedule_entries():
         return jsonify([])
 
     entries = []
-    for sc in q.all():
+    schedules = _dedup_schedules(q.all())
+    for sc in schedules:
         entries.append({
             'id':           sc.id,
             'course_id':    sc.course_id,
@@ -8472,8 +8572,8 @@ def api_archive_capture():
         return jsonify(ok=False, message="Missing Academic Year or Semester metadata.")
 
     try:
-        # 1. Fetch live master schedules (non-drafts)
-        master_schedules = ScheduledClass.query.filter_by(is_draft=False).all()
+        # 1. Fetch live master schedules (non-drafts) for the selected semester
+        master_schedules = ScheduledClass.query.filter_by(semester=sem, is_draft=False).all()
         
         # 2. Calculate summary totals
         active_sections = Section.query.filter_by(is_archived=False).count()
@@ -8594,9 +8694,12 @@ def api_archive_capture():
         # Capture Students
         for st in Student.query.filter(Student.deleted_at.is_(None)).all():
             asgn_data = None
+            sec_name = None
             if st.is_irregular:
                 asgn = IrregularAssignment.query.filter_by(student_id_fk=st.id, semester=sem).first()
                 asgn_data = asgn.assignments_json if asgn else "[]"
+            else:
+                sec_name = st.section.section_name if st.section else None
 
             db.session.add(ArchivedStudent(
                 term_archive_id=new_archive.id,
@@ -8604,6 +8707,8 @@ def api_archive_capture():
                 full_name=st.full_name,
                 year_level=st.year_level,
                 is_irregular=st.is_irregular,
+                section_name=sec_name,
+                email=st.email if hasattr(st, 'email') else None,
                 assignments_json=asgn_data
             ))
 
@@ -12639,6 +12744,21 @@ def _get_cached_template(path):
     return ws, grid_info, bounds
 
 
+def _dedup_schedules(schedules):
+    """Remove duplicate ScheduledClass records caused by multi-generation AI training.
+    Filters by (day, start_time, end_time, course_id, section_id).
+    """
+    seen = set()
+    result = []
+    for sc in schedules:
+        if not sc: continue
+        sig = (sc.day, sc.start_time, sc.end_time, sc.course_id, sc.section_id)
+        if sig not in seen:
+            seen.add(sig)
+            result.append(sc)
+    return result
+
+
 @app.route('/section-timetable-html/<int:section_id>')
 @login_required
 def section_timetable_html(section_id):
@@ -12708,18 +12828,18 @@ def section_timetable_html(section_id):
                 joinedload(ScheduledClass.room),
             ]
             if draft_id:
-                schedules = ScheduledClass.query.options(*_opts).filter(
+                schedules = _dedup_schedules(ScheduledClass.query.options(*_opts).filter(
                     ScheduledClass.section_id == section_id,
                     ScheduledClass.semester == semester,
                     db.or_(
                         ScheduledClass.is_draft == False,
                         ScheduledClass.draft_version_id == draft_id
                     )
-                ).all()
+                ).all())
             else:
-                schedules = ScheduledClass.query.options(*_opts).filter_by(
+                schedules = _dedup_schedules(ScheduledClass.query.options(*_opts).filter_by(
                     section_id=section_id, semester=semester, is_draft=False
-                ).all()
+                ).all())
 
     ws, grid_info, bounds = _get_cached_template(path)
 
@@ -12828,6 +12948,47 @@ def public_section_timetable(section_id):
     # Infinite Canvas support
     for_canvas = request.args.get('canvas', 'false') == 'true'
     return render_a4_page(html_content, table_px, margins=_margins, for_canvas=for_canvas)
+@app.route('/public/student-timetable-html/<string:identifier>')
+def public_student_timetable_html(identifier):
+    """Publicly accessible route for the Student Portal and Admin viewer.
+    Handles both student_id (string) and PK (int).
+    """
+    # 1. Try as student_id
+    student = Student.query.filter_by(student_id=identifier, is_archived=False).first()
+    
+    # 2. If not found, try as PK
+    if not student:
+        try:
+            pk = int(identifier)
+            student = Student.query.get(pk)
+        except (ValueError, TypeError):
+            pass
+            
+    if not student:
+        abort(404)
+        
+    return student_timetable_html(student.id)
+
+@app.route('/student-timetable-html/<int:student_pk>')
+def student_timetable_html(student_pk):
+    """Unified route to render a student's schedule.
+    If regular, redirects/delegates to section_timetable_html.
+    If irregular, renders their custom subject mix.
+    """
+    student = Student.query.get_or_404(student_pk)
+    if not student.is_irregular:
+        if not student.section_id:
+            return (
+                "<div style='padding:40px;text-align:center;color:#5f6368;font-family:Arial,sans-serif;'>"
+                "<strong>No section assigned.</strong><br>"
+                "This regular student is not yet assigned to any section."
+                "</div>"
+            )
+        # Delegate to public section viewer (no login required)
+        return public_section_timetable(student.section_id)
+    
+    # Otherwise, render irregular view
+    return irregular_timetable_html(student.student_id)
 
 
 @app.route('/irregular-timetable/<string:student_id>')
@@ -12861,6 +13022,7 @@ def irregular_timetable_html(student_id):
             semester=assignment.semester,
         ).all()
         schedules.extend(slots)
+    schedules = _dedup_schedules(schedules)
 
     path = os.path.join(basedir, 'static', 'assets', 'section_template.xlsx')
     for_canvas = request.args.get('canvas', 'false') == 'true'
@@ -13545,18 +13707,18 @@ def faculty_timetable_html(faculty_id):
             joinedload(ScheduledClass.room),
         ]
         if draft_id:
-            schedules = ScheduledClass.query.options(*_opts_f).filter(
+            schedules = _dedup_schedules(ScheduledClass.query.options(*_opts_f).filter(
                 ScheduledClass.faculty_id == faculty_id,
                 ScheduledClass.semester == semester,
                 db.or_(
                     ScheduledClass.is_draft == False,
                     ScheduledClass.draft_version_id == draft_id
                 )
-            ).all()
+            ).all())
         else:
-            schedules = ScheduledClass.query.options(*_opts_f).filter_by(
+            schedules = _dedup_schedules(ScheduledClass.query.options(*_opts_f).filter_by(
                 faculty_id=faculty_id, semester=semester, is_draft=False
-            ).all()
+            ).all())
 
         prep_count  = db.session.query(ScheduledClass.course_id).filter_by(
                           faculty_id=faculty_id, semester=semester, is_draft=False).distinct().count()
@@ -13652,18 +13814,18 @@ def room_timetable_html(room_id):
             joinedload(ScheduledClass.room),
         ]
         if draft_id:
-            schedules = ScheduledClass.query.options(*_opts_r).filter(
+            schedules = _dedup_schedules(ScheduledClass.query.options(*_opts_r).filter(
                 ScheduledClass.room_id == room_id,
                 ScheduledClass.semester == semester,
                 db.or_(
                     ScheduledClass.is_draft == False,
                     ScheduledClass.draft_version_id == draft_id
                 )
-            ).all()
+            ).all())
         else:
-            schedules = ScheduledClass.query.options(*_opts_r).filter_by(
+            schedules = _dedup_schedules(ScheduledClass.query.options(*_opts_r).filter_by(
                 room_id=room_id, semester=semester, is_draft=False
-            ).all()
+            ).all())
 
     # Define path to room template
     path = os.path.join(basedir, 'static', 'assets', 'room_template.xlsx')
@@ -13730,12 +13892,12 @@ def course_timetable_html(course_id):
         semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
         sem_ay    = request.args.get('sem_ay', '')
 
-        schedules = ScheduledClass.query.options(
+        schedules = _dedup_schedules(ScheduledClass.query.options(
             joinedload(ScheduledClass.course),
             joinedload(ScheduledClass.section),
             joinedload(ScheduledClass.faculty),
             joinedload(ScheduledClass.room),
-        ).filter_by(course_id=course_id, semester=semester, is_draft=False).all()
+        ).filter_by(course_id=course_id, semester=semester, is_draft=False).all())
     # Define path to course template
     path = os.path.join(basedir, 'static', 'assets', 'course_template.xlsx')
     for_canvas = request.args.get('canvas', 'false') == 'true'
@@ -13935,7 +14097,15 @@ def manage_students():
         # Combined Regular and Irregular students from the archive
         reg_students = get_archive_entities(archive_id, 'Student')
         irreg_students = get_archive_entities(archive_id, 'IrregularStudent')
-        all_objs = reg_students + irreg_students
+        
+        # Deduplicate by student_id to handle multi-generation archive pollution
+        seen_ids = set()
+        all_objs = []
+        for s in (reg_students + irreg_students):
+            sid = getattr(s, 'student_id', None)
+            if sid not in seen_ids:
+                all_objs.append(s)
+                seen_ids.add(sid)
         
         # Get section mapping to restore names in View Mode
         all_archived_sections = get_archive_entities(archive_id, 'Section')
@@ -14927,7 +15097,16 @@ def manage_irregular():
     # ------------------------------------ Time Machine: Historical Mode ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if session.get('historical_mode_active', False):
         archive_id = session.get('active_archive_id')
-        all_objs = get_archive_entities(archive_id, 'IrregularStudent')
+        _all_irregs = get_archive_entities(archive_id, 'IrregularStudent')
+        
+        # Deduplicate by student_id to handle multi-generation archive pollution
+        seen_ids = set()
+        all_objs = []
+        for s in _all_irregs:
+            sid = getattr(s, 'student_id', None)
+            if sid not in seen_ids:
+                all_objs.append(s)
+                seen_ids.add(sid)
         
         # 1. Apply Filtering
         if search_query:
@@ -14971,7 +15150,15 @@ def manage_irregular():
         items = all_objs[start:start+per_page]
         pagination = MockPagination(items, page, per_page, total)
         
-        irreg_assignments = {} # For historical, assignments are fixed in the timetable
+        # Populate assignments for the UI 'Assigned' badge
+        irreg_assignments = {}
+        for item in items:
+            if getattr(item, 'assignments_json', None):
+                # Mock an assignment object for the template logic
+                irreg_assignments[item.id] = SimpleNamespace(
+                    assignments_json=item.assignments_json,
+                    semester="Archived"
+                )
 
         all_courses = get_archive_entities(archive_id, 'Course')
         all_sections_list = get_archive_entities(archive_id, 'Section')
@@ -15285,17 +15472,18 @@ def student_schedule(student_id):
                         semester=assignment.semester,
                     ).all()
                     schedules.extend(slots)
+                schedules = _dedup_schedules(schedules)
                 schedules.sort(key=lambda sc: (sc.day, sc.start_time))
         else:
             if student.section_id:
-                schedules = ScheduledClass.query.options(
+                schedules = _dedup_schedules(ScheduledClass.query.options(
                     joinedload(ScheduledClass.course),
                     joinedload(ScheduledClass.faculty),
                     joinedload(ScheduledClass.room),
                     joinedload(ScheduledClass.section),
                 ).filter_by(section_id=student.section_id).order_by(
                     ScheduledClass.day, ScheduledClass.start_time
-                ).all()
+                ).all())
 
         # Always fetch section info if section_id exists for the header
         if student.section_id:
@@ -16331,7 +16519,7 @@ def _generate_individual_excel_internal(item, schedules, report_type, semester):
 def section_timetable_excel(section_id):
     section = Section.query.get_or_404(section_id)
     semester = request.args.get('semester', '1st Semester')
-    schedules = ScheduledClass.query.filter_by(section_id=section_id, semester=semester).all()
+    schedules = _dedup_schedules(ScheduledClass.query.filter_by(section_id=section_id, semester=semester).all())
     stream, name = _generate_individual_excel_internal(section, schedules, 'section', semester)
     if not stream:
         flash(name, "danger")
@@ -16344,7 +16532,7 @@ def section_timetable_excel(section_id):
 def faculty_timetable_excel(faculty_id):
     faculty = Faculty.query.get_or_404(faculty_id)
     semester = request.args.get('semester', '1st Semester')
-    schedules = ScheduledClass.query.filter_by(faculty_id=faculty_id, semester=semester).all()
+    schedules = _dedup_schedules(ScheduledClass.query.filter_by(faculty_id=faculty_id, semester=semester).all())
     stream, name = _generate_individual_excel_internal(faculty, schedules, 'faculty', semester)
     if not stream:
         flash(name, "danger")
@@ -16357,7 +16545,7 @@ def faculty_timetable_excel(faculty_id):
 def room_timetable_excel(room_id):
     room = Room.query.get_or_404(room_id)
     semester = request.args.get('semester', '1st Semester')
-    schedules = ScheduledClass.query.filter_by(room_id=room_id, semester=semester).all()
+    schedules = _dedup_schedules(ScheduledClass.query.filter_by(room_id=room_id, semester=semester).all())
     stream, name = _generate_individual_excel_internal(room, schedules, 'room', semester)
     if not stream:
         flash(name, "danger")
@@ -16370,7 +16558,7 @@ def room_timetable_excel(room_id):
 def course_timetable_excel(course_id):
     course = Course.query.get_or_404(course_id)
     semester = request.args.get('semester', '1st Semester')
-    schedules = ScheduledClass.query.filter_by(course_id=course_id, semester=semester).all()
+    schedules = _dedup_schedules(ScheduledClass.query.filter_by(course_id=course_id, semester=semester).all())
     stream, name = _generate_individual_excel_internal(course, schedules, 'course', semester)
     if not stream:
         flash(name, "danger")
@@ -16391,10 +16579,11 @@ def public_student_schedule_excel(student_id):
             for pair in pairs:
                 slots = ScheduledClass.query.filter_by(course_id=pair['course_id'], section_id=pair['section_id'], semester=assignment.semester).all()
                 schedules.extend(slots)
+            schedules = _dedup_schedules(schedules)
             semester = assignment.semester
     else:
         if student.section_id:
-            schedules = ScheduledClass.query.filter_by(section_id=student.section_id, semester=semester, is_draft=False).all()
+            schedules = _dedup_schedules(ScheduledClass.query.filter_by(section_id=student.section_id, semester=semester, is_draft=False).all())
     if not schedules:
         flash('No schedule found to export.', 'warning')
         return redirect(url_for('student_schedule', student_id=student.student_id))

@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <style>
         :root {
             --primary-green: #188038;
@@ -286,99 +287,117 @@
             font-size: 0.9rem;
         }
 
-        /* ── Premium Fullscreen Presenter ────────────────────────── */
+        /* ── Premium Fullscreen Presenter (Restored & Fixed) ────────── */
         #global-schedule-presenter {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.92);
-            backdrop-filter: blur(15px);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(25px);
             z-index: 9999;
             display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
             opacity: 0;
             transition: opacity 0.3s ease;
+            user-select: none;
+            touch-action: none;
         }
 
         #global-schedule-presenter.active {
-            display: flex;
+            display: block;
             opacity: 1;
         }
 
         .pres-close {
-            position: absolute;
+            position: fixed;
             top: 25px;
             right: 30px;
             font-size: 1.8rem;
             cursor: pointer;
             z-index: 10010;
-            transition: transform 0.2s;
             width: 50px;
             height: 50px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: rgba(255, 255, 255, 0.1);
+            color: white;
             border-radius: 50%;
+            transition: all 0.2s;
         }
 
-        .pres-close:hover {
-            transform: rotate(90deg) scale(1.1);
-            background: rgba(255, 0, 0, 0.3);
+        .pres-nav-btn {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            cursor: pointer;
+            z-index: 10010;
+            transition: all 0.3s;
+        }
+
+        .pres-nav-prev { left: 30px; }
+        .pres-nav-next { right: 30px; }
+
+        .pres-nav-btn:hover {
+            background: #198754;
+            transform: translateY(-50%) scale(1.1);
         }
 
         .pres-container {
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            cursor: grab;
         }
 
         .pres-iframe-wrap {
             position: relative;
             transform-origin: center center;
-            will-change: transform;
-            transition: transform 0.1s ease-out;
-            pointer-events: auto;
+            background: white;
+            box-shadow: 0 30px 100px rgba(0, 0, 0, 0.6);
+            border-radius: 4px;
         }
 
         .pres-iframe-wrap iframe {
-            background: white;
             border: none;
-            box-shadow: 0 30px 100px rgba(0, 0, 0, 0.6);
-            border-radius: 4px;
             display: block;
             pointer-events: none;
         }
 
         .pres-footer {
-            position: absolute;
+            position: fixed;
             bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
-            padding: 10px 25px;
-            border-radius: 40px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: #eee;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            color: #ccc;
             z-index: 10010;
-            white-space: nowrap;
         }
 
-        .pres-footer kbd {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: inherit;
+        @media (max-width: 767px) {
+            .pres-footer { display: none !important; }
+            .pres-nav-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 1.2rem;
+                background: rgba(0, 0, 0, 0.5);
+            }
+            .pres-nav-prev { left: 10px; }
+            .pres-nav-next { right: 10px; }
         }
 
         #pres-zoom-val {
@@ -666,7 +685,7 @@
                     <i class="bi bi-calendar-check-fill me-2 text-success"></i>CLASS SCHEDULE
                 </span>
 
-                <button class="btn-fullscreen-trigger" onclick="StudentSchedulePresenter.open()">
+                <button class="btn-fullscreen-trigger" onclick="viewSchedule('student', CONFIG.studentId)">
                     <i class="bi bi-arrows-fullscreen"></i>
                     <span>FULLSCREEN</span>
                 </button>
@@ -700,7 +719,12 @@
 
     <!-- GLOBAL PRESENTATION OVERLAY (PORTED) -->
     <div id="global-schedule-presenter">
-        <span class="pres-close" onclick="StudentSchedulePresenter.close()"><i class="bi bi-x-lg"></i></span>
+        <span class="pres-close" onclick="GlobalSchedulePresenter.close()"><i class="bi bi-x-lg"></i></span>
+
+        <button class="pres-nav-btn pres-nav-prev" onclick="GlobalSchedulePresenter.showPrev()"><i
+                class="bi bi-chevron-left"></i></button>
+        <button class="pres-nav-btn pres-nav-next" onclick="GlobalSchedulePresenter.showNext()"><i
+                class="bi bi-chevron-right"></i></button>
 
         <div class="pres-container" id="pres-backdrop">
             <div class="pres-iframe-wrap" id="pres-wrap">
@@ -709,8 +733,8 @@
         </div>
 
         <div class="pres-footer">
-            Schedule Viewer &nbsp;|&nbsp;
-            <span id="pres-zoom-val">40%</span> &nbsp;|&nbsp;
+            <span id="pres-label">Schedule Viewer</span> &nbsp;|&nbsp;
+            <span id="pres-zoom-val">100%</span> &nbsp;|&nbsp;
             Press <kbd>ESC</kbd> to exit &nbsp;|&nbsp; Drag to Pan &nbsp;|&nbsp; Scroll to Zoom
         </div>
     </div>
@@ -903,140 +927,7 @@
         }
         window.onload = loadSchedule;
     </script>
-
-    <!-- STUDENT SCHEDULE PRESENTER LOGIC -->
-    <script>
-        const StudentSchedulePresenter = {
-            scale: 0.4,
-            tx: 0,
-            ty: 0,
-            isDragging: false,
-            startX: 0,
-            startY: 0,
-
-            init() {
-                const overlay = document.getElementById('global-schedule-presenter');
-                if (!overlay) return;
-
-                // Close on backdrop click
-                overlay.addEventListener('click', (e) => {
-                    if (e.target.id === 'global-schedule-presenter' || e.target.id === 'pres-backdrop') {
-                        this.close();
-                    }
-                });
-
-                // Panning
-                overlay.addEventListener('mousedown', (e) => {
-                    if (e.target.closest('.pres-close')) return;
-                    this.isDragging = true;
-                    this.startX = e.clientX - this.tx;
-                    this.startY = e.clientY - this.ty;
-                    overlay.style.cursor = 'grabbing';
-                });
-
-                window.addEventListener('mousemove', (e) => {
-                    if (!this.isDragging || !overlay.classList.contains('active')) return;
-                    this.tx = e.clientX - this.startX;
-                    this.ty = e.clientY - this.startY;
-                    this.applyTransform();
-                });
-
-                window.addEventListener('mouseup', () => {
-                    this.isDragging = false;
-                    overlay.style.cursor = 'grab';
-                });
-
-                // Zooming
-                overlay.addEventListener('wheel', (e) => {
-                    if (!overlay.classList.contains('active')) return;
-                    e.preventDefault();
-                    const zoomSpeed = 0.0015;
-                    const delta = -e.deltaY * zoomSpeed;
-                    this.scale = Math.max(0.1, Math.min(4.0, this.scale + delta));
-                    this.applyTransform();
-                }, { passive: false });
-
-                // Keyboard
-                window.addEventListener('keydown', (e) => {
-                    if (!overlay.classList.contains('active')) return;
-                    if (e.key === 'Escape') this.close();
-                });
-
-                // Iframe Stylizer
-                const iframe = document.getElementById('pres-iframe');
-                if (iframe) {
-                    iframe.addEventListener('load', function () {
-                        try {
-                            const doc = iframe.contentDocument || iframe.contentWindow.document;
-                            const style = doc.createElement('style');
-                            style.innerHTML = `
-                                body { background: transparent !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; }
-                                .a4, #a4Paper { 
-                                    background: white !important; 
-                                    display: block !important; 
-                                    margin: 0 !important; 
-                                    box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
-                                }
-                                .container, .container-fluid { background: transparent !important; padding: 0 !important; max-width: none !important; }
-                                .card { background: transparent !important; border: none !important; box-shadow: none !important; }
-                                nav, footer, .navbar, .btn-group, .no-print, .header-wrap { display: none !important; }
-                            `;
-                            doc.head.appendChild(style);
-
-                            const paper = doc.querySelector('.a4') || doc.getElementById('a4Paper') || doc.body;
-                            if (paper) {
-                                setTimeout(() => {
-                                    iframe.style.width = paper.offsetWidth + 'px';
-                                    iframe.style.height = paper.offsetHeight + 'px';
-                                }, 50);
-                            }
-                        } catch (e) { }
-                    });
-                }
-            },
-
-            applyTransform() {
-                const wrap = document.getElementById('pres-wrap');
-                const zoomVal = document.getElementById('pres-zoom-val');
-                if (wrap) wrap.style.transform = `translate(${this.tx}px, ${this.ty}px) scale(${this.scale})`;
-                if (zoomVal) zoomVal.textContent = Math.round(this.scale * 100) + '%';
-            },
-
-            open() {
-                const overlay = document.getElementById('global-schedule-presenter');
-                const iframe = document.getElementById('pres-iframe');
-                if (!overlay || !iframe) return;
-
-                this.scale = 0.4;
-                this.tx = 0;
-                this.ty = 0;
-                this.applyTransform();
-
-                let url = "";
-                if (CONFIG.isArchive) {
-                    url = `/public/archived-timetable-html/${CONFIG.archiveId}/${CONFIG.studentId}?canvas=true`;
-                } else if (CONFIG.isIrregular) {
-                    url = `/irregular-timetable/${CONFIG.studentId}?canvas=true`;
-                } else if (CONFIG.sectionId) {
-                    url = `/public/section-timetable/${CONFIG.sectionId}?canvas=true`;
-                }
-
-                iframe.src = url;
-                overlay.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            },
-
-            close() {
-                const overlay = document.getElementById('global-schedule-presenter');
-                const iframe = document.getElementById('pres-iframe');
-                if (overlay) overlay.classList.remove('active');
-                if (iframe) iframe.src = '';
-                document.body.style.overflow = '';
-            }
-        };
-
-        document.addEventListener('DOMContentLoaded', () => StudentSchedulePresenter.init());
-    </script>
+    <!-- STUDENT SCHEDULE PRESENTER LOGIC REMOVED - NOW USING GLOBAL main.js -->
 </body>
 
 </html>

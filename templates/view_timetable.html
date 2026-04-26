@@ -161,52 +161,6 @@
         transform: scale(1.1);
     }
 
-    #presentation-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.7);
-        z-index: 2000;
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        opacity: 0;
-        transition: opacity 0.4s ease;
-        cursor: grab;
-        user-select: none;
-    }
-
-    #presentation-overlay.active {
-        display: flex;
-        opacity: 1;
-    }
-
-    #presentation-overlay:active {
-        cursor: grabbing;
-    }
-
-    .pres-container {
-        width: 100vw;
-        height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        overflow: hidden;
-        /* Prevent leakage */
-    }
-
-    .pres-iframe-wrap {
-        width: 800px;
-        height: 1130px;
-        background: white;
-        box-shadow: 0 0 100px rgba(0, 0, 0, 0.8);
-        transform-origin: center center;
-        transition: transform 0.05s linear;
-        pointer-events: auto;
-        /* Catch clicks to prevent backdrop exit bleed-through */
-    }
-
     .canvas-card {
         transition: opacity 0.3s ease, transform 0.05s linear;
     }
@@ -214,89 +168,6 @@
     .canvas-card.canvas-dimmed {
         opacity: 0.15;
         pointer-events: none;
-    }
-
-    .pres-iframe-wrap iframe {
-        width: 100%;
-        height: 100%;
-        border: none;
-        pointer-events: none;
-    }
-
-    .pres-nav-btn {
-        position: fixed;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 70px;
-        height: 70px;
-        background: rgba(255, 255, 255, 0.05);
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 2rem;
-        cursor: pointer;
-        z-index: 2100;
-        transition: all 0.3s;
-    }
-
-    .pres-nav-btn:hover {
-        background: var(--accent-green);
-        border-color: var(--accent-green);
-        transform: translateY(-50%) scale(1.1);
-    }
-
-    .pres-nav-prev {
-        left: 30px;
-    }
-
-    .pres-nav-next {
-        right: 30px;
-    }
-
-    .pres-nav {
-        position: absolute;
-        top: 50%;
-        width: 110%;
-        left: -5%;
-        transform: translateY(-50%);
-        display: flex;
-        justify-content: space-between;
-        pointer-events: none;
-    }
-
-    .pres-btn {
-        width: 60px;
-        height: 60px;
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        cursor: pointer;
-        pointer-events: auto;
-        transition: all 0.3s;
-    }
-
-    .pres-btn:hover {
-        background: var(--accent-green);
-        transform: scale(1.1);
-    }
-
-    .pres-close {
-        position: fixed;
-        top: 30px;
-        right: 30px;
-        color: rgba(255, 255, 255, 0.4);
-        font-size: 2.5rem;
-        cursor: pointer;
-        z-index: 2100;
-        transition: color 0.3s;
     }
 
     .pres-close:hover {
@@ -799,24 +670,7 @@
     <div id="minimap-viewport-box"></div>
 </div>
 
-<!-- PRESENTATION OVERLAY -->
-<div id="presentation-overlay">
-    <span class="pres-close" onclick="closePresentation()"><i class="bi bi-x-lg"></i></span>
-
-    <button class="pres-nav-btn pres-nav-prev" onclick="showPrev()"><i class="bi bi-chevron-left"></i></button>
-    <button class="pres-nav-btn pres-nav-next" onclick="showNext()"><i class="bi bi-chevron-right"></i></button>
-
-    <div class="pres-container" id="pres-backdrop">
-        <div class="pres-iframe-wrap" id="pres-wrap">
-            <iframe id="pres-iframe"></iframe>
-        </div>
-    </div>
-
-    <div class="pres-footer">
-        <span id="pres-label">...</span> &nbsp;|&nbsp; Press <kbd>ESC</kbd> to exit &nbsp;|&nbsp; Drag to Pan
-        &nbsp;|&nbsp; Scroll to Zoom
-    </div>
-</div>
+<!-- PRESENTATION OVERLAY REMOVED - USING GLOBAL BASE.HTML OVERLAY -->
 
 <!-- VIEWPORT & CANVAS -->
 <div id="canvas-viewport" style="top: {% if is_hist %}110px{% else %}48px{% endif %};">
@@ -828,8 +682,7 @@
 <script>
     (function () {
         // ── Data from Flask ──────────────────────────────────────────
-        const _sec = {{ sections_json | tojson | safe
-    }};
+        const _sec = {{ sections_json | tojson | safe }};
     const _fac = {{ faculty_json  | tojson | safe }};
     const _rom = {{ rooms_json    | tojson | safe }};
     const _crs = {{ courses_json  | tojson | safe }};
@@ -1204,7 +1057,7 @@
 <a href="${excelUrl}" class="card-maximize-btn text-decoration-none" title="Download Excel">
                         <i class="bi bi-file-earmark-excel"></i>
                     </a>
-                    <button class="card-maximize-btn" onclick="openPresentation(${data.index})" title="Maximize">
+                    <button class="card-maximize-btn" onclick="viewSchedule(currentType, '${data.id}')" title="Maximize">
                         <i class="bi bi-fullscreen"></i>
                     </button>
                 </div>
@@ -1216,7 +1069,7 @@
                 <iframe src="${data.url}" onload="this.previousElementSibling.style.display='none'"></iframe>
             </div>`;
         if (window.innerWidth > 768) {
-            card.addEventListener('dblclick', () => openPresentation(data.index));
+            card.addEventListener('dblclick', () => viewSchedule(currentType, data.id));
         }
         canvas.appendChild(card);
         data.element = card;
@@ -1412,142 +1265,25 @@
         initViewState();
     });
 
-    // ── PRESENTATION LOGIC (INTERACTIVE) ─────────────────────────
-    let currentPresIndex = -1;
-    let presScale = 1.0;
-    let presX = 0;
-    let presY = 0;
-    let isPresDragging = false;
-    let presStartX, presStartY;
-
-    const presOverlay = document.getElementById('presentation-overlay');
-    const presIframe = document.getElementById('pres-iframe');
-    const presLabel = document.getElementById('pres-label');
-    const presWrap = document.getElementById('pres-wrap');
-
-    function updatePresTransform() {
-        presWrap.style.transform = `translate(${presX}px, ${presY}px) scale(${presScale})`;
-    }
-
-    window.openPresentation = function (index) {
-        currentPresIndex = index;
-        const list = listMap[currentType] || [];
-        if (index < 0 || index >= list.length) return;
-
-        // Reset Transform for New Slide
-        // Update: Fixed 40% default zoom as per user request
-        presScale = 0.4;
-        presX = 0;
-        presY = 0;
-        updatePresTransform();
-
-        const item = list[index];
-        const urlMap = {
-            section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`,
-            faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`,
-            room: id => `/room-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`,
-            course: id => `/course-timetable-html/${id}?semester=${encodeURIComponent(currentSemester)}&canvas=true&t=${Date.now()}${activeDraftId ? `&draft_id=${activeDraftId}` : ''}`
+    // ── GLOBAL PRESENTER OVERRIDES (CANVAS SPECIFIC) ───────────
+    if (typeof GlobalSchedulePresenter !== 'undefined') {
+        GlobalSchedulePresenter.showNext = function() {
+            const list = listMap[currentType] || [];
+            const idx = list.findIndex(item => item.id == this.id);
+            if (idx !== -1) {
+                const nextIdx = (idx + 1) % list.length;
+                this.open(currentType, list[nextIdx].id);
+            }
         };
-
-        presIframe.src = urlMap[currentType](item.id);
-        presLabel.textContent = item.label;
-        presOverlay.classList.add('active');
-        document.body.style.overflow = 'hidden';
-
-        // FOCUS MODE: Hide HUD and main navbar
-        const hud = document.querySelector('.hud-controls');
-        if (hud) hud.classList.add('focus-mode');
-        const mainNav = document.querySelector('.sheets-menubar');
-        if (mainNav) mainNav.classList.add('d-none');
-    };
-
-    window.closePresentation = function () {
-        presOverlay.classList.remove('active');
-        presIframe.src = '';
-        document.body.style.overflow = 'auto';
-
-        // FOCUS MODE: Show HUD and main navbar
-        const hud = document.querySelector('.hud-controls');
-        if (hud) hud.classList.remove('focus-mode');
-        const mainNav = document.querySelector('.sheets-menubar');
-        if (mainNav) mainNav.classList.remove('d-none');
-    };
-
-    // Close on backdrop click (Only if clicking background, not paper)
-    presOverlay.addEventListener('click', (e) => {
-        if (e.target.id === 'pres-backdrop' || e.target.id === 'presentation-overlay') {
-            closePresentation();
-        }
-    });
-
-    // Prevent backdrop exit when clicking/dragging the paper card
-    presWrap.addEventListener('click', (e) => {
-        e.stopPropagation();
-    });
-
-    // Panning inside Presentation
-    presOverlay.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.pres-nav-btn') || e.target.closest('.pres-close')) return;
-        isPresDragging = true;
-        presStartX = e.clientX - presX;
-        presStartY = e.clientY - presY;
-    });
-
-    window.addEventListener('mousemove', (e) => {
-        if (!isPresDragging || !presOverlay.classList.contains('active')) return;
-        presX = e.clientX - presStartX;
-        presY = e.clientY - presStartY;
-        updatePresTransform();
-    });
-
-    window.addEventListener('mouseup', () => {
-        isPresDragging = false;
-    });
-
-    // Zooming inside Presentation
-    presOverlay.addEventListener('wheel', (e) => {
-        if (!presOverlay.classList.contains('active')) return;
-        e.preventDefault();
-
-        const zoomSpeed = 0.0015;
-        const delta = -e.deltaY * zoomSpeed;
-        const oldScale = presScale;
-        // Update: Min zoom is now 10% (0.1)
-        presScale = Math.max(0.1, Math.min(4.0, presScale + delta));
-
-        // Center zoom on mouse? For simple pan, we usually just scale.
-        // Let's keep it simple for now as per user request.
-        updatePresTransform();
-    }, { passive: false });
-
-
-
-    window.showNext = function () {
-        const list = listMap[currentType] || [];
-        if (currentPresIndex < list.length - 1) {
-            openPresentation(currentPresIndex + 1);
-        } else {
-            openPresentation(0);
-        }
-    };
-
-    window.showPrev = function () {
-        const list = listMap[currentType] || [];
-        if (currentPresIndex > 0) {
-            openPresentation(currentPresIndex - 1);
-        } else {
-            openPresentation(list.length - 1);
-        }
-    };
-
-    // Keyboard Navigation
-    window.addEventListener('keydown', (e) => {
-        if (!presOverlay.classList.contains('active')) return;
-        if (e.key === 'ArrowRight') showNext();
-        if (e.key === 'ArrowLeft') showPrev();
-        if (e.key === 'Escape') closePresentation();
-    });
-
+        GlobalSchedulePresenter.showPrev = function() {
+            const list = listMap[currentType] || [];
+            const idx = list.findIndex(item => item.id == this.id);
+            if (idx !== -1) {
+                const prevIdx = (idx - 1 + list.length) % list.length;
+                this.open(currentType, list[prevIdx].id);
+            }
+        };
+    }
 }) ();
 </script>
 

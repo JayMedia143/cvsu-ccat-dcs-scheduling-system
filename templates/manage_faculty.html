@@ -258,7 +258,11 @@
 
                             <td class="text-start">
                                 <!-- Total scheduled hours from GA-generated schedule -->
-                                {% set wload = workload_map.get(faculty.id, 0) %}
+                                {% if is_hist %}
+                                    {% set wload = workload_map.get(faculty.full_name, 0) %}
+                                {% else %}
+                                    {% set wload = workload_map.get(faculty.id, 0) %}
+                                {% endif %}
                                 <span class="badge bg-secondary rounded-pill cursor-help" style="padding: 5px 10px;"
                                     title="{{ wload }} hrs scheduled">
                                     {{ wload }}
