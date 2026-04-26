@@ -8983,7 +8983,7 @@ def check_constraints():
 
     target_semester = session.get('selected_semester', '1st Semester')
 
-    all_schedules = ScheduledClass.query.all()
+    all_schedules = _dedup_schedules(ScheduledClass.query.all())
     # Filter by semester when a specific semester is selected
     if target_semester and target_semester != 'All':
         schedules = [s for s in all_schedules if s.course.semester_offered == target_semester]
