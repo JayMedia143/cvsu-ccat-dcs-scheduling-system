@@ -1558,92 +1558,6 @@
     </div><!-- /layout-right -->
 </div><!-- /layout-page -->
 
-<!-- ── Preview Modal ── -->
-<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-preview-custom">
-        <div class="modal-content preview-modal-shell">
-            <div class="modal-header py-2 bg-white border-bottom">
-                <h6 class="modal-title mb-0 me-auto fw-bold text-dark" id="previewModalLabel">Template Preview</h6>
-                <div class="d-flex align-items-center gap-2 me-3">
-                    <span id="zoomPercent" class="badge bg-light text-dark border fw-normal"
-                        style="font-size:0.75rem; width:45px;">100%</span>
-                    <button class="btn btn-xs btn-outline-secondary" onclick="resetZoom()" title="Fit to Screen">
-                        <i class="bi bi-fullscreen"></i>
-                    </button>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-0 position-relative preview-dotted-bg" style="overflow:hidden; cursor: grab;"
-                id="previewContainer">
-                <div id="zoomWrapper"
-                    style="transform-origin: 0 0; transition: transform 0.1s ease-out; pointer-events: none; width:fit-content; height:fit-content; will-change: transform;">
-                    <iframe id="previewFrame" src="" scrolling="no"
-                        style="width:1px; height:1px; border:none; background:transparent; overflow:hidden;"
-                        title="Template Preview"></iframe>
-                </div>
-
-                <!-- Interaction Overlay -->
-                <div id="previewOverlay" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:10;">
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<style>
-    .btn-xs {
-        padding: 2px 6px;
-        font-size: 0.75rem;
-    }
-
-    #previewContainer:active {
-        cursor: grabbing;
-    }
-
-    /* Premium Preview Styling */
-    .preview-dotted-bg {
-        background-color: #f8f9fa;
-        background-image: radial-gradient(#d1d5db 1px, transparent 1px);
-        background-size: 20px 20px;
-    }
-
-    .modal-preview-custom {
-        max-width: 92vw;
-        width: 650px;
-        /* Force 90dvh by overriding centering margins */
-        height: 90dvh;
-        min-height: 90dvh !important;
-        margin: 5dvh auto !important;
-        max-height: none !important;
-        display: flex;
-        align-items: center;
-    }
-
-    .modal-preview-custom .preview-modal-shell {
-        height: 100%;
-        width: 100%;
-        background: white;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        border-radius: 12px;
-        border: none;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    }
-
-    @media (max-width: 767px) {
-        .modal-preview-custom {
-            max-width: 95vw !important;
-            width: 95vw !important;
-            margin: 15dvh auto !important;
-            height: 70dvh !important;
-            min-height: 70dvh !important;
-        }
-
-        .modal-preview-custom .preview-modal-shell {
-            height: 100% !important;
-        }
-    }
-</style>
 
 {% endblock %}
 
@@ -1698,203 +1612,58 @@
         });
     });
 
-    // ── Interactive Preview Logic ──
-    var _previewState = {
-        scale: 1,
-        x: 0,
-        y: 0,
-        isDragging: false,
-        startX: 0,
-        startY: 0,
-        initialPinchDist: 0,
-        initialScale: 1
-    };
+    // ── Global Viewer Stylizer (specifically for template preview) ──
+    document.addEventListener('DOMContentLoaded', function() {
+        const presIframe = document.getElementById('pres-iframe');
+        if (presIframe) {
+            presIframe.addEventListener('load', function () {
+                if (typeof GlobalSchedulePresenter === 'undefined' || GlobalSchedulePresenter.type !== 'preview') return;
+                try {
+                    var iframe = this;
+                    var doc = iframe.contentDocument || iframe.contentWindow.document;
 
-    function updatePreviewTransform() {
-        var wrapper = document.getElementById('zoomWrapper');
-        var zoomPercent = document.getElementById('zoomPercent');
-        if (!wrapper) return;
-        wrapper.style.transform = `translate(${_previewState.x}px, ${_previewState.y}px) scale(${_previewState.scale})`;
-        zoomPercent.textContent = Math.round(_previewState.scale * 100) + '%';
-    }
+                    // 1. Inject Styles
+                    var style = doc.createElement('style');
+                    style.innerHTML = `
+                        body { background: transparent !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; }
+                        .a4, #a4Paper { 
+                            background: white !important; 
+                            display: block !important; 
+                            margin: 0 !important; 
+                            box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
+                            visibility: visible !important;
+                        }
+                        .container, .container-fluid { background: transparent !important; padding: 0 !important; max-width: none !important; }
+                        .card { background: transparent !important; border: none !important; box-shadow: none !important; }
+                        nav, footer, .navbar, .btn-group, .no-print, .header-wrap { display: none !important; }
+                    `;
+                    doc.head.appendChild(style);
 
-    function resetZoom() {
-        var container = document.getElementById('previewContainer');
-        var iframe = document.getElementById('previewFrame');
-        if (!container || !iframe || iframe.offsetWidth <= 1) return;
+                    // 2. Measure & Resize Iframe to match Internal Paper
+                    var paper = doc.querySelector('.a4') || doc.getElementById('a4Paper') || doc.body;
+                    if (paper) {
+                        setTimeout(function () {
+                            iframe.style.width = paper.offsetWidth + 'px';
+                            iframe.style.height = paper.offsetHeight + 'px';
+                        }, 50);
+                    }
+                } catch (e) {
+                    console.warn("Cross-origin error on iframe preview:", e);
+                }
+            });
+        }
 
-        var cRect = container.getBoundingClientRect();
-        // Dynamic dimensions based on the measured iframe
-        var iW = iframe.offsetWidth;
-        var iH = iframe.offsetHeight;
-
-        var scaleW = cRect.width / iW;
-        var scaleH = cRect.height / iH;
-        _previewState.scale = Math.min(scaleW, scaleH) * 0.98; // Tight fit
-
-        // Perfect centering logic
-        _previewState.x = (cRect.width - (iW * _previewState.scale)) / 2;
-        _previewState.y = (cRect.height - (iH * _previewState.scale)) / 2;
-
-        updatePreviewTransform();
-    }
-
-    // ── Dynamic Transparency & Sizing Hack for Iframe Content ──
-    document.getElementById('previewFrame').addEventListener('load', function () {
-        try {
-            var iframe = this;
-            var doc = iframe.contentDocument || iframe.contentWindow.document;
-
-            // 1. Inject Styles
-            var style = doc.createElement('style');
-            style.innerHTML = `
-            body { background: transparent !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; }
-            .a4, #a4Paper { 
-                background: white !important; 
-                display: block !important; 
-                margin: 0 !important; 
-                box-shadow: 0 4px 18px rgba(0,0,0,0.2) !important;
-                visibility: visible !important;
-            }
-            .container, .container-fluid { background: transparent !important; padding: 0 !important; max-width: none !important; }
-            .card { background: transparent !important; border: none !important; box-shadow: none !important; }
-            nav, footer, .navbar, .btn-group, .no-print, .header-wrap { display: none !important; }
-        `;
-            doc.head.appendChild(style);
-
-            // 2. Measure & Resize Iframe to match Internal Paper
-            var paper = doc.querySelector('.a4') || doc.getElementById('a4Paper') || doc.body;
-            if (paper) {
-                // Force a slight delay to ensure browser layout is stable
-                setTimeout(function () {
-                    iframe.style.width = paper.offsetWidth + 'px';
-                    iframe.style.height = paper.offsetHeight + 'px';
-                    resetZoom(); // Now fit it to the modal
-                }, 50);
-            }
-        } catch (e) {
-            console.warn("Cross-origin or other error injecting style into iframe preview:", e);
+        // Preview button in upload card
+        const previewBtn = document.querySelector('.btn-preview-action');
+        if (previewBtn) {
+            previewBtn.addEventListener('click', function () {
+                if (typeof GlobalSchedulePresenter !== 'undefined') {
+                    GlobalSchedulePresenter.open('preview', _currentTab);
+                }
+            });
         }
     });
 
-    // Preview button in upload card
-    document.querySelector('.btn-preview-action').addEventListener('click', function () {
-        var frame = document.getElementById('previewFrame');
-        var label = document.getElementById('previewModalLabel');
-        frame.src = '/preview-layout/' + _currentTab;
-        label.textContent = _currentTab.charAt(0).toUpperCase() + _currentTab.slice(1) + ' Template Preview';
-
-        var modalEl = document.getElementById('previewModal');
-        var modal = new bootstrap.Modal(modalEl);
-        modal.show();
-
-        // Reset when modal is fully shown
-        modalEl.addEventListener('shown.bs.modal', function onShown() {
-            resetZoom();
-            modalEl.removeEventListener('shown.bs.modal', onShown);
-        });
-    });
-
-    // Clear iframe on modal close
-    document.getElementById('previewModal').addEventListener('hidden.bs.modal', function () {
-        document.getElementById('previewFrame').src = '';
-        _previewState.scale = 1; _previewState.x = 0; _previewState.y = 0;
-    });
-
-    // ── Event Listeners for Zoom/Pan ──
-    var overlay = document.getElementById('previewOverlay');
-
-    // Mouse Wheel & Trackpad Pinch (Focal Point Zooming)
-    overlay.addEventListener('wheel', function (e) {
-        e.preventDefault();
-        var container = document.getElementById('previewContainer');
-        if (!container) return;
-
-        var containerRect = container.getBoundingClientRect();
-        var mouseX = e.clientX - containerRect.left;
-        var mouseY = e.clientY - containerRect.top;
-
-        // In a preview modal, we want the wheel to zoom directly
-        var zoomSpeed = 0.001;
-        var oldScale = _previewState.scale;
-        var newScale = oldScale * (1 - e.deltaY * zoomSpeed);
-        newScale = Math.max(0.1, Math.min(newScale, 4));
-
-        // Focal point logic: Keep the point under mouse stationary
-        _previewState.x = mouseX - (mouseX - _previewState.x) * (newScale / oldScale);
-        _previewState.y = mouseY - (mouseY - _previewState.y) * (newScale / oldScale);
-        _previewState.scale = newScale;
-
-        updatePreviewTransform();
-    }, { passive: false });
-
-    // Pan (Mouse)
-    overlay.addEventListener('mousedown', function (e) {
-        _previewState.isDragging = true;
-        _previewState.startX = e.clientX - _previewState.x;
-        _previewState.startY = e.clientY - _previewState.y;
-    });
-
-    window.addEventListener('mousemove', function (e) {
-        if (!_previewState.isDragging) return;
-        _previewState.x = e.clientX - _previewState.startX;
-        _previewState.y = e.clientY - _previewState.startY;
-        updatePreviewTransform();
-    });
-
-    window.addEventListener('mouseup', function () {
-        _previewState.isDragging = false;
-    });
-
-    // Touch (Pinch & Pan - Focal Point Zooming)
-    overlay.addEventListener('touchstart', function (e) {
-        if (e.touches.length === 2) {
-            _previewState.initialPinchDist = Math.hypot(
-                e.touches[0].pageX - e.touches[1].pageX,
-                e.touches[0].pageY - e.touches[1].pageY
-            );
-            _previewState.initialScale = _previewState.scale;
-
-            // Center of the pinch
-            var container = document.getElementById('previewContainer');
-            var containerRect = container.getBoundingClientRect();
-            _previewState.pinchCenterX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - containerRect.left;
-            _previewState.pinchCenterY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - containerRect.top;
-        } else if (e.touches.length === 1) {
-            _previewState.isDragging = true;
-            _previewState.startX = e.touches[0].clientX - _previewState.x;
-            _previewState.startY = e.touches[0].clientY - _previewState.y;
-        }
-    }, { passive: false });
-
-    overlay.addEventListener('touchmove', function (e) {
-        e.preventDefault();
-        if (e.touches.length === 2) {
-            var dist = Math.hypot(
-                e.touches[0].pageX - e.touches[1].pageX,
-                e.touches[0].pageY - e.touches[1].pageY
-            );
-            var factor = dist / _previewState.initialPinchDist;
-            var oldScale = _previewState.scale;
-            var newScale = Math.max(0.1, Math.min(_previewState.initialScale * factor, 4));
-
-            // Focal point logic for touch
-            var centerX = _previewState.pinchCenterX;
-            var centerY = _previewState.pinchCenterY;
-            _previewState.x = centerX - (centerX - _previewState.x) * (newScale / oldScale);
-            _previewState.y = centerY - (centerY - _previewState.y) * (newScale / oldScale);
-            _previewState.scale = newScale;
-
-        } else if (e.touches.length === 1 && _previewState.isDragging) {
-            _previewState.x = e.touches[0].clientX - _previewState.startX;
-            _previewState.y = e.touches[0].clientY - _previewState.startY;
-        }
-        updatePreviewTransform();
-    }, { passive: false });
-
-    overlay.addEventListener('touchend', function () {
-        _previewState.isDragging = false;
-    });
 
 
     // ── Restore active tab from URL ?tab= param ──

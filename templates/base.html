@@ -171,158 +171,123 @@
     {% endif %}
 
     <style>
-        /* ── UNIVERSAL SCHEDULE MODAL (GLOBAL STYLES) ─────────── */
-        #universalScheduleModal .modal-dialog {
-            margin: 1.5rem auto;
-            max-width: 95dvw;
-        }
-
-        #universalScheduleModal .modal-content {
-            height: 94dvh;
-            max-height: 94dvh;
-            overflow: hidden !important;
-            display: flex;
+        /* ── GLOBAL PRESENTATION OVERLAY (NEW) ───────────────────────── */
+        #global-schedule-presenter {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 5000;
+            display: none;
             flex-direction: column;
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
-        }
-
-        #universalScheduleModal .modal-body {
-            flex: 1;
-            position: relative;
-            background-color: #f3f4f6;
-            background-image: radial-gradient(#d1d5db 1px, transparent 1px);
-            background-size: 24px 24px;
-            overflow: hidden !important;
-            padding: 0 !important;
-            touch-action: none;
-        }
-
-        #schedGridContainer {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            cursor: grab;
-            overflow: hidden !important;
-        }
-
-        /* The "Infinite" feel wrapper */
-        .modal-paper-wrapper {
-            display: inline-block;
-            padding: 200px;
-            /* Large safe zone for gestures */
-            transform-origin: top left;
-            transition: none;
-            transform-style: preserve-3d;
-        }
-
-        @media (max-width: 768px) {
-            .modal-paper-wrapper {
-                padding: 80px;
-            }
-        }
-
-        .modal-paper-content {
-            background: #fff;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-            border-radius: 4px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .dynamic-paper-wrapper {
-            width: 100%;
-            height: 100%;
-            display: block;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-        }
-
-        #schedGrid,
-        .modal-paper-content iframe {
-            display: block;
-            border: none;
-        }
-
-        #schedGrid {
-            min-width: 650px;
-            width: 100%;
-        }
-
-        .modal-footer-clean {
-            background: #fff;
-            border-top: 1px solid #dee2e6;
-            padding: 10px 15px;
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            z-index: 10;
-        }
-
-        .zoom-controls {
-            display: flex;
-            align-items: center;
-            gap: 2px;
-            background: #fff;
-            padding: 2px;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-
-        .zoom-btn {
-            background: transparent;
-            border: none;
-            color: #495057;
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 1rem;
-        }
-
-        .zoom-btn:hover {
-            background: #f8f9fa;
-            color: #198754;
-        }
-
-        .zoom-badge {
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: #212529;
-            padding: 0 8px;
-            min-width: 50px;
-            text-align: center;
-            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            cursor: grab;
             user-select: none;
         }
 
-        .zoom-badge:hover {
-            color: #198754;
+        #global-schedule-presenter.active {
+            display: flex;
+            opacity: 1;
         }
 
-        /* Semester Dropdown specific fix */
-        .semester-dropdown-menu {
-            left: auto !important;
-            right: 0 !important;
-            transform: translateY(10px) !important;
-        }
-        .semester-dropdown-menu.show {
-            transform: translateY(0) !important;
+        #global-schedule-presenter:active {
+            cursor: grabbing;
         }
 
-        #universalScheduleModal .modal-dialog {
-            max-width: 60dvw;
-            transition: max-width 0.3s ease;
+        .pres-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pres-iframe-wrap {
+            width: 800px;
+            height: 1130px;
+            background: white;
+            box-shadow: 0 0 100px rgba(0, 0, 0, 0.8);
+            transform-origin: center center;
+            transition: transform 0.05s linear;
+            pointer-events: auto;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .pres-iframe-wrap iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            pointer-events: none;
+        }
+
+        .pres-nav-btn {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            cursor: pointer;
+            z-index: 5100;
+            transition: all 0.3s;
+        }
+
+        .navbar-brand {
+            font-weight: 700 !important;
+        }
+
+        .pres-nav-btn:hover {
+            background: #198754;
+            border-color: #198754;
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .pres-nav-prev { left: 30px; }
+        .pres-nav-next { right: 30px; }
+
+        .pres-close {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 2.5rem;
+            cursor: pointer;
+            z-index: 5200;
+            transition: color 0.3s;
+        }
+
+        .pres-close:hover { color: white; }
+
+        .pres-footer {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            z-index: 5100;
+            text-align: center;
+            width: 100%;
+        }
+
+        .pres-footer kbd {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
         }
 
         /* ── NAVBAR DROPDOWN REFINEMENTS ─────────────────────── */
@@ -407,34 +372,6 @@
                 padding: 10px 15px !important;
             }
 
-            #universalScheduleModal .modal-dialog {
-                margin: 1.75rem auto;
-                max-width: 95dvw;
-            }
-
-            #universalScheduleModal .modal-content {
-                height: auto;
-                max-height: 90dvh;
-                border-radius: 12px;
-            }
-
-            .nav-hint {
-                display: none;
-            }
-
-            #universalScheduleLabel {
-                font-size: 0.7rem !important;
-                max-width: 100px;
-            }
-
-            .modal-paper-wrapper {
-                padding: 80px;
-            }
-
-            .zoom-controls {
-                gap: 2px;
-                padding: 2px 5px;
-            }
         }
     </style>
 
@@ -1164,6 +1101,26 @@
         </div>
     </div>
 
+    <!-- GLOBAL PRESENTATION OVERLAY -->
+    <div id="global-schedule-presenter">
+        <span class="pres-close" onclick="GlobalSchedulePresenter.close()"><i class="bi bi-x-lg"></i></span>
+
+        <button class="pres-nav-btn pres-nav-prev" onclick="GlobalSchedulePresenter.showPrev()"><i class="bi bi-chevron-left"></i></button>
+        <button class="pres-nav-btn pres-nav-next" onclick="GlobalSchedulePresenter.showNext()"><i class="bi bi-chevron-right"></i></button>
+
+        <div class="pres-container" id="pres-backdrop">
+            <div class="pres-iframe-wrap" id="pres-wrap">
+                <iframe id="pres-iframe"></iframe>
+            </div>
+        </div>
+
+        <div class="pres-footer">
+            <span id="pres-label">Loading Schedule...</span> &nbsp;|&nbsp; 
+            <span id="pres-zoom-val">100%</span> &nbsp;|&nbsp;
+            Press <kbd>ESC</kbd> to exit &nbsp;|&nbsp; Drag to Pan &nbsp;|&nbsp; Scroll to Zoom
+        </div>
+    </div>
+
     <!-- ================= EXTRA MODALS BLOCK ================= -->
     {% block modals %}{% endblock %}
 
@@ -1582,6 +1539,27 @@
         </div>
     </div>
 
+    <!-- GLOBAL PRESENTATION OVERLAY -->
+    <div id="global-schedule-presenter">
+        <span class="pres-close" onclick="GlobalSchedulePresenter.close()"><i class="bi bi-x-lg"></i></span>
+
+        <button class="pres-nav-btn pres-nav-prev" onclick="GlobalSchedulePresenter.showPrev()"><i class="bi bi-chevron-left"></i></button>
+        <button class="pres-nav-btn pres-nav-next" onclick="GlobalSchedulePresenter.showNext()"><i class="bi bi-chevron-right"></i></button>
+
+        <div class="pres-container" id="pres-backdrop">
+            <div class="pres-iframe-wrap" id="pres-wrap">
+                <iframe id="pres-iframe"></iframe>
+            </div>
+        </div>
+
+        <div class="pres-footer">
+            <span id="pres-label">Loading Schedule...</span> &nbsp;|&nbsp; 
+            <span id="pres-zoom-val">100%</span> &nbsp;|&nbsp;
+            Press <kbd>ESC</kbd> to exit &nbsp;|&nbsp; Drag to Pan &nbsp;|&nbsp; Scroll to Zoom
+        </div>
+    </div>
+
 </body>
+
 
 </html>

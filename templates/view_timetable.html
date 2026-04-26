@@ -1435,10 +1435,8 @@
         if (index < 0 || index >= list.length) return;
 
         // Reset Transform for New Slide
-        const cfg = layoutConfigs[currentType] || { w: 8.27, h: 11.69 };
-        const paperH = cfg.h * 96;
-        const baseScale = Math.min(1.0, (window.innerHeight * 0.9) / paperH);
-        presScale = baseScale;
+        // Update: Fixed 40% default zoom as per user request
+        presScale = 0.4;
         presX = 0;
         presY = 0;
         updatePresTransform();
@@ -1514,7 +1512,8 @@
         const zoomSpeed = 0.0015;
         const delta = -e.deltaY * zoomSpeed;
         const oldScale = presScale;
-        presScale = Math.max(0.4, Math.min(4.0, presScale + delta));
+        // Update: Min zoom is now 10% (0.1)
+        presScale = Math.max(0.1, Math.min(4.0, presScale + delta));
 
         // Center zoom on mouse? For simple pan, we usually just scale.
         // Let's keep it simple for now as per user request.

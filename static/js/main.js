@@ -185,8 +185,8 @@ function initializeSemesterFilter() {
     }
 }
 
-// ── UNIVERSAL SCHEDULE MODAL MANAGER (NUCLEAR CLEAN) ──────
-const UniversalModalManager = {
+// // ── GLOBAL SCHEDULE PRESENTER (NEW FULLSCREEN VIEW) ──────
+const GlobalSchedulePresenter = {
     type: null,
     id: null,
     scale: 1.0,
@@ -195,254 +195,165 @@ const UniversalModalManager = {
     isDragging: false,
     startX: 0,
     startY: 0,
-    lastPinchDist: null,
-    touchStartX: 0,
-    touchStartY: 0,
-    isSwiping: false,
+    currentSemester: null,
 
     init() {
-        const modalEl = document.getElementById('universalScheduleModal');
-        if (!modalEl) return;
+        const overlay = document.getElementById('global-schedule-presenter');
+        if (!overlay) return;
 
-        // ── ATTACH LISTENERS ONLY ONCE ──
-
-        // Arrow Key Support
-        document.addEventListener('keydown', (e) => {
-            if (!modalEl.classList.contains('show')) return;
-            if (e.key === 'ArrowLeft') this.navigate('prev');
-            if (e.key === 'ArrowRight') this.navigate('next');
+        // Panning inside Presentation
+        overlay.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.pres-nav-btn') || e.target.closest('.pres-close')) return;
+            this.isDragging = true;
+            this.startX = e.clientX - this.tx;
+            this.startY = e.clientY - this.ty;
+            overlay.style.cursor = 'grabbing';
         });
 
-        // Global Mouse Up
-        window.addEventListener('mouseup', () => {
-            this.isDragging = false;
-            const container = document.getElementById('schedGridContainer');
-            if (container) container.style.cursor = 'grab';
+        // Close on backdrop click (Only if clicking background, not paper)
+        overlay.addEventListener('click', (e) => {
+            if (e.target.id === 'global-schedule-presenter' || e.target.id === 'pres-backdrop') {
+                this.close();
+            }
         });
 
-        // Global Mouse Move
         window.addEventListener('mousemove', (e) => {
-            if (!this.isDragging || !this.modalIsVisible()) return;
+            if (!this.isDragging || !overlay.classList.contains('active')) return;
             this.tx = e.clientX - this.startX;
             this.ty = e.clientY - this.startY;
             this.applyTransform();
         });
 
-        // Handle Panning/Zooming via delegation from the container
-        modalEl.addEventListener('mousedown', (e) => {
-            const container = e.target.closest('#schedGridContainer');
-            if (!container) return;
-            this.isDragging = true;
-            this.startX = e.clientX - this.tx;
-            this.startY = e.clientY - this.ty;
-            container.style.cursor = 'grabbing';
-        });
-
-        // Touch Interaction (Pan + Zoom + Swipe)
-        modalEl.addEventListener('touchstart', (e) => {
-            const container = e.target.closest('#schedGridContainer');
-            if (!container) return;
-
-            if (e.touches.length === 1) {
-                this.isDragging = true;
-                this.startX = e.touches[0].clientX - this.tx;
-                this.startY = e.touches[0].clientY - this.ty;
-            } else if (e.touches.length === 2) {
-                this.isDragging = false;
-                this.lastPinchDist = this.getDistance(e.touches[0], e.touches[1]);
-            }
-        }, { passive: false });
-
-        modalEl.addEventListener('touchmove', (e) => {
-            if (!this.modalIsVisible()) return;
-            const container = e.target.closest('#schedGridContainer');
-            if (!container) return;
-
-            if (e.touches.length === 1 && this.isDragging) {
-                this.tx = e.touches[0].clientX - this.startX;
-                this.ty = e.touches[0].clientY - this.startY;
-                this.applyTransform();
-            } else if (e.touches.length === 2 && this.lastPinchDist) {
-                e.preventDefault(); 
-                const dist = this.getDistance(e.touches[0], e.touches[1]);
-                const delta = dist / this.lastPinchDist;
-                const oldScale = this.scale;
-                this.scale = Math.max(0.1, Math.min(4.0, this.scale * delta));
-
-                const rect = container.getBoundingClientRect();
-                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
-                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
-
-                this.tx -= (midX - this.tx) * (this.scale / oldScale - 1);
-                this.ty -= (midY - this.ty) * (this.scale / oldScale - 1);
-
-                this.lastPinchDist = dist;
-                this.applyTransform();
-            }
-        }, { passive: false });
-
-        modalEl.addEventListener('touchend', (e) => {
+        window.addEventListener('mouseup', () => {
             this.isDragging = false;
-            this.lastPinchDist = null;
+            overlay.style.cursor = 'grab';
         });
-    },
 
-    getDistance(t1, t2) {
-        return Math.sqrt(Math.pow(t2.clientX - t1.clientX, 2) + Math.pow(t2.clientY - t1.clientY, 2));
-    },
+        // Zooming inside Presentation
+        overlay.addEventListener('wheel', (e) => {
+            if (!overlay.classList.contains('active')) return;
+            e.preventDefault();
 
-    modalIsVisible() {
-        return document.getElementById('universalScheduleModal').classList.contains('show');
+            const zoomSpeed = 0.0015;
+            const delta = -e.deltaY * zoomSpeed;
+            const oldScale = this.scale;
+            // Update: Allowed min zoom is now 10% (0.1)
+            this.scale = Math.max(0.1, Math.min(4.0, this.scale + delta));
+            
+            this.applyTransform();
+        }, { passive: false });
+
+        // Keyboard Navigation
+        window.addEventListener('keydown', (e) => {
+            if (!overlay.classList.contains('active')) return;
+            if (e.key === 'ArrowRight') this.showNext();
+            if (e.key === 'ArrowLeft') this.showPrev();
+            if (e.key === 'Escape') this.close();
+        });
+
+        // Semester retrieval
+        const semEl = document.querySelector('.sem-btn-tool.active');
+        if (semEl) {
+            this.currentSemester = semEl.textContent.trim();
+        } else {
+            this.currentSemester = "All"; 
+        }
     },
 
     open(type, id) {
         this.type = type;
         this.id = id;
-        this.scale = 1.0;
+        
+        const overlay = document.getElementById('global-schedule-presenter');
+        const iframe = document.getElementById('pres-iframe');
+        const labelEl = document.getElementById('pres-label');
+        const wrap = document.getElementById('pres-wrap');
+
+        if (!overlay || !iframe) return;
+
+        // Update: Default zoom is now fixed at 40% (0.4) as per user request
+        this.scale = 0.4;
         this.tx = 0;
         this.ty = 0;
+        this.applyTransform();
 
-        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('universalScheduleModal'));
-        const container = document.getElementById('schedGridContainer');
-        const labelEl = document.getElementById('universalScheduleLabel');
-
-        if (!container) return;
-
+        // Get Name from Table if possible
         const activeRow = document.querySelector(`tr[data-id="${id}"]`);
         if (activeRow) {
             const nameCell = activeRow.querySelector('td.fw-bold') || activeRow.cells[1];
-            labelEl.textContent = nameCell ? nameCell.textContent.trim() : `ID: ${id}`;
+            labelEl.textContent = nameCell ? nameCell.textContent.trim() : `Loading...`;
+        } else {
+            labelEl.textContent = (type === 'preview') ? `Template Preview: ${id}` : "Loading...";
         }
 
-        container.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted small">Loading...</p></div>`;
-        modal.show();
+        const semester = this.currentSemester || "All";
+        const urlMap = {
+            section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(semester)}&canvas=true&t=${Date.now()}`,
+            faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(semester)}&canvas=true&t=${Date.now()}`,
+            room: id => `/room-timetable-html/${id}?semester=${encodeURIComponent(semester)}&canvas=true&t=${Date.now()}`,
+            course: id => `/course-timetable-html/${id}?semester=${encodeURIComponent(semester)}&canvas=true&t=${Date.now()}`,
+            preview: type => `/preview-layout/${type}?t=${Date.now()}`
+        };
 
-        fetch(`/view-schedule-modal/${type}/${id}`)
-            .then(r => {
-                if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
-                return r.text();
-            })
-            .then(html => {
-                // Wrap in Virtual Canvas for Infinite Feel
-                container.innerHTML = `
-                    <div class="modal-paper-wrapper" id="modalPaperWrapper">
-                        <div class="modal-paper-content" id="modalPaperContent">
-                            ${html}
-                        </div>
-                    </div>`;
-                
-                const wrapper = container.querySelector('.dynamic-paper-wrapper');
-                const paperContent = document.getElementById('modalPaperContent');
-                
-                if (wrapper && paperContent) {
-                    const dw = parseInt(wrapper.getAttribute('data-width')) || 800;
-                    const dh = parseInt(wrapper.getAttribute('data-height')) || 1150;
-                    
-                    paperContent.style.width = dw + 'px';
-                    paperContent.style.height = dh + 'px';
-                    
-                    // Force wrapper to fill
-                    wrapper.style.width = '100%';
-                    wrapper.style.height = '100%';
+        // Navigation visibility
+        const navBtns = document.querySelectorAll('.pres-nav-btn');
+        navBtns.forEach(btn => btn.style.display = (type === 'preview' ? 'none' : ''));
 
-                    // Special case for iframes
-                    const iframe = paperContent.querySelector('iframe');
-                    if (iframe) {
-                        iframe.setAttribute('scrolling', 'no');
-                        iframe.style.pointerEvents = 'none'; 
-                        iframe.style.width = '100%';
-                        iframe.style.height = '100%';
-                        iframe.style.display = 'block';
-                        iframe.style.border = 'none';
-                    }
-                }
+        iframe.src = urlMap[type](id);
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
 
-                this.autoFit();
-            })
-            .catch(err => {
-                console.error('Schedule Load Error:', err);
-                container.innerHTML = `<div class="alert alert-danger m-3">Failed to load schedule.</div>`;
-            });
+        this.updateZoomBadge();
     },
 
-    autoFit() {
-        const container = document.getElementById('schedGridContainer');
-        const wrapper = document.getElementById('modalPaperWrapper');
-        const content = document.getElementById('modalPaperContent');
-        if (!container || !wrapper || !content) return;
-        
-        setTimeout(() => {
-            const cw = container.clientWidth;
-            const ch = container.clientHeight;
-            const gw = content.offsetWidth || 800;
-            const gh = content.offsetHeight || 1150;
-
-            // Scale to fit width with safety margin
-            this.scale = Math.min(1.2, (cw - 40) / gw);
-            
-            // Adjust padding based on device
-            const wrapperPadding = window.innerWidth <= 768 ? 80 : 200;
-            
-            // Center Horizontally
-            this.tx = (cw / 2) - (gw / 2 * this.scale) - (wrapperPadding * this.scale);
-            
-            // Align exactly to top (0px) to avoid gray bar
-            this.ty = -(wrapperPadding * this.scale);
-            
-            this.applyTransform();
-        }, 350);
-    },
-
-    zoomManual(delta) {
-        const oldScale = this.scale;
-        this.scale = Math.max(0.1, Math.min(3.0, this.scale + delta));
-        
-        // Zoom relative to container center
-        const container = document.getElementById('schedGridContainer');
-        if (container) {
-            const cx = container.clientWidth / 2;
-            const cy = container.clientHeight / 2;
-            this.tx -= (cx - this.tx) * (this.scale / oldScale - 1);
-            this.ty -= (cy - this.ty) * (this.scale / oldScale - 1);
-        }
-        this.applyTransform();
+    close() {
+        const overlay = document.getElementById('global-schedule-presenter');
+        const iframe = document.getElementById('pres-iframe');
+        if (overlay) overlay.classList.remove('active');
+        if (iframe) iframe.src = '';
+        document.body.style.overflow = 'auto';
     },
 
     applyTransform() {
-        const wrapper = document.getElementById('modalPaperWrapper');
-        if (wrapper) {
-            // Round coordinates to prevent sub-pixel blurring
-            const rtx = Math.round(this.tx);
-            const rty = Math.round(this.ty);
-            // Use translate3d/translateZ for sharper hardware acceleration
-            // Add a tiny scale offset (1.00001) to force Chrome to re-rasterize sharply
-            wrapper.style.transform = `translate3d(${rtx}px, ${rty}px, 0) scale(${this.scale * 1.00001})`;
+        const wrap = document.getElementById('pres-wrap');
+        if (wrap) {
+            wrap.style.transform = `translate(${this.tx}px, ${this.ty}px) scale(${this.scale})`;
         }
-        // Update Zoom Percentage Badge
-        const zoomEl = document.getElementById('modal-zoom-percent');
-        if (zoomEl) {
-            zoomEl.textContent = Math.round(this.scale * 100) + '%';
+        this.updateZoomBadge();
+    },
+
+    updateZoomBadge() {
+        const badge = document.getElementById('pres-zoom-val');
+        if (badge) {
+            badge.textContent = Math.round(this.scale * 100) + '%';
         }
     },
 
-    navigate(dir) {
+    showNext() {
         const rows = Array.from(document.querySelectorAll('tr[data-id]')).filter(r => r.style.display !== 'none');
         const idx = rows.findIndex(r => r.getAttribute('data-id') == this.id);
-        if (idx === -1) return;
+        if (idx !== -1 && idx < rows.length - 1) {
+            this.open(this.type, rows[idx + 1].getAttribute('data-id'));
+        } else if (rows.length > 0) {
+            this.open(this.type, rows[0].getAttribute('data-id')); // Loop back
+        }
+    },
 
-        let nIdx = idx;
-        if (dir === 'prev' && idx > 0) nIdx = idx - 1;
-        if (dir === 'next' && idx < rows.length - 1) nIdx = idx + 1;
-
-        if (nIdx !== idx) {
-            this.open(this.type, rows[nIdx].getAttribute('data-id'));
+    showPrev() {
+        const rows = Array.from(document.querySelectorAll('tr[data-id]')).filter(r => r.style.display !== 'none');
+        const idx = rows.findIndex(r => r.getAttribute('data-id') == this.id);
+        if (idx !== -1 && idx > 0) {
+            this.open(this.type, rows[idx - 1].getAttribute('data-id'));
+        } else if (rows.length > 0) {
+            this.open(this.type, rows[rows.length - 1].getAttribute('data-id')); // Loop back
         }
     }
 };
 
-// Map global functions to Manager
-window.viewSchedule = (type, id) => UniversalModalManager.open(type, id);
-document.addEventListener('DOMContentLoaded', () => UniversalModalManager.init());
+// Global hooks
+window.viewSchedule = (type, id) => GlobalSchedulePresenter.open(type, id);
+window.closeSchedulePresenter = () => GlobalSchedulePresenter.close();
+document.addEventListener('DOMContentLoaded', () => GlobalSchedulePresenter.init());
 
 // ── Shared Pagination ──────────────────────────────────────
 window.jumpToPage = function () {
