@@ -129,7 +129,10 @@ def get_archive_entities(archive_id, entity_type):
         return results
 
     # Get all from specialized table
-    return cls.query.filter_by(term_archive_id=archive_id).all()
+    query = cls.query.filter_by(term_archive_id=archive_id)
+    if entity_type == 'IrregularStudent':
+        query = query.filter_by(is_irregular=True)
+    return query.all()
 
 def get_archive_query(archive_id, entity_type):
     """Returns a query object for server-side pagination of archives."""
@@ -830,13 +833,10 @@ class DraftVersion(db.Model):
     is_published = db.Column(db.Boolean, default=False, nullable=False)
     status       = db.Column(db.String(20), default='draft') # 'draft', 'submitted', 'approved', 'rejected', 'hold'
     notes        = db.Column(db.Text, nullable=True)
-    
-    # Justification for why this draft should be approved (submitted by DH)
+    admin_justification = db.Column(db.Text, nullable=True)
     submission_justification = db.Column(db.Text, nullable=True)
-    # Admin's decision justification (e.g., why approved with conflicts or why rejected)
-    admin_justification      = db.Column(db.Text, nullable=True)
     
-    creator      = db.relationship('User', foreign_keys=[created_by])
+    creator      = db.relationship('User', foreign_keys=[created_by], backref=db.backref('drafts_created', lazy=True))
 
 # --- Module 6: PROPOSAL HUB & DECISION TERMINAL ---
 class HubMessage(db.Model):
@@ -868,6 +868,18 @@ class HubMessage(db.Model):
     sender = db.relationship('User', foreign_keys=[sender_id])
     draft  = db.relationship('DraftVersion', backref=db.backref('messages', lazy=True, cascade="all, delete-orphan"))
 
+class Notification(db.Model):
+    __tablename__ = 'notification'
+    id        = db.Column(db.Integer, primary_key=True)
+    user_id   = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message   = db.Column(db.Text, nullable=False)
+    type      = db.Column(db.String(20), default='info') # 'info', 'success', 'warning', 'danger'
+    link      = db.Column(db.String(255), nullable=True)
+    is_read   = db.Column(db.Boolean, default=False, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    
+    user = db.relationship('User', backref=db.backref('notifications', lazy=True, cascade="all, delete-orphan"))
+
 # --- Module 7: USER MONITORING & ACTION TRACKER (BANTAY-SYSTEM) ---
 class ActivityLog(db.Model):
     __tablename__ = 'activity_log'
@@ -876,9 +888,11 @@ class ActivityLog(db.Model):
     username  = db.Column(db.String(50), nullable=True)
     action    = db.Column(db.String(100), nullable=False)
     details   = db.Column(db.Text, nullable=True)
+    draft_id  = db.Column(db.Integer, db.ForeignKey('draft_version.id'), nullable=True)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     
     user = db.relationship('User', backref=db.backref('activities', lazy=True))
+    draft = db.relationship('DraftVersion', backref=db.backref('activities', lazy=True))
 
 class SecurityLog(db.Model):
     __tablename__ = 'security_log'
@@ -965,6 +979,9 @@ def handle_connect():
     
     # Broadcast update (send processed list)
     broadcast_monitoring_update()
+    
+    # Join private notification room
+    join_room(f"user_notif_{uid}")
     
     print(f"Client connected: {uname} ({sid})")
 
@@ -1092,6 +1109,24 @@ def handle_send_message(data):
     db.session.add(msg)
     db.session.commit()
 
+    # --- PERSISTENT NOTIFICATION LOGIC ---
+    # If a regular user attaches a draft, notify all admins/superadmins via the bell icon.
+    if attached_draft_id and str(session.get('role')).lower() == 'user':
+        # Broad search for all administrators (consistent with api_hub_propose)
+        admins = User.query.filter(
+            or_(User.role.ilike('admin'), User.role.ilike('superadmin'))
+        ).all()
+        dv = DraftVersion.query.get(attached_draft_id)
+        draft_name = dv.name if dv else "Schedule Draft"
+        for admin in admins:
+            create_notification(
+                admin.id, 
+                f"New schedule proposal submitted by {username} for draft: {draft_name}", 
+                'info', 
+                url_for('proposal_hub')
+            )
+    # -------------------------------------
+
     # Pre-fetch Draft Info for Payload
     draft_info = None
     if attached_draft_id:
@@ -1158,6 +1193,22 @@ def api_hub_chat():
     )
     db.session.add(msg)
     db.session.commit()
+
+    # --- PERSISTENT NOTIFICATION LOGIC ---
+    if attached_draft_id and str(session.get('role')).lower() == 'user':
+        admins = User.query.filter(
+            or_(User.role.ilike('admin'), User.role.ilike('superadmin'))
+        ).all()
+        dv = DraftVersion.query.get(attached_draft_id)
+        draft_name = dv.name if dv else "Schedule Draft"
+        for admin in admins:
+            create_notification(
+                admin.id, 
+                f"New schedule proposal submitted by {username} for draft: {draft_name}", 
+                'info', 
+                url_for('proposal_hub')
+            )
+    # -------------------------------------
 
     draft_info = None
     if attached_draft_id:
@@ -1256,10 +1307,14 @@ def api_hub_conversations():
             unread = HubMessage.query.filter_by(sender_id=msg.sender_id, recipient_name=username, is_read=False).count() \
                      if partner == msg.sender.username else 0
             
+            preview = msg.content or ''
+            if not preview and msg.draft_id:
+                preview = "Shared a proposal"
+            
             convos[partner] = {
                 'name': partner,
                 'department': (potential_map[partner].department if partner in potential_map else 'System'),
-                'last_message': msg.content[:40] + ('...' if len(msg.content or '') > 40 else ''),
+                'last_message': preview[:40] + ('...' if len(preview) > 40 else ''),
                 'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
                 'unread_count': unread,
                 'is_global': False,
@@ -1275,7 +1330,7 @@ def api_hub_conversations():
     
     global_card = {
         'name': 'Everyone',
-        'last_message': last_global.content[:40] + '...' if last_global and last_global.content else 'No messages yet',
+        'last_message': (last_global.content[:40] + ('...' if len(last_global.content or '') > 40 else '')) if last_global and last_global.content else ("Shared a proposal" if last_global and last_global.draft_id else 'No messages yet'),
         'timestamp': last_global.timestamp.strftime('%Y-%m-%d %H:%M:%S') if last_global else '',
         'unread_count': 0,
         'is_global': True,
@@ -1340,23 +1395,51 @@ def api_hub_messages():
 @app.route('/api/hub/pending_drafts')
 @login_required
 def api_hub_pending_drafts():
-    """Returns draft versions that have been sent in messages and are not yet approved/rejected."""
-    sent_draft_ids = db.session.query(HubMessage.draft_id)\
-        .filter(HubMessage.draft_id != None).distinct().all()
-    sent_ids = [r[0] for r in sent_draft_ids]
-    if not sent_ids:
-        return jsonify([])
-    drafts = DraftVersion.query.filter(
-        DraftVersion.id.in_(sent_ids),
-        ~DraftVersion.status.in_(['approved', 'rejected'])
-    ).order_by(DraftVersion.updated_at.desc()).all()
+    # Find DraftVersions that are linked to HubMessages
+    drafts = db.session.query(DraftVersion, HubMessage.id).join(
+        HubMessage, DraftVersion.id == HubMessage.draft_id
+    ).join(
+        User, DraftVersion.created_by == User.id
+    ).filter(
+        ~DraftVersion.status.in_(['approved', 'rejected']),
+        User.role == 'user'
+    ).order_by(HubMessage.timestamp.desc()).all()
+
     return jsonify([{
         'id': dv.id,
+        'message_id': mid,
         'name': dv.name,
+        'filename': dv.name,
+        'sender': dv.creator.username if dv.creator else 'Unknown',
         'department': dv.department or 'ALL',
         'status': dv.status,
         'updated': dv.updated_at.strftime('%m/%d')
-    } for dv in drafts])
+    } for dv, mid in drafts])
+
+@app.route('/api/hub/user/<username>/history')
+@login_required
+def api_hub_user_history(username):
+    """Returns all approved/rejected logs for a specific user."""
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify([])
+    
+    # Fetch all activity logs where action is Proposal Approved/Rejected 
+    # and the draft was created by this user.
+    # We can join with DraftVersion to verify ownership.
+    logs = db.session.query(ActivityLog).join(DraftVersion, ActivityLog.draft_id == DraftVersion.id)\
+        .filter(
+            DraftVersion.created_by == user.id,
+            or_(ActivityLog.action.ilike('%approved%'), ActivityLog.action.ilike('%rejected%'))
+        ).order_by(ActivityLog.timestamp.desc()).all()
+        
+    return jsonify([{
+        'id': l.id,
+        'action': l.action,
+        'details': l.details,
+        'timestamp': l.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+        'username': l.user.username if l.user else 'System'
+    } for l in logs])
 
 @app.route('/api/hub/mark_read', methods=['POST'])
 @login_required
@@ -1377,6 +1460,94 @@ def api_hub_mark_read():
         socketio.emit('hub_messages_seen', {'reader': username, 'partner': username}, to=sender_sid)
 
     return jsonify(ok=True)
+
+
+# --- NOTIFICATION SYSTEM ---
+@app.route('/api/notifications', methods=['GET'])
+@login_required
+def get_notifications():
+    uid = session.get('user_id')
+    limit_val = request.args.get('limit', '20')
+    
+    query = Notification.query.filter_by(user_id=uid).order_by(Notification.timestamp.desc())
+    if limit_val != 'all':
+        try:
+            query = query.limit(int(limit_val))
+        except ValueError:
+            query = query.limit(20)
+            
+    notifications = query.all()
+    unread_count = Notification.query.filter_by(user_id=uid, is_read=False).count()
+    return jsonify({
+        'notifications': [{
+            'id': n.id,
+            'message': n.message,
+            'type': n.type,
+            'link': n.link,
+            'is_read': n.is_read,
+            'timestamp': n.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        } for n in notifications],
+        'unread_count': unread_count
+    })
+
+@app.route('/api/notifications/mark-read', methods=['POST'])
+@login_required
+def mark_notifications_read():
+    uid = session.get('user_id')
+    data = request.get_json(force=True) or {}
+    notif_id = data.get('id')
+    
+    if notif_id:
+        Notification.query.filter_by(id=notif_id, user_id=uid).update({'is_read': True})
+    else:
+        Notification.query.filter_by(user_id=uid, is_read=False).update({'is_read': True})
+    
+    db.session.commit()
+    return jsonify(ok=True)
+
+def create_notification(user_id, message, n_type='info', link=None):
+    """Utility to create a persistent notification and emit via socket."""
+    try:
+        notif = Notification(
+            user_id=user_id,
+            message=message,
+            type=n_type,
+            link=link
+        )
+        db.session.add(notif)
+        db.session.commit()
+        
+        # Emit real-time notification to the user
+        socketio.emit('new_notification', {
+            'id': notif.id,
+            'message': notif.message,
+            'type': notif.type,
+            'link': notif.link,
+            'timestamp': notif.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        }, room=f"user_notif_{user_id}")
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"Notification error: {e}")
+        return False
+
+
+@app.route('/api/draft/<int:draft_id>/history', methods=['GET'])
+@login_required
+def get_draft_history(draft_id):
+    dv = DraftVersion.query.get_or_404(draft_id)
+    # Optional: check if user has access to this draft
+    history = ActivityLog.query.filter_by(draft_id=draft_id).order_by(ActivityLog.timestamp.desc()).all()
+    
+    # Also include the creation info from DraftVersion itself if not in logs
+    timeline = [{
+        'action': h.action,
+        'details': h.details,
+        'username': h.username,
+        'timestamp': h.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+    } for h in history]
+    
+    return jsonify(timeline)
 
 
 # --- Module 6: HUB SYSTEM ALERTS & CONFLICTS ---
@@ -1448,7 +1619,7 @@ def check_and_post_hub_conflicts(semester, draft_id=None):
             }, room=room_name)
 
 # --- Module 7: MONITORING HELPERS ---
-def log_activity(action, details=None):
+def log_activity(action, details=None, draft_id=None):
     """Saves an administrative action to the ActivityLog and broadcasts it."""
     if 'user_id' in session:
         try:
@@ -1456,7 +1627,8 @@ def log_activity(action, details=None):
                 user_id=session['user_id'],
                 username=session.get('username'),
                 action=action,
-                details=details
+                details=details,
+                draft_id=draft_id
             )
             db.session.add(log)
             db.session.commit()
@@ -1465,6 +1637,7 @@ def log_activity(action, details=None):
                 'username': log.username,
                 'action': log.action,
                 'details': log.details,
+                'draft_id': log.draft_id,
                 'timestamp': log.timestamp.strftime('%H:%M:%S')
             }, room='monitoring_room')
         except Exception as e:
@@ -1859,7 +2032,7 @@ def api_hub_propose():
         return jsonify({'ok': False, 'error': 'Draft not found.'}), 404
         
     # Lock the draft
-    dv.status = 'submitted'
+    dv.status = 'pending'
     dv.submission_justification = justification
     
     # Create Proposal Card in Hub
@@ -1872,6 +2045,25 @@ def api_hub_propose():
     )
     db.session.add(msg)
     db.session.commit()
+    
+    # Log Activity
+    log_activity('Submit Proposal', f"Submitted draft {dv.name} for approval.", draft_id=draft_id)
+    
+    # Notify Admins (Only if sender is a regular user and recipient is an admin)
+    sender_role = session.get('role')
+    # Determine if we should notify. Rule: User to Admin/Superadmin only.
+    if str(sender_role).lower() == 'user':
+        # Broad search for all administrators
+        admins = User.query.filter(
+            or_(User.role.ilike('admin'), User.role.ilike('superadmin'))
+        ).all()
+        for admin in admins:
+            create_notification(
+                admin.id, 
+                f"A new schedule proposal has been submitted by {session.get('username')} for draft: {dv.name}", 
+                'info', 
+                url_for('proposal_hub')
+            )
     
     # WebSocket Broadcast
     semester = dv.semester or session.get('selected_semester', '1st Semester')
@@ -1899,7 +2091,7 @@ def api_hub_propose():
 def api_hub_decide(draft_id):
     """Admin approves, rejects, or holds a proposal."""
     data = request.get_json(force=True) or {}
-    decision = data.get('action')  # frontend sends 'action': 'approved'/'rejected'/'hold'
+    decision = data.get('decision') or data.get('action')
     justification = data.get('justification', '').strip()
 
     if not draft_id or not decision:
@@ -1950,6 +2142,18 @@ def api_hub_decide(draft_id):
         'justification': justification
     }, room=room)
     
+    # Create Notification for User
+    type_map_notif = {'approved': 'success', 'rejected': 'danger', 'hold': 'warning'}
+    create_notification(
+        dv.created_by, 
+        f"Your proposal '{dv.name}' has been {decision}.", 
+        type_map_notif.get(decision, 'info'), 
+        url_for('proposal_hub')
+    )
+    
+    # Log Activity
+    log_activity(f"Proposal {decision.capitalize()}", f"Admin {decision} draft {dv.name}. Justification: {justification}", draft_id=draft_id)
+
     return jsonify({'ok': True, 'message': f'Decision "{decision}" recorded.'})
 
 def _publish_draft_entries(draft_id):
@@ -1991,7 +2195,7 @@ def dashboard():
             stats = {
                 'courses':         archive.total_courses,
                 'faculty':         archive.total_faculty,
-                'rooms':           ArchivedEntity.query.filter_by(term_archive_id=archive_id, entity_type='Room').count(),
+                'rooms':           ArchivedRoom.query.filter_by(term_archive_id=archive_id).count(),
                 'sections':        archive.total_sections,
                 'needed':          archive.total_schedules,
                 'scheduled':       archive.total_schedules,

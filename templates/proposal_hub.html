@@ -1,8 +1,48 @@
 {% extends "base.html" %}
 
-{% block title %}CvSU Scheduling System | Decision Hub{% endblock %}
+{% block title %}CvSU Scheduling System | Decision Hub
+    <!-- DECISION CONFIRMATION MODAL -->
+    <div class="modal fade" id="decisionConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 2100;">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-body p-4 text-center">
+                    <div id="decisionConfirmIcon" class="mb-3">
+                        <i class="bi bi-exclamation-circle fs-1 text-warning"></i>
+                    </div>
+                    <h5 class="fw-bold" id="decisionConfirmTitle">Are you sure?</h5>
+                    <p class="text-muted small mb-4" id="decisionConfirmText">Do you want to proceed with this decision?</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light flex-grow-1 fw-bold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary flex-grow-1 fw-bold" id="confirmDecisionBtn">Yes, Proceed</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endblock %}
 
 {% block content %}
+<script>
+    // Critical Helpers for Early Loading (Avatars)
+    window.handleAvatarError = function (img) {
+        const name = img.alt || '?';
+        const palette = ['#0084ff', '#e91e8c', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316'];
+        let h = 0;
+        for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+        const color = palette[Math.abs(h) % palette.length];
+        const parent = img.parentElement;
+        if (parent) {
+            parent.innerHTML = name.charAt(0).toUpperCase();
+            parent.style.background = color;
+            parent.style.color = 'white';
+            parent.style.display = 'flex';
+            parent.style.alignItems = 'center';
+            parent.style.justifyContent = 'center';
+            parent.style.fontSize = '1.2rem';
+            parent.style.fontWeight = 'bold';
+        }
+    };
+</script>
 
 <div class="messenger-hub-wrapper">
     <!-- 1. CONVO LIST -->
@@ -22,6 +62,7 @@
                     <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
                 </button>
 
+                {% if session.get('role') in ['admin', 'superadmin'] %}
                 <!-- Relocated Pending Review (Three Dots) -->
                 <div class="ms-auto d-flex align-items-center">
                     <div id="sidebarMoreSkeleton">
@@ -33,6 +74,7 @@
                         <i class="bi bi-three-dots-vertical info-icon-hover"></i>
                     </button>
                 </div>
+                {% endif %}
             </h4>
             <div id="searchBarSkeleton">
                 <div class="skeleton" style="width: 100%; height: 36px; border-radius: 20px;"></div>
@@ -188,7 +230,7 @@
             <div class="profile-avatar-wrap mb-3" id="profileAvatarContainer" title="Double click to enlarge"
                 style="cursor: pointer;">
                 {% set p_pic = session.get('profile_pic', 'default.png') %}
-                <img src="{{ url_for('static', filename='uploads/profile_pics/' + p_pic) }}" alt="Profile"
+                <img src="{{ url_for('static', filename='profile_pics/' + p_pic) }}" alt="Profile"
                     class="profile-avatar-large shadow {% if not p_pic or p_pic == 'default.png' %}d-none{% endif %}"
                     id="mainProfileImg" onerror="handleAvatarError(this)">
                 <div id="mainProfileFallback"
@@ -210,31 +252,19 @@
 
             <hr class="my-4 op-10">
 
-            <div class="text-start">
-                <h6 class="text-uppercase text-muted fw-bold x-small mb-3">System & Network</h6>
-                <div class="small">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Status</span>
-                        <span class="fw-semibold text-warning" id="scanningStatus"><i
-                                class="bi bi-search me-1"></i>Scanning...</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Socket</span>
-                        <span class="text-secondary fw-semibold" id="socketStatus">Initializing</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Semester</span>
-                        <span class="fw-semibold">{{ selected_semester }}</span>
-                    </div>
+            <div class="text-start mb-4" id="draftHistorySection" style="display: none;">
+                <h6 class="text-uppercase text-muted fw-bold x-small mb-3">Proposal Timeline</h6>
+                <div id="draftHistoryTimeline" class="timeline-v2 small" style="position: relative; padding-left: 20px;">
+                    <!-- Timeline items will be injected here -->
                 </div>
             </div>
-            <div class="mt-auto pt-5 pb-4 opacity-50">
-                <div class="badge bg-light text-muted border py-2 px-3 rounded-pill" style="font-size: 0.65rem;">
-                    <i class="bi bi-shield-lock-fill me-1"></i> Secure End-to-End Chat
-                </div>
+
+            <div class="text-start mt-4">
+                <p class="text-muted small"><i class="bi bi-shield-lock-fill me-1"></i> End-to-end encrypted for your security.</p>
             </div>
         </div>
     </div>
+</div>
 
     <!-- FULLSCREEN PROFILE PREVIEW -->
     <div id="profileFullscreenOverlay" class="profile-fullscreen-overlay d-none">
@@ -364,9 +394,34 @@
                             <span class="pv-zoom-val" id="pvZoomLevel">12%</span>
                             <button class="btn pv-zoom-btn" onclick="pvZoom(0.1)"><i class="bi bi-plus"></i></button>
                         </div>
+                        
+                        {% if session.get('role') in ['admin', 'superadmin'] %}
+                        <div id="pvDecisionControls" class="ms-3 d-flex gap-2">
+                            <button class="btn btn-danger btn-sm px-3" onclick="handleDecision(pvActiveDraft, 'rejected')" style="border-radius: 20px; font-weight: 600;">Reject</button>
+                            <button class="btn btn-success btn-sm px-3" onclick="handleDecision(pvActiveDraft, 'approved')" style="border-radius: 20px; font-weight: 600;">Approve</button>
+                        </div>
+                        <div id="pvDecisionBadge" class="ms-3 d-none">
+                            <span class="badge rounded-pill px-3 py-2" id="pvBadgeSpan">Approved</span>
+                        </div>
+                        {% endif %}
+
+                        <button class="btn btn-link text-dark ms-2 p-0" title="View History" onclick="toggleIntegratedHistory()">
+                            <i class="bi bi-clock-history fs-5"></i>
+                        </button>
+
                         <button type="button" class="pv-close-x ms-2" data-bs-dismiss="modal">
                             <i class="bi bi-x"></i>
                         </button>
+                    </div>
+                </div>
+                <!-- Integrated History Panel -->
+                <div id="integratedHistoryPanel" class="integrated-history-panel d-none">
+                    <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold">PROPOSAL HISTORY</h6>
+                        <button class="btn-close btn-sm" onclick="toggleIntegratedHistory()"></button>
+                    </div>
+                    <div id="integratedHistoryContent" class="p-3 custom-scrollbar" style="max-height: 400px; overflow-y: auto;">
+                        <div class="text-center text-muted py-5">Loading history...</div>
                     </div>
                 </div>
                 <!-- Canvas viewport -->
@@ -507,6 +562,17 @@
             --ms-text-them: #050505;
             --ms-border: #f0f0f0;
             --skeleton-bg: #f2f2f2;
+        }
+
+        @keyframes highlight-flash {
+            0% { background-color: rgba(25, 135, 84, 0); transform: scale(1); }
+            30% { background-color: rgba(25, 135, 84, 0.2); transform: scale(1.02); box-shadow: 0 0 15px rgba(25,135,84,0.3); }
+            100% { background-color: transparent; transform: scale(1); }
+        }
+        .highlight-msg {
+            animation: highlight-flash 2.5s ease-out;
+            position: relative;
+            z-index: 10;
         }
 
         /* 🦴 SKELETON LOADERS */
@@ -2169,9 +2235,138 @@
             }
         }
 
+        .timeline-v2::before {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 5px;
+            bottom: 5px;
+            width: 2px;
+            background: #e9ecef;
+        }
+        .timeline-item-v2 {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        .timeline-dot-v2 {
+            position: absolute;
+            left: -19px;
+            top: 4px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #adb5bd;
+            border: 2px solid #fff;
+            z-index: 1;
+        }
+        .timeline-dot-v2.success { background: #198754; }
+        .timeline-dot-v2.danger { background: #dc3545; }
+        .timeline-dot-v2.primary { background: #0d6efd; }
+
+        .highlight-pulse {
+            animation: pulse-bg 1s infinite alternate;
+            border: 2px solid #198754 !important;
+        }
+        @keyframes pulse-bg {
+            from { background-color: rgba(25, 135, 84, 0.05); }
+            to { background-color: rgba(25, 135, 84, 0.2); }
+        }
+        /* Integrated History Panel */
+        .integrated-history-panel {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            width: 320px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            z-index: 2000;
+            border: 1px solid #eee;
+            animation: slideInRight 0.3s ease;
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
     </style>
 
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- MOBILE DETAILS OFFCANVAS -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasDetails" aria-labelledby="offcanvasDetailsLabel">
+        <div class="offcanvas-header border-bottom">
+            <h6 class="offcanvas-title fw-bold text-uppercase text-muted" id="offcanvasDetailsLabel"
+                style="font-size: 0.75rem; letter-spacing: 0.5px;">Chat Details</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body custom-scrollbar text-center">
+            <!-- Mobile Profile Section -->
+            <div class="py-4 mb-4">
+                <div class="profile-avatar-wrap mb-3 mx-auto" style="width: 120px; height: 120px; cursor: pointer;"
+                    onclick="openMobileFullscreen()">
+                    <img src="/static/profile_pics/default.png" alt="Profile"
+                        class="profile-avatar-large shadow w-100 h-100" id="mainProfileImgMobile"
+                        style="border-radius: 50%; object-fit: cover;" onerror="handleAvatarError(this)">
+                    <div id="mainProfileFallbackMobile"
+                        class="profile-avatar-large shadow d-none align-items-center justify-content-center fw-bold text-white h2 w-100 h-100"
+                        style="border-radius: 50%;">
+                    </div>
+                </div>
+                <h5 class="fw-bold mb-1" id="profileNameMobile">Announcements</h5>
+                <p class="text-muted small mb-1" id="profileDeptMobile">Global Channel</p>
+                <div class="small mb-3" id="activePartnerProfileStatusMobile">
+                    <span class="status-dot offline"></span> Offline
+                </div>
+                <div class="badge bg-light text-dark rounded-pill px-3 py-2 border">
+                    <span class="text-uppercase x-small fw-bold opacity-75" id="profileRoleMobile">System</span>
+                </div>
+            </div>
+
+            <hr class="my-4 op-10">
+
+            <div class="text-start px-3 mt-4">
+                <p class="text-muted small"><i class="bi bi-shield-lock-fill me-1"></i> End-to-end encrypted for your security.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- PENDING REVIEW OFFCANVAS (NEW) -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasPendingReview"
+        aria-labelledby="offcanvasPendingReviewLabel">
+        <div class="offcanvas-header border-bottom" style="height: 56px;">
+            <h6 class="offcanvas-title fw-bold text-uppercase text-muted" id="offcanvasPendingReviewLabel"
+                style="font-size: 0.75rem; letter-spacing: 0.5px;">Pending Proposals</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body custom-scrollbar">
+            <div id="proposalListGlobal">
+                <!-- Proposals will be loaded here -->
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DECISION CONFIRMATION MODAL -->
+    <div class="modal fade" id="decisionConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 2100;">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-body p-4 text-center">
+                    <div id="decisionConfirmIcon" class="mb-3">
+                        <i class="bi bi-exclamation-circle fs-1 text-warning"></i>
+                    </div>
+                    <h5 class="fw-bold" id="decisionConfirmTitle">Are you sure?</h5>
+                    <p class="text-muted small mb-4" id="decisionConfirmText">Do you want to proceed with this decision?</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light flex-grow-1 fw-bold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary flex-grow-1 fw-bold" id="confirmDecisionBtn">Yes, Proceed</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+
+{% block scripts %}
     <script>
         // System Config
         const SECTIONS = {{ sections  | map(attribute = 'id') | list | tojson }};
@@ -2269,42 +2464,7 @@
 
             // PENDING REVIEW LOGIC (Global List)
             document.getElementById('offcanvasPendingReview')?.addEventListener('show.bs.offcanvas', async function () {
-                const list = document.getElementById('proposalListGlobal');
-                if (list) {
-                    list.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
-                }
-
-                try {
-                    const r = await fetch('/api/hub/pending_drafts');
-                    const drafts = await r.json();
-
-                    if (list) {
-                        if (drafts.length === 0) {
-                            list.innerHTML = `<div class="text-center py-5 text-muted small">No pending proposals yet</div>`;
-                        } else {
-                            list.innerHTML = drafts.map(d => `
-                            <div class="card border-0 shadow-sm mb-3" style="border-radius: 12px; background: #f8f9fa;">
-                                <div class="card-body p-3">
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <i class="bi bi-file-earmark-text-fill text-primary fs-4"></i>
-                                        <div class="fw-bold text-truncate" style="font-size: 0.9rem;">${d.filename}</div>
-                                    </div>
-                                    <div class="x-small text-muted mb-1">From: <strong>${d.sender}</strong></div>
-                                    <div class="x-small text-muted mb-3">
-                                        Status: <span class="badge bg-warning text-dark px-2">Pending Review</span>
-                                    </div>
-                                    <button class="btn btn-primary btn-sm w-100 rounded-pill fw-bold" 
-                                            onclick="attachDraftToChat('${d.filename}', '${d.id}')">
-                                        Attach to Chat
-                                    </button>
-                                </div>
-                            </div>
-                        `).join('');
-                        }
-                    }
-                } catch (err) {
-                    if (list) list.innerHTML = '<div class="text-center py-5 text-danger small">Failed to load proposals</div>';
-                }
+                loadPendingDrafts();
             });
 
             // Messenger Style: Sidebar starts collapsed on Desktop
@@ -2440,9 +2600,29 @@
             renderPendingDrafts(drafts);
         }
 
+        function updateSidebarPreview(channel, data) {
+            if (!conversationsHistory) return;
+            let convo = conversationsHistory.find(c => c.name.toLowerCase() === channel.toLowerCase());
+            if (convo) {
+                convo.last_message = data.message;
+                convo.timestamp = data.timestamp;
+                if (data.sender !== currentUsername && activePartner !== channel) {
+                    convo.unread_count = (convo.unread_count || 0) + 1;
+                }
+                // Move to top
+                conversationsHistory = conversationsHistory.filter(c => c.name !== convo.name);
+                conversationsHistory.unshift(convo);
+            } else {
+                // Refresh list if it's a new conversation
+                loadConversations();
+                return;
+            }
+            if (typeof renderConvoList === 'function') renderConvoList();
+        }
+
         function renderPendingDrafts(drafts) {
             const desktopEl = document.getElementById('proposalList');
-            const offcanvasEl = document.getElementById('proposalListOffcanvas');
+            const offcanvasEl = document.getElementById('proposalListGlobal'); // Fixed ID
 
             const render = (el) => {
                 if (!el) return;
@@ -2450,20 +2630,83 @@
                     el.innerHTML = '<div class="text-center py-4 opacity-50 small">No pending proposals</div>';
                     return;
                 }
-                el.innerHTML = drafts.map(dv => `
+                el.innerHTML = drafts.map(dv => {
+                    const statusClass = dv.status === 'approved' ? 'bg-success' : (dv.status === 'rejected' ? 'bg-danger' : 'bg-warning text-dark');
+                    return `
                 <div class="proposal-mini-card mb-3" id="proposal-item-${dv.id}">
                     <div class="fw-bold small text-truncate">${dv.name}</div>
                     <div class="small text-muted mb-1">${dv.department} &bull; ${dv.updated}</div>
-                    <span class="badge bg-warning text-dark small mb-2">Pending</span>
-                    ${_isAdmin ? `<div class="d-flex gap-1 mt-1">
-                        <button class="btn btn-messenger-sm btn-success flex-grow-1" onclick="handleDecision(${dv.id},'approved')">Approve</button>
-                        <button class="btn btn-messenger-sm btn-danger flex-grow-1" onclick="handleDecision(${dv.id},'rejected')">Reject</button>
-                    </div>` : ''}
-                </div>`).join('');
+                    <div class="x-small text-muted mb-2">From: <strong>${dv.sender}</strong></div>
+                    <span class="badge ${statusClass} small mb-2">${dv.status.charAt(0).toUpperCase() + dv.status.slice(1)}</span>
+                    <div class="d-flex gap-1 mt-1">
+                        <button class="btn btn-messenger-sm btn-primary flex-grow-1" onclick="jumpToMessage('${dv.sender}', ${dv.message_id})">View Chat</button>
+                        ${_isAdmin && dv.status === 'submitted' ? `
+                            <button class="btn btn-messenger-sm btn-success flex-grow-1" onclick="handleDecision(${dv.id},'approved')">Approve</button>
+                            <button class="btn btn-messenger-sm btn-danger flex-grow-1" onclick="handleDecision(${dv.id},'rejected')">Reject</button>
+                        ` : ''}
+                    </div>
+                </div>`;
+                }).join('');
             };
 
             render(desktopEl);
             render(offcanvasEl);
+        }
+
+        async function focusProposalChat(sender, draftId) {
+            await switchConversation(sender);
+            // Close offcanvas if mobile
+            const offcanvasEl = document.getElementById('offcanvasPendingReview');
+            if (offcanvasEl) {
+                const offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                if (offcanvas) offcanvas.hide();
+            }
+            if (draftId) {
+                loadDraftHistory(draftId);
+                // Scroll to proposal card in chat
+                setTimeout(() => {
+                    const card = document.querySelector(`.msg-draft-card[onclick*="viewDraft(${draftId}"]`);
+                    if (card) {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        card.classList.add('highlight-pulse');
+                        setTimeout(() => card.classList.remove('highlight-pulse'), 3000);
+                    }
+                }, 600);
+            }
+        }
+
+        async function loadUserHistory(username) {
+            const section = document.getElementById('draftHistorySection');
+            const timeline = document.getElementById('draftHistoryTimeline');
+            if (!section || !timeline || !username || username === 'Everyone') return;
+
+            try {
+                const r = await fetch(`/api/hub/user/${encodeURIComponent(username)}/history`);
+                const history = await r.json();
+                
+                if (history.length > 0) {
+                    section.style.display = 'block';
+                    timeline.innerHTML = history.map(h => {
+                        let dotClass = 'primary';
+                        if (h.action.toLowerCase().includes('approve')) dotClass = 'success';
+                        if (h.action.toLowerCase().includes('reject')) dotClass = 'danger';
+                        
+                        return `
+                        <div class="timeline-item-v2">
+                            <div class="timeline-dot-v2 ${dotClass}"></div>
+                            <div class="fw-bold x-small">${h.action}</div>
+                            <div class="text-muted" style="font-size: 0.7rem;">${formatTimestamp(h.timestamp)}</div>
+                            <div class="mt-1 opacity-75" style="font-size: 0.65rem;">${h.details || ''}</div>
+                        </div>
+                        `;
+                    }).join('');
+                } else {
+                    section.style.display = 'none';
+                    timeline.innerHTML = '';
+                }
+            } catch (e) {
+                console.error("Failed to load history:", e);
+            }
         }
 
         // ──────────────── AVATAR HELPERS ────────────────
@@ -2614,6 +2857,9 @@
             // Message Loading
             const r = await fetch(`/api/hub/messages?partner=${encodeURIComponent(partner)}`);
             const msgs = await r.json();
+            
+            // Unified User History
+            loadUserHistory(partner);
 
             // Header & Profile Data Update (NOW after fetch for unified transition)
             const headName = document.getElementById('activePartnerName');
@@ -2820,17 +3066,18 @@
             const isMe = data.sender === currentUsername;
             const wrap = document.createElement('div');
             wrap.className = `bubble-wrap ${isMe ? 'me' : 'them'}`;
+            if (data.id) wrap.id = `hub-msg-${data.id}`;
 
             // Attached Draft UI
             let draftHtml = '';
             if (data.attached_draft) {
                 const d = data.attached_draft;
                 draftHtml = `
-                <a href="#" class="msg-draft-card" onclick="viewDraft(${d.id},'${d.name}','${currentSemester}');return false;">
+                <a href="#" class="msg-draft-card" id="proposal-card-${d.id}" onclick="viewDraft(${d.id},'${d.name}','${currentSemester}');return false;">
                     <div class="msg-draft-icon"><i class="bi bi-calendar3-fill"></i></div>
                     <div class="msg-draft-info">
                         <div class="msg-draft-name">${d.name}</div>
-                        <div class="msg-draft-sub">Schedule Draft &bull; ${d.status}</div>
+                        <div class="msg-draft-sub">Schedule Draft &bull; <span class="badge ${d.status === 'approved' ? 'bg-success' : (d.status === 'rejected' ? 'bg-danger' : 'bg-warning text-dark')}" style="font-size:0.6rem;">${d.status === 'pending' || d.status === 'submitted' ? 'pending review' : d.status}</span></div>
                     </div>
                     <span class="msg-draft-chevron">View &rarr;</span>
                 </a>`;
@@ -3155,39 +3402,80 @@
             const d = new Date(ts);
             return d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true });
         }
-        window.handleAvatarError = function (img) {
-            const name = img.alt || '?';
-            const color = getColorFromName(name);
-            const parent = img.parentElement;
-            if (parent) {
-                parent.innerHTML = name.charAt(0).toUpperCase();
-                parent.style.background = color;
-                parent.style.color = 'white';
-                parent.style.display = 'flex';
-                parent.style.alignItems = 'center';
-                parent.style.justifyContent = 'center';
-                parent.style.fontSize = '1.2rem';
-                parent.style.fontWeight = 'bold';
-            }
+        window.handleDecision = async (id, action) => {
+            const modalEl = document.getElementById('decisionConfirmModal');
+            const confirmBtn = document.getElementById('confirmDecisionBtn');
+            const titleEl = document.getElementById('decisionConfirmTitle');
+            const textEl = document.getElementById('decisionConfirmText');
+            const iconEl = document.getElementById('decisionConfirmIcon');
+
+            titleEl.textContent = action === 'approved' ? 'Approve Proposal?' : 'Reject Proposal?';
+            textEl.textContent = `Are you sure you want to ${action} this draft? This action cannot be undone.`;
+            iconEl.innerHTML = action === 'approved' 
+                ? '<i class="bi bi-check-circle fs-1 text-success"></i>'
+                : '<i class="bi bi-x-circle fs-1 text-danger"></i>';
+            
+            confirmBtn.className = `btn flex-grow-1 fw-bold ${action === 'approved' ? 'btn-success' : 'btn-danger'}`;
+
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+
+            confirmBtn.onclick = async () => {
+                modal.hide();
+                let reason = '';
+                if (action === 'rejected') {
+                    reason = prompt("Please provide a reason for rejection:");
+                    if (reason === null) return;
+                } else {
+                    reason = "Approved by Admin.";
+                }
+
+                try {
+                    const r = await fetch(`/api/hub/decide/${id}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+                        body: JSON.stringify({ decision: action, justification: reason })
+                    });
+                    const res = await r.json();
+                    if (res.ok) {
+                        if (typeof showToast === 'function') {
+                            showToast({ message: `Proposal ${action} successfully.`, type: action === 'approved' ? 'success' : 'danger' });
+                        }
+                        loadPendingDrafts();
+                        if (activePartner) loadUserHistory(activePartner);
+                        // Reload messages to update card badges
+                        if (activePartner) loadConversations(activePartner);
+                        // If preview is open, it should ideally hide buttons - we handle this in render
+                    } else {
+                        alert(res.error || "Decision failed");
+                    }
+                } catch (err) {
+                    console.error("Decision Error:", err);
+                }
+            };
         };
 
-        // Modal Decision
-        let activeDecisionId = null;
-        let activeDecisionType = null;
+        // --- DEEP LINKING: JUMP TO MESSAGE ---
+        window.jumpToMessage = function(username, msgId) {
+            // 1. Close sidebar/offcanvas if open
+            const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasPendingReview'));
+            if (offcanvas) offcanvas.hide();
 
-        window.handleDecision = (id, type) => {
-            activeDecisionId = id; activeDecisionType = type;
-            new bootstrap.Modal(document.getElementById('justificationModal')).show();
-        };
+            // 2. Open chat with user
+            focusProposalChat(username);
 
-        document.getElementById('confirmDecisionBtn').onclick = async () => {
-            const note = document.getElementById('adminNote').value;
-            const res = await fetch(`/api/hub/decide/${activeDecisionId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
-                body: JSON.stringify({ action: activeDecisionType, justification: note })
-            });
-            if (res.ok) location.reload();
+            // 3. Wait for messages to load, then jump
+            setTimeout(() => {
+                const target = document.getElementById(`hub-msg-${msgId}`);
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    target.classList.remove('highlight-msg');
+                    void target.offsetWidth; // Trigger reflow
+                    target.classList.add('highlight-msg');
+                } else {
+                    console.warn("Message target not found in current view:", msgId);
+                }
+            }, 800); // Buffer for fetch + render
         };
 
         // ──────────────── INFINITE CANVAS PREVIEW (full parity with schedule_editor draft preview) ────────────────
@@ -3215,6 +3503,7 @@
 
         window.viewDraft = async (id, name, sem) => {
             pvActiveDraft = id;
+            if (activePartner) loadUserHistory(activePartner); // Unified History
             pvCurrentType = 'section';
             pvEntityMap = null;
             const nameEl = document.getElementById('pvDraftName');
@@ -3229,6 +3518,31 @@
             } catch (e) { pvEntityMap = null; }
 
             document.body.classList.add('pv-active');
+            
+            // Update decision controls in modal
+            const controls = document.getElementById('pvDecisionControls');
+            const badge = document.getElementById('pvDecisionBadge');
+            const badgeSpan = document.getElementById('pvBadgeSpan');
+            if (controls && badge) {
+                // Fetch the specific draft info to get the latest status
+                try {
+                    const dr = await fetch(`/api/draft/${id}`);
+                    const ddata = await dr.json();
+                    if (ddata && (ddata.status === 'approved' || ddata.status === 'rejected')) {
+                        controls.classList.add('d-none');
+                        badge.classList.remove('d-none');
+                        badgeSpan.textContent = ddata.status.charAt(0).toUpperCase() + ddata.status.slice(1);
+                        badgeSpan.className = `badge rounded-pill px-3 py-2 ${ddata.status === 'approved' ? 'bg-success' : 'bg-danger'}`;
+                    } else {
+                        controls.classList.remove('d-none');
+                        badge.classList.add('d-none');
+                    }
+                } catch (e) {
+                    controls.classList.remove('d-none');
+                    badge.classList.add('d-none');
+                }
+            }
+
             const modal = new bootstrap.Modal(document.getElementById('hubPreviewModal'));
             modal.show();
 
@@ -3260,6 +3574,39 @@
                 });
             }
             pvLoadCanvas();
+        }
+
+        window.toggleIntegratedHistory = () => {
+            const panel = document.getElementById('integratedHistoryPanel');
+            if (!panel) return;
+            panel.classList.toggle('d-none');
+            if (!panel.classList.contains('d-none')) {
+                loadIntegratedHistory(activePartner);
+            }
+        };
+
+        async function loadIntegratedHistory(username) {
+            const container = document.getElementById('integratedHistoryContent');
+            if (!container || !username || username === 'Everyone') return;
+            try {
+                const r = await fetch(`/api/hub/user/${encodeURIComponent(username)}/history`);
+                const history = await r.json();
+                if (history.length > 0) {
+                    container.innerHTML = history.map(h => `
+                        <div class="mb-3 pb-2 border-bottom text-start">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge ${h.action.toLowerCase().includes('approve') ? 'bg-success' : (h.action.toLowerCase().includes('reject') ? 'bg-danger' : 'bg-light text-dark')} border" style="font-size:0.6rem;">${h.action}</span>
+                                <small class="text-muted" style="font-size:0.65rem;">${formatTimestamp(h.timestamp)}</small>
+                            </div>
+                            <div class="x-small text-muted" style="font-size:0.7rem;">${h.details || ''}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="text-center text-muted py-4">No history records.</div>';
+                }
+            } catch (e) {
+                container.innerHTML = '<div class="text-center text-danger py-4">Error loading history.</div>';
+            }
         }
 
         function pvGetCurrentList() {
@@ -3947,82 +4294,23 @@
                 });
             }
         });
+
     </script>
 
-    <!-- MOBILE DETAILS OFFCANVAS -->
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasDetails" aria-labelledby="offcanvasDetailsLabel">
-        <div class="offcanvas-header border-bottom">
-            <h6 class="offcanvas-title fw-bold text-uppercase text-muted" id="offcanvasDetailsLabel"
-                style="font-size: 0.75rem; letter-spacing: 0.5px;">Chat Details</h6>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body custom-scrollbar text-center">
-            <!-- Mobile Profile Section -->
-            <div class="py-4 mb-4">
-                <div class="profile-avatar-wrap mb-3 mx-auto" style="width: 120px; height: 120px; cursor: pointer;"
-                    onclick="openMobileFullscreen()">
-                    <img src="/static/profile_pics/default.png" alt="Profile"
-                        class="profile-avatar-large shadow w-100 h-100" id="mainProfileImgMobile"
-                        style="border-radius: 50%; object-fit: cover;" onerror="handleAvatarError(this)">
-                    <div id="mainProfileFallbackMobile"
-                        class="profile-avatar-large shadow d-none align-items-center justify-content-center fw-bold text-white h2 w-100 h-100"
-                        style="border-radius: 50%;">
+    <!-- DECISION CONFIRMATION MODAL -->
+    <div class="modal fade" id="decisionConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 2100;">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-body p-4 text-center">
+                    <div id="decisionConfirmIcon" class="mb-3">
+                        <i class="bi bi-exclamation-circle fs-1 text-warning"></i>
                     </div>
-                </div>
-                <h5 class="fw-bold mb-1" id="profileNameMobile">Announcements</h5>
-                <p class="text-muted small mb-1" id="profileDeptMobile">Global Channel</p>
-                <div class="small mb-3" id="activePartnerProfileStatusMobile">
-                    <span class="status-dot offline"></span> Offline
-                </div>
-                <div class="badge bg-light text-dark rounded-pill px-3 py-2 border">
-                    <span class="text-uppercase x-small fw-bold opacity-75" id="profileRoleMobile">System</span>
-                </div>
-            </div>
-
-            <hr class="my-4 op-10">
-
-            <!-- System & Network Section (Mirrored) -->
-            <div class="text-start px-3">
-                <h6 class="text-uppercase text-muted fw-bold x-small mb-3">System & Network</h6>
-                <div class="small">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Status</span>
-                        <div class="d-flex align-items-center gap-1">
-                            <span class="fw-semibold text-warning" id="scanningStatusMobile"><i
-                                    class="bi bi-search me-1"></i>Scanning...</span>
-                        </div>
+                    <h5 class="fw-bold" id="decisionConfirmTitle">Are you sure?</h5>
+                    <p class="text-muted small mb-4" id="decisionConfirmText">Do you want to proceed with this decision?</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light flex-grow-1 fw-bold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary flex-grow-1 fw-bold" id="confirmDecisionBtn">Yes, Proceed</button>
                     </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Socket</span>
-                        <span class="text-secondary fw-semibold" id="socketStatusMobile">Initializing</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Semester</span>
-                        <span class="fw-semibold">{{ selected_semester }}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-auto pt-5 pb-4 opacity-50">
-                <div class="badge bg-light text-muted border py-2 px-3 rounded-pill" style="font-size: 0.65rem;">
-                    <i class="bi bi-shield-lock-fill me-1"></i> Secure End-to-End Chat
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- PENDING REVIEW OFFCANVAS (NEW) -->
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasPendingReview"
-        aria-labelledby="offcanvasPendingReviewLabel">
-        <div class="offcanvas-header border-bottom" style="height: 56px;">
-            <h6 class="offcanvas-title fw-bold text-uppercase text-muted" id="offcanvasPendingReviewLabel"
-                style="font-size: 0.75rem; letter-spacing: 0.5px;">Pending Proposals</h6>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body custom-scrollbar">
-            <div id="proposalListGlobal">
-                <!-- Proposals will be loaded here -->
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary"></div>
                 </div>
             </div>
         </div>
@@ -4042,6 +4330,25 @@
                             style="border-radius: 10px; font-size: 0.85rem;">Cancel</button>
                         <button type="button" class="btn btn-danger px-4 fw-semibold small" id="confirmDeleteBtn"
                             style="border-radius: 10px; font-size: 0.85rem;">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- DECISION CONFIRMATION MODAL -->
+    <div class="modal fade" id="decisionConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 2100;">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-body p-4 text-center">
+                    <div id="decisionConfirmIcon" class="mb-3">
+                        <i class="bi bi-exclamation-circle fs-1 text-warning"></i>
+                    </div>
+                    <h5 class="fw-bold" id="decisionConfirmTitle">Are you sure?</h5>
+                    <p class="text-muted small mb-4" id="decisionConfirmText">Do you want to proceed with this decision?</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light flex-grow-1 fw-bold" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary flex-grow-1 fw-bold" id="confirmDecisionBtn">Yes, Proceed</button>
                     </div>
                 </div>
             </div>
