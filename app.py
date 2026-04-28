@@ -1314,26 +1314,39 @@ def api_hub_conversations():
     # 2. Group by partner
     convos = {}
     for msg in private_msgs:
-        partner = msg.recipient_name if msg.sender_id == uid else msg.sender.username
-        if partner not in convos:
-            unread = HubMessage.query.filter_by(sender_id=msg.sender_id, recipient_name=username, is_read=False).count() \
-                     if partner == msg.sender.username else 0
+        try:
+            # Safety Check: If sender is missing (hard deleted), skip this message/conversation
+            if msg.sender_id != uid and not msg.sender:
+                continue
+                
+            partner = msg.recipient_name if msg.sender_id == uid else msg.sender.username
             
-            preview = msg.content or ''
-            if not preview and msg.draft_id:
-                preview = "Shared a proposal"
-            
-            convos[partner] = {
-                'name': partner,
-                'department': (potential_map[partner].department if partner in potential_map else 'System'),
-                'last_message': preview[:40] + ('...' if len(preview) > 40 else ''),
-                'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-                'unread_count': unread,
-                'is_global': False,
-                'role': potential_map[partner].role if partner in potential_map else 'user',
-                'profile_pic': (potential_map[partner].profile_pic if partner in potential_map else None) or 'default.png',
-                'is_online': partner in online_usernames
-            }
+            # Safety Check: If partner is missing or is marked as deleted, skip from active view
+            if not partner or partner not in potential_map:
+                continue
+                
+            if partner not in convos:
+                unread = HubMessage.query.filter_by(sender_id=msg.sender_id, recipient_name=username, is_read=False).count() \
+                         if partner == msg.sender.username else 0
+                
+                preview = msg.content or ''
+                if not preview and msg.draft_id:
+                    preview = "Shared a proposal"
+                
+                convos[partner] = {
+                    'name': partner,
+                    'department': (potential_map[partner].department if partner in potential_map else 'System'),
+                    'last_message': preview[:40] + ('...' if len(preview) > 40 else ''),
+                    'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                    'unread_count': unread,
+                    'is_global': False,
+                    'role': potential_map[partner].role if partner in potential_map else 'user',
+                    'profile_pic': (potential_map[partner].profile_pic if partner in potential_map else None) or 'default.png',
+                    'is_online': partner in online_usernames
+                }
+        except Exception as e:
+            print(f"Error processing convo for msg {msg.id}: {str(e)}")
+            continue
             
     # 3. Add global 'Everyone'
     last_global = HubMessage.query.filter(
@@ -1384,9 +1397,13 @@ def api_hub_messages():
             and_(HubMessage.recipient_name == None, HubMessage.semester == semester)
         ).order_by(HubMessage.timestamp.asc()).all()
     else:
+        partner_user = User.query.filter_by(username=partner, is_deleted=False).first()
+        if not partner_user:
+            return jsonify([]) # Return empty if partner doesn't exist or is deleted
+            
         msgs = HubMessage.query.filter(
             or_(
-                and_(HubMessage.recipient_name == username, HubMessage.sender_id == User.query.filter_by(username=partner).first().id),
+                and_(HubMessage.recipient_name == username, HubMessage.sender_id == partner_user.id),
                 and_(HubMessage.sender_id == uid, HubMessage.recipient_name == partner)
             )
         ).order_by(HubMessage.timestamp.asc()).all()
@@ -16125,6 +16142,16 @@ def permanent_delete_user(user_id):
         
     user = User.query.get_or_404(user_id)
     username = user.username
+    
+    # Clean up Decision Hub messages associated with this user
+    # Delete where they are sender OR where they are recipient
+    HubMessage.query.filter(
+        or_(
+            HubMessage.sender_id == user_id,
+            HubMessage.recipient_name == username
+        )
+    ).delete(synchronize_session=False)
+    
     db.session.delete(user)
     db.session.commit()
     
@@ -16196,6 +16223,15 @@ def bulk_permanent_delete_users():
         if uid == current_id: continue
         user = User.query.get(uid)
         if user:
+            uname = user.username
+            # Clean up messages
+            HubMessage.query.filter(
+                or_(
+                    HubMessage.sender_id == user.id,
+                    HubMessage.recipient_name == uname
+                )
+            ).delete(synchronize_session=False)
+            
             db.session.delete(user)
             count += 1
             
