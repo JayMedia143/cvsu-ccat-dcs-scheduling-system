@@ -649,6 +649,8 @@
                                             class="bi bi-people-fill me-2"></i> Sections</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('manage_faculty') }}"><i
                                             class="bi bi-person-badge me-2"></i> Faculty</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('manage_rooms') }}"><i
+                                            class="bi bi-door-open me-2"></i> Rooms</a></li>
                             </ul>
                         </li>
                         <li class="nav-item"><a class="menu-item" href="{{ url_for('schedule_editor') }}">Schedule
@@ -1853,11 +1855,6 @@
             background-color: rgba(0, 0, 0, 0.02);
         }
 
-        /* Below-Navbar Modals & Backdrops */
-        .modal, .modal-backdrop {
-            top: 56px !important;
-            height: calc(100% - 56px) !important;
-        }
     </style>
 </body>
 

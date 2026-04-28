@@ -229,7 +229,7 @@
 
                             <td class="text-start">
                                 <span class="badge-clean">
-                                    {{ 'All Departments' if faculty.department == 'Unassigned' else faculty.department
+                                    {{ 'All Departments' if faculty.department == 'Unassigned' else dept_map.get(faculty.department, faculty.department)
                                     }}
                                 </span>
                             </td>
@@ -653,7 +653,6 @@
                     <!-- SUBJECT GRID (3 COLUMNS) -->
                     <div class="p-4 pt-3 bg-white">
                         <div class="row gx-4">
-                            <!-- DITO ANG FIX: Ginawang faculty.courses -->
                             {% set teachable_ids = faculty.courses | map(attribute='id') | list %}
 
                             {% for sem in ['1st Semester', '2nd Semester', 'Midyear'] %}
@@ -856,6 +855,7 @@
     const allFacultyProfiles = {{ faculty_profiles | tojson | safe }};
     const allTakenByOthers = {{ others_taken_by_faculty | tojson | safe }};
     const faSplitHoursMap = {{ fa_split_hours_map | tojson | safe }};
+    const deptMap = {{ dept_map | tojson | safe }};
 
     document.addEventListener('DOMContentLoaded', function () {
 
@@ -1408,7 +1408,7 @@
             <div class="mb-3">
               <div class="d-flex justify-content-between border-bottom py-2">
                 <span class="small text-muted fw-semibold">Department</span>
-                <span class="small text-dark">${f.department || '—'}</span>
+                <span class="small text-dark">${deptMap[f.department] || f.department || '—'}</span>
               </div>
               <div class="d-flex justify-content-between border-bottom py-2">
                 <span class="small text-muted fw-semibold">Academic Rank</span>
@@ -1537,6 +1537,7 @@
             </div>
             
             <div class="modal-body p-4">
+                {% if session.get('role') in ['admin', 'superadmin'] %}
                 <!-- 1. CREATING NEW FACULTY -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-primary small mb-1">1. Creating New Faculty</h6>
@@ -1587,6 +1588,42 @@
                     <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
                 </div>
+
+                {% else %}
+                <!-- USER VERSION -->
+                <!-- 1. CREATING NEW FACULTY -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1">1. Creating New Faculty</h6>
+                    <p class="small text-muted mb-0">Click <strong>'New Faculty'</strong> to add a record. Enter the <strong>Employee ID</strong>, <strong>Name</strong>, <strong>Status</strong>, and <strong>Max Hours</strong>. Be sure to include <strong>Educational Attainment</strong>, <strong>Academic Rank</strong>, and <strong>Available Days</strong> for accurate scheduling. Use <strong>'+ T.B.A.'</strong> for numbered placeholders.</p>
+                </div>
+
+                <!-- 2. FINDING & SORTING (WAS #4) -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1">2. Finding & Sorting</h6>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Search Bar:</strong> Type any part of a name, ID, or department; the list will update <strong>instantly</strong> as you type.</li>
+                        <li><strong>Funnel Icon:</strong> Click this to filter the list by <strong>Department</strong> or <strong>Employment Status</strong>.</li>
+                        <li><strong>Sort Menu:</strong> Arrange the list by <strong>Name (A-Z)</strong> using the dropdown on the top-right.</li>
+                    </ul>
+                </div>
+
+                <!-- 3. MANAGING & MASS ACTIONS (WAS #5) -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1">3. Managing & Mass Actions</h6>
+                    <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many records at once:</p>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the faculty's details, rank, or availability days.</li>
+                        <li><strong>Trash Icon:</strong> Move the faculty record to the <strong>Recycle Bin</strong>.</li>
+                        <li><strong>Bulk Actions:</strong> Select rows or use the Header box to <strong>Select All</strong>, then use the <strong>Green Bar</strong> to bulk-delete to the Recycle Bin.</li>
+                    </ul>
+                </div>
+
+                <!-- 4. PAGINATION (WAS #6) -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1">4. Pagination</h6>
+                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                </div>
+                {% endif %}
             </div>
 
             <div class="modal-footer bg-light">

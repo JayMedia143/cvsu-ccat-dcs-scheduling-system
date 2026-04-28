@@ -261,7 +261,7 @@
 
                         <!-- 4. DEPARTMENT -->
                         <td class="text-start">
-                            <span class="badge-clean">{{ course.department }}</span>
+                            <span class="badge-clean">{{ dept_map.get(course.department, course.department) }}</span>
                         </td>
 
                         {% if session.get('role') != 'user' %}
@@ -727,6 +727,8 @@
             </div>
 
             <div class="modal-body p-4">
+                {% if session.get('role') in ['admin', 'superadmin'] %}
+                <!-- 1. CREATING NEW COURSES -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-primary small mb-1">1. Creating New Courses (Manual)</h6>
                     <p class="small text-muted mb-0">Click the green <strong>'New Course'</strong> button to add a
@@ -735,6 +737,8 @@
                         <strong>Lecture/Lab units</strong> and <strong>Weekly Hours</strong> (Sync/Async) so the system
                         knows how much time is needed for scheduling.</p>
                 </div>
+
+                <!-- 2. BULK IMPORTING -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-success small mb-1">2. Bulk Importing from Curriculum</h6>
                     <p class="small text-muted mb-0">Instead of adding subjects one by one, use the
@@ -747,12 +751,16 @@
                             the system.</li>
                     </ul>
                 </div>
+
+                <!-- 3. ASSIGNING DEPARTMENTS -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-info small mb-1">3. Assigning Departments</h6>
                     <p class="small text-muted mb-0">Click the <strong>'Dept. Assignment'</strong> button (with the
                         diagram icon) to manage which departments "own" specific subjects. This ensures that only the
                         correct department handles the scheduling for those courses.</p>
                 </div>
+
+                <!-- 4. FINDING & SORTING -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-warning small mb-1">4. Finding & Sorting</h6>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
@@ -765,6 +773,8 @@
                             Alphabetical (A-Z), or by Department name.</li>
                     </ul>
                 </div>
+
+                <!-- 5. MANAGING & MASS ACTIONS -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-danger small mb-1">5. Managing & Mass Actions</h6>
                     <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many rows at
@@ -780,6 +790,8 @@
                             the Recycle Bin.</li>
                     </ul>
                 </div>
+
+                <!-- 6. PAGINATION -->
                 <div class="mb-0">
                     <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or
@@ -787,6 +799,57 @@
                         into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's
                         <strong>Left/Right arrow keys</strong> to flip through pages.</p>
                 </div>
+
+                {% else %}
+                <!-- USER VERSION (Filtered) -->
+                <!-- 1. CREATING NEW COURSES -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1">1. Creating New Courses (Manual)</h6>
+                    <p class="small text-muted mb-0">Click the green <strong>'New Course'</strong> button to add a
+                        single subject. You will need to fill in the <strong>Course Code</strong> (e.g., COSC 101),
+                        <strong>Full Name</strong>, and <strong>Department</strong>. You must also specify the
+                        <strong>Lecture/Lab units</strong> and <strong>Weekly Hours</strong> (Sync/Async) so the system
+                        knows how much time is needed for scheduling.</p>
+                </div>
+
+                <!-- 2. FINDING & SORTING (WAS #4) -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1">2. Finding & Sorting</h6>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Search Bar:</strong> Type any part of a code or name; the list will update
+                            <strong>instantly</strong> as you type.</li>
+                        <li><strong>Funnel Icon:</strong> Click this to filter the list by a specific
+                            <strong>Department</strong> or common <strong>Subject Code</strong> (like Math or COSC).
+                        </li>
+                        <li><strong>Sort Menu:</strong> Use the dropdown on the top-right to arrange subjects by Newest,
+                            Alphabetical (A-Z), or by Department name.</li>
+                    </ul>
+                </div>
+
+                <!-- 3. MANAGING & MASS ACTIONS (WAS #5) -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1">3. Managing & Mass Actions</h6>
+                    <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many rows at
+                        once:</p>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the subject's details (Code, Name,
+                            Units, etc.).</li>
+                        <li><strong>Trash Icon:</strong> Move the subject to the <strong>Recycle Bin</strong>.</li>
+                        <li><strong>Bulk Actions:</strong> Click any row to select it (or the Header box to
+                            <strong>Select All</strong>). Use the <strong>Green Bar</strong> to bulk-delete subjects to
+                            the Recycle Bin.</li>
+                    </ul>
+                </div>
+
+                <!-- 4. PAGINATION (WAS #6) -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1">4. Pagination</h6>
+                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or
+                        the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number
+                        into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's
+                        <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                </div>
+                {% endif %}
             </div>
 
             <div class="modal-footer bg-light">

@@ -162,6 +162,12 @@
                         <td class="text-center pe-0">
                             {% if current_user_id != user.id %}
                                 {% if not is_hist %}
+                                    {% if session.get('role') == 'superadmin' %}
+                                    <button type="button" class="btn-icon text-warning" data-bs-toggle="modal"
+                                        data-bs-target="#resetPasswordModal{{ user.id }}" title="Reset Password to Default">
+                                        <i class="bi bi-key"></i>
+                                    </button>
+                                    {% endif %}
                                     <button type="button" class="btn-icon" data-bs-toggle="modal"
                                         data-bs-target="#archiveUserModal{{ user.id }}" title="Move to Recycle Bin">
                                         <i class="bi bi-trash"></i>
@@ -305,6 +311,29 @@
             </div>
         </div>
     </div>
+
+    <!-- RESET PASSWORD MODAL -->
+    <div class="modal fade" id="resetPasswordModal{{ user.id }}" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-dark">Reset Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p>Are you sure you want to reset the password for <strong>{{ user.username }}</strong>?</p>
+                    <p class="text-muted small mb-0"><i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> The new password will be set to: <strong>CvSU123!</strong></p>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                    <form action="{{ url_for('reset_user_password', user_id=user.id) }}" method="POST" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-warning px-4 fw-bold">Reset Password</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endif %}
 {% endfor %}
 
@@ -343,7 +372,7 @@
                 <!-- 1. CREATING NEW USERS -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-primary small mb-1">1. Creating New Users</h6>
-                    <p class="small text-muted mb-0">Click the <strong>'New User'</strong> button at the top right to add a system account. You must specify a unique username, a secure password, an assigned department, and an appropriate access role. Use the <strong>Pencil icon</strong> on the table to update these details later.</p>
+                    <p class="small text-muted mb-0">Click the <strong>'New User'</strong> button at the top right to add a system account. You must specify a unique username, a secure password, an assigned department, and an appropriate access role. <strong>Note:</strong> Ensure all details are correct upon creation, as accounts cannot be directly edited afterwards.</p>
                 </div>
 
                 <!-- 2. USER ROLES OVERVIEW -->
@@ -369,7 +398,7 @@
                     <h6 class="fw-bold text-warning small mb-1">4. Managing & Mass Actions</h6>
                     <p class="small text-muted mb-0">Each row has icons for individual actions. To handle multiple users:</p>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
-                        <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the user's role, password, or department assignment.</li>
+                        <li><strong>Key Icon:</strong> <strong>Reset</strong> the user's password to the default system value (CvSU123!).</li>
                         <li><strong>Trash Icon:</strong> Move the user account to the <strong>Recycle Bin</strong> safely.</li>
                         <li><strong>Bulk Actions:</strong> Click any row to select it (or the Header box to <strong>Select All</strong>). Use the <strong>Green Bar</strong> to bulk-delete users to the Recycle Bin.</li>
                     </ul>

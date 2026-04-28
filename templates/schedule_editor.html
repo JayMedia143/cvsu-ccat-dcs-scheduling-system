@@ -1677,6 +1677,13 @@
         }
     }
 
+    /* Target only the Editor Mode Modal and its backdrop (Scoped by ID) */
+    #editorModeModal, 
+    body:has(#editorModeModal.show) .modal-backdrop {
+        top: 56px !important;
+        height: calc(100% - 56px) !important;
+    }
+
 </style>
 
 <div class="editor-wrapper">
@@ -5693,7 +5700,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4">
-
+                {% if session.get('role') in ['admin', 'superadmin'] %}
                 <!-- 1. The Two Modes -->
                 <section class="mb-4">
                     <h6 class="fw-bold text-primary small mb-1">1. HOW TO EDIT</h6>
@@ -5718,9 +5725,28 @@
                     </div>
                 </section>
 
-                <!-- 2. Adding Schedules -->
+                <!-- 2. Saving Your Work -->
                 <section class="mb-4">
-                    <h6 class="fw-bold text-success small mb-1">2. HOW TO ADD A SCHEDULE</h6>
+                    <h6 class="fw-bold text-warning small mb-1">2. SAVING YOUR WORK</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-white shadow-sm h-100">
+                                <h6 class="fw-bold small mb-2">Save as Draft (Direct Mode)</h6>
+                                <p class="small text-muted mb-0">If you are in <b>Direct Mode</b>, click this to save the current live schedule as a <b>new draft</b> version.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-white shadow-sm h-100">
+                                <h6 class="fw-bold small mb-2">Save as Copy (Draft Mode)</h6>
+                                <p class="small text-muted mb-0">If you are in <b>Draft Mode</b>, click this to create a <b>duplicate</b> of your current work to try a different version.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Adding Schedules -->
+                <section class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1">3. HOW TO ADD A SCHEDULE</h6>
                     <div class="ms-2">
                         <p class="small text-muted mb-2">There are two ways to add a schedule:</p>
                         <div class="p-3 bg-light rounded-3 border mb-3">
@@ -5736,9 +5762,9 @@
                     </div>
                 </section>
 
-                <!-- 3. Buttons -->
+                <!-- 4. Buttons -->
                 <section class="mb-4">
-                    <h6 class="fw-bold text-info small mb-1">3. BUTTONS</h6>
+                    <h6 class="fw-bold text-info small mb-1">4. BUTTONS</h6>
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="p-3 border rounded bg-white shadow-sm h-100">
@@ -5764,9 +5790,9 @@
                     </div>
                 </section>
 
-                <!-- 4. Manage Your Drafts -->
+                <!-- 5. Manage Your Drafts -->
                 <section class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1">4. MANAGE YOUR DRAFTS</h6>
+                    <h6 class="fw-bold text-danger small mb-1">5. MANAGE YOUR DRAFTS</h6>
                     <div class="ms-2">
                         <div class="d-flex align-items-center mb-2">
                             <i class="bi bi-check2 text-secondary me-3 fs-5"></i>
@@ -5785,7 +5811,104 @@
                         </div>
                     </div>
                 </section>
+                {% else %}
+                <!-- USER VERSION -->
+                <!-- 1. The Two Modes -->
+                <section class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1">1. HOW TO EDIT</h6>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div
+                                class="p-3 border rounded-3 bg-white shadow-sm border-start border-4 border-success h-100">
+                                <h6 class="fw-bold text-success mb-2">Draft Mode</h6>
+                                <p class="small text-muted mb-0">Use this to plan your department's schedule privately. No one sees your work until
+                                    you click the Publish button. This is safe for making big changes.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
+                <!-- 2. Saving Your Work -->
+                <section class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1">2. SAVING YOUR WORK</h6>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="p-3 border rounded bg-white shadow-sm h-100">
+                                <h6 class="fw-bold small mb-2">Save as Copy (Draft Mode)</h6>
+                                <p class="small text-muted mb-0">Click this to create a <b>duplicate</b> of your current work to try a different version of your department's schedule.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Adding Schedules -->
+                <section class="mb-4">
+                    <h6 class="fw-bold text-success small mb-1">3. HOW TO ADD A SCHEDULE</h6>
+                    <div class="ms-2">
+                        <p class="small text-muted mb-2">There are two ways to add a schedule:</p>
+                        <div class="p-3 bg-light rounded-3 border mb-3">
+                            <p class="small mb-1"><strong>A. Click the Line:</strong></p>
+                            <p class="small text-muted mb-0"><b>Click any blank line</b> in the schedule grid. This will
+                                automatically set the <b>Day</b> and <b>Time</b> for you in the form.</p>
+                        </div>
+                        <div class="p-3 bg-light rounded-3 border">
+                            <p class="small mb-1"><strong>B. Manual Entry:</strong></p>
+                            <p class="small text-muted mb-0">Pick the Course, Section, and Teacher from the <b>dropdown
+                                    lists</b>. Then, click the <b>Add Schedule</b> button to save.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Buttons -->
+                <section class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1">4. BUTTONS</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-white shadow-sm h-100">
+                                <h6 class="fw-bold small mb-2"><i class="bi bi-eye text-primary me-2"></i>Preview Mode
+                                </h6>
+                                <p class="small text-muted mb-0">Click the Eye icon to see the <b>final look</b> of your
+                                    schedule. Use this to check for errors before you finish.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded bg-white shadow-sm h-100">
+                                <h6 class="fw-bold small mb-2"><i class="bi bi-arrow-repeat text-success me-2"></i>Sync
+                                    Grid</h6>
+                                <p class="small text-muted mb-0">Click this to keep your work updated with any new
+                                    changes from the main system.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 p-2 bg-white border rounded shadow-sm d-flex align-items-center">
+                        <i class="bi bi-arrow-counterclockwise text-info fs-5 me-3"></i>
+                        <span class="small text-muted"><strong>Back and Forward Arrows:</strong> Use these arrows to go
+                            back or fix a mistake quickly.</span>
+                    </div>
+                </section>
+
+                <!-- 5. Manage Your Drafts -->
+                <section class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1">5. MANAGE YOUR DRAFTS</h6>
+                    <div class="ms-2">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-check2 text-secondary me-3 fs-5"></i>
+                            <span class="small text-muted"><strong>Gray Check Icon:</strong> Use this to pick a draft
+                                and start working on it.</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-pencil-square text-success me-3 fs-5"></i>
+                            <span class="small text-muted"><strong>Green Pencil Icon:</strong> Use this to change the
+                                <b>draft info</b> or name.</span>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-trash text-danger me-3 fs-5"></i>
+                            <span class="small text-muted"><strong>Trash Icon:</strong> Use this to remove <b>old
+                                    drafts</b> that you do not need anymore.</span>
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
             </div>
             <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-success px-4" data-bs-dismiss="modal">Got it!</button>

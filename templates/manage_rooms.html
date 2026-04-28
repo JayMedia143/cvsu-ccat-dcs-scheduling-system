@@ -234,7 +234,7 @@
                                 <div class="d-flex flex-wrap justify-content-start gap-1">
                                     {% for dept in room.room_departments.split(',') %}
                                     {% if dept.strip() %}
-                                    <span class="badge-clean">{{ dept.strip() }}</span>
+                                    <span class="badge-clean">{{ dept_map.get(dept.strip(), dept.strip()) }}</span>
                                     {% endif %}
                                     {% endfor %}
                                 </div>
@@ -836,6 +836,7 @@
             </div>
             
             <div class="modal-body p-4">
+                {% if session.get('role') in ['admin', 'superadmin'] %}
                 <!-- 1. CREATING NEW ROOMS -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-primary small mb-1">1. Creating New Rooms</h6>
@@ -884,6 +885,51 @@
                     <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
                 </div>
+
+                {% else %}
+                <!-- USER VERSION -->
+                <!-- 1. CREATING NEW ROOMS -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary small mb-1">1. Creating New Rooms</h6>
+                    <p class="small text-muted mb-0">Click <strong>'New Room'</strong> to add a record. Enter the <strong>Room Name</strong>, <strong>Building</strong>, <strong>Capacity</strong>, and <strong>Functional PCs</strong>. Specify if it is a <strong>Lecture</strong> or <strong>Laboratory</strong> and set <strong>Department Access</strong> if needed. Use <strong>'+ T.B.A.'</strong> for fallback rooms.</p>
+                </div>
+
+                <!-- 2. MONITORING STATUS (WAS #3) -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1">2. Monitoring Status</h6>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Available:</strong> The room is active and ready to be used by the scheduler.</li>
+                        <li><strong>Maintenance:</strong> The room is offline. The system will automatically skip this room during schedule generation to avoid conflicts.</li>
+                    </ul>
+                </div>
+
+                <!-- 3. FINDING & SORTING (WAS #4) -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1">3. Finding & Sorting</h6>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Search Bar:</strong> Type any part of a room name or building; the list will update <strong>instantly</strong> as you type.</li>
+                        <li><strong>Funnel Icon:</strong> Click this to filter the list by <strong>Building</strong> or <strong>Status</strong>.</li>
+                        <li><strong>Sort Menu:</strong> Arrange rooms by <strong>Name (A-Z)</strong> or <strong>Capacity (High-Low)</strong> using the top-right dropdown.</li>
+                    </ul>
+                </div>
+
+                <!-- 4. MANAGING & MASS ACTIONS (WAS #5) -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-danger small mb-1">4. Managing & Mass Actions</h6>
+                    <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many rooms at once:</p>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the room's name, capacity, or capabilities.</li>
+                        <li><strong>Trash Icon:</strong> Move the room record to the <strong>Recycle Bin</strong>.</li>
+                        <li><strong>Bulk Actions:</strong> Select rows or use the Header box to <strong>Select All</strong>, then use the <strong>Green Bar</strong> to bulk-delete to the Recycle Bin.</li>
+                    </ul>
+                </div>
+
+                <!-- 5. PAGINATION (WAS #6) -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1">5. Pagination</h6>
+                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                </div>
+                {% endif %}
             </div>
 
             <div class="modal-footer bg-light">

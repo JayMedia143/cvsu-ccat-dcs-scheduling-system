@@ -759,12 +759,14 @@
             </div>
 
             <div class="modal-body p-4">
+                {% if session.get('role') in ['admin', 'superadmin'] %}
                 <!-- 1. CREATING SECTIONS -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-primary small mb-1">1. Creating New Sections</h6>
                     <p class="small text-muted mb-0">Click the <strong>'New Section'</strong> button at the top right to
                         add a student block. Enter the name (e.g., BSCS 1-1), year level, and population. Use the
-                        <strong>Pencil icon</strong> in the table to edit these details later.</p>
+                        <strong>Pencil icon</strong> in the table to edit these details later.
+                    </p>
                 </div>
 
                 <!-- 2. ASSIGN CURRICULUM -->
@@ -823,6 +825,31 @@
                         into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's
                         <strong>Left/Right arrow keys</strong> to flip through pages.</p>
                 </div>
+
+                {% else %}
+                <!-- USER VERSION -->
+                <!-- 1. FINDING & SORTING (WAS #4) -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning small mb-1">1. Finding & Sorting</h6>
+                    <ul class="small text-muted mt-2 mb-0 ps-3">
+                        <li><strong>Search Bar:</strong> Type any part of a section name; the list will update
+                            <strong>instantly</strong> as you type.</li>
+                        <li><strong>Funnel Icon:</strong> Click this to filter the list by <strong>Year Level</strong>
+                            (1st to 4th Year).</li>
+                        <li><strong>Sort Menu:</strong> Arrange sections by <strong>Name (A-Z)</strong> or <strong>Year
+                                Level</strong> using the dropdown on the top-right.</li>
+                    </ul>
+                </div>
+
+                <!-- 2. PAGINATION (WAS #6) -->
+                <div class="mb-0">
+                    <h6 class="fw-bold text-secondary small mb-1">2. Pagination</h6>
+                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or
+                        the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number
+                        into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's
+                        <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                </div>
+                {% endif %}
             </div>
 
             <div class="modal-footer bg-light">

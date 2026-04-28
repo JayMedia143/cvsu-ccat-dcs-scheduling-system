@@ -247,9 +247,14 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 @app.context_processor
 def inject_archive_vars():
     """Makes archive mode variables available to all templates automatically."""
+    # Mapping of full name to short code (e.g. "Department of Computer Studies" -> "DCS")
+    depts = Department.query.filter_by(is_archived=False).all()
+    dept_map = {d.name: (d.code if d.code else d.name) for d in depts}
+
     return {
         'is_hist': session.get('historical_mode_active', False),
         'active_archive_display': session.get('active_archive_display', ''),
+        'dept_map': dept_map,
         'all_archives': TermArchive.query.order_by(TermArchive.created_at.desc()).all()
     }
 
@@ -1104,27 +1109,28 @@ def handle_send_message(data):
         message_type='chat',
         semester=semester,
         draft_id=attached_draft_id, 
-        recipient_name=recipient
+        recipient_name=recipient if recipient else None
     )
     db.session.add(msg)
     db.session.commit()
 
     # --- PERSISTENT NOTIFICATION LOGIC ---
-    # If a regular user attaches a draft, notify all admins/superadmins via the bell icon.
+    # If a regular user attaches a draft, notify the targeted admin (or superadmins by default).
     if attached_draft_id and str(session.get('role')).lower() == 'user':
-        # Broad search for all administrators (consistent with api_hub_propose)
-        admins = User.query.filter(
-            or_(User.role.ilike('admin'), User.role.ilike('superadmin'))
-        ).all()
         dv = DraftVersion.query.get(attached_draft_id)
         draft_name = dv.name if dv else "Schedule Draft"
-        for admin in admins:
-            create_notification(
-                admin.id, 
-                f"New schedule proposal submitted by {username} for draft: {draft_name}", 
-                'info', 
-                url_for('proposal_hub')
-            )
+        notif_msg = f"New schedule proposal submitted by {username} for draft: {draft_name}"
+        
+        target_url = url_for('proposal_hub') + f"#msg-{msg.id}"
+        if recipient:
+            target_user = User.query.filter_by(username=recipient).first()
+            if target_user:
+                create_notification(target_user.id, notif_msg, 'info', target_url)
+        else:
+            # BROADCAST: Notify ALL admins and superadmins for global announcements
+            all_admins = User.query.filter(or_(User.role.ilike('admin'), User.role.ilike('superadmin'))).all()
+            for admin in all_admins:
+                create_notification(admin.id, notif_msg, 'info', target_url)
     # -------------------------------------
 
     # Pre-fetch Draft Info for Payload
@@ -2023,6 +2029,8 @@ def api_hub_propose():
     data = request.get_json(force=True) or {}
     draft_id = data.get('draft_id')
     justification = data.get('justification', '').strip()
+    recipient_name = data.get('recipient_name', '').strip()
+    if not recipient_name: recipient_name = None
     
     if not draft_id:
         return jsonify({'ok': False, 'error': 'No draft selected.'}), 400
@@ -2041,7 +2049,8 @@ def api_hub_propose():
         content=f"Submitted draft **{dv.name}** for approval.",
         message_type='proposal',
         draft_id=draft_id,
-        proposal_status='pending'
+        proposal_status='pending',
+        recipient_name=recipient_name
     )
     db.session.add(msg)
     db.session.commit()
@@ -2051,19 +2060,18 @@ def api_hub_propose():
     
     # Notify Admins (Only if sender is a regular user and recipient is an admin)
     sender_role = session.get('role')
-    # Determine if we should notify. Rule: User to Admin/Superadmin only.
     if str(sender_role).lower() == 'user':
-        # Broad search for all administrators
-        admins = User.query.filter(
-            or_(User.role.ilike('admin'), User.role.ilike('superadmin'))
-        ).all()
-        for admin in admins:
-            create_notification(
-                admin.id, 
-                f"A new schedule proposal has been submitted by {session.get('username')} for draft: {dv.name}", 
-                'info', 
-                url_for('proposal_hub')
-            )
+        notif_msg = f"A new schedule proposal has been submitted by {session.get('username')} for draft: {dv.name}"
+        target_url = url_for('proposal_hub') + f"#msg-{msg.id}"
+        if recipient_name:
+            target_user = User.query.filter_by(username=recipient_name).first()
+            if target_user:
+                create_notification(target_user.id, notif_msg, 'info', target_url)
+        else:
+            # BROADCAST: Notify ALL admins and superadmins for global announcements
+            all_admins = User.query.filter(or_(User.role.ilike('admin'), User.role.ilike('superadmin'))).all()
+            for admin in all_admins:
+                create_notification(admin.id, notif_msg, 'info', target_url)
     
     # WebSocket Broadcast
     semester = dv.semester or session.get('selected_semester', '1st Semester')
@@ -2386,15 +2394,10 @@ def manage_courses():
     # Base Query
     query = Course.query.filter_by(is_archived=False)
 
-    # DATA ISOLATION: Department Heads see all items in their department OR what they created
+    # DATA ISOLATION: Makita nila LANG ang gawa nila (Strict Mode)
     if session.get('role') == 'user':
-        user_dept = session.get('department')
         user_id = session.get('user_id')
-        if user_dept:
-            query = query.filter(or_(Course.department == user_dept, Course.created_by_id == user_id))
-        else:
-            # Fallback: if no department on profile, at least show what they created
-            query = query.filter_by(created_by_id=user_id)
+        query = query.filter_by(created_by_id=user_id)
 
     # 1. Apply Semester Filter
     if selected_semester != 'All':
@@ -3371,15 +3374,10 @@ def manage_rooms():
     # 2. Base Query
     query = Room.query.filter_by(is_archived=False)
     
-    # DATA ISOLATION: Department Heads see all items in their department OR what they created
+    # DATA ISOLATION: Makita nila LANG ang gawa nila (Strict Mode)
     if session.get('role') == 'user':
-        user_dept = session.get('department')
         user_id = session.get('user_id')
-        if user_dept:
-            query = query.filter(or_(Room.department.ilike(f"%{user_dept}%"), Room.created_by_id == user_id))
-        else:
-            # Fallback: if no department on profile, at least show what they created
-            query = query.filter_by(created_by_id=user_id)
+        query = query.filter_by(created_by_id=user_id)
     
     # 3. Apply Search
     if search_query:
@@ -3909,7 +3907,7 @@ def manage_sections():
     )
 
 @app.route('/manage/section/add', methods=['POST'])
-@login_required
+@role_required('admin', 'superadmin')
 def add_section():
     section_name = request.form.get('section_name', '').strip()
 
@@ -3946,6 +3944,7 @@ def add_section():
 
 @app.route('/manage/section/update/<int:section_id>', methods=['POST'])
 @login_required
+@role_required('admin', 'superadmin')
 @hist_lockdown
 def update_section(section_id):
     section = Section.query.get_or_404(section_id)
@@ -4125,7 +4124,7 @@ def sections_archive():
     )
 
 @app.route('/manage/section/archive/<int:section_id>', methods=['POST'])
-@login_required
+@role_required('admin', 'superadmin')
 def archive_section(section_id):
     section = Section.query.get_or_404(section_id)
     if section.section_name == 'T.B.A.':
@@ -4157,7 +4156,7 @@ def restore_section(section_id):
 
 # I-UPDATE ANG delete_section FUNCTION
 @app.route('/manage/section/delete/<int:section_id>', methods=['POST'])
-@login_required
+@role_required('admin', 'superadmin')
 def delete_section(section_id):
     section = Section.query.get_or_404(section_id)
     tba_section = get_or_create_tba_section()
@@ -4291,15 +4290,10 @@ def manage_faculty():
     # 2. Base Query
     query = Faculty.query.filter_by(is_archived=False)
     
-    # DATA ISOLATION: Department Heads see all items in their department OR what they created
+    # DATA ISOLATION: Makita nila LANG ang gawa nila (Strict Mode)
     if session.get('role') == 'user':
-        user_dept = session.get('department')
         user_id = session.get('user_id')
-        if user_dept:
-            query = query.filter(or_(Faculty.department == user_dept, Faculty.created_by_id == user_id))
-        else:
-            # Fallback: if no department on profile, at least show what they created
-            query = query.filter_by(created_by_id=user_id)
+        query = query.filter_by(created_by_id=user_id)
 
     # 3. Apply Search
     if search_query:
@@ -5088,7 +5082,7 @@ def view_timetable():
 
         _rom_live = Room.query.filter_by(is_archived=False)
         if session.get('role') == 'user' and user_dept:
-             _rom_live = _rom_live.filter(or_(Room.department.ilike(f"%{user_dept}%"), Room.created_by_id == session.get('user_id')))
+             _rom_live = _rom_live.filter(Room.created_by_id == session.get('user_id'))
         _rom_live = _rom_live.order_by(Room.room_name).all()
 
         all_rooms    = [r for r in _rom_live if r.room_name != 'T.B.A.'] + \
@@ -15622,18 +15616,15 @@ def student_schedule(student_id):
         is_archive = True
         active_archive = TermArchive.query.get_or_404(term_id)
         
-        # Look for the student in the archive's entities
-        archive_entry = ArchivedEntity.query.filter_by(
-            term_archive_id=term_id
-        ).filter(ArchivedEntity.entity_type.in_(['Student', 'IrregularStudent']), 
-                 ArchivedEntity.data_json.like(f'%"student_id": "{student_id}"%')).first()
+        # NEW: Look for the student in the ArchivedStudent table
+        student = ArchivedStudent.query.filter_by(
+            term_archive_id=term_id,
+            student_id=student_id
+        ).first()
         
-        if not archive_entry:
+        if not student:
             flash('Student records not found in this archive.', 'warning')
             return redirect(url_for('student_schedule', student_id=student_id))
-        
-        data = json.loads(archive_entry.data_json)
-        student = SimpleNamespace(**data)
         
         # Load archived schedules
         if student.is_irregular:
@@ -15722,14 +15713,12 @@ def public_archived_timetable_html(archive_id, student_id):
     archive = TermArchive.query.get_or_404(archive_id)
     
     # 1. Reconstruct Student from snapshot
-    archive_entry = ArchivedEntity.query.filter_by(
-        term_archive_id=archive_id
-    ).filter(ArchivedEntity.entity_type.in_(['Student', 'IrregularStudent']), 
-             ArchivedEntity.data_json.like(f'%"student_id": "{student_id}"%')).first()
+    student = ArchivedStudent.query.filter_by(
+        term_archive_id=archive_id,
+        student_id=student_id
+    ).first()
     
-    if not archive_entry: abort(404)
-    data = json.loads(archive_entry.data_json)
-    student = SimpleNamespace(**data)
+    if not student: abort(404)
 
     # 2. Get Schedules
     if student.is_irregular:
@@ -16046,6 +16035,18 @@ def users_recycle_bin():
         current_sort=sort_by,
         now=datetime.utcnow()
     )
+
+@app.route('/manage/user/reset_password/<int:user_id>', methods=['POST'])
+@login_required
+@role_required('superadmin')
+@hist_lockdown
+def reset_user_password(user_id):
+    user = User.query.get_or_404(user_id)
+    user.password_hash = generate_password_hash('CvSU123!')
+    db.session.commit()
+    log_activity("Reset Password", f"Reset password for user {user.username} to default.")
+    flash(f"Successfully reset password for {user.username} to 'CvSU123!'.", "success")
+    return redirect(url_for('manage_users'))
 
 @app.route('/manage/user/archive/<int:user_id>', methods=['POST'])
 @login_required
