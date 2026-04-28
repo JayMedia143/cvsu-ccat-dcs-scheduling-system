@@ -19,23 +19,27 @@
     {% if not is_hist %}
     <div class="d-flex align-items-center gap-2 gap-md-3">
         {% if session.get('role') in ['admin', 'superadmin'] %}
-        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importWordModal" title="Import from Word">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importWordModal"
+            title="Import from Word">
             <i class="bi bi-file-earmark-word-fill"></i>
             <span class="d-none d-md-inline">Import Word</span>
         </button>
 
-        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importCoursesPdfModal" title="Import from PDF">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importCoursesPdfModal"
+            title="Import from PDF">
             <i class="bi bi-file-earmark-pdf-fill"></i>
             <span class="d-none d-md-inline">Import PDF</span>
         </button>
 
-        <a href="{{ url_for('course_code_assignment') }}" class="btn-google-action" style="text-decoration:none;" title="Department Assignment">
+        <a href="{{ url_for('course_code_assignment') }}" class="btn-google-action" style="text-decoration:none;"
+            title="Department Assignment">
             <i class="bi bi-diagram-3-fill"></i>
             <span class="d-none d-md-inline">Dept.</span>
         </a>
         {% endif %}
 
-        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addCourseModal" title="Add New Course">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addCourseModal"
+            title="Add New Course">
             <i class="bi bi-plus-lg"></i>
             <span class="d-none d-md-inline">New</span>
         </button>
@@ -602,7 +606,8 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-file-earmark-word-fill text-primary me-2"></i>Import Curriculum (Word)</h5>
+                <h5 class="modal-title"><i class="bi bi-file-earmark-word-fill text-primary me-2"></i>Import Curriculum
+                    (Word)</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('import_courses_docx') }}" method="POST" enctype="multipart/form-data">
@@ -660,7 +665,8 @@
             <form action="{{ url_for('import_courses_pdf') }}" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>Import Curriculum (PDF)</h5>
+                    <h5 class="modal-title"><i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>Import
+                        Curriculum (PDF)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
@@ -676,8 +682,10 @@
                         </select>
                     </div>
                     <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" name="auto_assign" id="autoAssignSwitchPdf" checked>
-                        <label class="form-check-label small" for="autoAssignSwitchPdf">Automatically assign to sections</label>
+                        <input class="form-check-input" type="checkbox" name="auto_assign" id="autoAssignSwitchPdf"
+                            checked>
+                        <label class="form-check-label small" for="autoAssignSwitchPdf">Automatically assign to
+                            sections</label>
                     </div>
                     <div id="semesterSelectPdf" class="mb-3">
                         <label class="form-label fw-bold small">ASSIGN TO SEMESTER</label>
@@ -735,20 +743,23 @@
                         single subject. You will need to fill in the <strong>Course Code</strong> (e.g., COSC 101),
                         <strong>Full Name</strong>, and <strong>Department</strong>. You must also specify the
                         <strong>Lecture/Lab units</strong> and <strong>Weekly Hours</strong> (Sync/Async) so the system
-                        knows how much time is needed for scheduling.</p>
+                        knows how much time is needed for scheduling.
+                    </p>
                 </div>
 
                 <!-- 2. BULK IMPORTING -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-success small mb-1">2. Bulk Importing from Curriculum</h6>
                     <p class="small text-muted mb-0">Instead of adding subjects one by one, use the
-                        <strong>Import</strong> buttons:</p>
+                        <strong>Import</strong> buttons:
+                    </p>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>PDF Import:</strong> Best for standard curriculum files; the system scans the text
                             to extract subjects automatically.</li>
                         <li><strong>Word Import:</strong> For most reliable results, click this button and use the
                             <strong>'Download Template'</strong> link inside. Fill out that file and upload it back to
-                            the system.</li>
+                            the system.
+                        </li>
                     </ul>
                 </div>
 
@@ -765,7 +776,8 @@
                     <h6 class="fw-bold text-warning small mb-1">4. Finding & Sorting</h6>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Search Bar:</strong> Type any part of a code or name; the list will update
-                            <strong>instantly</strong> as you type.</li>
+                            <strong>instantly</strong> as you type.
+                        </li>
                         <li><strong>Funnel Icon:</strong> Click this to filter the list by a specific
                             <strong>Department</strong> or common <strong>Subject Code</strong> (like Math or COSC).
                         </li>
@@ -787,7 +799,8 @@
                         <li><strong>Trash Icon:</strong> Move the subject to the <strong>Recycle Bin</strong>.</li>
                         <li><strong>Bulk Actions:</strong> Click any row to select it (or the Header box to
                             <strong>Select All</strong>). Use the <strong>Green Bar</strong> to bulk-delete subjects to
-                            the Recycle Bin.</li>
+                            the Recycle Bin.
+                        </li>
                     </ul>
                 </div>
 
@@ -797,7 +810,8 @@
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or
                         the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number
                         into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's
-                        <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                        <strong>Left/Right arrow keys</strong> to flip through pages.
+                    </p>
                 </div>
 
                 {% else %}
@@ -809,7 +823,8 @@
                         single subject. You will need to fill in the <strong>Course Code</strong> (e.g., COSC 101),
                         <strong>Full Name</strong>, and <strong>Department</strong>. You must also specify the
                         <strong>Lecture/Lab units</strong> and <strong>Weekly Hours</strong> (Sync/Async) so the system
-                        knows how much time is needed for scheduling.</p>
+                        knows how much time is needed for scheduling.
+                    </p>
                 </div>
 
                 <!-- 2. FINDING & SORTING (WAS #4) -->
@@ -817,7 +832,8 @@
                     <h6 class="fw-bold text-warning small mb-1">2. Finding & Sorting</h6>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Search Bar:</strong> Type any part of a code or name; the list will update
-                            <strong>instantly</strong> as you type.</li>
+                            <strong>instantly</strong> as you type.
+                        </li>
                         <li><strong>Funnel Icon:</strong> Click this to filter the list by a specific
                             <strong>Department</strong> or common <strong>Subject Code</strong> (like Math or COSC).
                         </li>
@@ -837,7 +853,8 @@
                         <li><strong>Trash Icon:</strong> Move the subject to the <strong>Recycle Bin</strong>.</li>
                         <li><strong>Bulk Actions:</strong> Click any row to select it (or the Header box to
                             <strong>Select All</strong>). Use the <strong>Green Bar</strong> to bulk-delete subjects to
-                            the Recycle Bin.</li>
+                            the Recycle Bin.
+                        </li>
                     </ul>
                 </div>
 
@@ -847,7 +864,8 @@
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or
                         the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number
                         into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's
-                        <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                        <strong>Left/Right arrow keys</strong> to flip through pages.
+                    </p>
                 </div>
                 {% endif %}
             </div>
