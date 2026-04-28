@@ -1,10 +1,20 @@
 # 🚀 CvSU Scheduling System - Setup Guide (Tagalog/English)
 
-Para ma-set up itong project sa ibang laptop, sundin lang ang mga steps sa ibaba. Siguraduhin na naka-install na ang Python sa laptop (Recommended: **Python 3.11**).
+Para ma-set up itong project sa ibang laptop, sundin lang ang mga steps sa ibaba.
 
 ---
 
-## 🛠️ Step-by-Step Installation (Windows Terminal/PowerShell)
+## 📥 1. Essentials to Download (Bago mag-umpisa)
+
+Siguraduhin na i-download at i-install muna ang mga ito:
+1.  **Python 3.11.1**: [Download Python 3.11.1](https://www.python.org/downloads/release/python-3111/)
+    - *Note: Siguraduhin na i-check ang box na **"Add Python to PATH"** habang nag-i-install.*
+2.  **Git**: [Download Git for Windows](https://git-scm.com/download/win)
+    - *Kailangan ito para sa pag-clone ng repository.*
+
+---
+
+## 🛠️ 2. Step-by-Step Installation (Windows Terminal/PowerShell)
 
 Buksan ang terminal sa loob ng project folder at i-type ang mga sumusunod:
 
