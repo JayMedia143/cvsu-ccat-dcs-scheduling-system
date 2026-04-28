@@ -313,7 +313,13 @@ _portal_attempts = {}
 _PORTAL_MAX_ATTEMPTS = 10
 _PORTAL_LOCKOUT_MINUTES = 5
 
+import threading
+import eventlet
+from eventlet.event import Event as EventletEvent
+
 # GLOBAL VARIABLE PARA SA PROGRESS
+# Gagamit tayo ng Eventlet Event para sigurado sa async environment
+ga_stop_event = EventletEvent()
 generation_status = {
     'running': False,
     'generation': 0,
@@ -6845,10 +6851,21 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
         except Exception:
             generation_status['pop_size'] = None  # fallback ---- UI shows '...'
 
+        # Reset stop signals
+        global ga_stop_event
+        ga_stop_event = EventletEvent() # Bagong event object bawat run
+        generation_status['stop_requested'] = False
+        
+        # Ensure signal file is gone
+        if os.path.exists("ga_stop.signal"):
+            try: os.remove("ga_stop.signal")
+            except: pass
+
         try:
             best_schedule = scheduler.run_algorithm(
                 progress_callback=update_progress,
                 seed_records=seed_records,
+                stop_event=ga_stop_event
             )
         except Exception as e:
             import traceback
@@ -7284,10 +7301,27 @@ def start_generation():
 @role_required('admin', 'superadmin')
 def stop_generation():
     global generation_status
-    if generation_status['running']:
-        generation_status['stop_requested'] = True
-        return jsonify({'status': 'stopping'})
-    return jsonify({'status': 'not_running'})
+    print(f"🛑 STOP CLICKED. Current state: running={generation_status['running']}")
+    
+    # Always set these to True/False to force UI to stop polling even if thread is stubborn
+    generation_status['stop_requested'] = True
+    generation_status['running'] = False # Force UI stop
+    
+    # NUCLEAR OPTION: File-based signal with absolute path
+    try:
+        sig_path = os.path.join(basedir, "ga_stop.signal")
+        with open(sig_path, "w") as f:
+            f.write("STOP")
+        print(f"📁 Signal file created at: {sig_path}")
+    except Exception as e:
+        print(f"❌ Failed to create signal file: {e}")
+
+    try:
+        ga_stop_event.send(True)
+    except:
+        pass
+        
+    return jsonify({'status': 'stopping'})
 
 @app.route('/get-generation-status')
 @login_required

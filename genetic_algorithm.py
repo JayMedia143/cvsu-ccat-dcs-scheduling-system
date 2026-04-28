@@ -2,6 +2,7 @@ import os
 import random
 import time
 import psutil
+import eventlet
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 try:
@@ -2894,7 +2895,20 @@ class GeneticScheduler:
     # ------------------------------------------------------------------ #
     # MAIN LOOP — NSGA-II (Multi-Objective Genetic Algorithm II)          #
     # ------------------------------------------------------------------ #
-    def run_algorithm(self, progress_callback=None, seed_records=None):
+    def _check_stop(self, stop_event):
+        """Helper to check all stop signals (Eventlet, Standard, File)."""
+        if stop_event:
+            if hasattr(stop_event, 'ready') and stop_event.ready(): return True
+            if hasattr(stop_event, 'is_set') and stop_event.is_set(): return True
+            
+        # Check for signal file in the same directory as this script
+        basedir = os.path.dirname(os.path.abspath(__file__))
+        sig_path = os.path.join(basedir, "ga_stop.signal")
+        if os.path.exists(sig_path):
+            return True
+        return False
+
+    def run_algorithm(self, progress_callback=None, seed_records=None, stop_event=None):
         """
         NSGA-II main loop with warm-start and two-phase fitness.
 
@@ -3076,7 +3090,17 @@ class GeneticScheduler:
                     print(f"⏳ SC-II phase time limit (10 min) reached at Gen {generation}.")
                     break
 
-            # Yield GIL every 6 gens for UI polling
+            # --- STOP SIGNAL CHECK ---
+            if self._check_stop(stop_event):
+                print(f"🛑 Generation {generation}: Global stop signal detected. Terminating...")
+                try: os.remove("ga_stop.signal")
+                except: pass
+                break
+
+            # Yield to Eventlet every generation to allow /stop-generation request to arrive
+            eventlet.sleep(0)
+            
+            # Additional yield for standard threading every 6 gens
             if generation % 6 == 0:
                 time.sleep(0.005)
 
@@ -3233,6 +3257,7 @@ class GeneticScheduler:
                 n_keep  = min(len(elites), 3)
                 new_pop = list(elites[:n_keep])
                 for elite in elites[:5]:
+                    if self._check_stop(stop_event): break
                     nc = self._copy_chromosome(elite)
                     self._hard_conflict_repair(nc)
                     _fit(nc)

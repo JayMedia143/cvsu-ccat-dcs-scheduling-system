@@ -17,12 +17,12 @@ DESCRIPTION    = "Strict BSCS/BSIT focused dataset with 64+ sections and 60+ fac
 
 # ── ROOMS (25 total) ───────────────────────────────────────────────────────────
 ROOMS = [
-    # ICT Building A — Lecture rooms
-    {'name': 'A101', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0},
-    {'name': 'A102', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0},
-    {'name': 'A103', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0},
-    {'name': 'A201', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 50, 'func_comp': 0},
-    {'name': 'A202', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 50, 'func_comp': 0},
+    # ICT Building A — Lecture rooms (DCS Specific)
+    {'name': 'A101', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0, 'room_depts': 'Department of Computer Studies'},
+    {'name': 'A102', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0, 'room_depts': 'Department of Computer Studies'},
+    {'name': 'A103', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0, 'room_depts': 'Department of Computer Studies'},
+    {'name': 'A201', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 50, 'func_comp': 0, 'room_depts': 'Department of Computer Studies'},
+    {'name': 'A202', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 50, 'func_comp': 0, 'room_depts': 'Department of Computer Studies'},
     
     # ICT Building B — Computer Labs (DCS Specific)
     {'name': 'CL1', 'building': 'ICT Building B', 'capabilities': 'Lecture,Computer Lab', 'status': 'Available', 'capacity': 35, 'func_comp': 35, 'room_depts': 'Department of Computer Studies'},
@@ -38,11 +38,11 @@ ROOMS = [
     {'name': 'E201', 'building': 'Engineering Building', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 40, 'func_comp': 0, 'room_depts': 'Department of Engineering'},
     {'name': 'ELAB1', 'building': 'Engineering Building', 'capabilities': 'Lecture,Computer Lab', 'status': 'Available', 'capacity': 30, 'func_comp': 25, 'room_depts': 'Department of Engineering'},
 
-    # Arts & Sciences Building
-    {'name': 'AS1', 'building': 'AS Building', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0},
-    {'name': 'AS2', 'building': 'AS Building', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0},
-    {'name': 'AS3', 'building': 'AS Building', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0},
-    {'name': 'AS4', 'building': 'AS Building', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0},
+    # Arts & Sciences Building (DAS Specific)
+    {'name': 'AS1', 'building': 'AS Building', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0, 'room_depts': 'Department of Arts and Sciences'},
+    {'name': 'AS2', 'building': 'AS Building', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0, 'room_depts': 'Department of Arts and Sciences'},
+    {'name': 'AS3', 'building': 'AS Building', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0, 'room_depts': 'Department of Arts and Sciences'},
+    {'name': 'AS4', 'building': 'AS Building', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0, 'room_depts': 'Department of Arts and Sciences'},
     
     # Large Hall / Field
     {'name': 'University Field', 'building': 'Grounds', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0},
