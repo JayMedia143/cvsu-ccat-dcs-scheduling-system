@@ -583,7 +583,7 @@
 
                         {% if session.get('role') == 'superadmin' %}
                         <li class="nav-item dropdown">
-                            <a class="menu-item dropdown-toggle {% if request.endpoint in ['manage_users', 'monitoring', 'signup', 'system_tester'] %}active{% endif %}"
+                            <a class="menu-item dropdown-toggle {% if request.endpoint in ['manage_users', 'monitoring', 'signup'] %}active{% endif %}"
                                 href="#" role="button" data-bs-toggle="dropdown">Users</a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{{ url_for('manage_users') }}"><i
@@ -592,12 +592,6 @@
                                             class="bi bi-display me-2"></i> User Monitoring</a></li>
                                 <li><a class="dropdown-item" href="{{ url_for('signup') }}"><i
                                             class="bi bi-person-plus me-2"></i> User Registration</a></li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
-                                <li><a class="dropdown-item text-primary fw-bold"
-                                        href="{{ url_for('system_tester') }}"><i class="bi bi-shield-check me-2"></i>
-                                        SYSTEM TESTER</a></li>
                             </ul>
                         </li>
                         {% endif %}
