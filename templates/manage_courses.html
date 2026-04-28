@@ -902,6 +902,14 @@
             rowCheckboxes = document.querySelectorAll('.row-checkbox');
             allRows = document.querySelectorAll('.course-row');
 
+            // AUTO-DISPOSE MODALS: Prevent "backdrop of undefined" by destroying instances when closed
+            document.querySelectorAll('.modal').forEach(m => {
+                m.addEventListener('hidden.bs.modal', function() {
+                    const inst = bootstrap.Modal.getInstance(m);
+                    if (inst) inst.dispose();
+                }, { once: false });
+            });
+
             // Row Click Event
             allRows.forEach(row => {
                 // Remove old listeners to prevent duplicates (clean slate)
@@ -1008,33 +1016,64 @@
                     window.history.pushState({ path: newUrl }, '', newUrl);
 
                     // 2. Fetch Data from Server (Background)
-                    fetch(newUrl)
-                        .then(response => response.text())
-                        .then(html => {
-                            // 3. Parse the HTML response
-                            const parser = new DOMParser();
-                            const doc = parser.parseFromString(html, 'text/html');
-
-                            // 4. Get new Table Body and Pagination
-                            const newTableBody = doc.getElementById('coursesTable').querySelector('tbody').innerHTML;
-                            const newPagination = doc.querySelector('.pagination').innerHTML;
-
-                            // 5. Replace content in current page
-                            document.querySelector('#coursesTable tbody').innerHTML = newTableBody;
-                            document.querySelector('.pagination').innerHTML = newPagination;
-
-                            // 6. Re-attach click events to the new rows
-                            initializeSelectionLogic();
-
-                            // 7. Reset selection state (kasi nawala ang checked rows pagpalit)
-                            bulkActionBar.classList.remove('active');
-                            if (selectAllCheckbox) selectAllCheckbox.checked = false;
-
-                        })
-                        .catch(err => console.error('Search failed:', err));
-
-                }, 300); // 300ms delay
+                    const activeModals = Array.from(document.querySelectorAll('.modal.show'));
+                    if (activeModals.length > 0) {
+                        let closedCount = 0;
+                        activeModals.forEach(m => {
+                            const inst = bootstrap.Modal.getInstance(m) || new bootstrap.Modal(m);
+                            m.addEventListener('hidden.bs.modal', function onHidden() {
+                                m.removeEventListener('hidden.bs.modal', onHidden);
+                                closedCount++;
+                                if (closedCount === activeModals.length) executeFetch(newUrl);
+                            }, { once: true });
+                            inst.hide();
+                        });
+                    } else {
+                        executeFetch(newUrl);
+                    }
+                }, 300);
             });
+        }
+
+        function executeFetch(url) {
+            if (typeof bootstrap !== 'undefined') {
+                document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }
+
+            fetch(url)
+                .then(response => response.text())
+                .then(html => {
+                    setTimeout(() => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+
+                        const mainArea = document.getElementById('mainContentArea');
+                        if (mainArea && doc.getElementById('mainContentArea')) {
+                            mainArea.innerHTML = doc.getElementById('mainContentArea').innerHTML;
+                        } else {
+                            const newTableBody = doc.getElementById('coursesTable').querySelector('tbody').innerHTML;
+                            document.querySelector('#coursesTable tbody').innerHTML = newTableBody;
+                            const pag = doc.querySelector('.pagination');
+                            if (pag) document.querySelector('.pagination').innerHTML = pag.innerHTML;
+                        }
+
+                        if (typeof bootstrap !== 'undefined') {
+                            document.querySelectorAll('.tooltip').forEach(t => t.remove());
+                            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+                            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                                return new bootstrap.Tooltip(tooltipTriggerEl)
+                            });
+                        }
+
+                        initializeSelectionLogic();
+                        bulkActionBar.classList.remove('active');
+                        if (selectAllCheckbox) selectAllCheckbox.checked = false;
+                    }, 20);
+                })
+                .catch(err => console.error('Search failed:', err));
         }
 
         // ==================================================

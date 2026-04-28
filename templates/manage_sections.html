@@ -939,9 +939,16 @@
         // ==========================================
 
         function initializeSelectionLogic() {
-            const rowCheckboxes = document.querySelectorAll('.row-checkbox');
-            const allRows = document.querySelectorAll('.section-row');
-            const paginationLinks = document.querySelectorAll('.page-link');
+            rowCheckboxes = document.querySelectorAll('.row-checkbox');
+            allRows = document.querySelectorAll('.course-row');
+
+            // AUTO-DISPOSE MODALS: Prevent "backdrop of undefined" by destroying instances when closed
+            document.querySelectorAll('.modal').forEach(m => {
+                m.addEventListener('hidden.bs.modal', function() {
+                    const inst = bootstrap.Modal.getInstance(m);
+                    if (inst) inst.dispose();
+                }, { once: false });
+            });
 
             allRows.forEach(row => {
                 // Prevent duplicate listeners by cloning
@@ -1023,13 +1030,53 @@
 
         // AJAX Fetch Function
         function fetchContent(url) {
+            window.history.pushState({ path: url }, '', url);
+
+            const activeModals = Array.from(document.querySelectorAll('.modal.show'));
+            if (activeModals.length > 0) {
+                let closedCount = 0;
+                activeModals.forEach(m => {
+                    const inst = bootstrap.Modal.getInstance(m) || new bootstrap.Modal(m);
+                    m.addEventListener('hidden.bs.modal', function onHidden() {
+                        m.removeEventListener('hidden.bs.modal', onHidden);
+                        closedCount++;
+                        if (closedCount === activeModals.length) executeFetch(url);
+                    }, { once: true });
+                    inst.hide();
+                });
+            } else {
+                executeFetch(url);
+            }
+        }
+
+        function executeFetch(url) {
+            if (typeof bootstrap !== 'undefined') {
+                document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }
+
             fetch(url).then(response => response.text()).then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                document.getElementById('mainContentArea').innerHTML = doc.getElementById('mainContentArea').innerHTML;
-                initializeSelectionLogic();
-                bulkActionBar.classList.remove('active');
-                if (selectAllCheckbox) { selectAllCheckbox.checked = false; selectAllCheckbox.indeterminate = false; }
+                setTimeout(() => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newArea = doc.getElementById('mainContentArea');
+                    if (newArea) document.getElementById('mainContentArea').innerHTML = newArea.innerHTML;
+                    
+                    initializeSelectionLogic();
+
+                    if (typeof bootstrap !== 'undefined') {
+                        document.querySelectorAll('.tooltip').forEach(t => t.remove());
+                        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+                        tooltipTriggerList.map(function (tooltipTriggerEl) {
+                            return new bootstrap.Tooltip(tooltipTriggerEl)
+                        });
+                    }
+
+                    bulkActionBar.classList.remove('active');
+                    if (selectAllCheckbox) { selectAllCheckbox.checked = false; selectAllCheckbox.indeterminate = false; }
+                }, 20);
             }).catch(err => console.error('Fetch failed:', err));
         }
 

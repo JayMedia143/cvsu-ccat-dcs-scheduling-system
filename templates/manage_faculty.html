@@ -890,7 +890,16 @@
         }
 
         function initializeSelectionLogic() {
-            const { rowCheckboxes, allRows, paginationLinks } = getDynamicElements();
+            rowCheckboxes = document.querySelectorAll('.row-checkbox');
+            allRows = document.querySelectorAll('.course-row');
+
+            // AUTO-DISPOSE MODALS: Prevent "backdrop of undefined" by destroying instances when closed
+            document.querySelectorAll('.modal').forEach(m => {
+                m.addEventListener('hidden.bs.modal', function() {
+                    const inst = bootstrap.Modal.getInstance(m);
+                    if (inst) inst.dispose();
+                }, { once: false });
+            });
 
             allRows.forEach(row => {
                 const newRow = row.cloneNode(true);
@@ -971,13 +980,53 @@
 
         function fetchContent(url) {
             window.history.pushState({ path: url }, '', url);
+
+            const activeModals = Array.from(document.querySelectorAll('.modal.show'));
+            if (activeModals.length > 0) {
+                let closedCount = 0;
+                activeModals.forEach(m => {
+                    const inst = bootstrap.Modal.getInstance(m) || new bootstrap.Modal(m);
+                    m.addEventListener('hidden.bs.modal', function onHidden() {
+                        m.removeEventListener('hidden.bs.modal', onHidden);
+                        closedCount++;
+                        if (closedCount === activeModals.length) executeFetch(url);
+                    }, { once: true });
+                    inst.hide();
+                });
+            } else {
+                executeFetch(url);
+            }
+        }
+
+        function executeFetch(url) {
+            if (typeof bootstrap !== 'undefined') {
+                document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }
+
             fetch(url).then(response => response.text()).then(html => {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                document.getElementById('mainContentArea').innerHTML = doc.getElementById('mainContentArea').innerHTML;
-                initializeSelectionLogic();
-                bulkActionBar.classList.remove('active');
-                if (selectAllCheckbox) { selectAllCheckbox.checked = false; selectAllCheckbox.indeterminate = false; }
+                setTimeout(() => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newArea = doc.getElementById('mainContentArea');
+                    if (newArea) document.getElementById('mainContentArea').innerHTML = newArea.innerHTML;
+                    
+                    initializeSelectionLogic();
+                    initializeFacultyModals();
+
+                    if (typeof bootstrap !== 'undefined') {
+                        document.querySelectorAll('.tooltip').forEach(t => t.remove());
+                        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+                        tooltipTriggerList.map(function (tooltipTriggerEl) {
+                            return new bootstrap.Tooltip(tooltipTriggerEl)
+                        });
+                    }
+
+                    bulkActionBar.classList.remove('active');
+                    if (selectAllCheckbox) { selectAllCheckbox.checked = false; selectAllCheckbox.indeterminate = false; }
+                }, 20);
             }).catch(err => console.error('Fetch failed:', err));
         }
 
@@ -995,251 +1044,263 @@
         }
 
         // =========================================================
-        // 4. WIZARD LOGIC LOOP (Per Faculty Member)
+        // 4. WIZARD LOGIC LOOP (Wrapped in function for AJAX support)
         // =========================================================
-        {% for faculty in all_faculty_for_modals %}
-        (function () {
-            const facultyId = "{{ faculty.id }}";
-            const modal = document.getElementById(`assignCoursesModal${facultyId}`);
-            if (!modal) return;
+        function initializeFacultyModals() {
+            {% for faculty in all_faculty_for_modals %}
+            (function () {
+                const facultyId = "{{ faculty.id }}";
+                const modal = document.getElementById(`assignCoursesModal${facultyId}`);
+                if (!modal) return;
 
-            const step1 = modal.querySelector('.wizard-step-1');
-            const step2 = modal.querySelector('.wizard-step-2');
-            const nextBtn = modal.querySelector('.btn-next-step');
-            const backBtn = modal.querySelector('.btn-back-step');
-            const sectionListDiv = modal.querySelector(`#sectionList${facultyId}`);
-            const totalHoursSpan = modal.querySelector(`#totalHours${facultyId}`);
-            const maxHours = parseInt("{{ faculty.max_weekly_hours }}", 10);
+                // Remove existing listeners to avoid duplicates
+                const nextBtn = modal.querySelector('.btn-next-step');
+                const backBtn = modal.querySelector('.btn-back-step');
+                const form = modal.querySelector(`#assignmentForm${facultyId}`);
+                
+                if (nextBtn) {
+                    const newNext = nextBtn.cloneNode(true);
+                    nextBtn.parentNode.replaceChild(newNext, nextBtn);
+                }
+                if (backBtn) {
+                    const newBack = backBtn.cloneNode(true);
+                    backBtn.parentNode.replaceChild(newBack, backBtn);
+                }
+                if (form) {
+                    const newForm = form.cloneNode(true);
+                    form.parentNode.replaceChild(newForm, form);
+                }
 
-            // RETENTION: Kunin ang assignments mula sa database + ScheduledClass (post-GA)
-            const currentAssignmentPairs = [...new Set([
-                {% for assign in faculty.assignments %}
-                "{{ assign.course_id }}-{{ assign.section_id }}",
+                const step1 = modal.querySelector('.wizard-step-1');
+                const step2 = modal.querySelector('.wizard-step-2');
+                const nextBtnRef = modal.querySelector('.btn-next-step');
+                const backBtnRef = modal.querySelector('.btn-back-step');
+                const sectionListDiv = modal.querySelector(`#sectionList${facultyId}`);
+                const totalHoursSpan = modal.querySelector(`#totalHours${facultyId}`);
+                const maxHours = parseInt("{{ faculty.max_weekly_hours }}", 10);
+
+                // RETENTION logic...
+                const currentAssignmentPairs = [...new Set([
+                    {% for assign in faculty.assignments %}
+                    "{{ assign.course_id }}-{{ assign.section_id }}",
+                    {% endfor %}
+                    {% for pair in sc_pairs_by_faculty.get(faculty.id | string, []) %}
+                    "{{ pair }}",
+                    {% endfor %}
+                ])];
+
+                const availDaysRaw = "{{ faculty.available_days or '' }}";
+                const availDays = availDaysRaw ? availDaysRaw.split(',').map(d => d.trim()).filter(d => d)
+                    : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+                const facSplitData = allSplitData[String(facultyId)] || {};
+
+                nextBtnRef.addEventListener('click', function () {
+                    const checkedBoxes = Array.from(step1.querySelectorAll(`.teachable-cb-${facultyId}:checked`));
+                    const selectedCourses = checkedBoxes.map(cb => ({
+                        id: cb.value,
+                        code: cb.getAttribute('data-code'),
+                        name: cb.getAttribute('data-course-name'),
+                        lecHours: parseFloat(cb.getAttribute('data-lec-hours') || 0),
+                        labHours: parseFloat(cb.getAttribute('data-lab-hours') || 0),
+                        asyncHours: parseFloat(cb.getAttribute('data-async-hours') || 0),
+                        totalHours: parseFloat(cb.getAttribute('data-course-hours') || 0),
+                    }));
+
+                    sectionListDiv.innerHTML = '';
+                    if (selectedCourses.length === 0) {
+                        sectionListDiv.innerHTML = '<div class="alert alert-warning border-0 shadow-sm m-2">No subjects selected. Go back to Step 1.</div>';
+                    } else {
+                        const allDayOpts = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+                        function buildSplitPanel(pair, sfx, hours, savedDay1, savedHours1, savedDay2, savedHours2) {
+                            const dayOpts1 = allDayOpts.map(d => `<option value="${d}" ${d === savedDay1 ? 'selected' : ''}>${d}</option>`).join('');
+                            const dayOpts2 = '<option value="">-- none --</option>' +
+                                allDayOpts.map(d => `<option value="${d}" ${d === savedDay2 ? 'selected' : ''}>${d}</option>`).join('');
+                            return `
+                              <div class="split-panel ps-3 pb-2 pt-1" id="splitpanel_${facultyId}_${pair.replace('-', '_')}_${sfx}">
+                                <div class="small text-muted mb-1" style="font-size:.77rem;">
+                                  <i class="bi bi-scissors me-1"></i>Split ${hours}h across days <em>(optional)</em>
+                                </div>
+                                <div class="d-flex align-items-center gap-1 mb-1 flex-wrap">
+                                  <span class="small text-muted" style="width:38px;font-size:.78rem;">Day 1:</span>
+                                  <select class="form-select form-select-sm split-day-1 py-0" style="max-width:120px;font-size:.8rem;"
+                                          name="split_${pair}_${sfx}day_1">${dayOpts1}</select>
+                                  <input type="number" class="form-control form-control-sm split-hrs-1 py-0"
+                                         style="max-width:64px;font-size:.8rem;" min="0.5" max="${hours}" step="0.5"
+                                         value="${savedHours1 || ''}" placeholder="hrs"
+                                         name="split_${pair}_${sfx}hours_1"
+                                         onchange="validateSplit(this.closest('.split-panel'),'${hours}')">
+                                  <span class="small text-muted">h</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1 mb-1 flex-wrap">
+                                  <span class="small text-muted" style="width:38px;font-size:.78rem;">Day 2:</span>
+                                  <select class="form-select form-select-sm split-day-2 py-0" style="max-width:120px;font-size:.8rem;"
+                                          name="split_${pair}_${sfx}day_2">${dayOpts2}</select>
+                                  <input type="number" class="form-control form-control-sm split-hrs-2 py-0"
+                                         style="max-width:64px;font-size:.8rem;" min="0" max="${hours}" step="0.5"
+                                         value="${savedHours2 || ''}" placeholder="hrs"
+                                         name="split_${pair}_${sfx}hours_2"
+                                         onchange="validateSplit(this.closest('.split-panel'),'${hours}')">
+                                  <span class="small text-muted">h</span>
+                                </div>
+                                <div class="split-total-msg" style="font-size:.77rem;"></div>
+                              </div>`;
+                        }
+
+                        let content = '<div class="row g-2">';
+                        const othersTaken = allTakenByOthers[String(facultyId)] || [];
+                        selectedCourses.forEach(course => {
+                            let matches = allSections.filter(s => {
+                                const pair = `${course.id}-${s.id}`;
+                                const alreadyMine = currentAssignmentPairs.includes(pair);
+                                const takenByOther = othersTaken.includes(pair);
+                                return (s.course_ids.includes(parseInt(course.id)) || alreadyMine) && !takenByOther;
+                            });
+                            if (matches.length === 0) return;
+
+                            const _facSplit = faSplitHoursMap[String(facultyId)] || {};
+                            const _firstEntry = Object.entries(_facSplit).find(([k]) => k.startsWith(course.id + '-'));
+                            const _hdrSplit = _firstEntry ? _firstEntry[1] : {};
+                            const effLecHoursHdr = _hdrSplit.lec !== undefined ? _hdrSplit.lec : course.lecHours;
+                            const effLabHoursHdr = _hdrSplit.lab !== undefined ? _hdrSplit.lab : course.labHours;
+
+                            let badges = '';
+                            if (effLecHoursHdr > 0) badges += `<span class="badge bg-primary bg-opacity-75 ms-1" style="font-size:.75rem;">Lec ${effLecHoursHdr}h</span>`;
+                            if (effLabHoursHdr > 0) badges += `<span class="badge bg-warning text-dark ms-1" style="font-size:.75rem;">Lab ${effLabHoursHdr}h</span>`;
+                            if (course.asyncHours > 0) badges += `<span class="badge bg-secondary ms-1" style="font-size:.75rem;">Async ${course.asyncHours}h</span>`;
+
+                            content += `
+                            <div class="col-md-6">
+                              <div class="card border-0 shadow-sm h-100" style="border-radius:8px;overflow:hidden;">
+                                <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between"
+                                     style="background:rgba(24,128,56,.08);border-bottom:2px solid rgba(24,128,56,.18);">
+                                  <span class="fw-bold text-success" style="font-size:.82rem;">${course.code} <span class="text-muted fw-normal" style="font-size:.78rem;">— ${course.name}</span></span>
+                                  <span>${badges}</span>
+                                </div>
+                                <div class="p-1">`;
+
+                            matches.forEach(sec => {
+                                const pair = `${course.id}-${sec.id}`;
+                                const isChecked = currentAssignmentPairs.includes(pair);
+                                const sd = facSplitData[pair] || {};
+
+                                const _secSplit = (_facSplit[pair]) || {};
+                                const effLecHours = _secSplit.lec !== undefined ? _secSplit.lec : course.lecHours;
+                                const effLabHours = _secSplit.lab !== undefined ? _secSplit.lab : course.labHours;
+
+                                content += `
+                                  <div class="px-2 pt-2 pb-1 border-bottom border-light assignment-row">
+                                      <input class="assignment-checkbox"
+                                             type="checkbox" name="assignments"
+                                             value="${pair}" id="assign_${facultyId}_${pair}"
+                                             data-hours="${course.totalHours}"
+                                             data-lec-hours="${course.lecHours}"
+                                             data-lab-hours="${course.labHours}"
+                                             data-async-hours="${course.asyncHours}"
+                                             ${isChecked ? 'checked' : ''}
+                                             onchange="toggleSessionPanels(this,'${facultyId}','${pair}')"
+                                             style="display:none">
+                                      <label class="d-block small fw-semibold text-dark cursor-pointer px-1 py-1 rounded"
+                                             for="assign_${facultyId}_${pair}">
+                                        ${sec.name}
+                                      </label>`;
+
+                                if (course.lecHours > 0) {
+                                    const lecVisible = isChecked ? '' : 'display:none;';
+                                    content += `
+                                    <div class="session-panels-${facultyId}-${pair.replace('-', '_')}" style="${lecVisible}">
+                                      <div class="d-flex align-items-center px-2 py-1 rounded mb-1"
+                                           style="background:rgba(13,110,253,.06);border-left:3px solid rgba(13,110,253,.4);">
+                                        <span class="badge bg-primary bg-opacity-75 me-2" style="font-size:.72rem;min-width:46px;">Lec</span>
+                                        <span class="small text-muted" style="font-size:.8rem;">${effLecHours}h — split across days (optional)</span>
+                                      </div>
+                                      ${buildSplitPanel(pair, 'lec_', effLecHours, sd.lec_day_1, sd.lec_hours_1, sd.lec_day_2, sd.lec_hours_2)}
+                                    </div>`;
+                                }
+
+                                if (course.labHours > 0) {
+                                    const labVisible = isChecked ? '' : 'display:none;';
+                                    content += `
+                                    <div class="session-panels-${facultyId}-${pair.replace('-', '_')}" style="${labVisible}">
+                                      <div class="d-flex align-items-center px-2 py-1 rounded mb-1"
+                                           style="background:rgba(255,193,7,.08);border-left:3px solid rgba(255,193,7,.6);">
+                                        <span class="badge bg-warning text-dark me-2" style="font-size:.72rem;min-width:46px;">Lab</span>
+                                        <span class="small text-muted" style="font-size:.8rem;">${effLabHours}h — split across days (optional)</span>
+                                      </div>
+                                      ${buildSplitPanel(pair, '', effLabHours, sd.day_1, sd.hours_1, sd.day_2, sd.hours_2)}
+                                    </div>`;
+                                }
+
+                                if (course.asyncHours > 0) {
+                                    const asyncVisible = isChecked ? '' : 'display:none;';
+                                    content += `
+                                    <div class="session-panels-${facultyId}-${pair.replace('-', '_')}" style="${asyncVisible}">
+                                      <div class="d-flex align-items-center px-2 py-1 rounded mb-1"
+                                           style="background:rgba(108,117,125,.07);border-left:3px solid rgba(108,117,125,.4);">
+                                        <span class="badge bg-secondary me-2" style="font-size:.72rem;min-width:46px;">Async</span>
+                                        <span class="small text-muted" style="font-size:.8rem;">${course.asyncHours}h — GA places freely</span>
+                                      </div>
+                                    </div>`;
+                                }
+                                content += `</div>`;
+                            });
+                            content += `</div></div></div>`;
+                        });
+                        sectionListDiv.innerHTML = content + '</div>';
+                    }
+                    step1.style.display = 'none';
+                    step2.style.display = 'block';
+                    updateTotal(facultyId);
+                });
+
+                backBtnRef.addEventListener('click', function () {
+                    step2.style.display = 'none';
+                    step1.style.display = 'block';
+                });
+
+                modal.querySelector(`#assignmentForm${facultyId}`).addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    const currentForm = this;
+                    const csrfToken = currentForm.querySelector('input[name="csrf_token"]')?.value;
+                    
+                    // Create a virtual form to submit
+                    const submissionForm = document.createElement('form');
+                    submissionForm.method = 'POST';
+                    submissionForm.action = currentForm.action;
+                    
+                    if (csrfToken) {
+                        const csrfInput = document.createElement('input');
+                        csrfInput.type = 'hidden'; i.name = 'csrf_token'; i.value = csrfToken;
+                        submissionForm.appendChild(csrfInput);
+                    }
+
+                    step2.querySelectorAll('.assignment-checkbox:checked').forEach(cb => {
+                        const pair = cb.value;
+                        const addH = (n, v) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = n; i.value = v; submissionForm.appendChild(i); };
+                        addH('assignments', pair);
+                        const pairKey = pair.replace('-', '_');
+                        ['', 'lec_'].forEach(sfx => {
+                            const panelId = `splitpanel_${facultyId}_${pairKey}_${sfx}`;
+                            const panel = step2.querySelector(`#${panelId}`);
+                            if (!panel) return;
+                            const d1 = panel.querySelector(`[name="split_${pair}_${sfx}day_1"]`);
+                            const h1 = panel.querySelector(`[name="split_${pair}_${sfx}hours_1"]`);
+                            const d2 = panel.querySelector(`[name="split_${pair}_${sfx}day_2"]`);
+                            const h2 = panel.querySelector(`[name="split_${pair}_${sfx}hours_2"]`);
+                            if (d1 && h1 && h1.value) { addH(d1.name, d1.value); addH(h1.name, h1.value); }
+                            if (d2 && h2 && d2.value && h2.value) { addH(d2.name, d2.value); addH(h2.name, h2.value); }
+                        });
+                    });
+                    document.body.appendChild(submissionForm);
+                    submissionForm.submit();
+                });
+            }) ();
             {% endfor %}
-                {% for pair in sc_pairs_by_faculty.get(faculty.id | string, []) %}
-    "{{ pair }}",
-        {% endfor %}
-            ])];
-
-    // Faculty available days for split dropdowns
-    const availDaysRaw = "{{ faculty.available_days or '' }}";
-    const availDays = availDaysRaw ? availDaysRaw.split(',').map(d => d.trim()).filter(d => d)
-        : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-    // Existing split data for this faculty (pre-populate)
-    const facSplitData = allSplitData[String(facultyId)] || {};
-
-    // --- NEXT STEP LOGIC ---
-    nextBtn.addEventListener('click', function () {
-        const checkedBoxes = Array.from(step1.querySelectorAll(`.teachable-cb-${facultyId}:checked`));
-        const selectedCourses = checkedBoxes.map(cb => ({
-            id: cb.value,
-            code: cb.getAttribute('data-code'),
-            name: cb.getAttribute('data-course-name'),
-            lecHours: parseFloat(cb.getAttribute('data-lec-hours') || 0),
-            labHours: parseFloat(cb.getAttribute('data-lab-hours') || 0),
-            asyncHours: parseFloat(cb.getAttribute('data-async-hours') || 0),
-            totalHours: parseFloat(cb.getAttribute('data-course-hours') || 0),
-        }));
-
-        sectionListDiv.innerHTML = '';
-        if (selectedCourses.length === 0) {
-            sectionListDiv.innerHTML = '<div class="alert alert-warning border-0 shadow-sm m-2">No subjects selected. Go back to Step 1.</div>';
-        } else {
-            const allDayOpts = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
-            function buildSplitPanel(pair, sfx, hours, savedDay1, savedHours1, savedDay2, savedHours2) {
-                const dayOpts1 = allDayOpts.map(d => `<option value="${d}" ${d === savedDay1 ? 'selected' : ''}>${d}</option>`).join('');
-                const dayOpts2 = '<option value="">-- none --</option>' +
-                    allDayOpts.map(d => `<option value="${d}" ${d === savedDay2 ? 'selected' : ''}>${d}</option>`).join('');
-                return `
-                  <div class="split-panel ps-3 pb-2 pt-1" id="splitpanel_${facultyId}_${pair.replace('-', '_')}_${sfx}">
-                    <div class="small text-muted mb-1" style="font-size:.77rem;">
-                      <i class="bi bi-scissors me-1"></i>Split ${hours}h across days <em>(optional)</em>
-                    </div>
-                    <div class="d-flex align-items-center gap-1 mb-1 flex-wrap">
-                      <span class="small text-muted" style="width:38px;font-size:.78rem;">Day 1:</span>
-                      <select class="form-select form-select-sm split-day-1 py-0" style="max-width:120px;font-size:.8rem;"
-                              name="split_${pair}_${sfx}day_1">${dayOpts1}</select>
-                      <input type="number" class="form-control form-control-sm split-hrs-1 py-0"
-                             style="max-width:64px;font-size:.8rem;" min="0.5" max="${hours}" step="0.5"
-                             value="${savedHours1 || ''}" placeholder="hrs"
-                             name="split_${pair}_${sfx}hours_1"
-                             onchange="validateSplit(this.closest('.split-panel'),'${hours}')">
-                      <span class="small text-muted">h</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-1 mb-1 flex-wrap">
-                      <span class="small text-muted" style="width:38px;font-size:.78rem;">Day 2:</span>
-                      <select class="form-select form-select-sm split-day-2 py-0" style="max-width:120px;font-size:.8rem;"
-                              name="split_${pair}_${sfx}day_2">${dayOpts2}</select>
-                      <input type="number" class="form-control form-control-sm split-hrs-2 py-0"
-                             style="max-width:64px;font-size:.8rem;" min="0" max="${hours}" step="0.5"
-                             value="${savedHours2 || ''}" placeholder="hrs"
-                             name="split_${pair}_${sfx}hours_2"
-                             onchange="validateSplit(this.closest('.split-panel'),'${hours}')">
-                      <span class="small text-muted">h</span>
-                    </div>
-                    <div class="split-total-msg" style="font-size:.77rem;"></div>
-                  </div>`;
-            }
-
-            let content = '<div class="row g-2">';
-            const othersTaken = allTakenByOthers[String(facultyId)] || [];
-            selectedCourses.forEach(course => {
-                let matches = allSections.filter(s => {
-                    const pair = `${course.id}-${s.id}`;
-                    const alreadyMine = currentAssignmentPairs.includes(pair);
-                    const takenByOther = othersTaken.includes(pair);
-                    return (s.course_ids.includes(parseInt(course.id)) || alreadyMine) && !takenByOther;
-                });
-                if (matches.length === 0) return;
-
-                // Effective hours: use split hours when configured for this faculty+course pair
-                const _facSplit = faSplitHoursMap[String(facultyId)] || {};
-                const _firstEntry = Object.entries(_facSplit).find(([k]) => k.startsWith(course.id + '-'));
-                const _hdrSplit = _firstEntry ? _firstEntry[1] : {};
-                const effLecHoursHdr = _hdrSplit.lec !== undefined ? _hdrSplit.lec : course.lecHours;
-                const effLabHoursHdr = _hdrSplit.lab !== undefined ? _hdrSplit.lab : course.labHours;
-
-                // Build header badges
-                let badges = '';
-                if (effLecHoursHdr > 0) badges += `<span class="badge bg-primary bg-opacity-75 ms-1" style="font-size:.75rem;">Lec ${effLecHoursHdr}h</span>`;
-                if (effLabHoursHdr > 0) badges += `<span class="badge bg-warning text-dark ms-1" style="font-size:.75rem;">Lab ${effLabHoursHdr}h</span>`;
-                if (course.asyncHours > 0) badges += `<span class="badge bg-secondary ms-1" style="font-size:.75rem;">Async ${course.asyncHours}h</span>`;
-
-                content += `
-                <div class="col-md-6">
-                  <div class="card border-0 shadow-sm h-100" style="border-radius:8px;overflow:hidden;">
-                    <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between"
-                         style="background:rgba(24,128,56,.08);border-bottom:2px solid rgba(24,128,56,.18);">
-                      <span class="fw-bold text-success" style="font-size:.82rem;">${course.code} <span class="text-muted fw-normal" style="font-size:.78rem;">— ${course.name}</span></span>
-                      <span>${badges}</span>
-                    </div>
-                    <div class="p-1">`;
-
-                matches.forEach(sec => {
-                    const pair = `${course.id}-${sec.id}`;
-                    const isChecked = currentAssignmentPairs.includes(pair);
-                    const sd = facSplitData[pair] || {};
-
-                    // Per-section effective hours (split hours override full course hours)
-                    const _secSplit = (_facSplit[pair]) || {};
-                    const effLecHours = _secSplit.lec !== undefined ? _secSplit.lec : course.lecHours;
-                    const effLabHours = _secSplit.lab !== undefined ? _secSplit.lab : course.labHours;
-
-                    // Main row checkbox (tracks total hours for counter)
-                    content += `
-                      <div class="px-2 pt-2 pb-1 border-bottom border-light assignment-row">
-                          <input class="assignment-checkbox"
-                                 type="checkbox" name="assignments"
-                                 value="${pair}" id="assign_${facultyId}_${pair}"
-                                 data-hours="${course.totalHours}"
-                                 data-lec-hours="${course.lecHours}"
-                                 data-lab-hours="${course.labHours}"
-                                 data-async-hours="${course.asyncHours}"
-                                 ${isChecked ? 'checked' : ''}
-                                 onchange="toggleSessionPanels(this,'${facultyId}','${pair}')"
-                                 style="display:none">
-                          <label class="d-block small fw-semibold text-dark cursor-pointer px-1 py-1 rounded"
-                                 for="assign_${facultyId}_${pair}">
-                            ${sec.name}
-                          </label>`;
-
-                    // Lec sub-row (if course has lec hours)
-                    if (course.lecHours > 0) {
-                        const lecVisible = isChecked ? '' : 'display:none;';
-                        content += `
-                        <div class="session-panels-${facultyId}-${pair.replace('-', '_')}" style="${lecVisible}">
-                          <div class="d-flex align-items-center px-2 py-1 rounded mb-1"
-                               style="background:rgba(13,110,253,.06);border-left:3px solid rgba(13,110,253,.4);">
-                            <span class="badge bg-primary bg-opacity-75 me-2" style="font-size:.72rem;min-width:46px;">Lec</span>
-                            <span class="small text-muted" style="font-size:.8rem;">${effLecHours}h — split across days (optional)</span>
-                          </div>
-                          ${buildSplitPanel(pair, 'lec_', effLecHours, sd.lec_day_1, sd.lec_hours_1, sd.lec_day_2, sd.lec_hours_2)}
-                        </div>`;
-                    }
-
-                    // Lab sub-row (if course has lab hours)
-                    if (course.labHours > 0) {
-                        const labVisible = isChecked ? '' : 'display:none;';
-                        content += `
-                        <div class="session-panels-${facultyId}-${pair.replace('-', '_')}" style="${labVisible}">
-                          <div class="d-flex align-items-center px-2 py-1 rounded mb-1"
-                               style="background:rgba(255,193,7,.08);border-left:3px solid rgba(255,193,7,.6);">
-                            <span class="badge bg-warning text-dark me-2" style="font-size:.72rem;min-width:46px;">Lab</span>
-                            <span class="small text-muted" style="font-size:.8rem;">${effLabHours}h — split across days (optional)</span>
-                          </div>
-                          ${buildSplitPanel(pair, '', effLabHours, sd.day_1, sd.hours_1, sd.day_2, sd.hours_2)}
-                        </div>`;
-                    }
-
-                    // Async row (no split panel)
-                    if (course.asyncHours > 0) {
-                        const asyncVisible = isChecked ? '' : 'display:none;';
-                        content += `
-                        <div class="session-panels-${facultyId}-${pair.replace('-', '_')}" style="${asyncVisible}">
-                          <div class="d-flex align-items-center px-2 py-1 rounded mb-1"
-                               style="background:rgba(108,117,125,.07);border-left:3px solid rgba(108,117,125,.4);">
-                            <span class="badge bg-secondary me-2" style="font-size:.72rem;min-width:46px;">Async</span>
-                            <span class="small text-muted" style="font-size:.8rem;">${course.asyncHours}h — GA places freely</span>
-                          </div>
-                        </div>`;
-                    }
-
-                    content += `</div>`;  // close assignment-row
-                });
-
-                content += `</div></div></div>`;
-            });
-            sectionListDiv.innerHTML = content + '</div>';
-        }
-        step1.style.display = 'none';
-        step2.style.display = 'block';
-        updateTotal(facultyId);
-    });
-
-    // --- BACK STEP LOGIC ---
-    backBtn.addEventListener('click', function () {
-        step2.style.display = 'none';
-        step1.style.display = 'block';
-    });
-
-    // --- FINALIZE LOAD ---
-    modal.querySelector(`#assignmentForm${facultyId}`).addEventListener('submit', function (e) {
-        e.preventDefault();
-        const form2 = this;
-        const csrfToken = form2.querySelector('input[name="csrf_token"]')?.value;
-        form2.innerHTML = '';
-        if (csrfToken) {
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = 'csrf_token';
-            csrfInput.value = csrfToken;
-            form2.appendChild(csrfInput);
         }
 
-        // Collect assignment checkboxes + their split data (Lec + Lab)
-        step2.querySelectorAll('.assignment-checkbox:checked').forEach(cb => {
-            const pair = cb.value;
-            const addH = (n, v) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = n; i.value = v; form2.appendChild(i); };
-            addH('assignments', pair);
-            // Collect all split panels for this pair (lab panel + lec panel)
-            const pairKey = pair.replace('-', '_');
-            ['', 'lec_'].forEach(sfx => {
-                const panelId = `splitpanel_${facultyId}_${pairKey}_${sfx}`;
-                const panel = step2.querySelector(`#${panelId}`);
-                if (!panel) return;
-                const d1 = panel.querySelector(`[name="split_${pair}_${sfx}day_1"]`);
-                const h1 = panel.querySelector(`[name="split_${pair}_${sfx}hours_1"]`);
-                const d2 = panel.querySelector(`[name="split_${pair}_${sfx}day_2"]`);
-                const h2 = panel.querySelector(`[name="split_${pair}_${sfx}hours_2"]`);
-                if (d1 && h1 && h1.value) { addH(d1.name, d1.value); addH(h1.name, h1.value); }
-                if (d2 && h2 && d2.value && h2.value) { addH(d2.name, d2.value); addH(h2.name, h2.value); }
-            });
-        });
-
-        form2.submit();
-    });
+        // Initial setup
+        initializeFacultyModals();
 
     // LIVE HOUR COUNTER
     sectionListDiv.addEventListener('change', (e) => {
@@ -1288,9 +1349,7 @@
             bar.classList.toggle('bg-danger', current > max);
             bar.classList.toggle('bg-success', current <= max);
         }
-    }
-        }) ();
-    {% endfor %}
+        }
     });
 
     // ==========================================
