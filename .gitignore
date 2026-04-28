@@ -13,6 +13,5 @@ static/temp/
 *.log
 .DS_Store
 
-System Testing/
 .json_report
 *.json

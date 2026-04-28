@@ -11523,8 +11523,8 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False, domin
 
     # Canvas-specific overrides
     bg_style = "background: transparent;" if for_canvas else "background: #c8c8c8;"
-    body_padding = "padding: 0;" if for_canvas else "padding: 24px 0;"
-    body_overflow = "overflow: hidden;" if for_canvas else ""
+    body_padding = "padding: 0;"
+    body_overflow = "overflow: hidden;"
     paper_shadow = "box-shadow: none;" if for_canvas else "box-shadow: 0 4px 24px rgba(0,0,0,.28), 0 1px 4px rgba(0,0,0,.14);"
     
     dfont = f"'{dominant_font}', " if dominant_font else ""
@@ -14403,7 +14403,7 @@ def manage_students():
             all_objs.sort(key=lambda x: (getattr(x, 'full_name', '') or '').lower())
 
         # 3. Paginate
-        per_page = 15
+        per_page = 10
         total = len(all_objs)
         start = (page - 1) * per_page
         items = all_objs[start:start+per_page]
@@ -14454,7 +14454,7 @@ def manage_students():
     else:
         query = query.order_by(Student.full_name.asc())
 
-    pagination    = query.paginate(page=page, per_page=15, error_out=False)
+    pagination    = query.paginate(page=page, per_page=10, error_out=False)
     students      = pagination.items
     all_sections  = Section.query.filter_by(is_archived=False).order_by(Section.section_name).all()
     unique_years  = db.session.query(Student.year_level).filter_by(is_archived=False).distinct().order_by(Student.year_level).all()

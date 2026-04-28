@@ -7,13 +7,48 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app import (app, db, User, Course, Room, Section, Faculty, Constraint,
                  SystemSettings, CodePrefixRule, ScheduledClass,
-                 FacultyAssignment, PreAssignment,
+                 FacultyAssignment, PreAssignment, Department, Student,
                  section_courses, faculty_courses)
 from werkzeug.security import generate_password_hash
+from datetime import datetime
 from collections import defaultdict
 
 SEEDER_LEVEL   = 10
-DESCRIPTION    = "Strict BSCS/BSIT focused dataset with 64+ sections and 60+ faculty."
+DESCRIPTION    = "Production-ready dataset with Users, Departments, and 200 Students."
+
+# ── DEPARTMENTS ──────────────────────────────────────────────────────────────
+DEPARTMENTS = [
+    {'name': 'Department of Computer Studies', 'code': 'DCS'},
+    {'name': 'Department of Teachers Education', 'code': 'DTE'},
+    {'name': 'Department of Hospitality Management', 'code': 'DHM'},
+    {'name': 'NSTP Department', 'code': 'NSTP'},
+    {'name': 'Department of Industrial Technology', 'code': 'DIT'},
+    {'name': 'Department of Arts and Sciences', 'code': 'DAS'},
+    {'name': 'Department of Engineering', 'code': 'DE'},
+    {'name': 'Department of Business Administration', 'code': 'DBA'},
+]
+
+# ── USERS ────────────────────────────────────────────────────────────────────
+USERS = [
+    {'user': 'Jeremychristian', 'role': 'superadmin', 'dept': None, 'pass': 'sosa'},
+    {'user': 'admin1', 'role': 'admin', 'dept': 'Department of Computer Studies', 'pass': 'admin123'},
+    {'user': 'DAS', 'role': 'user', 'dept': 'Department of Arts and Sciences', 'pass': 'user123'},
+    {'user': 'DBA', 'role': 'user', 'dept': 'Department of Business Administration', 'pass': 'user123'},
+    {'user': 'DE', 'role': 'user', 'dept': 'Department of Engineering', 'pass': 'user123'},
+    {'user': 'DHM', 'role': 'user', 'dept': 'Department of Hospitality Management', 'pass': 'user123'},
+    {'user': 'DIT', 'role': 'user', 'dept': 'Department of Industrial Technology', 'pass': 'user123'},
+    {'user': 'DTE', 'role': 'user', 'dept': 'Department of Teachers Education', 'pass': 'user123'},
+]
+
+# ── STUDENT NAMES (Filipino context) ──────────────────────────────────────────
+STUDENT_NAMES = [
+    "Juan Dela Cruz", "Maria Clara", "Jose Rizal", "Andres Bonifacio", "Emilio Aguinaldo",
+    "Apolinario Mabini", "Melchora Aquino", "Gabriela Silang", "Lapu-Lapu", "Antonio Luna",
+    "Gregoria de Jesus", "Marcelo H. Del Pilar", "Juan Luna", "Paciano Rizal", "Teresa Magbanua",
+    "Emilio Jacinto", "Mariano Ponce", "Galicano Apacible", "Felipe Agoncillo", "Gregorio Del Pilar",
+    "Vito Belarmino", "Artemio Ricarte", "Miguel Malvar", "Macario Sakay", "Julian Felipe",
+    "Pascual Poblete", "Deodato Arellano", "Roman Basa", "Ladislao Diwa", "Teodoro Plata"
+]
 
 # ── ROOMS (25 total) ───────────────────────────────────────────────────────────
 ROOMS = [
@@ -266,7 +301,8 @@ def seed_database():
         ScheduledClass.query.delete(); Course.query.delete()
         Room.query.delete(); Section.query.delete(); Faculty.query.delete()
         Constraint.query.delete(); SystemSettings.query.delete()
-        CodePrefixRule.query.delete()
+        CodePrefixRule.query.delete(); Department.query.delete()
+        Student.query.delete(); User.query.delete()
         db.session.commit()
 
         # 1. Rules and Constraints
@@ -288,6 +324,10 @@ def seed_database():
         ))
 
         # 3. Core Entities
+        for d in DEPARTMENTS:
+            db.session.add(Department(name=d['name'], code=d['code']))
+        for u in USERS:
+            db.session.add(User(username=u['user'], role=u['role'], department=u['dept'], password_hash=generate_password_hash(u['pass'])))
         for f in FACULTY:
             db.session.add(Faculty(employee_id=f['eid'], full_name=f['name'], department=f['dept'], employment_status=f['status'], max_weekly_hours=f.get('max_weekly', 35), sex=f.get('sex'), academic_rank=f.get('rank', ''), highest_educational_attainment=f.get('attainment', '')))
         for r in ROOMS:
@@ -296,6 +336,28 @@ def seed_database():
             db.session.add(Course(course_code=c[0], course_name=c[1], year_level=c[2], program=c[3], department=c[4], synchronous_lec_hours=c[5], synchronous_lab_hours=c[6], asynchronous_lec_hours=c[7], asynchronous_lab_hours=c[8], semester_offered=c[9]))
         for s in SECTIONS:
             db.session.add(Section(section_name=s['name'], year_level=s['year'], number_of_students=s['students']))
+        
+        # 4. Generate 200 Students
+        all_sections = Section.query.all()
+        for i in range(200):
+            sid = str(202200101 + i)
+            name = STUDENT_NAMES[i % len(STUDENT_NAMES)]
+            if i >= len(STUDENT_NAMES):
+                name += f" {i // len(STUDENT_NAMES) + 1}"
+            
+            is_irregular = (i >= 150) # Last 50 are irregular
+            section_id = None if is_irregular else all_sections[i % len(all_sections)].id
+            year_level = (i % 4) + 1
+            
+            db.session.add(Student(
+                student_id=sid,
+                full_name=name.upper(),
+                year_level=year_level,
+                section_id=section_id,
+                is_irregular=is_irregular,
+                email=f"student{sid}@cvsu.edu.ph"
+            ))
+            
         db.session.commit()
 
         # 4. Link sections and auto-assign workloads
@@ -337,12 +399,40 @@ def seed_database():
                     db.session.add(FacultyAssignment(faculty_id=fac.id, course_id=c.id, section_id=sec.id))
                     fac_loads[fac.id] += course_hours
         
-        # Ensure Superadmin
-        if not User.query.filter_by(role='superadmin').first():
-            db.session.add(User(username='Jeremychristian', password_hash=generate_password_hash('sosa'), role='superadmin'))
-            
         db.session.commit()
-        print(f"Seeder {SEEDER_LEVEL} complete! Sections: {Section.query.count()}, Faculty: {Faculty.query.count()}")
+
+        # 5. Populate Recycle Bin (11 items per category)
+        print("  Populating Recycle Bin (Trash)...")
+        # Reuse existing objects for relationships where needed
+        sample_course = Course.query.first()
+        sample_section = Section.query.first()
+        sample_faculty = Faculty.query.first()
+        sample_room = Room.query.first()
+
+        for i in range(1, 12):
+            suffix = f"{i:02d}"
+            # 1. Courses
+            db.session.add(Course(course_code=f"DEL-CRS-{suffix}", course_name=f"Deleted Course {suffix}", year_level=1, program='Both', department='Department of Computer Studies', semester_offered='1st Semester', is_archived=True, deleted_at=datetime.utcnow()))
+            # 2. Sections
+            db.session.add(Section(section_name=f"DEL-SEC-{suffix}", year_level=1, number_of_students=40, is_archived=True, deleted_at=datetime.utcnow()))
+            # 3. Students
+            db.session.add(Student(student_id=f"2022009{suffix}", full_name=f"DELETED STUDENT {suffix}", year_level=1, is_archived=True, deleted_at=datetime.utcnow()))
+            # 4. Faculty
+            db.session.add(Faculty(employee_id=f"DEL-FAC-{suffix}", full_name=f"Deleted Faculty {suffix}", department='Department of Computer Studies', is_archived=True, deleted_at=datetime.utcnow()))
+            # 5. Rooms
+            db.session.add(Room(room_name=f"DEL-RM-{suffix}", building='Trash Building', capabilities='Lecture', is_archived=True, deleted_at=datetime.utcnow()))
+            # 6. Schedules (PreAssignments)
+            if sample_course and sample_section and sample_faculty and sample_room:
+                db.session.add(PreAssignment(course_id=sample_course.id, section_id=sample_section.id, faculty_id=sample_faculty.id, room_id=sample_room.id, day='Monday', start_time='07:00', end_time='10:00', is_archived=True, deleted_at=datetime.utcnow()))
+            # 7. Code Rules
+            db.session.add(CodePrefixRule(code=f"DEL-RULE-{suffix}", is_prefix=True, department='Department of Computer Studies', is_archived=True, deleted_at=datetime.utcnow()))
+            # 8. Departments
+            db.session.add(Department(name=f"Deleted Dept {suffix}", code=f"D-DEL-{suffix}", is_archived=True, deleted_at=datetime.utcnow()))
+            # 9. Users
+            db.session.add(User(username=f"del_user_{suffix}", role='user', is_deleted=True, deleted_at=datetime.utcnow(), password_hash=generate_password_hash('user123')))
+
+        db.session.commit()
+        print(f"Seeder {SEEDER_LEVEL} complete! Masterlist: 200 Students, Recycle Bin: 99 Items.")
 
 if __name__ == '__main__':
     seed_database()

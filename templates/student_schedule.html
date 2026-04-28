@@ -343,8 +343,13 @@
             transition: all 0.3s;
         }
 
-        .pres-nav-prev { left: 30px; }
-        .pres-nav-next { right: 30px; }
+        .pres-nav-prev {
+            left: 30px;
+        }
+
+        .pres-nav-next {
+            right: 30px;
+        }
 
         .pres-nav-btn:hover {
             background: #198754;
@@ -389,15 +394,24 @@
         }
 
         @media (max-width: 767px) {
-            .pres-footer { display: none !important; }
+            .pres-footer {
+                display: none !important;
+            }
+
             .pres-nav-btn {
                 width: 45px;
                 height: 45px;
                 font-size: 1.2rem;
                 background: rgba(0, 0, 0, 0.5);
             }
-            .pres-nav-prev { left: 10px; }
-            .pres-nav-next { right: 10px; }
+
+            .pres-nav-prev {
+                left: 10px;
+            }
+
+            .pres-nav-next {
+                right: 10px;
+            }
         }
 
         #pres-zoom-val {
@@ -720,11 +734,6 @@
     <!-- GLOBAL PRESENTATION OVERLAY (PORTED) -->
     <div id="global-schedule-presenter">
         <span class="pres-close" onclick="GlobalSchedulePresenter.close()"><i class="bi bi-x-lg"></i></span>
-
-        <button class="pres-nav-btn pres-nav-prev" onclick="GlobalSchedulePresenter.showPrev()"><i
-                class="bi bi-chevron-left"></i></button>
-        <button class="pres-nav-btn pres-nav-next" onclick="GlobalSchedulePresenter.showNext()"><i
-                class="bi bi-chevron-right"></i></button>
 
         <div class="pres-container" id="pres-backdrop">
             <div class="pres-iframe-wrap" id="pres-wrap">

@@ -243,7 +243,8 @@ body {
 #hubPreviewModal .modal-content {
     max-height: 100dvh !important;
     height: 100dvh !important;
-    border-radius: 0; /* Optional: make it truly fullscreen look */
+    border-radius: 0;
+    /* Optional: make it truly fullscreen look */
 }
 
 /* Ensure forms or wizard steps inside modals also behave as flex containers to allow body scrolling */
@@ -757,6 +758,8 @@ body {
     position: relative;
 }
 
+
+
 .auth-right::before {
     content: '';
     position: absolute;
@@ -1031,7 +1034,13 @@ html.login-loading #page-loader {
 }
 
 /* Mobile responsive */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
+    body.auth-page {
+        background: url("../assets/student_bg.png") center/cover no-repeat fixed !important;
+        padding-top: 0 !important;
+        margin: 0 !important;
+    }
+
     .auth-page {
         flex-direction: column;
     }
@@ -1042,8 +1051,9 @@ html.login-loading #page-loader {
 
     .auth-right {
         width: 100%;
+        min-height: 100vh !important;
         padding: 2rem 1.25rem;
-        background: #ffffff !important;
+        background: transparent !important;
     }
 
     .auth-right::before {
