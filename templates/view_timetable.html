@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Canvas Workspace - View Timetable{% endblock %}
+{% block title %}View Timetable - CvSU CCAT DCS{% endblock %}
 
 {% block content %}
 
@@ -682,7 +682,8 @@
 <script>
     (function () {
         // ── Data from Flask ──────────────────────────────────────────
-        const _sec = {{ sections_json | tojson | safe }};
+        const _sec = {{ sections_json | tojson | safe
+    }};
     const _fac = {{ faculty_json  | tojson | safe }};
     const _rom = {{ rooms_json    | tojson | safe }};
     const _crs = {{ courses_json  | tojson | safe }};
@@ -1267,7 +1268,7 @@
 
     // ── GLOBAL PRESENTER OVERRIDES (CANVAS SPECIFIC) ───────────
     if (typeof GlobalSchedulePresenter !== 'undefined') {
-        GlobalSchedulePresenter.showNext = function() {
+        GlobalSchedulePresenter.showNext = function () {
             const list = listMap[currentType] || [];
             const idx = list.findIndex(item => item.id == this.id);
             if (idx !== -1) {
@@ -1275,7 +1276,7 @@
                 this.open(currentType, list[nextIdx].id);
             }
         };
-        GlobalSchedulePresenter.showPrev = function() {
+        GlobalSchedulePresenter.showPrev = function () {
             const list = listMap[currentType] || [];
             const idx = list.findIndex(item => item.id == this.id);
             if (idx !== -1) {

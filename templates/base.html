@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>{% block title %}{% endblock %} - CvSU CCAT DCS Scheduling System</title>
+    <title>{% block title %}{% endblock %}</title>
     <!-- Dependencies -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -1768,26 +1768,26 @@
         async function markAllRead() {
             updateBadge(0); // Instant reset for snappy UI
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-            await fetch('/api/notifications/mark-read', { 
-                method: 'POST', 
-                headers: { 
+            await fetch('/api/notifications/mark-read', {
+                method: 'POST',
+                headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
-                }, 
-                body: JSON.stringify({}) 
+                },
+                body: JSON.stringify({})
             });
             fetchNotifications();
         }
 
         async function handleNotifClick(id, link) {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-            await fetch('/api/notifications/mark-read', { 
-                method: 'POST', 
-                headers: { 
+            await fetch('/api/notifications/mark-read', {
+                method: 'POST',
+                headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
-                }, 
-                body: JSON.stringify({ id: id }) 
+                },
+                body: JSON.stringify({ id: id })
             });
             if (link && link !== '#') window.location.href = link;
             else fetchNotifications();
@@ -1843,7 +1843,6 @@
         .notif-item:hover {
             background-color: rgba(0, 0, 0, 0.02);
         }
-
     </style>
 </body>
 
