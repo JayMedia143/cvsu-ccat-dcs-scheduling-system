@@ -1,4 +1,4 @@
-﻿beautifulsoup4==4.14.3
+beautifulsoup4==4.14.3
 bidict==0.23.1
 blinker==1.9.0
 cffi==2.0.0
@@ -20,10 +20,10 @@ iniconfig==2.3.0
 itsdangerous==2.2.0
 Jinja2==3.1.6
 MarkupSafe==3.0.3
-numpy==2.4.4
+numpy
 openpyxl==3.1.5
 packaging==26.2
-pandas==3.0.2
+pandas
 pdfminer.six==20251230
 pdfplumber==0.11.9
 pillow==12.2.0
