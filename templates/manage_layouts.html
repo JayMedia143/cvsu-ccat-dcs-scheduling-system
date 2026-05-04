@@ -452,7 +452,7 @@
                                     <label class="form-label mb-1">Top</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control" name="margin_top"
-                                            value="{{ settings.margin_top or 1.0 }}" min="0" max="5" step="0.1">
+                                            value="{{ settings.margin_top or 0.5 }}" min="0" max="5" step="0.1">
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -460,7 +460,7 @@
                                     <label class="form-label mb-1">Bottom</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control" name="margin_bottom"
-                                            value="{{ settings.margin_bottom or 1.0 }}" min="0" max="5" step="0.1">
+                                            value="{{ settings.margin_bottom or 0.5 }}" min="0" max="5" step="0.1">
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -468,7 +468,7 @@
                                     <label class="form-label mb-1">Left</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control" name="margin_left"
-                                            value="{{ settings.margin_left or 1.0 }}" min="0" max="5" step="0.1">
+                                            value="{{ settings.margin_left or 0.5 }}" min="0" max="5" step="0.1">
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -476,7 +476,7 @@
                                     <label class="form-label mb-1">Right</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control" name="margin_right"
-                                            value="{{ settings.margin_right or 1.0 }}" min="0" max="5" step="0.1">
+                                            value="{{ settings.margin_right or 0.5 }}" min="0" max="5" step="0.1">
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -703,7 +703,7 @@
                                     <label class="form-label mb-1">Top</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control" name="fac_margin_top"
-                                            value="{{ settings.fac_margin_top or 1.0 }}" min="0" max="5" step="0.1">
+                                            value="{{ settings.fac_margin_top or 0.5 }}" min="0" max="5" step="0.1">
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -711,7 +711,7 @@
                                     <label class="form-label mb-1">Bottom</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control" name="fac_margin_bottom"
-                                            value="{{ settings.fac_margin_bottom or 1.0 }}" min="0" max="5" step="0.1">
+                                            value="{{ settings.fac_margin_bottom or 0.5 }}" min="0" max="5" step="0.1">
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -719,7 +719,7 @@
                                     <label class="form-label mb-1">Left</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control" name="fac_margin_left"
-                                            value="{{ settings.fac_margin_left or 1.0 }}" min="0" max="5" step="0.1">
+                                            value="{{ settings.fac_margin_left or 0.5 }}" min="0" max="5" step="0.1">
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -727,7 +727,7 @@
                                     <label class="form-label mb-1">Right</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control" name="fac_margin_right"
-                                            value="{{ settings.fac_margin_right or 1.0 }}" min="0" max="5" step="0.1">
+                                            value="{{ settings.fac_margin_right or 0.5 }}" min="0" max="5" step="0.1">
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -1072,7 +1072,7 @@
                                     <label class="form-label mb-1">Top</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control"
-                                            value="{{ settings.margin_top or 1.0 }}" disabled>
+                                            value="{{ settings.margin_top or 0.5 }}" disabled>
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -1080,7 +1080,7 @@
                                     <label class="form-label mb-1">Bottom</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control"
-                                            value="{{ settings.margin_bottom or 1.0 }}" disabled>
+                                            value="{{ settings.margin_bottom or 0.5 }}" disabled>
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -1088,7 +1088,7 @@
                                     <label class="form-label mb-1">Left</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control"
-                                            value="{{ settings.margin_left or 1.0 }}" disabled>
+                                            value="{{ settings.margin_left or 0.5 }}" disabled>
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -1096,7 +1096,7 @@
                                     <label class="form-label mb-1">Right</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control"
-                                            value="{{ settings.margin_right or 1.0 }}" disabled>
+                                            value="{{ settings.margin_right or 0.5 }}" disabled>
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -1326,7 +1326,7 @@
                                     <label class="form-label mb-1">Top</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control"
-                                            value="{{ settings.margin_top or 1.0 }}" disabled>
+                                            value="{{ settings.margin_top or 0.5 }}" disabled>
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -1334,7 +1334,7 @@
                                     <label class="form-label mb-1">Bottom</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control"
-                                            value="{{ settings.margin_bottom or 1.0 }}" disabled>
+                                            value="{{ settings.margin_bottom or 0.5 }}" disabled>
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -1342,7 +1342,7 @@
                                     <label class="form-label mb-1">Left</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control"
-                                            value="{{ settings.margin_left or 1.0 }}" disabled>
+                                            value="{{ settings.margin_left or 0.5 }}" disabled>
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>
@@ -1350,7 +1350,7 @@
                                     <label class="form-label mb-1">Right</label>
                                     <div class="input-group input-group-sm" style="width:100px;">
                                         <input type="number" class="form-control"
-                                            value="{{ settings.margin_right or 1.0 }}" disabled>
+                                            value="{{ settings.margin_right or 0.5 }}" disabled>
                                         <span class="input-group-text">in</span>
                                     </div>
                                 </div>

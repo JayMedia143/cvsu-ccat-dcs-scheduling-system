@@ -208,13 +208,9 @@
                             <!-- Adjusted Widths for Compact Look -->
                             <th class="ps-0 text-start" style="width: 25%;">SECTION NAME</th>
                             <th class="text-start" style="width: 15%;">YEAR LEVEL</th>
-                            {% if session.get('role') != 'user' %}
                             <th class="text-start" style="width: 12%;">POPULATION</th>
                             <th class="text-start" style="width: 40%;">ASSIGNED COURSES</th>
-                            {% endif %}
-                            {% if session.get('role') != 'user' %}
                             <th class="text-center pe-0" style="width: 1%; white-space: nowrap;">ACTIONS</th>
-                            {% endif %}
                         </tr>
                     </thead>
                     <tbody class="section-table-body">
@@ -241,7 +237,6 @@
                                 </span>
                             </td>
 
-                            {% if session.get('role') != 'user' %}
                             <td class="text-start text-dark">{{ section.number_of_students }}</td>
 
                             <!-- Compact Course List -->
@@ -263,12 +258,9 @@
                                 <span class="text-muted small fst-italic">--</span>
                                 {% endif %}
                             </td>
-                            {% endif %}
 
-                            <!-- Sa loob ng Actions column -->
-                            {% if session.get('role') != 'user' %}
                             <td class="text-center pe-0" onclick="event.stopPropagation()">
-                                {% if not is_hist %}
+                                {% if not is_hist and session.get('role') != 'user' %}
                                 <button type="button" class="btn-icon"
                                     onclick="copyCurriculum({{ section.id }}, '{{ section.section_name }}')"
                                     title="Copy subjects">
@@ -276,22 +268,20 @@
                                 </button>
                                 {% endif %}
 
-                                <!-- 3rd: Schedule Viewer (admin only) -->
-                                {% if session.get('role') in ['admin', 'superadmin'] %}
+                                <!-- Schedule Viewer -->
                                 <button type="button" class="btn-icon view"
                                     onclick="viewSchedule('section', {{ section.id }})" title="View Schedule">
                                     <i class="bi bi-calendar-week"></i>
                                 </button>
-                                {% endif %}
 
-                                {% if not is_hist %}
-                                <!-- 3. Edit -->
+                                {% if not is_hist and session.get('role') != 'user' %}
+                                <!-- Edit -->
                                 <button type="button" class="btn-icon edit" data-bs-toggle="modal"
                                     data-bs-target="#editSectionModal{{ section.id }}" title="Edit">
                                     <i class="bi bi-pencil"></i>
                                 </button>
 
-                                <!-- 4. Delete (hidden for T.B.A. system section) -->
+                                <!-- Delete -->
                                 {% if section.section_name != 'T.B.A.' %}
                                 <button type="button" class="btn-icon delete" title="Move to Recycle Bin"
                                     data-bs-toggle="modal" data-bs-target="#archiveModal{{ section.id }}">
@@ -300,7 +290,6 @@
                                 {% endif %}
                                 {% endif %}
                             </td>
-                            {% endif %}
                         </tr>
                         {% else %}
                         <tr>
@@ -759,7 +748,6 @@
             </div>
 
             <div class="modal-body p-4">
-                {% if session.get('role') in ['admin', 'superadmin'] %}
                 <!-- 1. CREATING SECTIONS -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-primary small mb-1">1. Creating New Sections</h6>
@@ -769,6 +757,7 @@
                     </p>
                 </div>
 
+                {% if session.get('role') in ['admin', 'superadmin'] %}
                 <!-- 2. ASSIGN CURRICULUM -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-success small mb-1">2. Assign Curriculum</h6>
@@ -776,7 +765,8 @@
                         clicking their rows. When the green bar appears at the top, click the <strong>'Assign
                             Curriculum'</strong> button to choose subjects for those sections. You can use the
                         <strong>Smart Presets</strong> (BSCoS/BSIT) to instantly select all subjects for a specific year
-                        and semester.</p>
+                        and semester.
+                    </p>
                 </div>
 
                 <!-- 3. COPY & PASTE SUBJECTS -->
@@ -786,13 +776,15 @@
                         section to copy its assigned list. Then, select other sections and click the <strong>'Paste
                             subjects'</strong> button in the green bar to apply them instantly.</p>
                 </div>
+                {% endif %}
 
                 <!-- 4. FINDING & SORTING -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1">4. Finding & Sorting</h6>
+                    <h6 class="fw-bold text-warning small mb-1">{% if session.get('role') in ['admin', 'superadmin'] %}4.{% else %}2.{% endif %} Finding & Sorting</h6>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Search Bar:</strong> Type any part of a section name; the list will update
-                            <strong>instantly</strong> as you type.</li>
+                            <strong>instantly</strong> as you type.
+                        </li>
                         <li><strong>Funnel Icon:</strong> Click this to filter the list by <strong>Year Level</strong>
                             (1st to 4th Year).</li>
                         <li><strong>Sort Menu:</strong> Arrange sections by <strong>Name (A-Z)</strong> or <strong>Year
@@ -802,54 +794,31 @@
 
                 <!-- 5. MANAGING & MASS ACTIONS -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1">5. Managing & Mass Actions</h6>
+                    <h6 class="fw-bold text-danger small mb-1">{% if session.get('role') in ['admin', 'superadmin'] %}5.{% else %}3.{% endif %} Managing & Mass Actions</h6>
                     <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many sections
                         at once:</p>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Calendar Icon:</strong> View the real-time <strong>Schedule</strong> for that
                             specific section.</li>
-                        <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the section's name, population, or year
-                            level.</li>
+                        <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the section's name, year level, or
+                            population.</li>
                         <li><strong>Trash Icon:</strong> Move the section to the <strong>Recycle Bin</strong>.</li>
                         <li><strong>Bulk Actions:</strong> Click any row to select it (or the Header box to
-                            <strong>Select All</strong>). Use the <strong>Green Bar</strong> to bulk-delete sections to
-                            the Recycle Bin.</li>
+                            <strong>Select All</strong>). Use the <strong>Green Bar</strong> to bulk-assign curriculum,
+                            paste subjects, or delete sections.
+                        </li>
                     </ul>
                 </div>
 
                 <!-- 6. PAGINATION -->
                 <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
+                    <h6 class="fw-bold text-secondary small mb-1">{% if session.get('role') in ['admin', 'superadmin'] %}6.{% else %}4.{% endif %} Pagination</h6>
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or
                         the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number
                         into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's
-                        <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                        <strong>Left/Right arrow keys</strong> to flip through pages.
+                    </p>
                 </div>
-
-                {% else %}
-                <!-- USER VERSION -->
-                <!-- 1. FINDING & SORTING (WAS #4) -->
-                <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1">1. Finding & Sorting</h6>
-                    <ul class="small text-muted mt-2 mb-0 ps-3">
-                        <li><strong>Search Bar:</strong> Type any part of a section name; the list will update
-                            <strong>instantly</strong> as you type.</li>
-                        <li><strong>Funnel Icon:</strong> Click this to filter the list by <strong>Year Level</strong>
-                            (1st to 4th Year).</li>
-                        <li><strong>Sort Menu:</strong> Arrange sections by <strong>Name (A-Z)</strong> or <strong>Year
-                                Level</strong> using the dropdown on the top-right.</li>
-                    </ul>
-                </div>
-
-                <!-- 2. PAGINATION (WAS #6) -->
-                <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1">2. Pagination</h6>
-                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or
-                        the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number
-                        into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's
-                        <strong>Left/Right arrow keys</strong> to flip through pages.</p>
-                </div>
-                {% endif %}
             </div>
 
             <div class="modal-footer bg-light">
@@ -872,7 +841,7 @@
     let currentCopiedId = null;
 
     // Helper: Show Toast notification matching base.html style
-    function showToast(message, category = 'danger') {
+    function showSectionToast(message, category = 'danger') {
         const container = document.querySelector('.flash-messages-container');
         if (!container) {
             alert(message); // Fallback
@@ -883,7 +852,7 @@
         toast.className = `alert alert-${category} alert-dismissible fade show shadow-lg border-0 mb-2`;
         toast.style.minWidth = "300px";
         toast.style.pointerEvents = "auto";
-        
+
         // Icon logic based on category
         let icon = "bi-exclamation-triangle-fill";
         if (category === "success") icon = "bi-check-circle-fill";
@@ -897,7 +866,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" style="font-size: 0.6rem;"></button>
         `;
         container.appendChild(toast);
-        
+
         // Auto-close after 3.5 seconds
         setTimeout(() => {
             const bsAlert = bootstrap.Alert.getOrCreateInstance(toast);
@@ -906,7 +875,7 @@
     }
 
     // Helper: Full clipboard reset
-    window.resetClipboard = function() {
+    window.resetClipboard = function () {
         curriculumClipboard = null;
         clipboardSourceName = "";
         currentCopiedId = null;
@@ -914,7 +883,7 @@
         // Hide UI elements
         const modalPasteArea = document.getElementById('modalPasteArea');
         if (modalPasteArea) modalPasteArea.style.setProperty('display', 'none', 'important');
-        
+
         const mainPasteBtn = document.getElementById('mainPasteBtn');
         if (mainPasteBtn) mainPasteBtn.style.display = "none";
 
@@ -939,12 +908,13 @@
         // ==========================================
 
         function initializeSelectionLogic() {
-            rowCheckboxes = document.querySelectorAll('.row-checkbox');
-            allRows = document.querySelectorAll('.course-row');
+            const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+            const allRows = document.querySelectorAll('.section-row');
+            const paginationLinks = document.querySelectorAll('.page-link');
 
             // AUTO-DISPOSE MODALS: Prevent "backdrop of undefined" by destroying instances when closed
             document.querySelectorAll('.modal').forEach(m => {
-                m.addEventListener('hidden.bs.modal', function() {
+                m.addEventListener('hidden.bs.modal', function () {
                     const inst = bootstrap.Modal.getInstance(m);
                     if (inst) inst.dispose();
                 }, { once: false });
@@ -957,10 +927,12 @@
 
                 newRow.addEventListener('click', function (e) {
                     // Don't trigger if a button or link was clicked
-                    if (e.target.closest('button') || e.target.closest('a')) return;
+                    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
                     const checkbox = this.querySelector('.row-checkbox');
-                    checkbox.checked = !checkbox.checked;
-                    updateSelectionState();
+                    if (checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        updateSelectionState();
+                    }
                 });
             });
 
@@ -1063,7 +1035,7 @@
                     const doc = parser.parseFromString(html, 'text/html');
                     const newArea = doc.getElementById('mainContentArea');
                     if (newArea) document.getElementById('mainContentArea').innerHTML = newArea.innerHTML;
-                    
+
                     initializeSelectionLogic();
 
                     if (typeof bootstrap !== 'undefined') {
@@ -1228,13 +1200,13 @@
         // 1. TOGGLE OFF (CANCEL)
         if (currentCopiedId === sectionId) {
             window.resetClipboard();
-            showToast("Selection cleared.", "info");
+            showSectionToast("Selection cleared.", "info");
             return;
         }
 
         // 2. CONSTRAINT (BLOCK IF ANOTHER IS ACTIVE)
         if (currentCopiedId !== null) {
-            showToast("Wait! Please cancel current copy or paste it first before copying another one.", "danger");
+            showSectionToast("Wait! Please cancel current copy or paste it first before copying another one.", "danger");
             return;
         }
 
@@ -1245,7 +1217,7 @@
             .then(r => r.json())
             .then(ids => {
                 if (ids.length === 0) {
-                    showToast("This section has no subjects to copy.", "warning");
+                    showSectionToast("This section has no subjects to copy.", "warning");
                     icon.className = originalClass;
                     return;
                 }
@@ -1256,17 +1228,17 @@
                 // Show UI elements
                 const modalPasteArea = document.getElementById('modalPasteArea');
                 if (modalPasteArea) modalPasteArea.style.setProperty('display', 'flex', 'important');
-                
+
                 const mainPasteBtn = document.getElementById('mainPasteBtn');
                 if (mainPasteBtn) mainPasteBtn.style.display = "inline-block";
 
                 // Success State Icon
                 icon.className = "bi bi-clipboard-check-fill text-dark";
-                showToast(`Subjects of ${sectionName} copied!`, "success");
+                showSectionToast(`Subjects of ${sectionName} copied!`, "success");
             })
-            .catch(() => { 
+            .catch(() => {
                 icon.className = originalClass;
-                showToast("Failed to fetch section courses.", "danger");
+                showSectionToast("Failed to fetch section courses.", "danger");
             });
     };
 

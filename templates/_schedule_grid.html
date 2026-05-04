@@ -67,6 +67,16 @@
         position: relative;
     }
 
+    .sched-class-cell.personal-cell {
+        background: #f0fdf4 !important; /* Light Green */
+        border: 2px dashed #22c55e !important;
+        cursor: help;
+    }
+
+    .sched-class-cell.personal-cell .c-code {
+        color: #166534;
+    }
+
     .sched-class-cell:active {
         cursor: grabbing;
     }
@@ -229,7 +239,7 @@
                     {% if cell.type == 'skip' %}
                     {# covered by rowspan — emit nothing #}
                     {% elif cell.type == 'sched' %}
-                    <td rowspan="{{ cell.rowspan }}" class="sched-class-cell" draggable="true"
+                    <td rowspan="{{ cell.rowspan }}" class="sched-class-cell {% if cell.is_personal %}personal-cell{% endif %}" draggable="true"
                         data-sched-id="{{ cell.sched_id }}" data-day="{{ cell.day }}" data-start="{{ cell.start }}"
                         data-end="{{ cell.end }}" data-slots="{{ cell.rowspan }}">
                         {% if cell.overlap_count > 1 %}
@@ -266,6 +276,17 @@
         (function () {
             document.querySelectorAll('.overlap-badge[data-bs-toggle="popover"]').forEach(el => {
                 new bootstrap.Popover(el, { sanitize: false });
+            });
+        })();
+    </script>
+
+    <!-- ── KEYBOARD RELAY (For Fullscreen Presenter) ────────────── -->
+    <script>
+        (function () {
+            window.addEventListener('keydown', (e) => {
+                if (['ArrowLeft', 'ArrowRight', 'Escape'].includes(e.key)) {
+                    window.parent.postMessage({ type: 'keydown', key: e.key }, '*');
+                }
             });
         })();
     </script>

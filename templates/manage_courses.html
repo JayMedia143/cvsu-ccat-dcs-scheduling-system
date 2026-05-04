@@ -89,6 +89,7 @@
     <!-- C. SORT & FILTER GROUP -->
     <div class="col-auto h-100 text-end d-flex align-items-center justify-content-end gap-2">
 
+        {% if session.get('role') != 'user' %}
         <!-- 1. FILTER DROPDOWN (Nested) -->
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="filterDropdown"
@@ -147,6 +148,7 @@
                 </li>
             </ul>
         </div>
+        {% endif %}
 
         <!-- 2. SORT DROPDOWN -->
         <div class="dropdown">
@@ -224,12 +226,10 @@
                         <th class="text-start" style="width: 25%;">Course Name</th>
                         <th class="text-start" style="width: 15%;">Program</th>
                         <th class="text-start" style="width: 20%;">Department</th>
-                        {% if session.get('role') != 'user' %}
                         <th class="text-start" style="width: 8%;">Units</th>
                         <th class="text-start" style="width: 8%;">Sync</th>
                         <th class="text-start" style="width: 8%;">Async</th>
                         <th class="text-start" style="width: 10%;">Semester</th>
-                        {% endif %}
                         <th class="text-center pe-0" style="width: 1%; white-space: nowrap;">Actions</th>
                     </tr>
                 </thead>
@@ -268,7 +268,6 @@
                             <span class="badge-clean">{{ dept_map.get(course.department, course.department) }}</span>
                         </td>
 
-                        {% if session.get('role') != 'user' %}
                         <!-- 5. UNITS -->
                         <td class="text-start text-muted fw-medium">{{ course.lec_units }} / {{ course.lab_units }}</td>
 
@@ -290,17 +289,14 @@
                             <span class="badge bg-warning bg-opacity-10 text-dark border border-warning">Midyear</span>
                             {% endif %}
                         </td>
-                        {% endif %}
 
                         <!-- 8. ACTIONS -->
                         <td class="text-center pe-0">
-                            <!-- 3rd button: Schedule (admin only) -->
-                            {% if session.get('role') in ['admin', 'superadmin'] %}
+                            <!-- 3rd button: Schedule -->
                             <button type="button" class="btn-icon view"
                                 onclick="viewSchedule('course', {{ course.id }})" title="View Schedule">
                                 <i class="bi bi-calendar-week"></i>
                             </button>
-                            {% endif %}
                             {% if not is_hist %}
                             <button type="button" class="btn-icon edit" data-bs-toggle="modal"
                                 data-bs-target="#editCourseModal{{ course.id }}"><i class="bi bi-pencil"></i></button>
@@ -416,14 +412,18 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
+                        {% if session.get('role') == 'user' %}
+                        <input type="text" class="form-control bg-light" value="{{ session.get('department') }}" readonly>
+                        <input type="hidden" name="department" value="{{ session.get('department') }}">
+                        {% else %}
                         <select class="form-select" name="department">
                             {% for dept in unique_depts %}
                             <option value="{{ dept }}">{{ dept }}</option>
                             {% endfor %}
                         </select>
+                        {% endif %}
                     </div>
 
-                    {% if session.get('role') != 'user' %}
                     <!-- Units & Hours Grid -->
                     <div class="row g-2">
                         <div class="col-4 border-end">
@@ -465,7 +465,6 @@
                             <option>Midyear</option>
                         </select>
                     </div>
-                    {% endif %}
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -513,6 +512,10 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
+                        {% if session.get('role') == 'user' %}
+                        <input type="text" class="form-control bg-light" value="{{ session.get('department') }}" readonly>
+                        <input type="hidden" name="department" value="{{ session.get('department') }}">
+                        {% else %}
                         <select class="form-select" name="department">
                             {% for dept_opt in unique_depts %}
                             <option value="{{ dept_opt }}" {% if course.department==dept_opt %}selected{% endif %}>
@@ -520,9 +523,9 @@
                             </option>
                             {% endfor %}
                         </select>
+                        {% endif %}
                     </div>
 
-                    {% if session.get('role') != 'user' %}
                     <!-- Units/Hours -->
                     <div class="row g-2">
                         <div class="col-4 border-end">
@@ -564,7 +567,6 @@
                             <option {% if course.semester_offered=='Midyear' %}selected{% endif %}>Midyear</option>
                         </select>
                     </div>
-                    {% endif %}
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -735,7 +737,6 @@
             </div>
 
             <div class="modal-body p-4">
-                {% if session.get('role') in ['admin', 'superadmin'] %}
                 <!-- 1. CREATING NEW COURSES -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-primary small mb-1">1. Creating New Courses (Manual)</h6>
@@ -747,33 +748,20 @@
                     </p>
                 </div>
 
-                <!-- 2. BULK IMPORTING -->
+                {% if session.get('role') in ['admin', 'superadmin'] %}
+                <!-- 2. IMPORTING FROM EXCEL -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-success small mb-1">2. Bulk Importing from Curriculum</h6>
-                    <p class="small text-muted mb-0">Instead of adding subjects one by one, use the
-                        <strong>Import</strong> buttons:
+                    <h6 class="fw-bold text-success small mb-1">2. Importing from Excel</h6>
+                    <p class="small text-muted mb-0">For large-scale updates, use the <strong>'Import'</strong> button.
+                        Download the <strong>Curriculum Template.xlsx</strong> first. Fill in your subjects and upload
+                        it back to instantly populate your database with hundreds of courses at once.
                     </p>
-                    <ul class="small text-muted mt-2 mb-0 ps-3">
-                        <li><strong>PDF Import:</strong> Best for standard curriculum files; the system scans the text
-                            to extract subjects automatically.</li>
-                        <li><strong>Word Import:</strong> For most reliable results, click this button and use the
-                            <strong>'Download Template'</strong> link inside. Fill out that file and upload it back to
-                            the system.
-                        </li>
-                    </ul>
                 </div>
+                {% endif %}
 
-                <!-- 3. ASSIGNING DEPARTMENTS -->
+                <!-- 3. FINDING & SORTING -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-info small mb-1">3. Assigning Departments</h6>
-                    <p class="small text-muted mb-0">Click the <strong>'Dept. Assignment'</strong> button (with the
-                        diagram icon) to manage which departments "own" specific subjects. This ensures that only the
-                        correct department handles the scheduling for those courses.</p>
-                </div>
-
-                <!-- 4. FINDING & SORTING -->
-                <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1">4. Finding & Sorting</h6>
+                    <h6 class="fw-bold text-warning small mb-1">{% if session.get('role') in ['admin', 'superadmin'] %}3.{% else %}2.{% endif %} Finding & Sorting</h6>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Search Bar:</strong> Type any part of a code or name; the list will update
                             <strong>instantly</strong> as you type.
@@ -786,14 +774,24 @@
                     </ul>
                 </div>
 
+                {% if session.get('role') in ['admin', 'superadmin'] %}
+                <!-- 4. RECYCLE BIN -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-info small mb-1">4. Recycle Bin</h6>
+                    <p class="small text-muted mb-0">Deleted subjects aren't gone forever. Click the <strong>Clock/Trash
+                            icon</strong> (Recycle Bin) at the top to see recently deleted courses. You can
+                        <strong>Restore</strong> them back to the active list or <strong>Permanently Delete</strong>
+                        them.
+                    </p>
+                </div>
+                {% endif %}
+
                 <!-- 5. MANAGING & MASS ACTIONS -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1">5. Managing & Mass Actions</h6>
+                    <h6 class="fw-bold text-danger small mb-1">{% if session.get('role') in ['admin', 'superadmin'] %}5.{% else %}3.{% endif %} Managing & Mass Actions</h6>
                     <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many rows at
                         once:</p>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
-                        <li><strong>Calendar Icon:</strong> View the real-time <strong>Schedule</strong> for that
-                            specific subject.</li>
                         <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the subject's details (Code, Name,
                             Units, etc.).</li>
                         <li><strong>Trash Icon:</strong> Move the subject to the <strong>Recycle Bin</strong>.</li>
@@ -806,68 +804,13 @@
 
                 <!-- 6. PAGINATION -->
                 <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
+                    <h6 class="fw-bold text-secondary small mb-1">{% if session.get('role') in ['admin', 'superadmin'] %}6.{% else %}4.{% endif %} Pagination</h6>
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or
                         the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number
                         into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's
                         <strong>Left/Right arrow keys</strong> to flip through pages.
                     </p>
                 </div>
-
-                {% else %}
-                <!-- USER VERSION (Filtered) -->
-                <!-- 1. CREATING NEW COURSES -->
-                <div class="mb-4">
-                    <h6 class="fw-bold text-primary small mb-1">1. Creating New Courses (Manual)</h6>
-                    <p class="small text-muted mb-0">Click the green <strong>'New Course'</strong> button to add a
-                        single subject. You will need to fill in the <strong>Course Code</strong> (e.g., COSC 101),
-                        <strong>Full Name</strong>, and <strong>Department</strong>. You must also specify the
-                        <strong>Lecture/Lab units</strong> and <strong>Weekly Hours</strong> (Sync/Async) so the system
-                        knows how much time is needed for scheduling.
-                    </p>
-                </div>
-
-                <!-- 2. FINDING & SORTING (WAS #4) -->
-                <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1">2. Finding & Sorting</h6>
-                    <ul class="small text-muted mt-2 mb-0 ps-3">
-                        <li><strong>Search Bar:</strong> Type any part of a code or name; the list will update
-                            <strong>instantly</strong> as you type.
-                        </li>
-                        <li><strong>Funnel Icon:</strong> Click this to filter the list by a specific
-                            <strong>Department</strong> or common <strong>Subject Code</strong> (like Math or COSC).
-                        </li>
-                        <li><strong>Sort Menu:</strong> Use the dropdown on the top-right to arrange subjects by Newest,
-                            Alphabetical (A-Z), or by Department name.</li>
-                    </ul>
-                </div>
-
-                <!-- 3. MANAGING & MASS ACTIONS (WAS #5) -->
-                <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1">3. Managing & Mass Actions</h6>
-                    <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many rows at
-                        once:</p>
-                    <ul class="small text-muted mt-2 mb-0 ps-3">
-                        <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the subject's details (Code, Name,
-                            Units, etc.).</li>
-                        <li><strong>Trash Icon:</strong> Move the subject to the <strong>Recycle Bin</strong>.</li>
-                        <li><strong>Bulk Actions:</strong> Click any row to select it (or the Header box to
-                            <strong>Select All</strong>). Use the <strong>Green Bar</strong> to bulk-delete subjects to
-                            the Recycle Bin.
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- 4. PAGINATION (WAS #6) -->
-                <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1">4. Pagination</h6>
-                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or
-                        the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number
-                        into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's
-                        <strong>Left/Right arrow keys</strong> to flip through pages.
-                    </p>
-                </div>
-                {% endif %}
             </div>
 
             <div class="modal-footer bg-light">

@@ -186,7 +186,7 @@ function initializeSemesterFilter() {
 }
 
 // // ── GLOBAL SCHEDULE PRESENTER (NEW FULLSCREEN VIEW) ──────
-const GlobalSchedulePresenter = {
+window.GlobalSchedulePresenter = {
     type: null,
     id: null,
     scale: 1.0,
@@ -245,7 +245,7 @@ const GlobalSchedulePresenter = {
         // --- TOUCH EVENTS (Mobile) ---
         overlay.addEventListener('touchstart', (e) => {
             if (e.target.closest('.pres-nav-btn') || e.target.closest('.pres-close')) return;
-            
+
             if (e.touches.length === 1) {
                 // Pan Start
                 this.isDragging = true;
@@ -283,12 +283,13 @@ const GlobalSchedulePresenter = {
             this.isPinching = false;
         });
 
-        // --- KEYBOARD ---
-        window.addEventListener('keydown', (e) => {
-            if (!overlay.classList.contains('active')) return;
-            if (e.key === 'ArrowRight') this.showNext();
-            if (e.key === 'ArrowLeft') this.showPrev();
-            if (e.key === 'Escape') this.close();
+        // Relay from Iframe (If focus is inside)
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'keydown' && overlay.classList.contains('active')) {
+                if (e.data.key === 'ArrowRight') this.showNext();
+                if (e.data.key === 'ArrowLeft') this.showPrev();
+                if (e.data.key === 'Escape') this.close();
+            }
         });
 
         // --- IFRAME LOAD HANDLER (SMART SIZING) ---
@@ -298,14 +299,14 @@ const GlobalSchedulePresenter = {
                 try {
                     const doc = iframe.contentDocument || iframe.contentWindow.document;
                     const paper = doc.querySelector('.a4') || doc.getElementById('a4Paper') || doc.body;
-                    
+
                     if (paper) {
                         const wrap = document.getElementById('pres-wrap');
                         // Wait a tiny bit for layout to settle
                         setTimeout(() => {
                             const actualW = paper.offsetWidth;
                             const actualH = paper.offsetHeight;
-                            
+
                             if (wrap) {
                                 wrap.style.width = actualW + 'px';
                                 wrap.style.height = actualH + 'px';
@@ -348,7 +349,7 @@ const GlobalSchedulePresenter = {
 
         // Reset dimensions for next load
         if (wrap) {
-            wrap.style.width = '800px'; 
+            wrap.style.width = '800px';
             wrap.style.height = 'auto';
         }
 
@@ -371,7 +372,7 @@ const GlobalSchedulePresenter = {
         const urlParams = new URLSearchParams(window.location.search);
         const termId = urlParams.get('term_id') || 'live';
         const semester = this.currentSemester || "All";
-        
+
         const urlMap = {
             section: id => `/section-timetable-html/${id}?semester=${encodeURIComponent(semester)}&canvas=true&t=${Date.now()}`,
             faculty: id => `/faculty-timetable-html/${id}?semester=${encodeURIComponent(semester)}&canvas=true&t=${Date.now()}`,
@@ -413,7 +414,7 @@ const GlobalSchedulePresenter = {
     updateZoomBadge() {
         const badge = document.getElementById('pres-zoom-val');
         const footer = document.querySelector('.pres-footer');
-        
+
         if (badge) {
             if (window.innerWidth <= 767) {
                 badge.textContent = Math.round(this.scale * 100) + '% Fit';
@@ -447,9 +448,9 @@ const GlobalSchedulePresenter = {
 };
 
 // Global hooks
-window.viewSchedule = (type, id) => GlobalSchedulePresenter.open(type, id);
-window.closeSchedulePresenter = () => GlobalSchedulePresenter.close();
-document.addEventListener('DOMContentLoaded', () => GlobalSchedulePresenter.init());
+window.viewSchedule = (type, id) => window.GlobalSchedulePresenter.open(type, id);
+window.closeSchedulePresenter = () => window.GlobalSchedulePresenter.close();
+document.addEventListener('DOMContentLoaded', () => window.GlobalSchedulePresenter.init());
 
 // ── Shared Pagination ──────────────────────────────────────
 window.jumpToPage = function () {
@@ -475,10 +476,11 @@ document.addEventListener('keydown', function (e) {
     // Skip if the schedule presenter is active (let it handle its own arrows)
     const presenterEl = document.getElementById('global-schedule-presenter');
     if (presenterEl && presenterEl.classList.contains('active')) {
-        if (typeof GlobalSchedulePresenter !== 'undefined') {
-            if (e.key === 'ArrowLeft') GlobalSchedulePresenter.showPrev();
-            if (e.key === 'ArrowRight') GlobalSchedulePresenter.showNext();
-            if (e.key === 'Escape') GlobalSchedulePresenter.close();
+        const pres = window.GlobalSchedulePresenter;
+        if (pres) {
+            if (e.key === 'ArrowLeft') pres.showPrev();
+            if (e.key === 'ArrowRight') pres.showNext();
+            if (e.key === 'Escape') pres.close();
         }
         return;
     }

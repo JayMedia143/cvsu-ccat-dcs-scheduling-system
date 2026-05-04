@@ -9,7 +9,8 @@
     <div>
         <h1 class="h3 text-gray-800 fw-light mb-1 d-flex align-items-center">
             Faculty
-            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal" data-bs-target="#facultyInfoModal" title="How to use this page">
+            <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal"
+                data-bs-target="#facultyInfoModal" title="How to use this page">
                 <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"></i>
             </button>
         </h1>
@@ -19,16 +20,18 @@
     <!-- Updated Buttons: Clean Style -->
     {% if not is_hist %}
     <div class="d-flex align-items-center gap-2 gap-md-3">
-        {% if session.get('role') in ['admin', 'superadmin'] %}
+        {% if session.get('role') != 'user' %}
         <!-- IMPORT BUTTON -->
-        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importLoadingModal" title="Import Loading">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#importLoadingModal"
+            title="Import Loading">
             <i class="bi bi-file-earmark-spreadsheet-fill"></i>
             <span class="d-none d-md-inline">Import Loading</span>
         </button>
         {% endif %}
 
         <!-- New Faculty (Existing) -->
-        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addFacultyModal" title="Add New Faculty">
+        <button class="btn-google-action" data-bs-toggle="modal" data-bs-target="#addFacultyModal"
+            title="Add New Faculty">
             <i class="bi bi-plus-lg"></i>
             <span class="d-none d-md-inline">New Faculty</span>
         </button>
@@ -89,7 +92,8 @@
         <!-- 1. FILTER DROPDOWN -->
         <div class="dropdown">
             <button class="btn google-sort-toggle dropdown-toggle" type="button" id="filterDropdown"
-                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" data-bs-toggle="tooltip" title="Filter Results">
+                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" data-bs-toggle="tooltip"
+                title="Filter Results">
                 <i class="bi bi-funnel me-md-2"></i>
                 <span class="d-none d-md-inline">
                     {% if current_filter_by == 'dept' %}
@@ -205,12 +209,10 @@
                             <th class="ps-0 text-start" style="width: 15%;">Employee ID</th>
                             <th class="text-start" style="width: 25%;">Full Name</th>
                             <th class="text-start" style="width: 25%;">Department</th>
-                            {% if session.get('role') != 'user' %}
                             <th class="text-start" style="width: 10%;">Status</th>
                             <th class="text-start" style="width: 8%;">Availability</th>
                             <th class="text-start" style="width: 10%;">Max Hrs</th>
                             <th class="text-start" style="width: 10%;">Workload</th>
-                            {% endif %}
                             <th class="text-center pe-0" style="width: 1%; white-space: nowrap;">Actions</th>
                         </tr>
                     </thead>
@@ -229,12 +231,12 @@
 
                             <td class="text-start">
                                 <span class="badge-clean">
-                                    {{ 'All Departments' if faculty.department == 'Unassigned' else dept_map.get(faculty.department, faculty.department)
+                                    {{ 'All' if faculty.department == 'Unassigned' else
+                                    dept_map.get(faculty.department, faculty.department)
                                     }}
                                 </span>
                             </td>
 
-                            {% if session.get('role') != 'user' %}
                             <td class="text-start">
                                 {% if faculty.employment_status == 'Full-time' %}
                                 <span
@@ -259,42 +261,37 @@
                             <td class="text-start">
                                 <!-- Total scheduled hours from GA-generated schedule -->
                                 {% if is_hist %}
-                                    {% set wload = workload_map.get(faculty.full_name, 0) %}
+                                {% set wload = workload_map.get(faculty.full_name, 0) %}
                                 {% else %}
-                                    {% set wload = workload_map.get(faculty.id, 0) %}
+                                {% set wload = workload_map.get(faculty.id, 0) %}
                                 {% endif %}
                                 <span class="badge bg-secondary rounded-pill cursor-help" style="padding: 5px 10px;"
                                     title="{{ wload }} hrs scheduled">
                                     {{ wload }}
                                 </span>
                             </td>
-                            {% endif %}
 
                             <!-- Hanapin ang Actions column sa table loop -->
                             <td class="text-center pe-0 text-nowrap" onclick="event.stopPropagation()">
-                                {% if session.get('role') in ['admin', 'superadmin'] %}
-                                <!-- View Profile (admin only) -->
+                                <!-- View Profile -->
                                 <button type="button" class="btn-icon" onclick="openFacultyProfile({{ loop.index0 }})"
                                     title="View Profile">
                                     <i class="bi bi-eye"></i>
                                 </button>
-                                {% endif %}
 
-                                {% if not is_hist and session.get('role') in ['admin', 'superadmin'] %}
-                                <!-- Workload (admin only) -->
+                                {% if not is_hist %}
+                                <!-- Workload -->
                                 <button type="button" class="btn-icon" style="color: #188038;" data-bs-toggle="modal"
                                     data-bs-target="#assignCoursesModal{{ faculty.id }}" title="Assign Workload">
                                     <i class="bi bi-clipboard-check"></i>
                                 </button>
                                 {% endif %}
 
-                                <!-- Schedule Viewer (admin only) -->
-                                {% if session.get('role') in ['admin', 'superadmin'] %}
+                                <!-- Schedule Viewer -->
                                 <button type="button" class="btn-icon view"
                                     onclick="viewSchedule('faculty', {{ faculty.id }})" title="View Schedule">
                                     <i class="bi bi-calendar-week"></i>
                                 </button>
-                                {% endif %}
 
                                 {% if not is_hist %}
                                 <!-- Edit -->
@@ -432,11 +429,19 @@
                     {% endif %}
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
-                        <select class="form-select" name="department">
+                        {% if session.get('role') == 'user' %}
+                        <select class="form-select bg-light" disabled>
+                            <option selected>{{ session.get('department') }}</option>
+                        </select>
+                        <input type="hidden" name="department" value="{{ session.get('department') }}">
+                        {% else %}
+                        <select class="form-select" name="department" required>
+                            <option value="" disabled selected>Select Department</option>
                             {% for dept in unique_depts %}
                             <option value="{{ dept }}">{{ dept }}</option>
                             {% endfor %}
                         </select>
+                        {% endif %}
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">HIGHEST EDUCATIONAL ATTAINMENT</label>
@@ -528,13 +533,20 @@
                     {% endif %}
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">DEPARTMENT</label>
+                        {% if session.get('role') == 'user' %}
+                        <select class="form-select bg-light" disabled>
+                            <option selected>{{ faculty.department }}</option>
+                        </select>
+                        <input type="hidden" name="department" value="{{ faculty.department }}">
+                        {% else %}
                         <select class="form-select" name="department">
                             {% for dept_opt in unique_depts %}
-                            <option value="{{ dept_opt }}" {% if faculty.department == dept_opt %}selected{% endif %}>
+                            <option value="{{ dept_opt }}" {% if faculty.department==dept_opt %}selected{% endif %}>
                                 {{ dept_opt }}
                             </option>
                             {% endfor %}
                         </select>
+                        {% endif %}
                     </div>
                     <div class="mb-3">
                         <label class="form-label small text-muted fw-bold">HIGHEST EDUCATIONAL ATTAINMENT</label>
@@ -611,7 +623,7 @@
 </div>
 
 <!-- 1. FACULTY ASSIGNMENT WIZARD (v5.2 STYLED) -->
-<div class="modal fade modal-xl" id="assignCoursesModal{{ faculty.id }}" tabindex="-1">
+<div class="modal fade modal-xl" id="assignCoursesModal{{ faculty.id }}" tabindex="-1" data-max-hours="{{ faculty.max_weekly_hours }}">
     <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
 
@@ -665,12 +677,7 @@
                                         style="font-size: 0.85rem; letter-spacing: 0.5px;">{{ sem }}</span>
                                 </div>
                                 <div class="course-list-container pe-1" style="max-height: 400px; overflow-y: auto;">
-                                    {% set _fdn = faculty.department | lower | replace('department of ', '') | replace('
-                                    and ', ' & ') | trim %}
                                     {% for course in courses_by_sem[sem] %}
-                                    {% set _cdn = (course.department or '') | lower | replace('department of ', '') |
-                                    replace(' and ', ' & ') | trim %}
-                                    {% if not _cdn or _cdn == _fdn or faculty.full_name == 'T.B.A.' %}
                                     <div class="course-readable-card mb-2">
                                         <input
                                             class="form-check-input d-none teachable-cb-{{ faculty.id }} teachable-checkbox"
@@ -698,7 +705,6 @@
                                             </div>
                                         </label>
                                     </div>
-                                    {% endif %}
                                     {% endfor %}
                                 </div>
                             </div>
@@ -890,40 +896,42 @@
         }
 
         function initializeSelectionLogic() {
-            rowCheckboxes = document.querySelectorAll('.row-checkbox');
-            allRows = document.querySelectorAll('.course-row');
+            const { rowCheckboxes, allRows, paginationLinks } = getDynamicElements();
 
             // AUTO-DISPOSE MODALS: Prevent "backdrop of undefined" by destroying instances when closed
             document.querySelectorAll('.modal').forEach(m => {
-                m.addEventListener('hidden.bs.modal', function() {
+                m.addEventListener('hidden.bs.modal', function () {
                     const inst = bootstrap.Modal.getInstance(m);
                     if (inst) inst.dispose();
                 }, { once: false });
             });
 
-            allRows.forEach(row => {
-                const newRow = row.cloneNode(true);
-                row.parentNode.replaceChild(newRow, row);
-            });
+            // EVENT DELEGATION: Attach listener to the table body instead of individual rows
+            const tableBody = document.querySelector('.faculty-table-body');
+            if (tableBody && !tableBody.dataset.listenerAttached) {
+                tableBody.addEventListener('click', function (e) {
+                    const row = e.target.closest('.faculty-row');
+                    if (!row) return;
 
-            document.querySelectorAll('.faculty-row').forEach(row => {
-                row.addEventListener('click', function (e) {
+                    // Don't trigger if a button, link, or the checkbox itself was clicked
                     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
-                    const checkbox = this.querySelector('.row-checkbox');
+
+                    const checkbox = row.querySelector('.row-checkbox');
                     if (checkbox) {
                         checkbox.checked = !checkbox.checked;
                         updateSelectionState();
                     }
                 });
 
-                const cb = row.querySelector('.row-checkbox');
-                if (cb) {
-                    cb.addEventListener('click', function (e) {
-                        e.stopPropagation();
+                // Checkbox click handler (stop propagation is handled by delegating carefully)
+                tableBody.addEventListener('change', function (e) {
+                    if (e.target.classList.contains('row-checkbox')) {
                         updateSelectionState();
-                    });
-                }
-            });
+                    }
+                });
+
+                tableBody.dataset.listenerAttached = "true";
+            }
 
             paginationLinks.forEach(link => {
                 link.addEventListener('click', function (e) {
@@ -1012,7 +1020,7 @@
                     const doc = parser.parseFromString(html, 'text/html');
                     const newArea = doc.getElementById('mainContentArea');
                     if (newArea) document.getElementById('mainContentArea').innerHTML = newArea.innerHTML;
-                    
+
                     initializeSelectionLogic();
                     initializeFacultyModals();
 
@@ -1057,7 +1065,7 @@
                 const nextBtn = modal.querySelector('.btn-next-step');
                 const backBtn = modal.querySelector('.btn-back-step');
                 const form = modal.querySelector(`#assignmentForm${facultyId}`);
-                
+
                 if (nextBtn) {
                     const newNext = nextBtn.cloneNode(true);
                     nextBtn.parentNode.replaceChild(newNext, nextBtn);
@@ -1077,47 +1085,47 @@
                 const backBtnRef = modal.querySelector('.btn-back-step');
                 const sectionListDiv = modal.querySelector(`#sectionList${facultyId}`);
                 const totalHoursSpan = modal.querySelector(`#totalHours${facultyId}`);
-                const maxHours = parseInt("{{ faculty.max_weekly_hours }}", 10);
+                const maxHours = parseInt(modal.dataset.maxHours || "35", 10);
 
                 // RETENTION logic...
                 const currentAssignmentPairs = [...new Set([
                     {% for assign in faculty.assignments %}
                     "{{ assign.course_id }}-{{ assign.section_id }}",
-                    {% endfor %}
-                    {% for pair in sc_pairs_by_faculty.get(faculty.id | string, []) %}
-                    "{{ pair }}",
-                    {% endfor %}
+                {% endfor %}
+        {% for pair in sc_pairs_by_faculty.get(faculty.id | string, []) %}
+        "{{ pair }}",
+            {% endfor %}
                 ])];
 
-                const availDaysRaw = "{{ faculty.available_days or '' }}";
-                const availDays = availDaysRaw ? availDaysRaw.split(',').map(d => d.trim()).filter(d => d)
-                    : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const availDaysRaw = "{{ faculty.available_days or '' }}";
+    const availDays = availDaysRaw ? availDaysRaw.split(',').map(d => d.trim()).filter(d => d)
+        : ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-                const facSplitData = allSplitData[String(facultyId)] || {};
+    const facSplitData = allSplitData[String(facultyId)] || {};
 
-                nextBtnRef.addEventListener('click', function () {
-                    const checkedBoxes = Array.from(step1.querySelectorAll(`.teachable-cb-${facultyId}:checked`));
-                    const selectedCourses = checkedBoxes.map(cb => ({
-                        id: cb.value,
-                        code: cb.getAttribute('data-code'),
-                        name: cb.getAttribute('data-course-name'),
-                        lecHours: parseFloat(cb.getAttribute('data-lec-hours') || 0),
-                        labHours: parseFloat(cb.getAttribute('data-lab-hours') || 0),
-                        asyncHours: parseFloat(cb.getAttribute('data-async-hours') || 0),
-                        totalHours: parseFloat(cb.getAttribute('data-course-hours') || 0),
-                    }));
+    nextBtnRef.addEventListener('click', function () {
+        const checkedBoxes = Array.from(step1.querySelectorAll(`.teachable-cb-${facultyId}:checked`));
+        const selectedCourses = checkedBoxes.map(cb => ({
+            id: cb.value,
+            code: cb.getAttribute('data-code'),
+            name: cb.getAttribute('data-course-name'),
+            lecHours: parseFloat(cb.getAttribute('data-lec-hours') || 0),
+            labHours: parseFloat(cb.getAttribute('data-lab-hours') || 0),
+            asyncHours: parseFloat(cb.getAttribute('data-async-hours') || 0),
+            totalHours: parseFloat(cb.getAttribute('data-course-hours') || 0),
+        }));
 
-                    sectionListDiv.innerHTML = '';
-                    if (selectedCourses.length === 0) {
-                        sectionListDiv.innerHTML = '<div class="alert alert-warning border-0 shadow-sm m-2">No subjects selected. Go back to Step 1.</div>';
-                    } else {
-                        const allDayOpts = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        sectionListDiv.innerHTML = '';
+        if (selectedCourses.length === 0) {
+            sectionListDiv.innerHTML = '<div class="alert alert-warning border-0 shadow-sm m-2">No subjects selected. Go back to Step 1.</div>';
+        } else {
+            const allDayOpts = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-                        function buildSplitPanel(pair, sfx, hours, savedDay1, savedHours1, savedDay2, savedHours2) {
-                            const dayOpts1 = allDayOpts.map(d => `<option value="${d}" ${d === savedDay1 ? 'selected' : ''}>${d}</option>`).join('');
-                            const dayOpts2 = '<option value="">-- none --</option>' +
-                                allDayOpts.map(d => `<option value="${d}" ${d === savedDay2 ? 'selected' : ''}>${d}</option>`).join('');
-                            return `
+            function buildSplitPanel(pair, sfx, hours, savedDay1, savedHours1, savedDay2, savedHours2) {
+                const dayOpts1 = allDayOpts.map(d => `<option value="${d}" ${d === savedDay1 ? 'selected' : ''}>${d}</option>`).join('');
+                const dayOpts2 = '<option value="">-- none --</option>' +
+                    allDayOpts.map(d => `<option value="${d}" ${d === savedDay2 ? 'selected' : ''}>${d}</option>`).join('');
+                return `
                               <div class="split-panel ps-3 pb-2 pt-1" id="splitpanel_${facultyId}_${pair.replace('-', '_')}_${sfx}">
                                 <div class="small text-muted mb-1" style="font-size:.77rem;">
                                   <i class="bi bi-scissors me-1"></i>Split ${hours}h across days <em>(optional)</em>
@@ -1146,31 +1154,31 @@
                                 </div>
                                 <div class="split-total-msg" style="font-size:.77rem;"></div>
                               </div>`;
-                        }
+            }
 
-                        let content = '<div class="row g-2">';
-                        const othersTaken = allTakenByOthers[String(facultyId)] || [];
-                        selectedCourses.forEach(course => {
-                            let matches = allSections.filter(s => {
-                                const pair = `${course.id}-${s.id}`;
-                                const alreadyMine = currentAssignmentPairs.includes(pair);
-                                const takenByOther = othersTaken.includes(pair);
-                                return (s.course_ids.includes(parseInt(course.id)) || alreadyMine) && !takenByOther;
-                            });
-                            if (matches.length === 0) return;
+            let content = '<div class="row g-2">';
+            const othersTaken = allTakenByOthers[String(facultyId)] || [];
+            selectedCourses.forEach(course => {
+                let matches = allSections.filter(s => {
+                    const pair = `${course.id}-${s.id}`;
+                    const alreadyMine = currentAssignmentPairs.includes(pair);
+                    // Removed takenByOther restriction to display all sections
+                    return (s.course_ids.includes(parseInt(course.id)) || alreadyMine);
+                });
+                if (matches.length === 0) return;
 
-                            const _facSplit = faSplitHoursMap[String(facultyId)] || {};
-                            const _firstEntry = Object.entries(_facSplit).find(([k]) => k.startsWith(course.id + '-'));
-                            const _hdrSplit = _firstEntry ? _firstEntry[1] : {};
-                            const effLecHoursHdr = _hdrSplit.lec !== undefined ? _hdrSplit.lec : course.lecHours;
-                            const effLabHoursHdr = _hdrSplit.lab !== undefined ? _hdrSplit.lab : course.labHours;
+                const _facSplit = faSplitHoursMap[String(facultyId)] || {};
+                const _firstEntry = Object.entries(_facSplit).find(([k]) => k.startsWith(course.id + '-'));
+                const _hdrSplit = _firstEntry ? _firstEntry[1] : {};
+                const effLecHoursHdr = _hdrSplit.lec !== undefined ? _hdrSplit.lec : course.lecHours;
+                const effLabHoursHdr = _hdrSplit.lab !== undefined ? _hdrSplit.lab : course.labHours;
 
-                            let badges = '';
-                            if (effLecHoursHdr > 0) badges += `<span class="badge bg-primary bg-opacity-75 ms-1" style="font-size:.75rem;">Lec ${effLecHoursHdr}h</span>`;
-                            if (effLabHoursHdr > 0) badges += `<span class="badge bg-warning text-dark ms-1" style="font-size:.75rem;">Lab ${effLabHoursHdr}h</span>`;
-                            if (course.asyncHours > 0) badges += `<span class="badge bg-secondary ms-1" style="font-size:.75rem;">Async ${course.asyncHours}h</span>`;
+                let badges = '';
+                if (effLecHoursHdr > 0) badges += `<span class="badge bg-primary bg-opacity-75 ms-1" style="font-size:.75rem;">Lec ${effLecHoursHdr}h</span>`;
+                if (effLabHoursHdr > 0) badges += `<span class="badge bg-warning text-dark ms-1" style="font-size:.75rem;">Lab ${effLabHoursHdr}h</span>`;
+                if (course.asyncHours > 0) badges += `<span class="badge bg-secondary ms-1" style="font-size:.75rem;">Async ${course.asyncHours}h</span>`;
 
-                            content += `
+                content += `
                             <div class="col-md-6">
                               <div class="card border-0 shadow-sm h-100" style="border-radius:8px;overflow:hidden;">
                                 <div class="card-header py-2 px-3 d-flex align-items-center justify-content-between"
@@ -1180,16 +1188,16 @@
                                 </div>
                                 <div class="p-1">`;
 
-                            matches.forEach(sec => {
-                                const pair = `${course.id}-${sec.id}`;
-                                const isChecked = currentAssignmentPairs.includes(pair);
-                                const sd = facSplitData[pair] || {};
+                matches.forEach(sec => {
+                    const pair = `${course.id}-${sec.id}`;
+                    const isChecked = currentAssignmentPairs.includes(pair);
+                    const sd = facSplitData[pair] || {};
 
-                                const _secSplit = (_facSplit[pair]) || {};
-                                const effLecHours = _secSplit.lec !== undefined ? _secSplit.lec : course.lecHours;
-                                const effLabHours = _secSplit.lab !== undefined ? _secSplit.lab : course.labHours;
+                    const _secSplit = (_facSplit[pair]) || {};
+                    const effLecHours = _secSplit.lec !== undefined ? _secSplit.lec : course.lecHours;
+                    const effLabHours = _secSplit.lab !== undefined ? _secSplit.lab : course.labHours;
 
-                                content += `
+                    content += `
                                   <div class="px-2 pt-2 pb-1 border-bottom border-light assignment-row">
                                       <input class="assignment-checkbox"
                                              type="checkbox" name="assignments"
@@ -1206,9 +1214,9 @@
                                         ${sec.name}
                                       </label>`;
 
-                                if (course.lecHours > 0) {
-                                    const lecVisible = isChecked ? '' : 'display:none;';
-                                    content += `
+                    if (course.lecHours > 0) {
+                        const lecVisible = isChecked ? '' : 'display:none;';
+                        content += `
                                     <div class="session-panels-${facultyId}-${pair.replace('-', '_')}" style="${lecVisible}">
                                       <div class="d-flex align-items-center px-2 py-1 rounded mb-1"
                                            style="background:rgba(13,110,253,.06);border-left:3px solid rgba(13,110,253,.4);">
@@ -1217,11 +1225,11 @@
                                       </div>
                                       ${buildSplitPanel(pair, 'lec_', effLecHours, sd.lec_day_1, sd.lec_hours_1, sd.lec_day_2, sd.lec_hours_2)}
                                     </div>`;
-                                }
+                    }
 
-                                if (course.labHours > 0) {
-                                    const labVisible = isChecked ? '' : 'display:none;';
-                                    content += `
+                    if (course.labHours > 0) {
+                        const labVisible = isChecked ? '' : 'display:none;';
+                        content += `
                                     <div class="session-panels-${facultyId}-${pair.replace('-', '_')}" style="${labVisible}">
                                       <div class="d-flex align-items-center px-2 py-1 rounded mb-1"
                                            style="background:rgba(255,193,7,.08);border-left:3px solid rgba(255,193,7,.6);">
@@ -1230,11 +1238,11 @@
                                       </div>
                                       ${buildSplitPanel(pair, '', effLabHours, sd.day_1, sd.hours_1, sd.day_2, sd.hours_2)}
                                     </div>`;
-                                }
+                    }
 
-                                if (course.asyncHours > 0) {
-                                    const asyncVisible = isChecked ? '' : 'display:none;';
-                                    content += `
+                    if (course.asyncHours > 0) {
+                        const asyncVisible = isChecked ? '' : 'display:none;';
+                        content += `
                                     <div class="session-panels-${facultyId}-${pair.replace('-', '_')}" style="${asyncVisible}">
                                       <div class="d-flex align-items-center px-2 py-1 rounded mb-1"
                                            style="background:rgba(108,117,125,.07);border-left:3px solid rgba(108,117,125,.4);">
@@ -1242,75 +1250,75 @@
                                         <span class="small text-muted" style="font-size:.8rem;">${course.asyncHours}h — GA places freely</span>
                                       </div>
                                     </div>`;
-                                }
-                                content += `</div>`;
-                            });
-                            content += `</div></div></div>`;
-                        });
-                        sectionListDiv.innerHTML = content + '</div>';
                     }
-                    step1.style.display = 'none';
-                    step2.style.display = 'block';
-                    updateTotal(facultyId);
+                    content += `</div>`;
                 });
+                content += `</div></div></div>`;
+            });
+            sectionListDiv.innerHTML = content + '</div>';
+        }
+        step1.style.display = 'none';
+        step2.style.display = 'block';
+        updateTotal(facultyId);
+    });
 
-                backBtnRef.addEventListener('click', function () {
-                    step2.style.display = 'none';
-                    step1.style.display = 'block';
+    backBtnRef.addEventListener('click', function () {
+        step2.style.display = 'none';
+        step1.style.display = 'block';
+    });
+
+    modal.querySelector(`#assignmentForm${facultyId}`).addEventListener('submit', function (e) {
+        e.preventDefault();
+        const currentForm = this;
+        const csrfToken = currentForm.querySelector('input[name="csrf_token"]')?.value;
+
+        // Create a virtual form to submit
+        const submissionForm = document.createElement('form');
+        submissionForm.method = 'POST';
+        submissionForm.action = currentForm.action;
+
+        if (csrfToken) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden'; csrfInput.name = 'csrf_token'; csrfInput.value = csrfToken;
+            submissionForm.appendChild(csrfInput);
+        }
+
+        step2.querySelectorAll('.assignment-checkbox:checked').forEach(cb => {
+            const pair = cb.value;
+            const addH = (n, v) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = n; i.value = v; submissionForm.appendChild(i); };
+            addH('assignments', pair);
+            const pairKey = pair.replace('-', '_');
+            ['', 'lec_'].forEach(sfx => {
+                const panelId = `splitpanel_${facultyId}_${pairKey}_${sfx}`;
+                const panel = step2.querySelector(`#${panelId}`);
+                if (!panel) return;
+                const d1 = panel.querySelector(`[name="split_${pair}_${sfx}day_1"]`);
+                const h1 = panel.querySelector(`[name="split_${pair}_${sfx}hours_1"]`);
+                const d2 = panel.querySelector(`[name="split_${pair}_${sfx}day_2"]`);
+                const h2 = panel.querySelector(`[name="split_${pair}_${sfx}hours_2"]`);
+                if (d1 && h1 && h1.value) { addH(d1.name, d1.value); addH(h1.name, h1.value); }
+                if (d2 && h2 && d2.value && h2.value) { addH(d2.name, d2.value); addH(h2.name, h2.value); }
+            });
+        });
+        document.body.appendChild(submissionForm);
+        submissionForm.submit();
+    });
+                // LIVE HOUR COUNTER (Moved inside loop)
+                sectionListDiv.addEventListener('change', (e) => {
+                    if (e.target.classList.contains('assignment-checkbox')) updateTotal(facultyId);
                 });
-
-                modal.querySelector(`#assignmentForm${facultyId}`).addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    const currentForm = this;
-                    const csrfToken = currentForm.querySelector('input[name="csrf_token"]')?.value;
-                    
-                    // Create a virtual form to submit
-                    const submissionForm = document.createElement('form');
-                    submissionForm.method = 'POST';
-                    submissionForm.action = currentForm.action;
-                    
-                    if (csrfToken) {
-                        const csrfInput = document.createElement('input');
-                        csrfInput.type = 'hidden'; i.name = 'csrf_token'; i.value = csrfToken;
-                        submissionForm.appendChild(csrfInput);
+                sectionListDiv.addEventListener('input', (e) => {
+                    if (e.target.classList.contains('split-hrs-1') || e.target.classList.contains('split-hrs-2')) {
+                        updateTotal(facultyId);
                     }
-
-                    step2.querySelectorAll('.assignment-checkbox:checked').forEach(cb => {
-                        const pair = cb.value;
-                        const addH = (n, v) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = n; i.value = v; submissionForm.appendChild(i); };
-                        addH('assignments', pair);
-                        const pairKey = pair.replace('-', '_');
-                        ['', 'lec_'].forEach(sfx => {
-                            const panelId = `splitpanel_${facultyId}_${pairKey}_${sfx}`;
-                            const panel = step2.querySelector(`#${panelId}`);
-                            if (!panel) return;
-                            const d1 = panel.querySelector(`[name="split_${pair}_${sfx}day_1"]`);
-                            const h1 = panel.querySelector(`[name="split_${pair}_${sfx}hours_1"]`);
-                            const d2 = panel.querySelector(`[name="split_${pair}_${sfx}day_2"]`);
-                            const h2 = panel.querySelector(`[name="split_${pair}_${sfx}hours_2"]`);
-                            if (d1 && h1 && h1.value) { addH(d1.name, d1.value); addH(h1.name, h1.value); }
-                            if (d2 && h2 && d2.value && h2.value) { addH(d2.name, d2.value); addH(h2.name, h2.value); }
-                        });
-                    });
-                    document.body.appendChild(submissionForm);
-                    submissionForm.submit();
                 });
             }) ();
-            {% endfor %}
+    {% endfor %}
         }
 
-        // Initial setup
-        initializeFacultyModals();
+    // Initial setup
+    initializeFacultyModals();
 
-    // LIVE HOUR COUNTER
-    sectionListDiv.addEventListener('change', (e) => {
-        if (e.target.classList.contains('assignment-checkbox')) updateTotal(facultyId);
-    });
-    sectionListDiv.addEventListener('input', (e) => {
-        if (e.target.classList.contains('split-hrs-1') || e.target.classList.contains('split-hrs-2')) {
-            updateTotal(facultyId);
-        }
-    });
 
     function updateTotal(id) {
         let current = 0;
@@ -1325,19 +1333,19 @@
             // Read actual split inputs for lec and lab panels
             const lecPanel = activeModal.querySelector(`#splitpanel_${id}_${pairKey}_lec_`);
             const labPanel = activeModal.querySelector(`#splitpanel_${id}_${pairKey}_`);
-            const lecH1 = lecPanel ? parseFloat(lecPanel.querySelector('.split-hrs-1')?.value || 0) : 0;
-            const lecH2 = lecPanel ? parseFloat(lecPanel.querySelector('.split-hrs-2')?.value || 0) : 0;
-            const labH1 = labPanel ? parseFloat(labPanel.querySelector('.split-hrs-1')?.value || 0) : 0;
-            const labH2 = labPanel ? parseFloat(labPanel.querySelector('.split-hrs-2')?.value || 0) : 0;
+            const lecH1 = lecPanel ? (parseFloat(lecPanel.querySelector('.split-hrs-1')?.value) || 0) : 0;
+            const lecH2 = lecPanel ? (parseFloat(lecPanel.querySelector('.split-hrs-2')?.value) || 0) : 0;
+            const labH1 = labPanel ? (parseFloat(labPanel.querySelector('.split-hrs-1')?.value) || 0) : 0;
+            const labH2 = labPanel ? (parseFloat(labPanel.querySelector('.split-hrs-2')?.value) || 0) : 0;
 
             // Use split total when user has entered hours, else fall back to course attr
             const effLec = (lecH1 > 0) ? (lecH1 + lecH2) : lecHoursAttr;
             const effLab = (labH1 > 0) ? (labH1 + labH2) : labHoursAttr;
-            current += effLec + effLab + asyncHoursAttr;
+            current += (effLec || 0) + (effLab || 0) + (asyncHoursAttr || 0);
         });
         const span = activeModal.querySelector(`#totalHours${id}`);
         const bar = activeModal.querySelector(`#hoursBar${id}`);
-        const max = maxHours || 1;
+        const max = parseInt(activeModal.dataset.maxHours || "35", 10);
         if (span) {
             span.textContent = current;
             span.classList.toggle('text-danger', current > max);
@@ -1349,7 +1357,7 @@
             bar.classList.toggle('bg-danger', current > max);
             bar.classList.toggle('bg-success', current <= max);
         }
-        }
+    }
     });
 
     // ==========================================
@@ -1555,7 +1563,7 @@
         const total = parseFloat(totalHours) || 0;
         const msg = panel.querySelector('.split-total-msg');
         if (!msg) return;
-        const used = h1 + h2;
+        const used = parseFloat((h1 + h2).toFixed(2));
         if (used === 0) { msg.innerHTML = ''; return; }
         if (Math.abs(used - total) < 0.01) {
             msg.innerHTML = `<span class="text-success fw-semibold">${used} / ${total}h ✓</span>`;
@@ -1570,15 +1578,20 @@
 </script>
 
 <style>
-    .text-muted-v2 { color: #adb5bd; }
+    .text-muted-v2 {
+        color: #adb5bd;
+    }
+
     .info-icon-hover {
         transition: all 0.2s ease;
         cursor: pointer;
     }
+
     .info-icon-hover:hover {
         color: #198754 !important;
         transform: scale(1.2);
     }
+
     #facultyInfoModal {
         z-index: 1060 !important;
     }
@@ -1594,95 +1607,84 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            
+
             <div class="modal-body p-4">
-                {% if session.get('role') in ['admin', 'superadmin'] %}
                 <!-- 1. CREATING NEW FACULTY -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-primary small mb-1">1. Creating New Faculty</h6>
-                    <p class="small text-muted mb-0">Click <strong>'New Faculty'</strong> to add a record. Enter the <strong>Employee ID</strong>, <strong>Name</strong>, <strong>Status</strong>, and <strong>Max Hours</strong>. Be sure to include <strong>Educational Attainment</strong>, <strong>Academic Rank</strong>, and <strong>Available Days</strong> for accurate scheduling. Use <strong>'+ T.B.A.'</strong> for numbered placeholders.</p>
+                    <p class="small text-muted mb-0">Click <strong>'New Faculty'</strong> to add a record. Enter the
+                        <strong>Employee ID</strong>, <strong>Name</strong>, <strong>Status</strong>, and <strong>Max
+                            Hours</strong>. Be sure to include <strong>Educational Attainment</strong>, <strong>Academic
+                            Rank</strong>, and <strong>Available Days</strong> for accurate scheduling. Use <strong>'+
+                            T.B.A.'</strong> for numbered placeholders.</p>
                 </div>
 
                 <!-- 2. ASSIGNING WORKLOAD -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-success small mb-1">2. Assigning Workload</h6>
-                    <p class="small text-muted mb-0">Click the green <strong>Clipboard icon</strong> to open the 2-step <strong>Workload Wizard</strong>:</p>
+                    <p class="small text-muted mb-0">Click the green <strong>Clipboard icon</strong> to open the 2-step
+                        <strong>Workload Wizard</strong>:</p>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
-                        <li><strong>Step 1 (Teachable):</strong> Select the subjects the faculty is qualified to handle.</li>
-                        <li><strong>Step 2 (Final Load):</strong> Tick specific sections and optionally split the contact hours across different days to balance the load.</li>
+                        <li><strong>Step 1 (Teachable):</strong> Select the subjects the faculty is qualified to handle.
+                        </li>
+                        <li><strong>Step 2 (Final Load):</strong> Tick specific sections and optionally split the
+                            contact hours across different days to balance the load.</li>
                     </ul>
                 </div>
 
+                {% if session.get('role') in ['admin', 'superadmin'] %}
                 <!-- 3. IMPORT FROM EXCEL -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-info small mb-1">3. Import from Excel</h6>
-                    <p class="small text-muted mb-0">For massive updates, click <strong>'Import Faculty Loading'</strong>. Download the official <strong>Excel Template</strong> first to ensure your data (Employee ID, Course Code, and Section) is correctly formatted for the automatic loader.</p>
+                    <p class="small text-muted mb-0">For massive updates, click <strong>'Import Faculty
+                            Loading'</strong>. Download the official <strong>Excel Template</strong> first to ensure
+                        your data (Employee ID, Course Code, and Section) is correctly formatted for the automatic
+                        loader.</p>
                 </div>
+                {% endif %}
 
                 <!-- 4. FINDING & SORTING -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1">4. Finding & Sorting</h6>
+                    <h6 class="fw-bold text-warning small mb-1">{% if session.get('role') in ['admin', 'superadmin'] %}4.{% else %}3.{% endif %} Finding & Sorting</h6>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
-                        <li><strong>Search Bar:</strong> Type any part of a name, ID, or department; the list will update <strong>instantly</strong> as you type.</li>
-                        <li><strong>Funnel Icon:</strong> Click this to filter the list by <strong>Department</strong> or <strong>Employment Status</strong>.</li>
-                        <li><strong>Sort Menu:</strong> Arrange the list by <strong>Name (A-Z)</strong> using the dropdown on the top-right.</li>
+                        <li><strong>Search Bar:</strong> Type any part of a name, ID, or department; the list will
+                            update <strong>instantly</strong> as you type.</li>
+                        <li><strong>Funnel Icon:</strong> Click this to filter the list by <strong>Department</strong>
+                            or <strong>Employment Status</strong>.</li>
+                        <li><strong>Sort Menu:</strong> Arrange the list by <strong>Name (A-Z)</strong> using the
+                            dropdown on the top-right.</li>
                     </ul>
                 </div>
 
                 <!-- 5. MANAGING & MASS ACTIONS -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1">5. Managing & Mass Actions</h6>
-                    <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many records at once:</p>
+                    <h6 class="fw-bold text-danger small mb-1">{% if session.get('role') in ['admin', 'superadmin'] %}5.{% else %}4.{% endif %} Managing & Mass Actions</h6>
+                    <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many records
+                        at once:</p>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
-                        <li><strong>Eye Icon:</strong> View the detailed <strong>Faculty Profile</strong> and specialization info.</li>
-                        <li><strong>Calendar Icon:</strong> View the instructor's real-time <strong>Schedule</strong>.</li>
-                        <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the faculty's details, rank, or availability days.</li>
-                        <li><strong>Trash Icon:</strong> Move the faculty record to the <strong>Recycle Bin</strong>.</li>
-                        <li><strong>Bulk Actions:</strong> Select rows or use the Header box to <strong>Select All</strong>, then use the <strong>Green Bar</strong> to bulk-delete to the Recycle Bin.</li>
+                        <li><strong>Eye Icon:</strong> View the detailed <strong>Faculty Profile</strong> and
+                            specialization info.</li>
+                        <li><strong>Calendar Icon:</strong> View the instructor's real-time <strong>Schedule</strong>.
+                        </li>
+                        <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the faculty's details, rank, or
+                            availability days.</li>
+                        <li><strong>Trash Icon:</strong> Move the faculty record to the <strong>Recycle Bin</strong>.
+                        </li>
+                        <li><strong>Bulk Actions:</strong> Select rows or use the Header box to <strong>Select
+                                All</strong>, then use the <strong>Green Bar</strong> to bulk-delete to the Recycle Bin.
+                        </li>
                     </ul>
                 </div>
 
                 <!-- 6. PAGINATION -->
                 <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1">6. Pagination</h6>
-                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                    <h6 class="fw-bold text-secondary small mb-1">{% if session.get('role') in ['admin', 'superadmin'] %}6.{% else %}5.{% endif %} Pagination</h6>
+                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or
+                        the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number
+                        into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's
+                        <strong>Left/Right arrow keys</strong> to flip through pages.</p>
                 </div>
 
-                {% else %}
-                <!-- USER VERSION -->
-                <!-- 1. CREATING NEW FACULTY -->
-                <div class="mb-4">
-                    <h6 class="fw-bold text-primary small mb-1">1. Creating New Faculty</h6>
-                    <p class="small text-muted mb-0">Click <strong>'New Faculty'</strong> to add a record. Enter the <strong>Employee ID</strong>, <strong>Name</strong>, <strong>Status</strong>, and <strong>Max Hours</strong>. Be sure to include <strong>Educational Attainment</strong>, <strong>Academic Rank</strong>, and <strong>Available Days</strong> for accurate scheduling. Use <strong>'+ T.B.A.'</strong> for numbered placeholders.</p>
-                </div>
-
-                <!-- 2. FINDING & SORTING (WAS #4) -->
-                <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1">2. Finding & Sorting</h6>
-                    <ul class="small text-muted mt-2 mb-0 ps-3">
-                        <li><strong>Search Bar:</strong> Type any part of a name, ID, or department; the list will update <strong>instantly</strong> as you type.</li>
-                        <li><strong>Funnel Icon:</strong> Click this to filter the list by <strong>Department</strong> or <strong>Employment Status</strong>.</li>
-                        <li><strong>Sort Menu:</strong> Arrange the list by <strong>Name (A-Z)</strong> using the dropdown on the top-right.</li>
-                    </ul>
-                </div>
-
-                <!-- 3. MANAGING & MASS ACTIONS (WAS #5) -->
-                <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1">3. Managing & Mass Actions</h6>
-                    <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many records at once:</p>
-                    <ul class="small text-muted mt-2 mb-0 ps-3">
-                        <li><strong>Pencil Icon:</strong> <strong>Edit</strong> the faculty's details, rank, or availability days.</li>
-                        <li><strong>Trash Icon:</strong> Move the faculty record to the <strong>Recycle Bin</strong>.</li>
-                        <li><strong>Bulk Actions:</strong> Select rows or use the Header box to <strong>Select All</strong>, then use the <strong>Green Bar</strong> to bulk-delete to the Recycle Bin.</li>
-                    </ul>
-                </div>
-
-                <!-- 4. PAGINATION (WAS #6) -->
-                <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1">4. Pagination</h6>
-                    <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's <strong>Left/Right arrow keys</strong> to flip through pages.</p>
-                </div>
-                {% endif %}
             </div>
 
             <div class="modal-footer bg-light">

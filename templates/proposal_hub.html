@@ -1514,6 +1514,36 @@
         pointer-events: none;
     }
 
+    /* LOD Placeholder */
+    .lod-placeholder {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        color: #94a3b8;
+        text-align: center;
+        border: 1px solid #e2e8f0;
+        padding: 20px;
+        pointer-events: none;
+    }
+
+    .lod-placeholder i {
+        font-size: 3rem;
+        margin-bottom: 10px;
+        opacity: 0.3;
+    }
+
+    .lod-placeholder span {
+        font-weight: 800;
+        font-size: 1.2rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.5;
+    }
+
     /* Mobile adjustments for overlay */
     @media (max-width: 991.98px) {
         .messenger-overlay {
@@ -3240,6 +3270,7 @@
             document.getElementById('editModeIndicator').classList.remove('d-none');
             input.focus();
             input.setSelectionRange(input.value.length, input.value.length);
+            input.dispatchEvent(new Event('input')); // Trigger auto-resize
             input.scrollIntoView({ behavior: 'smooth', block: 'end' });
         }
     }
@@ -3249,6 +3280,8 @@
         const input = document.getElementById('chatInput');
         if (input) {
             input.value = '';
+            input.style.height = 'auto';
+            input.style.overflowY = 'hidden';
             document.getElementById('editModeIndicator').classList.add('d-none');
         }
     }
@@ -3286,8 +3319,25 @@
         }
 
         // Chat Form Submit
-        const chatForm = document.getElementById('chatForm');
         if (chatForm) {
+            // Enter to Send & Auto-resize
+            if (chatInput) {
+                chatInput.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        chatForm.requestSubmit();
+                    }
+                });
+
+                // Auto-resize
+                chatInput.addEventListener('input', function () {
+                    this.style.height = 'auto';
+                    let newHeight = Math.min(this.scrollHeight, 150);
+                    this.style.height = newHeight + 'px';
+                    this.style.overflowY = this.scrollHeight > 150 ? 'auto' : 'hidden';
+                });
+            }
+
             chatForm.onsubmit = function (e) {
                 e.preventDefault();
                 const inputEl = document.getElementById('chatInput');
@@ -3335,6 +3385,10 @@
                         socket.emit('send_hub_message', payload);
                     }
                     inputEl.value = '';
+                    // Reset height
+                    inputEl.style.height = 'auto';
+                    inputEl.style.overflowY = 'hidden';
+                    
                     clearDraftAttachment();
                     if (sendBtn) sendBtn.disabled = false;
                     if (sendIcon) sendIcon.classList.remove('d-none');
@@ -3711,7 +3765,8 @@
                 height: 1200,
                 index: idx,
                 isMounted: false,
-                element: null
+                element: null,
+                isHighRes: false
             };
         });
 
@@ -3726,30 +3781,58 @@
         const vp = document.getElementById('pvViewport');
         if (!vp) return;
         const rect = vp.getBoundingClientRect();
-        const buffer = 1000;
+        
+        // Smart Buffer
+        const baseBuffer = 600;
+        const effectiveBuffer = baseBuffer * Math.max(1, pvScale); 
 
-        const vLeft = (-pvTranslateX - buffer) / pvScale;
-        const vTop = (-pvTranslateY - buffer) / pvScale;
-        const vWidth = (rect.width + buffer * 2) / pvScale;
-        const vHeight = (rect.height + buffer * 2) / pvScale;
+        const vLeft = (-pvTranslateX - effectiveBuffer) / pvScale;
+        const vTop = (-pvTranslateY - effectiveBuffer) / pvScale;
+        const vRight = (rect.width + effectiveBuffer * 2) / pvScale + vLeft;
+        const vBottom = (rect.height + effectiveBuffer * 2) / pvScale + vTop;
+
+        const zoomThreshold = 0.35;
+        const shouldBeHighRes = pvScale >= zoomThreshold;
 
         window.pvAllCardData.forEach(card => {
             const isVisible = (
-                card.x < vLeft + vWidth &&
+                card.x < vRight &&
                 card.x + card.width > vLeft &&
-                card.y < vTop + vHeight &&
+                card.y < vBottom &&
                 card.y + card.height > vTop
             );
 
-            if (isVisible && !card.isMounted) {
-                pvMountCard(card);
-            } else if (!isVisible && card.isMounted) {
+            if (isVisible) {
+                if (!card.isMounted) {
+                    pvMountCard(card, shouldBeHighRes);
+                } else if (card.isHighRes !== shouldBeHighRes) {
+                    pvUpdateCardLOD(card, shouldBeHighRes);
+                }
+            } else if (card.isMounted) {
                 pvUnmountCard(card);
             }
         });
     }
 
-    function pvMountCard(data) {
+    function pvUpdateCardLOD(data, highRes) {
+        if (!data.element) return;
+        const wrap = data.element.querySelector('.card-iframe-wrap');
+        if (!wrap) return;
+
+        if (highRes) {
+            wrap.innerHTML = `<iframe src="${data.url}"></iframe>`;
+        } else {
+            wrap.innerHTML = `
+                <div class="lod-placeholder">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>${data.label}</span>
+                </div>
+            `;
+        }
+        data.isHighRes = highRes;
+    }
+
+    function pvMountCard(data, highRes) {
         const card = document.createElement('div');
         card.className = 'pv-card';
         card.id = `pv-card-${data.id}`;
@@ -3766,6 +3849,18 @@
             pvOpenPresentation(data.index);
         });
 
+        let innerContent = '';
+        if (highRes) {
+            innerContent = `<iframe src="${data.url}"></iframe>`;
+        } else {
+            innerContent = `
+                <div class="lod-placeholder">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>${data.label}</span>
+                </div>
+            `;
+        }
+
         card.innerHTML = `
             <div class="card-header-bar">
                 <span>${data.label}</span>
@@ -3774,12 +3869,13 @@
                 </button>
             </div>
             <div class="card-iframe-wrap">
-                <iframe src="${data.url}"></iframe>
+                ${innerContent}
             </div>
         `;
         document.getElementById('pvCanvas').appendChild(card);
         data.element = card;
         data.isMounted = true;
+        data.isHighRes = highRes;
     }
 
     function pvUnmountCard(data) {

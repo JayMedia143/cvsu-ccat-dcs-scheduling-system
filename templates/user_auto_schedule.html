@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Optimization Active{% endblock %}
+{% block title %}Department Optimizer{% endblock %}
 
 {% block content %}
 <link
@@ -586,7 +586,7 @@
             <i class="bi bi-file-earmark-spreadsheet-fill"
                 style="color:var(--theme-green); font-size:1.5rem; margin-right:10px;"></i>
             <div>
-                <div class="file-title">Master Schedule Gen</div>
+                <div class="file-title">Dept Schedule Gen</div>
                 <div class="file-status" id="sysStatus">Ready</div>
             </div>
         </div>
@@ -677,7 +677,7 @@
     <div class="modal-box" style="max-width: 480px; width: 90%;">
         <div class="mb-3"><i class="bi bi-grid-3x3-gap-fill text-success" style="font-size:3rem;"></i></div>
         <h3 class="d-flex align-items-center justify-content-center">
-            Initialize Generator
+            Initialize Department Generator
             <button class="btn btn-link link-secondary p-0 ms-2" data-bs-toggle="modal"
                 data-bs-target="#generatorInfoModal" title="How to use this page">
                 <i class="bi bi-info-circle fs-6 text-muted-v2 info-icon-hover"
@@ -1058,7 +1058,7 @@
         });
 
         window.toggleView = function () { ov.classList.toggle('minimized'); setTimeout(rsz, 400); };
-        window.confirmAbort = function () { if (confirm('Stop generation?')) fetch('/stop-generation', { method: 'POST', headers: { 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content } }).then(function () { location.reload(); }); };
+        window.confirmAbort = function () { if (confirm('Stop generation?')) fetch('/api/user/stop', { method: 'POST', headers: { 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content } }).then(function () { location.reload(); }); };
 
         function rsz() {
             var par = cvs.offsetParent || cvs.parentElement; if (!par) return;
@@ -1204,7 +1204,7 @@
             // ── Step 1: Pre-Feasibility Check (Gatekeeper) ──────────────────
             document.getElementById('checkLoadingOverlay').style.display = 'flex';
             
-            fetch('/api/check-feasibility', {
+            fetch('/api/user/check-feasibility', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content },
                 body: JSON.stringify({ semester: sem, scheduled_depts: selectedDepts })
@@ -1374,7 +1374,7 @@
             while (log.firstChild) log.removeChild(log.firstChild);
             t0 = Date.now(); tInt = setInterval(function () { var d = Date.now() - t0, dt = new Date(d); tmr.innerText = dt.toISOString().substr(11, 8); }, 1000);
             
-            fetch('/start-generation', { 
+            fetch('/api/user/generate', { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content }, 
                 body: JSON.stringify({ semester: sem, fresh_start: isFresh, scheduled_depts: selectedDepts }) 
@@ -1383,7 +1383,7 @@
             .then(function () {
                 var lastG = 0;
                 pInt = setInterval(function () {
-                    fetch('/get-generation-status').then(r => r.json()).then(d => {
+                    fetch('/api/user/status').then(r => r.json()).then(d => {
                         if (d.visual_matrix) mat = d.visual_matrix;
                         var hc = d.hard_conflicts || 0, sc1 = d.sc1_violations || 0, sc2 = d.sc2_violations || 0;
                         hG.innerText = d.generation;

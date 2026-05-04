@@ -140,8 +140,8 @@
             z-index: 1075 !important;
         }
 
-        .sheets-menubar .0menu-item:hover {
-            background-color: rgba(0, 0, 0, 0.04) !important;
+        .sheets-menubar .menu-item:hover {
+            background: rgba(0, 0, 0, 0.05) !important;
         }
 
         .sheets-menubar .menu-item.active {
@@ -307,6 +307,30 @@
 
         .pres-nav-next {
             right: 30px;
+        }
+
+        #offcanvasNavbar {
+            z-index: 1080 !important;
+        }
+
+        @media (max-width: 991.98px) {
+            .offcanvas-body .menu-item {
+                display: flex !important;
+                width: 100%;
+                height: auto;
+                padding: 12px 16px;
+            }
+
+            .offcanvas-body .nav-item {
+                width: 100%;
+            }
+
+            /* ARCHIVE MODE SIDEBAR FIX */
+            {% if is_hist %}
+            #offcanvasNavbar {
+                height: 100vh !important;
+            }
+            {% endif %}
         }
 
         /* Hide footer text on mobile, but keep nav buttons */
@@ -595,7 +619,6 @@
                             </ul>
                         </li>
                         {% endif %}
-
                         {% else %}
                         <!-- ARCHIVE ACCESS NAVBAR (VIEW MODE ACTIVE) -->
                         <li class="nav-item">
@@ -632,9 +655,16 @@
 
                         {% else %}
                         <!-- USER ROLE NAV -->
-                        <li class="nav-item"><a class="menu-item" href="{{ url_for('proposal_hub') }}">Chats</a></li>
+                        <li class="nav-item">
+                            <a class="menu-item {% if request.endpoint == 'dashboard' %}active{% endif %}"
+                                href="{{ url_for('dashboard') }}">Dashboard</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="menu-item {% if request.endpoint == 'proposal_hub' %}active{% endif %}"
+                                href="{{ url_for('proposal_hub') }}">Chats</a>
+                        </li>
                         <li class="nav-item dropdown">
-                            <a class="menu-item dropdown-toggle {% if request.endpoint in ['manage_courses', 'manage_sections', 'manage_students', 'manage_preassignments'] %}active{% endif %}"
+                            <a class="menu-item dropdown-toggle {% if request.endpoint in ['manage_courses', 'manage_sections', 'manage_students', 'manage_faculty', 'manage_rooms'] %}active{% endif %}"
                                 href="#" role="button" data-bs-toggle="dropdown">Data</a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{{ url_for('manage_courses') }}"><i
@@ -647,10 +677,20 @@
                                             class="bi bi-door-open me-2"></i> Rooms</a></li>
                             </ul>
                         </li>
-                        <li class="nav-item"><a class="menu-item" href="{{ url_for('schedule_editor') }}">Schedule
-                                Editor</a></li>
-                        <li class="nav-item"><a class="menu-item" href="{{ url_for('view_timetable') }}">View Current
-                                Schedules</a></li>
+                        <li class="nav-item dropdown">
+                            <a class="menu-item dropdown-toggle {% if request.endpoint in ['user_auto_schedule', 'schedule_editor'] %}active{% endif %}"
+                                href="#" role="button" data-bs-toggle="dropdown">Scheduling</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('user_auto_schedule') }}"><i
+                                            class="bi bi-cpu me-2"></i> Auto-Scheduler</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('schedule_editor') }}"><i
+                                            class="bi bi-pencil-square me-2"></i> Schedule Editor</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item">
+                            <a class="menu-item {% if request.endpoint == 'view_timetable' %}active{% endif %}"
+                                href="{{ url_for('view_timetable') }}">View</a>
+                        </li>
                         {% endif %}
 
                         <!-- SEMESTER FILTER (MOBILE ONLY - Inside Offcanvas) -->
@@ -1793,20 +1833,42 @@
             else fetchNotifications();
         }
 
-        function showToast(notif) {
+        function showToast(notif, type = 'success', title = 'System Notification') {
             const container = document.querySelector('.toast-container');
+            if (!container) return;
+
             const toastId = 'toast-' + Date.now();
+
+            // Handle both object (from Socket.IO) and raw string (from manual calls)
+            let message = '';
+            let link = '';
+            let icon = 'bell-fill';
+
+            if (typeof notif === 'object' && notif !== null) {
+                message = notif.message || '';
+                link = notif.link || '';
+                title = notif.title || title;
+                type = notif.type || type;
+            } else {
+                message = notif;
+            }
+
+            // Set icon based on type
+            if (type === 'danger') icon = 'exclamation-circle-fill';
+            else if (type === 'warning') icon = 'exclamation-triangle-fill';
+            else if (type === 'success') icon = 'check-circle-fill';
+
             const html = `
                 <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
                     <div class="toast-header">
-                        <i class="bi bi-bell-fill text-success me-2"></i>
-                        <strong class="me-auto">New Notification</strong>
+                        <i class="bi bi-${icon} text-${type} me-2"></i>
+                        <strong class="me-auto">${title}</strong>
                         <small class="text-muted">Just now</small>
                         <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
                     </div>
                     <div class="toast-body">
-                        ${notif.message}
-                        ${notif.link ? `<div class="mt-2"><a href="${notif.link}" class="btn btn-sm btn-success text-white">View</a></div>` : ''}
+                        ${message}
+                        ${link ? `<div class="mt-2"><a href="${link}" class="btn btn-sm btn-${type} text-white">View</a></div>` : ''}
                     </div>
                 </div>
             `;

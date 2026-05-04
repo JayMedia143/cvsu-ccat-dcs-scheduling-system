@@ -2,6 +2,51 @@
 
 {% block title %}View Timetable - CvSU CCAT DCS{% endblock %}
 
+{% block scripts %}
+<script>
+    // ── GLOBAL PRESENTER OVERRIDES (CANVAS SPECIFIC) ───────────
+    // We wait for DOMContentLoaded to ensure main.js is already loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.GlobalSchedulePresenter) {
+            window.GlobalSchedulePresenter.showNext = function () {
+                const list = window.allCardData || [];
+                const idx = list.findIndex(item => item.id == this.id);
+                if (idx !== -1) {
+                    const nextIdx = (idx + 1) % list.length;
+                    this.open(this.type || 'section', list[nextIdx].id);
+                    // Fix Label: Set it manually since we don't use TRs here
+                    const lbl = document.getElementById('pres-label');
+                    if (lbl) lbl.textContent = list[nextIdx].label;
+                }
+            };
+            window.GlobalSchedulePresenter.showPrev = function () {
+                const list = window.allCardData || [];
+                const idx = list.findIndex(item => item.id == this.id);
+                if (idx !== -1) {
+                    const prevIdx = (idx - 1 + list.length) % list.length;
+                    this.open(this.type || 'section', list[prevIdx].id);
+                    // Fix Label: Set it manually since we don't use TRs here
+                    const lbl = document.getElementById('pres-label');
+                    if (lbl) lbl.textContent = list[prevIdx].label;
+                }
+            };
+
+            // Also override the initial open to set label correctly
+            const originalOpen = window.GlobalSchedulePresenter.open;
+            window.GlobalSchedulePresenter.open = function(type, id) {
+                originalOpen.call(this, type, id);
+                const list = window.allCardData || [];
+                const found = list.find(item => item.id == id);
+                if (found) {
+                    const lbl = document.getElementById('pres-label');
+                    if (lbl) lbl.textContent = found.label;
+                }
+            };
+        }
+    });
+</script>
+{% endblock %}
+
 {% block content %}
 
 <style>
@@ -179,6 +224,36 @@
         margin-top: 20px;
         font-size: 0.9rem;
         letter-spacing: 1px;
+    }
+
+    /* LOD Placeholder */
+    .lod-placeholder {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        color: #94a3b8;
+        text-align: center;
+        border: 1px solid #e2e8f0;
+        padding: 20px;
+        pointer-events: none;
+    }
+
+    .lod-placeholder i {
+        font-size: 3rem;
+        margin-bottom: 10px;
+        opacity: 0.3;
+    }
+
+    .lod-placeholder span {
+        font-weight: 800;
+        font-size: 1.2rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.5;
     }
 
     /* ── FLOATING HUD (PILL DESIGN) ────────────────────────── */
@@ -1018,31 +1093,75 @@
             x: (index % columns) * spacingX + 500, y: Math.floor(index / columns) * spacingY + 500,
             width: paperW, height: paperH + 34,
             paperW_raw: paperW, paperH_raw: paperH,
-            index: index, isMounted: false, element: null
+            index: index, isMounted: false, element: null,
+            isHighRes: false // Track if iframe is currently loaded
         }));
         renderVisibleCards();
         initMinimap();
     };
 
     function renderVisibleCards() {
-        const buffer = 1000;
+        // Smart Buffer: Don't let it grow infinitely when zoomed out
+        const baseBuffer = 600;
+        const effectiveBuffer = baseBuffer * Math.max(1, scale); 
+        
         const rect = viewport.getBoundingClientRect();
-        const vLeft = (-translateX - buffer) / scale, vTop = (-translateY - buffer) / scale;
-        const vRight = (rect.width + buffer * 2) / scale + vLeft, vBottom = (rect.height + buffer * 2) / scale + vTop;
+        const vLeft = (-translateX - effectiveBuffer) / scale;
+        const vTop = (-translateY - effectiveBuffer) / scale;
+        const vRight = (rect.width + effectiveBuffer * 2) / scale + vLeft;
+        const vBottom = (rect.height + effectiveBuffer * 2) / scale + vTop;
+
+        const zoomThreshold = 0.35;
+        const shouldBeHighRes = scale >= zoomThreshold;
 
         window.allCardData.forEach(data => {
             const isVisible = (data.x < vRight && data.x + data.width > vLeft && data.y < vBottom && data.y + data.height > vTop);
-            if (isVisible && !data.isMounted) mountCard(data);
-            else if (!isVisible && data.isMounted) unmountCard(data);
+            
+            if (isVisible) {
+                if (!data.isMounted) {
+                    mountCard(data, shouldBeHighRes);
+                } else if (data.isHighRes !== shouldBeHighRes) {
+                    // Transition between LOD states without unmounting outer card
+                    updateCardLOD(data, shouldBeHighRes);
+                }
+            } else if (data.isMounted) {
+                unmountCard(data);
+            }
         });
     }
 
-    function mountCard(data) {
+    function updateCardLOD(data, highRes) {
+        if (!data.element) return;
+        const wrap = data.element.querySelector('.card-iframe-wrap');
+        if (!wrap) return;
+
+        if (highRes) {
+            wrap.innerHTML = `
+                <div class="iframe-loading">
+                    <div class="spinner-border text-success" role="status"><span class="visually-hidden">Loading...</span></div>
+                </div>
+                <iframe src="${data.url}" onload="this.previousElementSibling.style.display='none'"></iframe>
+            `;
+        } else {
+            wrap.innerHTML = `
+                <div class="lod-placeholder">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>${data.label}</span>
+                </div>
+            `;
+        }
+        data.isHighRes = highRes;
+    }
+
+    function mountCard(data, highRes) {
         const card = document.createElement('div');
         card.className = 'canvas-card sticker-card';
-        // Only position and layout metadata on the outer card
         card.style.cssText = `left:${data.x}px;top:${data.y}px;`;
-        if (window.lastSearchQuery && !data.lowerLabel.includes(window.lastSearchQuery)) card.classList.add('canvas-dimmed');
+        
+        if (window.lastSearchQuery && !data.lowerLabel.includes(window.lastSearchQuery)) {
+            card.classList.add('canvas-dimmed');
+        }
+
         const excelUrlMap = {
             section: id => `/section-timetable-excel/${id}?semester=${encodeURIComponent(currentSemester)}`,
             faculty: id => `/faculty-timetable-excel/${id}?semester=${encodeURIComponent(currentSemester)}`,
@@ -1051,11 +1170,28 @@
         };
         const excelUrl = excelUrlMap[currentType](data.id);
 
+        let innerContent = '';
+        if (highRes) {
+            innerContent = `
+                <div class="iframe-loading">
+                    <div class="spinner-border text-success" role="status"><span class="visually-hidden">Loading...</span></div>
+                </div>
+                <iframe src="${data.url}" onload="this.previousElementSibling.style.display='none'"></iframe>
+            `;
+        } else {
+            innerContent = `
+                <div class="lod-placeholder">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>${data.label}</span>
+                </div>
+            `;
+        }
+
         card.innerHTML = `
             <div class="card-header-bar">
                 <span>${data.label}</span>
                 <div class="d-flex align-items-center gap-2">
-<a href="${excelUrl}" class="card-maximize-btn text-decoration-none" title="Download Excel">
+                    <a href="${excelUrl}" class="card-maximize-btn text-decoration-none" title="Download Excel">
                         <i class="bi bi-file-earmark-excel"></i>
                     </a>
                     <button class="card-maximize-btn" onclick="viewSchedule(currentType, '${data.id}')" title="Maximize">
@@ -1064,17 +1200,17 @@
                 </div>
             </div>
             <div class="card-iframe-wrap" style="width:${data.paperW_raw}px; height:${data.paperH_raw}px;">
-                <div class="iframe-loading">
-                    <div class="spinner-border text-success" role="status"><span class="visually-hidden">Loading...</span></div>
-                </div>
-                <iframe src="${data.url}" onload="this.previousElementSibling.style.display='none'"></iframe>
+                ${innerContent}
             </div>`;
+
         if (window.innerWidth > 768) {
             card.addEventListener('dblclick', () => viewSchedule(currentType, data.id));
         }
+        
         canvas.appendChild(card);
         data.element = card;
         data.isMounted = true;
+        data.isHighRes = highRes;
     }
 
     function unmountCard(data) {
@@ -1266,25 +1402,6 @@
         initViewState();
     });
 
-    // ── GLOBAL PRESENTER OVERRIDES (CANVAS SPECIFIC) ───────────
-    if (typeof GlobalSchedulePresenter !== 'undefined') {
-        GlobalSchedulePresenter.showNext = function () {
-            const list = listMap[currentType] || [];
-            const idx = list.findIndex(item => item.id == this.id);
-            if (idx !== -1) {
-                const nextIdx = (idx + 1) % list.length;
-                this.open(currentType, list[nextIdx].id);
-            }
-        };
-        GlobalSchedulePresenter.showPrev = function () {
-            const list = listMap[currentType] || [];
-            const idx = list.findIndex(item => item.id == this.id);
-            if (idx !== -1) {
-                const prevIdx = (idx - 1 + list.length) % list.length;
-                this.open(currentType, list[prevIdx].id);
-            }
-        };
-    }
 }) ();
 </script>
 

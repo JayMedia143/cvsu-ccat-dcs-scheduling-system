@@ -10,10 +10,10 @@
 
 | Hardware Tier | CPU Model / RAM | Core/Thread | GPU Model | GPU Cores/VRAM | Expected Speed | Actual Speed |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **High-End** | i7-1065G7 / 32GB | 4C / 8T | NVIDIA GTX 1660 Ti | 6GB GDDR6 | 1 - 2 mins | [Time] |
-| **Mid-Range** | i7-860 / 16GB | 4C / 8T | AMD Radeon HD 5700 | 1GB VRAM | 3 - 5 mins | [Time] |
-| **Low-End** | i5-4310M / 12GB | 2C / 4T | Intel HD 4600 | None (Shared) | 5 - 8 mins | [Time] |
-| **Entry-Level** | i3-1005G1 / 8GB | 2C / 4T | Intel UHD Graphics | None (Shared) | 8 - 12 mins | [Time] |
+| **High-End** | i7-1065G7 / 32GB | 4C / 8T | NVIDIA GTX 1660 Ti | 6GB GDDR6 | 0.52 mins | [Time] |
+| **Mid-Range** | i7-860 / 16GB | 4C / 8T | AMD Radeon HD 5700 | 1GB VRAM | 8.58 mins | [Time] |
+| **Low-End** | i5-4310M / 12GB | 2C / 4T | Intel HD 4600 | None (Shared) | 17.78 mins | [Time] |
+| **Entry-Level** | i3-1005G1 / 8GB | 2C / 4T | Intel UHD Graphics | None (Shared) | 40.0 mins | [Time] |
 
 **Table 4.X**: *Comparative Performance Analysis across Varying Hardware Configurations*
 

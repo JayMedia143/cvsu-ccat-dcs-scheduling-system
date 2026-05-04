@@ -3018,3 +3018,12 @@ table.table tbody tr.irreg-row.selected:hover td {
         padding: 0 10px !important;
     }
 }
+/* Skeleton Loading Styles */
+.skeleton-block {
+  position: absolute;
+  background-color: #ffebee;
+  border: 1px solid #ef5350;
+  border-radius: 4px;
+  opacity: 0.8;
+  z-index: 10;
+}

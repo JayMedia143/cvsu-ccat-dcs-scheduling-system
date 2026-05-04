@@ -39,31 +39,52 @@ ROOMS = [
     # Special rooms
     {'name': 'University Field', 'building': 'Grounds', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0},
     {'name': 'T.B.A.',           'building': 'Virtual',  'capabilities': 'Lecture,Computer Lab', 'status': 'Available', 'capacity': 999, 'func_comp': 0},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
 ]
 
 # ── FACULTY (20 TBA + 32 real = 52 total) ────────────────────────────────────
 FACULTY = [
     # TBA entries
     {'eid': 'TBA-01',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-02',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-03',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-04',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-05',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-06',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-07',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-08',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-09',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-10',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-11',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-12',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-13',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-14',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-15',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-16',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-17',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-18',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-19',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     {'eid': 'TBA-20',  'name': 'T.B.A.', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
     # Department of Arts and Sciences
     {'eid': 'DAS-001', 'name': 'Gabriela Silang',       'dept': 'Arts & Sciences',     'status': 'Full-time', 'max_weekly': 17, 'sex': 'F', 'rank': 'Instructor I',            'attainment': 'Bachelor of Arts in English',       'days': 'Monday,Tuesday,Wednesday,Thursday,Friday'},
     {'eid': 'DAS-002', 'name': 'Emilio Aguinaldo',      'dept': 'Arts & Sciences',     'status': 'Full-time', 'max_weekly': 17, 'sex': 'M', 'rank': 'Instructor II',           'attainment': 'Bachelor of Arts in Filipino',      'days': 'Monday,Tuesday,Wednesday,Thursday,Friday'},
@@ -274,46 +295,57 @@ SECTIONS = [
 
 # ── CONSTRAINTS (same 37 as all other seeders) ────────────────────────────────
 CONSTRAINTS = [
-    {'code': 'LOCKED_SCHEDULES',           'cat': 'Administrative', 'type': 'HC',  'name': '(HC-01) Locked Schedules',                    'desc': 'Manually plotted course schedules (Pre-assignments) are immovable.'},
-    {'code': 'MINOR_SUBJECT_GAP',          'cat': 'Administrative', 'type': 'HC',  'name': '(HC-02) Space for Minor Subjects',             'desc': 'Ensure sufficient free time slots exist for unscheduled minor courses.'},
-    {'code': 'GLOBAL_DAY_RESTRICTION',     'cat': 'Administrative', 'type': 'HC',  'name': '(HC-03) Global Day Restriction',               'desc': 'Courses must NOT be scheduled on declared non-academic days.'},
-    {'code': 'LEC_LAB_SEQUENCE',           'cat': 'Course',         'type': 'HC',  'name': '(HC-04) Lecture-Laboratory Sequence',          'desc': 'The Lecture component must be scheduled earlier than the Laboratory component.'},
-    {'code': 'STRICT_ALLOC_LEC',           'cat': 'Course',         'type': 'HC',  'name': '(HC-05) Strict Lecture Allocation',            'desc': 'Every section must have a Lecture component scheduled for each required course.'},
-    {'code': 'STRICT_ALLOC_LAB',           'cat': 'Course',         'type': 'HC',  'name': '(HC-06) Strict Laboratory Allocation',         'desc': 'Every section must have a Laboratory component scheduled if required by the course.'},
-    {'code': 'STRICT_ALLOC_ASYNC',         'cat': 'Course',         'type': 'HC',  'name': '(HC-07) Strict Async Allocation',              'desc': 'Every section must have an Asynchronous component scheduled if required by the course.'},
-    {'code': 'STRICT_LEC_DURATION',        'cat': 'Course',         'type': 'HC',  'name': '(HC-08) Strict Lecture Duration',              'desc': 'Face-to-face Lecture hours must exactly match the required hours defined in the course data.'},
-    {'code': 'STRICT_LAB_DURATION',        'cat': 'Course',         'type': 'HC',  'name': '(HC-09) Strict Laboratory Duration',           'desc': 'Face-to-face Laboratory hours must exactly match the required hours defined in the course data.'},
-    {'code': 'STRICT_ASYNC_LEC_DUR',       'cat': 'Course',         'type': 'HC',  'name': '(HC-10) Strict Async Lecture Duration',        'desc': 'Asynchronous Lecture hours must exactly match the required hours defined in the course data.'},
-    {'code': 'STRICT_ASYNC_LAB_DUR',       'cat': 'Course',         'type': 'HC',  'name': '(HC-11) Strict Async Laboratory Duration',     'desc': 'Asynchronous Laboratory hours must exactly match the required hours defined in the course data.'},
-    {'code': 'SECTION_CONFLICT',           'cat': 'Course',         'type': 'HC',  'name': '(HC-12) No Section Course Conflict',           'desc': 'A section cannot have two or more different courses scheduled at the same time.'},
-    {'code': 'FACULTY_CONFLICT',           'cat': 'Course',         'type': 'HC',  'name': '(HC-13) No Faculty Course Conflict',           'desc': 'A faculty member cannot be assigned to two or more courses at the same time.'},
-    {'code': 'COMPLETE_COURSE_SCHEDULING', 'cat': 'Course',         'type': 'HC',  'name': '(HC-25) Complete Course Scheduling',           'desc': 'All courses for the selected semester must be fully plotted in the timetable.'},
-    {'code': 'LEC_LAB_WEEKLY_DIST',        'cat': 'Course',         'type': 'SC1', 'name': '(SC-I-01) Lecture-Lab Weekly Distribution',    'desc': 'Lectures should be placed earlier in the week; laboratories later in the week.'},
-    {'code': 'ASYNC_STRATEGIC_PLACEMENT',  'cat': 'Course',         'type': 'SC1', 'name': '(SC-I-02) Strategic Asynchronous Placement',   'desc': 'Asynchronous classes should fill 1-hour gaps to preserve larger free blocks.'},
-    {'code': 'LEC_LAB_PROXIMITY',          'cat': 'Course',         'type': 'SC1', 'name': '(SC-I-03) Lecture-Lab Proximity',              'desc': 'Lecture and Lab of the same course should be scheduled within 3 days of each other.'},
-    {'code': 'PE_MORNING_PLACEMENT',       'cat': 'Course',         'type': 'SC1', 'name': '(SC-I-04) Morning Placement for PE Courses',   'desc': 'PE/FITT courses should be scheduled early in the morning (7:00 AM onwards).'},
-    {'code': 'PE_EARLY_WEEK',              'cat': 'Course',         'type': 'SC1', 'name': '(SC-I-05) Early Week Placement for PE Courses','desc': 'PE/FITT courses should ideally be scheduled on Mondays or Tuesdays.'},
-    {'code': 'SECTION_DAY_RESTRICTIONS',   'cat': 'Section',        'type': 'HC',  'name': '(HC-14) Section Day Restrictions',             'desc': 'Section schedules must only be assigned within allowed academic days for the year level.'},
-    {'code': 'MAX_CONSECUTIVE_STUDENT',    'cat': 'Section',        'type': 'HC',  'name': '(HC-15) Max Consecutive Student Load',         'desc': 'A section must not exceed 6 consecutive hours of scheduled course sessions.'},
-    {'code': 'NO_ROOM_MULTI_SECTION',      'cat': 'Section',        'type': 'HC',  'name': '(HC-16) No Multiple Sections in One Room',     'desc': 'Two or more sections must not be assigned to the same room at the same time.'},
-    {'code': 'PREASSIGNMENT_EXCLUSIVITY',  'cat': 'Section',        'type': 'HC',  'name': '(HC-26) Pre-assignment Time Exclusivity',      'desc': 'Time slots blocked by pre-assignments cannot be overwritten or double-booked for that section.'},
-    {'code': 'EARLY_START',                'cat': 'Administrative', 'type': 'HC',  'name': '(HC-27) Early Start Enforcement',              'desc': 'All scheduled sessions must start at or after the configured earliest start time.'},
-    {'code': 'DIV4_SLOT_ALIGNMENT',        'cat': 'Time',           'type': 'HC',  'name': '(HC-28) Divisible-4 Slot Alignment',           'desc': 'Courses in special rooms must align to valid 4-hour slot blocks.'},
-    {'code': 'FACULTY_DAY_SPLIT',          'cat': 'Faculty',        'type': 'HC',  'name': '(HC-29) Faculty Day Split',                    'desc': 'When a faculty has a configured day-split, Lab/Lec sessions must be pinned to their assigned days.'},
-    {'code': 'NO_ISOLATED_LECTURES',       'cat': 'Section',        'type': 'SC2', 'name': '(SC-II-01) No Isolated Lectures',              'desc': 'A section must not have only one lecture scheduled on a given day.'},
-    {'code': 'NO_ISOLATED_LABS',           'cat': 'Section',        'type': 'SC2', 'name': '(SC-II-02) No Isolated Laboratories',          'desc': 'A section must not have only one laboratory scheduled on a given day.'},
-    {'code': 'MIN_DAILY_SECTION_LOAD',     'cat': 'Section',        'type': 'SC2', 'name': '(SC-II-05) Minimum Daily Section Load',        'desc': 'A section should have at least two classes scheduled on any active academic day.'},
-    {'code': 'SINGLE_FACULTY_PER_TIMESLOT','cat': 'Faculty',        'type': 'HC',  'name': '(HC-17) Single Faculty per Section Timeslot',  'desc': 'A section cannot have two or more faculty members assigned at the same time.'},
-    {'code': 'FACULTY_AVAILABILITY',       'cat': 'Faculty',        'type': 'HC',  'name': '(HC-18) Faculty Availability',                 'desc': 'A faculty member must not be scheduled during declared unavailable time slots.'},
-    {'code': 'MAX_CONSECUTIVE_FACULTY',    'cat': 'Faculty',        'type': 'HC',  'name': '(HC-19) Max Consecutive Faculty Load',         'desc': 'A faculty member must not teach for more than 6 consecutive hours.'},
-    {'code': 'SINGLE_ROOM_PER_SESSION',    'cat': 'Room',           'type': 'HC',  'name': '(HC-20) Single Room per Course Session',       'desc': 'A scheduled course session cannot be assigned to two or more rooms at the same time.'},
-    {'code': 'ROOM_SUITABILITY',           'cat': 'Room',           'type': 'HC',  'name': '(HC-21) Room Type Suitability',                'desc': 'Laboratory components must be in Laboratory rooms; Lecture components in Lecture rooms.'},
-    {'code': 'ROOM_AVAILABILITY',          'cat': 'Room',           'type': 'HC',  'name': '(HC-22) Room Availability',                    'desc': 'Courses must not be scheduled in rooms marked as unavailable or under maintenance.'},
-    {'code': 'ROOM_CAPACITY_PROPORTIONAL', 'cat': 'Room',           'type': 'SC2', 'name': '(SC-II-03) Proportional Room Capacity Allocation','desc': 'Sections with larger student populations should be prioritized for larger rooms.'},
-    {'code': 'OPERATING_HOURS',            'cat': 'Time',           'type': 'HC',  'name': '(HC-23) Operating Hours Compliance',           'desc': 'All course sessions must fall within official institutional start and end times.'},
-    {'code': 'HOURLY_ALIGNMENT',           'cat': 'Time',           'type': 'HC',  'name': '(HC-24) Hourly Clock Alignment',               'desc': 'All course session start times must begin exactly on the hour.'},
-    {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'SC2', 'name': '(SC-II-04) Lunch Break Allocation',            'desc': 'A 1-hour vacant period must be provided between 10:00 AM and 2:00 PM.'},
-    {'code': 'EVENING_AVOIDANCE',          'cat': 'Time',           'type': 'SC2', 'name': '(SC-II-06) Evening Class Avoidance',           'desc': 'Avoid scheduling classes in the evening (from 6:00 PM onwards).'},
+    # ── ADMINISTRATIVE ──────────────────────────────────────────────────────────
+    {'code': 'LOCKED_SCHEDULES',           'cat': 'Administrative', 'type': 'HC',  'weight': 1,   'name': '(HC-01) Locked Schedules', 'desc': 'Manually plotted schedules are immovable.'},
+    {'code': 'MINOR_SUBJECT_GAP',          'cat': 'Administrative', 'type': 'HC',  'weight': 1,   'name': '(HC-02) Space for Minor Subjects', 'desc': 'Ensure free slots for unscheduled minor courses.'},
+    {'code': 'GLOBAL_DAY_RESTRICTION',     'cat': 'Administrative', 'type': 'HC',  'weight': 1,   'name': '(HC-03) Global Day Restriction', 'desc': 'No classes on Sundays or non-academic days.'},
+
+    # ── COURSE ──────────────────────────────────────────────────────────────────
+    {'code': 'LEC_LAB_SEQUENCE',           'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-04) Lec-Lab Sequence', 'desc': 'Lecture must be scheduled before Laboratory.'},
+    {'code': 'STRICT_ALLOC_LEC',           'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-05) Strict Lecture Allocation', 'desc': 'Every section must have a lecture for required courses.'},
+    {'code': 'STRICT_ALLOC_LAB',           'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-06) Strict Laboratory Allocation', 'desc': 'Every section must have a lab if required.'},
+    {'code': 'STRICT_ALLOC_ASYNC',         'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-07) Strict Async Allocation', 'desc': 'Every section must have an async part if required.'},
+    {'code': 'STRICT_LEC_DURATION',        'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-08) Strict Lecture Duration', 'desc': 'Lec hours must match the required course data.'},
+    {'code': 'STRICT_LAB_DURATION',        'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-09) Strict Laboratory Duration', 'desc': 'Lab hours must match the required course data.'},
+    {'code': 'STRICT_ASYNC_LEC_DUR',       'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-10) Strict Async Lec Dur', 'desc': 'Async Lec hours must match required data.'},
+    {'code': 'STRICT_ASYNC_LAB_DUR',       'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-11) Strict Async Lab Dur', 'desc': 'Async Lab hours must match required data.'},
+    {'code': 'SECTION_CONFLICT',           'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-12) No Section Course Conflict', 'desc': 'A section cannot have 2 courses at the same time.'},
+    {'code': 'FACULTY_CONFLICT',           'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-13) No Faculty Course Conflict', 'desc': 'A faculty cannot teach 2 courses at the same time.'},
+    {'code': 'COMPLETE_COURSE_SCHEDULING', 'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-25) Complete Course Scheduling', 'desc': 'All required courses must be fully plotted.'},
+    {'code': 'LEC_LAB_WEEKLY_DIST',        'cat': 'Course',         'type': 'SC1', 'weight': 80,  'name': '(SC-I-03) Lec-Lab Weekly Dist.', 'desc': 'Lec early in week, Lab later in week.'},
+    {'code': 'LEC_LAB_PROXIMITY',          'cat': 'Course',         'type': 'SC1', 'weight': 70,  'name': '(SC-I-04) Lec-Lab Proximity', 'desc': 'Lec and Lab should be within 3 days.'},
+    {'code': 'PE_MORNING_PLACEMENT',       'cat': 'Course',         'type': 'SC2', 'weight': 5,  'name': '(SC-II-01) Morning PE Placement', 'desc': 'PE courses early in the morning.'},
+    {'code': 'PE_EARLY_WEEK',              'cat': 'Course',         'type': 'SC2', 'weight': 5,  'name': '(SC-II-02) Early Week PE Placement', 'desc': 'PE courses on Mondays or Tuesdays.'},
+    {'code': 'ASYNC_STRATEGIC_PLACEMENT',  'cat': 'Course',         'type': 'SC2', 'weight': 5,  'name': '(SC-II-03) Strategic Async Placement', 'desc': 'Async classes fill 1-hour gaps.'},
+
+    # ── SECTION ─────────────────────────────────────────────────────────────────
+    {'code': 'SECTION_DAY_RESTRICTIONS',   'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-14) Section Day Restrictions', 'desc': 'Schedules must be within allowed academic days.'},
+    {'code': 'MAX_CONSECUTIVE_STUDENT',    'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-15) Max Consecutive Student Load', 'desc': 'Max 6 consecutive hours for students.'},
+    {'code': 'NO_ROOM_MULTI_SECTION',      'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-16) No Multiple Sections in Room', 'desc': 'One room cannot host 2 sections at once.'},
+    {'code': 'PREASSIGNMENT_EXCLUSIVITY',  'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-26) Pre-assignment Exclusivity', 'desc': 'Pre-assigned slots cannot be overwritten.'},
+    {'code': 'NO_ISOLATED_LECTURES',       'cat': 'Section',        'type': 'SC1', 'weight': 100, 'name': '(SC-I-01) No Isolated Lectures', 'desc': 'Section should not have only 1 lec in a day.'},
+    {'code': 'NO_ISOLATED_LABS',           'cat': 'Section',        'type': 'SC1', 'weight': 100, 'name': '(SC-I-02) No Isolated Laboratories', 'desc': 'Section should not have only 1 lab in a day.'},
+    {'code': 'MIN_DAILY_SECTION_LOAD',     'cat': 'Section',        'type': 'SC1', 'weight': 60,  'name': '(SC-I-05) Min Daily Section Load', 'desc': 'At least 2 classes per active day.'},
+
+    # ── FACULTY ─────────────────────────────────────────────────────────────────
+    {'code': 'SINGLE_FACULTY_PER_TIMESLOT','cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-17) Single Fac per Section Slot', 'desc': 'One section cannot have 2 faculty at once.'},
+    {'code': 'FACULTY_AVAILABILITY',       'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-18) Faculty Availability', 'desc': 'Faculty must be available during scheduled times.'},
+    {'code': 'MAX_CONSECUTIVE_FACULTY',    'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-19) Max Consecutive Faculty Load', 'desc': 'Max 6 consecutive teaching hours for faculty.'},
+    {'code': 'FACULTY_DAY_SPLIT',          'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-28) Faculty Day Split', 'desc': 'Sessions must land on designated split days.'},
+
+    # ── ROOM ────────────────────────────────────────────────────────────────────
+    {'code': 'SINGLE_ROOM_PER_SESSION',    'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-20) Single Room per Session', 'desc': 'One session cannot use 2 rooms at once.'},
+    {'code': 'ROOM_SUITABILITY',           'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-21) Room Type Suitability', 'desc': 'Lab in Lab rooms, Lec in Lec rooms.'},
+    {'code': 'ROOM_AVAILABILITY',          'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-22) Room Availability', 'desc': 'Room must be available (not for maintenance).'},
+    {'code': 'LECTURE_SLOT_ALIGNMENT',     'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-27) Lec Slot Alignment (Div4)', 'desc': 'Lecture classes must start on 2-hour boundaries.'},
+    {'code': 'EARLY_START_ENFORCEMENT',    'cat': 'Room',           'type': 'SC1', 'weight': 100, 'name': '(SC-I-09) Early Start Enforcement', 'desc': 'First class in room starts by 8:00 AM.'},
+    {'code': 'ROOM_CAPACITY_PROPORTIONAL', 'cat': 'Room',           'type': 'SC2', 'weight': 2,  'name': '(SC-II-05) Room Capacity Allocation', 'desc': 'Large sections prioritized for large rooms.'},
+
+    # ── TIME ────────────────────────────────────────────────────────────────────
+    {'code': 'OPERATING_HOURS',            'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-23) Operating Hours Compliance', 'desc': 'Sessions must be within campus hours.'},
+    {'code': 'HOURLY_ALIGNMENT',           'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-24) Hourly Clock Alignment', 'desc': 'Sessions must start exactly on the hour.'},
+    {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'SC2', 'weight': 2,  'name': '(SC-II-04) Lunch Break Allocation', 'desc': '1-hour break between 10 AM and 2 PM.'},
+    {'code': 'EVENING_AVOIDANCE',          'cat': 'Time',           'type': 'SC2', 'weight': 10,  'name': '(SC-II-03) Evening Class Avoidance', 'desc': 'Avoid classes from 6:00 PM onwards.'},
 ]
 
 PREFIX_RULES = [
@@ -358,8 +390,7 @@ def seed_database():
         for e in PREFIX_EXCEPTIONS:
             db.session.add(CodePrefixRule(code=e['code'], is_prefix=False, department=e['dept'], is_archived=False))
         for c in CONSTRAINTS:
-            db.session.add(Constraint(logic_code=c['code'], category=c['cat'],
-                                      name=c['name'], description=c['desc'], constraint_type=c['type']))
+            db.session.add(Constraint(logic_code=c['code'], category=c['cat'], name=c['name'], description=c['desc'], constraint_type=c['type'], weight=c.get('weight', 1)))
 
         db.session.add(SystemSettings(
             start_hour=7, end_hour=20,

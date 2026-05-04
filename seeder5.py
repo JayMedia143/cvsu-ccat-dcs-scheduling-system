@@ -14,119 +14,109 @@ GENE_ESTIMATE  = 168
 DESCRIPTION    = "16 sections (BSCoS+BSIT Yr1-4 x2 each), full 4-year 2-program curriculum"
 
 ROOMS = [
-    {'name': 'A1',              'building': 'ICT Building A', 'capabilities': 'Lecture',              'status': 'Available',                 'capacity': 40,  'func_comp': 0},
-    {'name': 'A2',              'building': 'ICT Building A', 'capabilities': 'Lecture',              'status': 'Available',                 'capacity': 40,  'func_comp': 0},
-    {'name': 'B1',              'building': 'ICT Building B', 'capabilities': 'Lecture,Computer Lab', 'status': 'Available',                 'capacity': 30,  'func_comp': 20, 'room_depts': 'Department of Computer Studies'},
-    {'name': 'B2',              'building': 'ICT Building B', 'capabilities': 'Lecture,Computer Lab', 'status': 'Available',                 'capacity': 30,  'func_comp': 20, 'room_depts': 'Department of Computer Studies'},
-    {'name': 'B3',              'building': 'ICT Building B', 'capabilities': 'Lecture,Computer Lab', 'status': 'Available',                 'capacity': 30,  'func_comp': 19, 'room_depts': 'Department of Computer Studies'},
-    {'name': 'B4',              'building': 'ICT Building B', 'capabilities': 'Lecture,Computer Lab', 'status': 'Available',                 'capacity': 30,  'func_comp': 18, 'room_depts': 'Department of Computer Studies'},
-    {'name': 'B5',              'building': 'ICT Building B', 'capabilities': 'Lecture,Computer Lab', 'status': 'Available',                 'capacity': 30,  'func_comp': 18, 'room_depts': 'Department of Computer Studies'},
-    {'name': 'B6',              'building': 'ICT Building B', 'capabilities': 'Lecture,Computer Lab', 'status': 'Available',                 'capacity': 30,  'func_comp': 20, 'room_depts': 'Department of Computer Studies'},
-    {'name': 'University Field','building': 'Grounds',        'capabilities': 'Lecture',              'status': 'Available',                 'capacity': 999, 'func_comp': 0},
-    {'name': 'T.B.A.',          'building': 'Virtual',        'capabilities': 'Lecture,Computer Lab',              'status': 'Available',                 'capacity': 999, 'func_comp': 0},
+    # ICT Building A — Lecture rooms (DCS Specific)
+    {'name': 'A101', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0, 'room_depts': 'Department of Computer Studies'},
+    {'name': 'A102', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0, 'room_depts': 'Department of Computer Studies'},
+    {'name': 'A103', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'func_comp': 0, 'room_depts': 'Department of Computer Studies'},
+    
+    # ICT Building B — Computer Labs (DCS Specific)
+    {'name': 'CL1', 'building': 'ICT Building B', 'capabilities': 'Lecture,Computer Lab', 'status': 'Available', 'capacity': 35, 'func_comp': 35, 'room_depts': 'Department of Computer Studies'},
+    {'name': 'CL2', 'building': 'ICT Building B', 'capabilities': 'Lecture,Computer Lab', 'status': 'Available', 'capacity': 35, 'func_comp': 35, 'room_depts': 'Department of Computer Studies'},
+    {'name': 'CL3', 'building': 'ICT Building B', 'capabilities': 'Lecture,Computer Lab', 'status': 'Available', 'capacity': 35, 'func_comp': 30, 'room_depts': 'Department of Computer Studies'},
+    {'name': 'CL4', 'building': 'ICT Building B', 'capabilities': 'Lecture,Computer Lab', 'status': 'Available', 'capacity': 35, 'func_comp': 35, 'room_depts': 'Department of Computer Studies'},
+    
+    # Large Hall / Field for NSTP
+    {'name': 'University Field', 'building': 'Grounds', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0},
+    {'name': 'Gymnasium',        'building': 'Grounds', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 500, 'func_comp': 0},
+    {'name': 'T.B.A.',           'building': 'Virtual', 'capabilities': 'Lecture,Computer Lab', 'status': 'Available', 'capacity': 999, 'func_comp': 0},
+    {'name': 'Online Room', 'building': 'Virtual', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 999, 'func_comp': 0, 'room_depts': ''},
 ]
 
 FACULTY = [
-    {'eid': 'TBA-01',  'name': 'T.B.A.',             'dept': 'Unassigned',                       'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'TBA-02',  'name': 'T.B.A.',             'dept': 'Unassigned',                       'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'TBA-03',  'name': 'T.B.A.',             'dept': 'Unassigned',                       'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'TBA-04',  'name': 'T.B.A.',             'dept': 'Unassigned',                       'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'TBA-05',  'name': 'T.B.A.',             'dept': 'Unassigned',                       'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'TBA-06',  'name': 'T.B.A.',             'dept': 'Unassigned',                       'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'TBA-07',  'name': 'T.B.A.',             'dept': 'Unassigned',                       'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'TBA-08',  'name': 'T.B.A.',             'dept': 'Unassigned',                       'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'TBA-09',  'name': 'T.B.A.',             'dept': 'Unassigned',                       'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'TBA-10',  'name': 'T.B.A.',             'dept': 'Unassigned',                       'status': 'Part-time', 'max_weekly': 999, 'sex': None, 'rank': '', 'attainment': '', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'DAS-001', 'name': 'Gabriela Silang',    'dept': 'Arts & Sciences',                  'status': 'Full-time', 'max_weekly': 17, 'sex': 'F', 'rank': 'Assistant Professor II', 'attainment': 'Master of Arts in Education', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday'},
-    {'eid': 'DAS-002', 'name': 'Emilio Aguinaldo',   'dept': 'Arts & Sciences',                  'status': 'Full-time', 'max_weekly': 17, 'sex': 'M', 'rank': 'Associate Professor I', 'attainment': 'Doctor of Philosophy', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday'},
-    {'eid': 'DAS-003', 'name': 'Andres Bonifacio',   'dept': 'Arts & Sciences',                  'status': 'Part-time', 'max_weekly': 35, 'sex': 'M', 'rank': 'Instructor I', 'attainment': 'Bachelor of Science', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'DAS-004', 'name': 'Melchora Aquino',    'dept': 'Arts & Sciences',                  'status': 'Part-time', 'max_weekly': 35, 'sex': 'F', 'rank': 'Instructor II', 'attainment': 'Master of Arts', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'DAS-005', 'name': 'Jose Rizal',         'dept': 'Arts & Sciences',                  'status': 'Full-time', 'max_weekly': 17, 'sex': 'M', 'rank': 'Associate Professor III', 'attainment': 'Doctor of Philosophy', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday'},
-    {'eid': 'DTE-001', 'name': 'Apolinario Mabini',  'dept': 'Teachers Education',               'status': 'Full-time', 'max_weekly': 17, 'sex': 'M', 'rank': 'Assistant Professor I', 'attainment': 'Master of Arts in Teaching', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday'},
-    {'eid': 'DTE-002', 'name': 'Leonor Briones',     'dept': 'Teachers Education',               'status': 'Part-time', 'max_weekly': 35, 'sex': 'F', 'rank': 'Instructor III', 'attainment': 'Master of Education', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'DTE-003', 'name': 'Sara Duterte',       'dept': 'Teachers Education',               'status': 'Full-time', 'max_weekly': 17, 'sex': 'F', 'rank': 'Associate Professor II', 'attainment': 'Doctor of Education', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday'},
-    {'eid': 'DTE-004', 'name': 'Armin Luistro',      'dept': 'Teachers Education',               'status': 'Part-time', 'max_weekly': 35, 'sex': 'M', 'rank': 'Instructor II', 'attainment': 'Master of Arts in Education', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'CEN-001', 'name': 'Lapu-Lapu',          'dept': 'Engineering',                      'status': 'Full-time', 'max_weekly': 17, 'sex': 'M', 'rank': 'Assistant Professor III', 'attainment': 'Master of Engineering', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday'},
-    # Department of Computer Studies
-    {'eid': 'DCS-001', 'name': 'Juan Luna',             'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Assistant Professor I',   'attainment': 'Master of Science in Computer Science',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday'},
-    {'eid': 'DCS-002', 'name': 'Nicolas Zafra',         'dept': 'Department of Computer Studies', 'status': 'Part-time', 'max_weekly': 35, 'sex': 'M', 'rank': 'Instructor I',            'attainment': 'Bachelor of Science in Information Technology', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'DCS-003', 'name': 'Graciano Lopez Jaena',  'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Assistant Professor II',  'attainment': 'Master of Science in Information Technology',   'days': 'Monday,Tuesday,Wednesday,Thursday,Friday'},
-    {'eid': 'DCS-004', 'name': 'Pedro Paterno',         'dept': 'Department of Computer Studies', 'status': 'Part-time', 'max_weekly': 35, 'sex': 'M', 'rank': 'Instructor II',           'attainment': 'Bachelor of Science in Computer Science',       'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'DCS-005', 'name': 'Paciano Rizal',         'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Assistant Professor I',   'attainment': 'Master of Science in Computer Science',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday'},
-    {'eid': 'DCS-006', 'name': 'Tomas Pinpin',          'dept': 'Department of Computer Studies', 'status': 'Part-time', 'max_weekly': 35, 'sex': 'M', 'rank': 'Instructor I',            'attainment': 'Bachelor of Science in Information Technology', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'},
-    {'eid': 'DCS-007', 'name': 'Alan Turing',           'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Assistant Professor I',   'attainment': 'Master of Science in Computer Science',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday'},
-    {'eid': 'DCS-008', 'name': 'Ada Lovelace',          'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'F', 'rank': 'Assistant Professor I',   'attainment': 'Master of Science in Computer Science',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday'},
+    # Department of Computer Studies (DCS) - 30 Faculty from Seeder 10
+    {'eid': 'DCS-001', 'name': 'ARIES M. GELERA',       'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Assistant Professor II', 'attainment': 'MSIT'},
+    {'eid': 'DCS-002', 'name': 'DANILO C. ALCANTARA',   'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Associate Professor I', 'attainment': 'PhD CS'},
+    {'eid': 'DCS-003', 'name': 'MARIA TERESA R. PEREZ', 'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'F', 'rank': 'Assistant Professor III', 'attainment': 'MSIT'},
+    {'eid': 'DCS-004', 'name': 'JOSEPHINE A. SANTOS',   'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'F', 'rank': 'Instructor I', 'attainment': 'MSIT'},
+    {'eid': 'DCS-005', 'name': 'REYNALDO M. REYES',     'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Assistant Professor I', 'attainment': 'MIT'},
+    {'eid': 'DCS-006', 'name': 'ALAN TURING',           'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Instructor III', 'attainment': 'PhD Math'},
+    {'eid': 'DCS-007', 'name': 'ADA LOVELACE',          'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'F', 'rank': 'Instructor II', 'attainment': 'MSCS'},
+    {'eid': 'DCS-008', 'name': 'GRACE HOPPER',          'dept': 'Department of Computer Studies', 'status': 'Part-time', 'max_weekly': 35, 'sex': 'F', 'rank': 'Instructor I', 'attainment': 'BSIT'},
+    {'eid': 'DCS-009', 'name': 'LINUS TORVALDS',        'dept': 'Department of Computer Studies', 'status': 'Part-time', 'max_weekly': 35, 'sex': 'M', 'rank': 'Instructor I', 'attainment': 'BSCS'},
+    {'eid': 'DCS-010', 'name': 'GUIDO VAN ROSSUM',      'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Assistant Professor I', 'attainment': 'MIT'},
+    {'eid': 'DCS-011', 'name': 'KATHERINE JOHNSON',     'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'F', 'rank': 'Instructor I', 'attainment': 'MS Math'},
+    {'eid': 'DCS-012', 'name': 'TIM BERNERS-LEE',       'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Instructor II', 'attainment': 'MSCS'},
+    {'eid': 'DCS-013', 'name': 'BJARNE STROUSTRUP',     'dept': 'Department of Computer Studies', 'status': 'Part-time', 'max_weekly': 35, 'sex': 'M', 'rank': 'Instructor I', 'attainment': 'PhD CS'},
+    {'eid': 'DCS-014', 'name': 'DONALD KNUTH',          'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Associate Professor II', 'attainment': 'PhD CS'},
+    {'eid': 'DCS-015', 'name': 'MARGARET HAMILTON',     'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'F', 'rank': 'Assistant Professor III', 'attainment': 'MSCS'},
+    {'eid': 'DCS-016', 'name': 'DENNIS RITCHIE',        'dept': 'Department of Computer Studies', 'status': 'Part-time', 'max_weekly': 35, 'sex': 'M', 'rank': 'Instructor I', 'attainment': 'MSIT'},
+    {'eid': 'DCS-017', 'name': 'KEN THOMPSON',          'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Instructor I', 'attainment': 'BSCS'},
+    {'eid': 'DCS-018', 'name': 'RICHARD STALLMAN',      'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Instructor III', 'attainment': 'MSCS'},
+    {'eid': 'DCS-019', 'name': 'JOHN VON NEUMANN',      'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Professor I', 'attainment': 'PhD Math'},
+    {'eid': 'DCS-020', 'name': 'PACIANO RIZAL',         'dept': 'Department of Computer Studies', 'status': 'Part-time', 'max_weekly': 35, 'sex': 'M', 'rank': 'Instructor I', 'attainment': 'BSIT'},
+    {'eid': 'DCS-021', 'name': 'JUAN LUNA',             'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Assistant Professor I', 'attainment': 'MIT'},
+    {'eid': 'DCS-022', 'name': 'MARCELO H. DEL PILAR',  'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Instructor II', 'attainment': 'MSIT'},
+    {'eid': 'DCS-023', 'name': 'GREGORIA DE JESUS',     'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'F', 'rank': 'Instructor I', 'attainment': 'BSCS'},
+    {'eid': 'DCS-024', 'name': 'EMILIO JACINTO',        'dept': 'Department of Computer Studies', 'status': 'Part-time', 'max_weekly': 35, 'sex': 'M', 'rank': 'Instructor I', 'attainment': 'BSIT'},
+    {'eid': 'DCS-025', 'name': 'ANDRES BONIFACIO',      'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Assistant Professor I', 'attainment': 'MIT'},
+    {'eid': 'DCS-026', 'name': 'MELCHORA AQUINO',       'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'F', 'rank': 'Instructor II', 'attainment': 'MSCS'},
+    {'eid': 'DCS-027', 'name': 'GABRIELA SILANG',       'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'F', 'rank': 'Instructor I', 'attainment': 'BSIT'},
+    {'eid': 'DCS-028', 'name': 'LAPU-LAPU',             'dept': 'Department of Computer Studies', 'status': 'Part-time', 'max_weekly': 35, 'sex': 'M', 'rank': 'Instructor I', 'attainment': 'BSCS'},
+    {'eid': 'DCS-029', 'name': 'ANTONIO LUNA',          'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'M', 'rank': 'Assistant Professor II', 'attainment': 'MIT'},
+    {'eid': 'DCS-030', 'name': 'TEODORA ALONSO',        'dept': 'Department of Computer Studies', 'status': 'Full-time', 'max_weekly': 21, 'sex': 'F', 'rank': 'Instructor III', 'attainment': 'MSIT'},
+    
+    # TBA Entries
+    {'eid': 'TBA-01', 'name': 'T.B.A. 1', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999},
+    {'eid': 'TBA-02', 'name': 'T.B.A. 2', 'dept': 'Unassigned', 'status': 'Part-time', 'max_weekly': 999},
 ]
 
 # (code, name, year, program, dept, sync_lec, sync_lab, async_lec, async_lab, sem)
 COURSES = [
-    # ── Shared Year 1 ──
-    ('MATH101', 'Calculus I',                            1, 'Both',  'Department of Teachers Education', 3, 0, 0, 0, '1st Semester'),
-    ('ENGL101', 'Communication Arts 1',                  1, 'Both',  'Department of Teachers Education', 3, 0, 0, 0, '1st Semester'),
-    ('FILI101', 'Komunikasyon sa Akademikong Filipino',  1, 'Both',  'Department of Teachers Education', 3, 0, 0, 0, '1st Semester'),
-    ('PHED101', 'Physical Education 1',                  1, 'Both',  'Department of Arts and Sciences',  2, 0, 0, 0, '1st Semester'),
-    ('DCIT101', 'Digital Literacy',                      1, 'Both',  'Department of Computer Studies',   1, 3, 0, 0, '1st Semester'),
-    ('SOSC101', 'Understanding the Self',                1, 'Both',  'Department of Arts and Sciences',  3, 0, 0, 0, '1st Semester'),
-    # ── Shared Year 2 ──
-    ('MATH201', 'Discrete Mathematics',                  2, 'Both',  'Department of Teachers Education', 3, 0, 0, 0, '1st Semester'),
-    ('ENGL201', 'Communication Arts 2',                  2, 'Both',  'Department of Teachers Education', 3, 0, 0, 0, '1st Semester'),
-    ('FILI201', 'Pagbasa at Pagsulat sa Filipino',       2, 'Both',  'Department of Teachers Education', 3, 0, 0, 0, '1st Semester'),
-    ('PHED201', 'Physical Education 2',                  2, 'Both',  'Department of Arts and Sciences',  2, 0, 0, 0, '1st Semester'),
-    ('DCIT201', 'Platform Technologies',                 2, 'Both',  'Department of Computer Studies',   3, 0, 0, 0, '1st Semester'),
-    # ── Shared Year 3 ──
-    ('MATH301', 'Probability and Statistics',            3, 'Both',  'Department of Teachers Education', 3, 0, 0, 0, '1st Semester'),
-    ('ENGL301', 'Technical Writing',                     3, 'Both',  'Department of Teachers Education', 3, 0, 0, 0, '1st Semester'),
-    ('SOSC301', 'Ethics',                                3, 'Both',  'Department of Arts and Sciences',  3, 0, 0, 0, '1st Semester'),
-    ('PHED301', 'Physical Education 3',                  3, 'Both',  'Department of Arts and Sciences',  2, 0, 0, 0, '1st Semester'),
-    ('DCIT301', 'Network Administration',                3, 'Both',  'Department of Computer Studies',   1, 3, 0, 0, '1st Semester'),
-    # ── Shared Year 4 ──
-    ('SOSC401', 'Science Technology and Society',        4, 'Both',  'Department of Arts and Sciences',  3, 0, 0, 0, '1st Semester'),
-    ('ENGL401', 'Speech and Oral Communication',         4, 'Both',  'Department of Teachers Education', 3, 0, 0, 0, '1st Semester'),
-    ('MATH401', 'Mathematics Elective',                  4, 'Both',  'Department of Teachers Education', 3, 0, 0, 0, '1st Semester'),
-    ('DCIT401', 'IT Elective',                           4, 'Both',  'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
-    # ── BSCoS Year 1 ──
-    ('COSC101', 'Introduction to Computing',             1, 'BSCoS', 'Department of Computer Studies',   3, 0, 0, 0, '1st Semester'),
-    ('COSC102', 'Computer Programming 1',                1, 'BSCoS', 'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
-    # ── BSCoS Year 2 ──
-    ('COSC201', 'Computer Programming 2',                2, 'BSCoS', 'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
-    ('COSC202', 'Data Structures and Algorithms',        2, 'BSCoS', 'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
-    ('COSC203', 'Object-Oriented Programming',           2, 'BSCoS', 'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
-    # ── BSCoS Year 3 ──
-    ('COSC301', 'Operating Systems',                     3, 'BSCoS', 'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
-    ('COSC302', 'Database Management Systems',           3, 'BSCoS', 'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
-    ('COSC303', 'Algorithm Design and Analysis',         3, 'BSCoS', 'Department of Computer Studies',   3, 0, 0, 0, '1st Semester'),
-    ('COSC304', 'Software Engineering',                  3, 'BSCoS', 'Department of Computer Studies',   3, 0, 0, 0, '1st Semester'),
-    # ── BSCoS Year 4 ──
-    ('COSC401', 'Thesis Writing 1',                      4, 'BSCoS', 'Department of Computer Studies',   3, 0, 0, 0, '1st Semester'),
-    ('COSC402', 'Thesis Writing 2',                      4, 'BSCoS', 'Department of Computer Studies',   3, 0, 0, 0, '1st Semester'),
-    ('COSC403', 'Advanced Computer Science Topics',      4, 'BSCoS', 'Department of Computer Studies',   3, 0, 0, 0, '1st Semester'),
-    ('COSC404', 'CS Internship',                         4, 'BSCoS', 'Department of Computer Studies',   0, 0, 3, 0, '1st Semester'),
-    # ── BSIT Year 1 ──
-    ('ITEC101', 'Introduction to Information Technology',1, 'BSIT',  'Department of Computer Studies',   3, 0, 0, 0, '1st Semester'),
-    ('ITEC102', 'Fundamentals of Programming',           1, 'BSIT',  'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
-    # ── BSIT Year 2 ──
-    ('ITEC201', 'Web Development',                       2, 'BSIT',  'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
-    ('ITEC202', 'Database Management',                   2, 'BSIT',  'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
-    ('ITEC203', 'Network Fundamentals',                  2, 'BSIT',  'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
-    # ── BSIT Year 3 ──
-    ('ITEC301', 'Systems Administration',                3, 'BSIT',  'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
-    ('ITEC302', 'Systems Integration and Architecture',  3, 'BSIT',  'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
-    ('ITEC303', 'Information Assurance and Security',    3, 'BSIT',  'Department of Computer Studies',   3, 0, 0, 0, '1st Semester'),
-    ('ITEC304', 'Application Development',               3, 'BSIT',  'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
-    # ── BSIT Year 4 ──
-    ('ITEC401', 'Capstone Project 1',                    4, 'BSIT',  'Department of Computer Studies',   3, 0, 0, 0, '1st Semester'),
-    ('ITEC402', 'Capstone Project 2',                    4, 'BSIT',  'Department of Computer Studies',   3, 0, 0, 0, '1st Semester'),
-    ('ITEC403', 'IT Internship',                         4, 'BSIT',  'Department of Computer Studies',   0, 0, 3, 0, '1st Semester'),
+    # ── Shared GE courses (program='Both') ──
+    ('MATH101', 'Mathematics in the Modern World',    1, 'Both', 'Department of Teachers Education', 3, 0, 0, 0, '1st Semester'),
+    ('ENGL101', 'Purposive Communication',             1, 'Both', 'Department of Teachers Education', 3, 0, 0, 0, '1st Semester'),
+    ('FILI101', 'Kontekstwalisadong Komunikasyon',     1, 'Both', 'Department of Teachers Education', 3, 0, 0, 0, '1st Semester'),
+    ('PHED101', 'Physical Education 1',                1, 'Both', 'Department of Arts and Sciences',  2, 0, 0, 0, '1st Semester'),
+    ('SOSC101', 'Understanding the Self',              1, 'Both', 'Department of Arts and Sciences',  3, 0, 0, 0, '1st Semester'),
+    ('NSTP101', 'NSTP 1',                              1, 'Both', 'NSTP Department',                  3, 0, 0, 0, '1st Semester'),
+    
+    # ── DCS Shared ICT Courses ──
+    ('DCIT101', 'Introduction to Computing',           1, 'Both', 'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
+    ('DCIT102', 'Computer Programming 1',              1, 'Both', 'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
+    ('DCIT201', 'Data Structures and Algorithms',      2, 'Both', 'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
+    ('DCIT202', 'Information Management',              2, 'Both', 'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
+    ('DCIT301', 'Applications Development',            3, 'Both', 'Department of Computer Studies',   2, 3, 0, 0, '1st Semester'),
+    ('DCIT302', 'Social and Professional Issues',      3, 'Both', 'Department of Computer Studies',   3, 0, 0, 0, '1st Semester'),
+    
+    # ── BSCoS Specific ──
+    ('COSC101', 'CS Fundamentals',                     1, 'BSCoS', 'Department of Computer Studies', 3, 0, 0, 0, '1st Semester'),
+    ('COSC201', 'Discrete Mathematics for CS',         2, 'BSCoS', 'Department of Computer Studies', 3, 0, 0, 0, '1st Semester'),
+    ('COSC202', 'Object Oriented Programming',         2, 'BSCoS', 'Department of Computer Studies', 2, 3, 0, 0, '1st Semester'),
+    ('COSC301', 'Operating Systems',                   3, 'BSCoS', 'Department of Computer Studies', 2, 3, 0, 0, '1st Semester'),
+    ('COSC302', 'Architecture and Organization',       3, 'BSCoS', 'Department of Computer Studies', 2, 3, 0, 0, '1st Semester'),
+    ('COSC401', 'CS Thesis Writing 1',                 4, 'BSCoS', 'Department of Computer Studies', 3, 0, 0, 0, '1st Semester'),
+    ('COSC402', 'CS Practicum (162 Hours)',            4, 'BSCoS', 'Department of Computer Studies', 0, 0, 3, 0, '1st Semester'),
+    
+    # ── BSInfoTech Specific ──
+    ('ITEC101', 'IT Fundamentals',                     1, 'BSInfoTech', 'Department of Computer Studies', 3, 0, 0, 0, '1st Semester'),
+    ('ITEC201', 'Networking 1',                        2, 'BSInfoTech', 'Department of Computer Studies', 2, 3, 0, 0, '1st Semester'),
+    ('ITEC202', 'Web Systems and Technologies',        2, 'BSInfoTech', 'Department of Computer Studies', 2, 3, 0, 0, '1st Semester'),
+    ('ITEC301', 'Systems Integration',                 3, 'BSInfoTech', 'Department of Computer Studies', 2, 3, 0, 0, '1st Semester'),
+    ('ITEC302', 'Information Assurance and Security',  3, 'BSInfoTech', 'Department of Computer Studies', 3, 0, 0, 0, '1st Semester'),
+    ('ITEC401', 'IT Capstone Project 1',               4, 'BSInfoTech', 'Department of Computer Studies', 3, 0, 0, 0, '1st Semester'),
+    ('ITEC402', 'IT Practicum (486 Hours)',            4, 'BSInfoTech', 'Department of Computer Studies', 0, 0, 6, 0, '1st Semester'),
 ]
 
-_cs_yr1 = ['COSC101', 'COSC102', 'MATH101', 'ENGL101', 'FILI101', 'PHED101', 'DCIT101', 'SOSC101']
-_cs_yr2 = ['COSC201', 'COSC202', 'COSC203', 'MATH201', 'ENGL201', 'FILI201', 'PHED201', 'DCIT201']
-_cs_yr3 = ['COSC301', 'COSC302', 'COSC303', 'COSC304', 'MATH301', 'ENGL301', 'SOSC301', 'PHED301', 'DCIT301']
-_cs_yr4 = ['COSC401', 'COSC402', 'COSC403', 'COSC404', 'SOSC401', 'ENGL401', 'MATH401', 'DCIT401']
-_it_yr1 = ['ITEC101', 'ITEC102', 'MATH101', 'ENGL101', 'FILI101', 'PHED101', 'DCIT101', 'SOSC101']
-_it_yr2 = ['ITEC201', 'ITEC202', 'ITEC203', 'MATH201', 'ENGL201', 'FILI201', 'PHED201', 'DCIT201']
-_it_yr3 = ['ITEC301', 'ITEC302', 'ITEC303', 'ITEC304', 'MATH301', 'ENGL301', 'SOSC301', 'PHED301', 'DCIT301']
-_it_yr4 = ['ITEC401', 'ITEC402', 'ITEC403', 'SOSC401', 'ENGL401', 'MATH401', 'DCIT401']
+# ── CURRICULUM MAPS ──
+_cs_yr1 = ['MATH101', 'ENGL101', 'FILI101', 'PHED101', 'SOSC101', 'NSTP101', 'DCIT101', 'DCIT102', 'COSC101']
+_cs_yr2 = ['DCIT201', 'DCIT202', 'COSC201', 'COSC202']
+_cs_yr3 = ['DCIT301', 'DCIT302', 'COSC301', 'COSC302']
+_cs_yr4 = ['COSC401', 'COSC402']
+
+_it_yr1 = ['MATH101', 'ENGL101', 'FILI101', 'PHED101', 'SOSC101', 'NSTP101', 'DCIT101', 'DCIT102', 'ITEC101']
+_it_yr2 = ['DCIT201', 'DCIT202', 'ITEC201', 'ITEC202']
+_it_yr3 = ['DCIT301', 'DCIT302', 'ITEC301', 'ITEC302']
+_it_yr4 = ['ITEC401', 'ITEC402']
 
 CURRICULUM = {
     'BSCoS 101-A': _cs_yr1, 'BSCoS 101-B': _cs_yr1,
@@ -151,52 +141,57 @@ SECTIONS = [
 ]
 
 CONSTRAINTS = [
-    {'code': 'LOCKED_SCHEDULES',           'cat': 'Administrative', 'type': 'HC',  'name': '(HC-01) Locked Schedules',                     'desc': 'Manually plotted course schedules (Pre-assignments) are immovable.'},
-    {'code': 'MINOR_SUBJECT_GAP',          'cat': 'Administrative', 'type': 'HC',  'name': '(HC-02) Space for Minor Subjects',              'desc': 'Ensure sufficient free time slots exist for unscheduled minor courses.'},
-    {'code': 'GLOBAL_DAY_RESTRICTION',     'cat': 'Administrative', 'type': 'HC',  'name': '(HC-03) Global Day Restriction',                'desc': 'Courses must NOT be scheduled on declared non-academic days.'},
-    {'code': 'LEC_LAB_SEQUENCE',           'cat': 'Course',         'type': 'HC',  'name': '(HC-04) Lecture-Laboratory Sequence',           'desc': 'The Lecture component must be scheduled earlier than the Laboratory component.'},
-    {'code': 'STRICT_ALLOC_LEC',           'cat': 'Course',         'type': 'HC',  'name': '(HC-05) Strict Lecture Allocation',             'desc': 'Every section must have a Lecture component scheduled for each required course.'},
-    {'code': 'STRICT_ALLOC_LAB',           'cat': 'Course',         'type': 'HC',  'name': '(HC-06) Strict Laboratory Allocation',          'desc': 'Every section must have a Laboratory component scheduled if required by the course.'},
-    {'code': 'STRICT_ALLOC_ASYNC',         'cat': 'Course',         'type': 'HC',  'name': '(HC-07) Strict Async Allocation',               'desc': 'Every section must have an Asynchronous component scheduled if required by the course.'},
-    {'code': 'STRICT_LEC_DURATION',        'cat': 'Course',         'type': 'HC',  'name': '(HC-08) Strict Lecture Duration',               'desc': 'Face-to-face Lecture hours must exactly match the required hours defined in the course data.'},
-    {'code': 'STRICT_LAB_DURATION',        'cat': 'Course',         'type': 'HC',  'name': '(HC-09) Strict Laboratory Duration',            'desc': 'Face-to-face Laboratory hours must exactly match the required hours defined in the course data.'},
-    {'code': 'STRICT_ASYNC_LEC_DUR',       'cat': 'Course',         'type': 'HC',  'name': '(HC-10) Strict Async Lecture Duration',         'desc': 'Asynchronous Lecture hours must exactly match the required hours defined in the course data.'},
-    {'code': 'STRICT_ASYNC_LAB_DUR',       'cat': 'Course',         'type': 'HC',  'name': '(HC-11) Strict Async Laboratory Duration',      'desc': 'Asynchronous Laboratory hours must exactly match the required hours defined in the course data.'},
-    {'code': 'SECTION_CONFLICT',           'cat': 'Course',         'type': 'HC',  'name': '(HC-12) No Section Course Conflict',            'desc': 'A section cannot have two or more different courses scheduled at the same time.'},
-    {'code': 'FACULTY_CONFLICT',           'cat': 'Course',         'type': 'HC',  'name': '(HC-13) No Faculty Course Conflict',            'desc': 'A faculty member cannot be assigned to two or more courses at the same time.'},
-    {'code': 'COMPLETE_COURSE_SCHEDULING', 'cat': 'Course',         'type': 'HC',  'name': '(HC-25) Complete Course Scheduling',            'desc': 'All courses for the selected semester must be fully plotted in the timetable.'},
-    {'code': 'LEC_LAB_WEEKLY_DIST',        'cat': 'Course',         'type': 'SC1', 'name': '(SC-I-01) Lecture-Lab Weekly Distribution',     'desc': 'Lectures should be placed earlier in the week; laboratories later in the week.'},
-    {'code': 'ASYNC_STRATEGIC_PLACEMENT',  'cat': 'Course',         'type': 'SC1', 'name': '(SC-I-02) Strategic Asynchronous Placement',    'desc': 'Asynchronous classes should fill 1-hour gaps to preserve larger free blocks.'},
-    {'code': 'LEC_LAB_PROXIMITY',          'cat': 'Course',         'type': 'SC1', 'name': '(SC-I-03) Lecture-Lab Proximity',               'desc': 'Lecture and Lab of the same course should be scheduled within 3 days of each other.'},
-    {'code': 'PE_MORNING_PLACEMENT',       'cat': 'Course',         'type': 'SC1', 'name': '(SC-I-04) Morning Placement for PE Courses',    'desc': 'PE/FITT courses should be scheduled early in the morning (7:00 AM onwards).'},
-    {'code': 'PE_EARLY_WEEK',              'cat': 'Course',         'type': 'SC1', 'name': '(SC-I-05) Early Week Placement for PE Courses', 'desc': 'PE/FITT courses should ideally be scheduled on Mondays or Tuesdays.'},
-    {'code': 'SECTION_DAY_RESTRICTIONS',   'cat': 'Section',        'type': 'HC',  'name': '(HC-14) Section Day Restrictions',              'desc': 'Section schedules must only be assigned within allowed academic days for the year level.'},
-    {'code': 'MAX_CONSECUTIVE_STUDENT',    'cat': 'Section',        'type': 'HC',  'name': '(HC-15) Max Consecutive Student Load',          'desc': 'A section must not exceed 6 consecutive hours of scheduled course sessions.'},
-    {'code': 'NO_ROOM_MULTI_SECTION',      'cat': 'Section',        'type': 'HC',  'name': '(HC-16) No Multiple Sections in One Room',      'desc': 'Two or more sections must not be assigned to the same room at the same time.'},
-    {'code': 'PREASSIGNMENT_EXCLUSIVITY',  'cat': 'Section',        'type': 'HC',  'name': '(HC-26) Pre-assignment Time Exclusivity',       'desc': 'Time slots blocked by pre-assignments cannot be overwritten or double-booked for that section.'},
-    {'code': 'EARLY_START',         'cat': 'Administrative', 'type': 'HC',
-     'name': '(HC-27) Early Start Enforcement',
-     'desc': 'All scheduled sessions must start at or after the configured earliest start time.'},
-    {'code': 'DIV4_SLOT_ALIGNMENT', 'cat': 'Time',           'type': 'HC',
-     'name': '(HC-28) Divisible-4 Slot Alignment',
-     'desc': 'Courses in special rooms must align to valid 4-hour slot blocks.'},
-    {'code': 'FACULTY_DAY_SPLIT',   'cat': 'Faculty',        'type': 'HC',
-     'name': '(HC-29) Faculty Day Split',
-     'desc': 'When a faculty has a configured day-split, Lab/Lec sessions must be pinned to their assigned days.'},
-    {'code': 'NO_ISOLATED_LECTURES',       'cat': 'Section',        'type': 'SC2', 'name': '(SC-II-01) No Isolated Lectures',               'desc': 'A section must not have only one lecture scheduled on a given day.'},
-    {'code': 'NO_ISOLATED_LABS',           'cat': 'Section',        'type': 'SC2', 'name': '(SC-II-02) No Isolated Laboratories',           'desc': 'A section must not have only one laboratory scheduled on a given day.'},
-    {'code': 'MIN_DAILY_SECTION_LOAD',     'cat': 'Section',        'type': 'SC2', 'name': '(SC-II-05) Minimum Daily Section Load',         'desc': 'A section should have at least two classes scheduled on any active academic day.'},
-    {'code': 'SINGLE_FACULTY_PER_TIMESLOT','cat': 'Faculty',        'type': 'HC',  'name': '(HC-17) Single Faculty per Section Timeslot',   'desc': 'A section cannot have two or more faculty members assigned at the same time.'},
-    {'code': 'FACULTY_AVAILABILITY',       'cat': 'Faculty',        'type': 'HC',  'name': '(HC-18) Faculty Availability',                  'desc': 'A faculty member must not be scheduled during declared unavailable time slots.'},
-    {'code': 'MAX_CONSECUTIVE_FACULTY',    'cat': 'Faculty',        'type': 'HC',  'name': '(HC-19) Max Consecutive Faculty Load',          'desc': 'A faculty member must not teach for more than 6 consecutive hours.'},
-    {'code': 'SINGLE_ROOM_PER_SESSION',    'cat': 'Room',           'type': 'HC',  'name': '(HC-20) Single Room per Course Session',        'desc': 'A scheduled course session cannot be assigned to two or more rooms at the same time.'},
-    {'code': 'ROOM_SUITABILITY',           'cat': 'Room',           'type': 'HC',  'name': '(HC-21) Room Type Suitability',                 'desc': 'Laboratory components must be in Laboratory rooms; Lecture components in Lecture rooms.'},
-    {'code': 'ROOM_AVAILABILITY',          'cat': 'Room',           'type': 'HC',  'name': '(HC-22) Room Availability',                     'desc': 'Courses must not be scheduled in rooms marked as unavailable or under maintenance.'},
-    {'code': 'ROOM_CAPACITY_PROPORTIONAL', 'cat': 'Room',           'type': 'SC2', 'name': '(SC-II-03) Proportional Room Capacity Allocation','desc': 'Sections with larger student populations should be prioritized for larger rooms.'},
-    {'code': 'OPERATING_HOURS',            'cat': 'Time',           'type': 'HC',  'name': '(HC-23) Operating Hours Compliance',            'desc': 'All course sessions must fall within official institutional start and end times.'},
-    {'code': 'HOURLY_ALIGNMENT',           'cat': 'Time',           'type': 'HC',  'name': '(HC-24) Hourly Clock Alignment',                'desc': 'All course session start times must begin exactly on the hour.'},
-    {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'SC2', 'name': '(SC-II-04) Lunch Break Allocation',             'desc': 'A 1-hour vacant period must be provided between 10:00 AM and 2:00 PM.'},
-    {'code': 'EVENING_AVOIDANCE',          'cat': 'Time',           'type': 'SC2', 'name': '(SC-II-06) Evening Class Avoidance',            'desc': 'Avoid scheduling classes in the evening (from 6:00 PM onwards).'},
+    # ── ADMINISTRATIVE ──────────────────────────────────────────────────────────
+    {'code': 'LOCKED_SCHEDULES',           'cat': 'Administrative', 'type': 'HC',  'weight': 1,   'name': '(HC-01) Locked Schedules', 'desc': 'Manually plotted schedules are immovable.'},
+    {'code': 'MINOR_SUBJECT_GAP',          'cat': 'Administrative', 'type': 'HC',  'weight': 1,   'name': '(HC-02) Space for Minor Subjects', 'desc': 'Ensure free slots for unscheduled minor courses.'},
+    {'code': 'GLOBAL_DAY_RESTRICTION',     'cat': 'Administrative', 'type': 'HC',  'weight': 1,   'name': '(HC-03) Global Day Restriction', 'desc': 'No classes on Sundays or non-academic days.'},
+
+    # ── COURSE ──────────────────────────────────────────────────────────────────
+    {'code': 'LEC_LAB_SEQUENCE',           'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-04) Lec-Lab Sequence', 'desc': 'Lecture must be scheduled before Laboratory.'},
+    {'code': 'STRICT_ALLOC_LEC',           'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-05) Strict Lecture Allocation', 'desc': 'Every section must have a lecture for required courses.'},
+    {'code': 'STRICT_ALLOC_LAB',           'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-06) Strict Laboratory Allocation', 'desc': 'Every section must have a lab if required.'},
+    {'code': 'STRICT_ALLOC_ASYNC',         'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-07) Strict Async Allocation', 'desc': 'Every section must have an async part if required.'},
+    {'code': 'STRICT_LEC_DURATION',        'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-08) Strict Lecture Duration', 'desc': 'Lec hours must match the required course data.'},
+    {'code': 'STRICT_LAB_DURATION',        'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-09) Strict Laboratory Duration', 'desc': 'Lab hours must match the required course data.'},
+    {'code': 'STRICT_ASYNC_LEC_DUR',       'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-10) Strict Async Lec Dur', 'desc': 'Async Lec hours must match required data.'},
+    {'code': 'STRICT_ASYNC_LAB_DUR',       'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-11) Strict Async Lab Dur', 'desc': 'Async Lab hours must match required data.'},
+    {'code': 'SECTION_CONFLICT',           'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-12) No Section Course Conflict', 'desc': 'A section cannot have 2 courses at the same time.'},
+    {'code': 'FACULTY_CONFLICT',           'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-13) No Faculty Course Conflict', 'desc': 'A faculty cannot teach 2 courses at the same time.'},
+    {'code': 'COMPLETE_COURSE_SCHEDULING', 'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-25) Complete Course Scheduling', 'desc': 'All required courses must be fully plotted.'},
+    {'code': 'LEC_LAB_WEEKLY_DIST',        'cat': 'Course',         'type': 'SC1', 'weight': 80,  'name': '(SC-I-03) Lec-Lab Weekly Dist.', 'desc': 'Lec early in week, Lab later in week.'},
+    {'code': 'LEC_LAB_PROXIMITY',          'cat': 'Course',         'type': 'SC1', 'weight': 70,  'name': '(SC-I-04) Lec-Lab Proximity', 'desc': 'Lec and Lab should be within 3 days.'},
+    {'code': 'PE_MORNING_PLACEMENT',       'cat': 'Course',         'type': 'SC2', 'weight': 5,  'name': '(SC-II-01) Morning PE Placement', 'desc': 'PE courses early in the morning.'},
+    {'code': 'PE_EARLY_WEEK',              'cat': 'Course',         'type': 'SC2', 'weight': 5,  'name': '(SC-II-02) Early Week PE Placement', 'desc': 'PE courses on Mondays or Tuesdays.'},
+    {'code': 'ASYNC_STRATEGIC_PLACEMENT',  'cat': 'Course',         'type': 'SC2', 'weight': 5,  'name': '(SC-II-03) Strategic Async Placement', 'desc': 'Async classes fill 1-hour gaps.'},
+
+    # ── SECTION ─────────────────────────────────────────────────────────────────
+    {'code': 'SECTION_DAY_RESTRICTIONS',   'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-14) Section Day Restrictions', 'desc': 'Schedules must be within allowed academic days.'},
+    {'code': 'MAX_CONSECUTIVE_STUDENT',    'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-15) Max Consecutive Student Load', 'desc': 'Max 6 consecutive hours for students.'},
+    {'code': 'NO_ROOM_MULTI_SECTION',      'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-16) No Multiple Sections in Room', 'desc': 'One room cannot host 2 sections at once.'},
+    {'code': 'PREASSIGNMENT_EXCLUSIVITY',  'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-26) Pre-assignment Exclusivity', 'desc': 'Pre-assigned slots cannot be overwritten.'},
+    {'code': 'NO_ISOLATED_LECTURES',       'cat': 'Section',        'type': 'SC1', 'weight': 100, 'name': '(SC-I-01) No Isolated Lectures', 'desc': 'Section should not have only 1 lec in a day.'},
+    {'code': 'NO_ISOLATED_LABS',           'cat': 'Section',        'type': 'SC1', 'weight': 100, 'name': '(SC-I-02) No Isolated Laboratories', 'desc': 'Section should not have only 1 lab in a day.'},
+    {'code': 'MIN_DAILY_SECTION_LOAD',     'cat': 'Section',        'type': 'SC1', 'weight': 60,  'name': '(SC-I-05) Min Daily Section Load', 'desc': 'At least 2 classes per active day.'},
+
+    # ── FACULTY ─────────────────────────────────────────────────────────────────
+    {'code': 'SINGLE_FACULTY_PER_TIMESLOT','cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-17) Single Fac per Section Slot', 'desc': 'One section cannot have 2 faculty at once.'},
+    {'code': 'FACULTY_AVAILABILITY',       'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-18) Faculty Availability', 'desc': 'Faculty must be available during scheduled times.'},
+    {'code': 'MAX_CONSECUTIVE_FACULTY',    'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-19) Max Consecutive Faculty Load', 'desc': 'Max 6 consecutive teaching hours for faculty.'},
+    {'code': 'FACULTY_DAY_SPLIT',          'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-28) Faculty Day Split', 'desc': 'Sessions must land on designated split days.'},
+
+    # ── ROOM ────────────────────────────────────────────────────────────────────
+    {'code': 'SINGLE_ROOM_PER_SESSION',    'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-20) Single Room per Session', 'desc': 'One session cannot use 2 rooms at once.'},
+    {'code': 'ROOM_SUITABILITY',           'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-21) Room Type Suitability', 'desc': 'Lab in Lab rooms, Lec in Lec rooms.'},
+    {'code': 'ROOM_AVAILABILITY',          'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-22) Room Availability', 'desc': 'Room must be available (not for maintenance).'},
+    {'code': 'LECTURE_SLOT_ALIGNMENT',     'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-27) Lec Slot Alignment (Div4)', 'desc': 'Lecture classes must start on 2-hour boundaries.'},
+    {'code': 'EARLY_START_ENFORCEMENT',    'cat': 'Room',           'type': 'SC1', 'weight': 100, 'name': '(SC-I-09) Early Start Enforcement', 'desc': 'First class in room starts by 8:00 AM.'},
+    {'code': 'ROOM_CAPACITY_PROPORTIONAL', 'cat': 'Room',           'type': 'SC2', 'weight': 2,  'name': '(SC-II-05) Room Capacity Allocation', 'desc': 'Large sections prioritized for large rooms.'},
+
+    # ── TIME ────────────────────────────────────────────────────────────────────
+    {'code': 'OPERATING_HOURS',            'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-23) Operating Hours Compliance', 'desc': 'Sessions must be within campus hours.'},
+    {'code': 'HOURLY_ALIGNMENT',           'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-24) Hourly Clock Alignment', 'desc': 'Sessions must start exactly on the hour.'},
+    {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'SC2', 'weight': 2,  'name': '(SC-II-04) Lunch Break Allocation', 'desc': '1-hour break between 10 AM and 2 PM.'},
+    {'code': 'EVENING_AVOIDANCE',          'cat': 'Time',           'type': 'SC2', 'weight': 10,  'name': '(SC-II-03) Evening Class Avoidance', 'desc': 'Avoid classes from 6:00 PM onwards.'},
 ]
 
 PREFIX_RULES = [
@@ -240,8 +235,7 @@ def seed_database():
         for e in PREFIX_EXCEPTIONS:
             db.session.add(CodePrefixRule(code=e['code'], is_prefix=False, department=e['dept'], is_archived=False))
         for c in CONSTRAINTS:
-            db.session.add(Constraint(logic_code=c['code'], category=c['cat'],
-                                      name=c['name'], description=c['desc'], constraint_type=c['type']))
+            db.session.add(Constraint(logic_code=c['code'], category=c['cat'], name=c['name'], description=c['desc'], constraint_type=c['type'], weight=c.get('weight', 1)))
 
         db.session.add(SystemSettings(
             start_hour=7, end_hour=20,
@@ -332,7 +326,7 @@ def seed_database():
         
         
         
-        # === NEW: AUTOMATED ALL-DEPARTMENTS WORKLOAD INJECTOR ===
+        # === AUTOMATED ALL-DEPARTMENTS WORKLOAD INJECTOR ===
         print("  Assigning automatic workloads for ALL departments...")
         from collections import defaultdict
         
@@ -378,6 +372,34 @@ def seed_database():
                     ))
                     fac_loads[fac.id] += course_hours
                     
+        db.session.commit()
+
+        # === NSTP PRE-ASSIGNMENTS (Saturday Logic) ===
+        print("  Applying NSTP Pre-assignments for 1st Year...")
+        nstp_course = Course.query.filter_by(course_code='NSTP101').first()
+        tba_fac = Faculty.query.filter(Faculty.employee_id.like('TBA%')).first()
+        field_rm = Room.query.filter_by(room_name='University Field').first()
+        gym_rm = Room.query.filter_by(room_name='Gymnasium').first()
+
+        if nstp_course and tba_fac:
+            first_year_sections = Section.query.filter_by(year_level=1).all()
+            for sec in first_year_sections:
+                # BSCoS: Morning (7-10), BSIT: Afternoon (1-4)
+                is_cs = 'BSCoS' in sec.section_name
+                target_rm = field_rm if is_cs else gym_rm
+                start_t = '07:00' if is_cs else '13:00'
+                end_t = '10:00' if is_cs else '16:00'
+
+                if target_rm:
+                    db.session.add(PreAssignment(
+                        course_id=nstp_course.id,
+                        section_id=sec.id,
+                        faculty_id=tba_fac.id,
+                        room_id=target_rm.id,
+                        day='Saturday',
+                        start_time=start_t,
+                        end_time=end_t
+                    ))
         db.session.commit()
         print(f"Seeder {SEEDER_LEVEL} complete! — {DESCRIPTION}")
         print(f"  Sections : {Section.query.count()}")
