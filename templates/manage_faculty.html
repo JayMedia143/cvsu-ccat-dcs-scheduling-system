@@ -134,7 +134,7 @@
 
                 <!-- Status Filter (Nested) -->
                 <li class="dropdown-submenu">
-                    <a class="dropdown-item" href="javascript:void(0);">Status</a>
+                    <a class="dropdown-item" href="javascript:void(0);">Emp. Status</a>
                     <ul class="dropdown-menu">
                         <li>
                             <a class="dropdown-item {% if current_filter_val == 'Full-time' %}active{% endif %}"
@@ -146,6 +146,25 @@
                             <a class="dropdown-item {% if current_filter_val == 'Part-time' %}active{% endif %}"
                                 href="{{ url_for('manage_faculty', sort=current_sort, search=search_query, filter_by='status', filter_val='Part-time') }}">
                                 Part-time
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+
+                <!-- Assignment Status Filter (Nested) -->
+                <li class="dropdown-submenu">
+                    <a class="dropdown-item" href="javascript:void(0);">Asgn. Status</a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == 'Announced' %}active{% endif %}"
+                                href="{{ url_for('manage_faculty', sort=current_sort, search=search_query, filter_by='asgn_status', filter_val='Announced') }}">
+                                Announced
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == 'TBA' %}active{% endif %}"
+                                href="{{ url_for('manage_faculty', sort=current_sort, search=search_query, filter_by='asgn_status', filter_val='TBA') }}">
+                                TBA
                             </a>
                         </li>
                     </ul>
@@ -244,6 +263,11 @@
                                 {% else %}
                                 <span
                                     class="badge bg-info bg-opacity-10 text-info border border-info fw-normal">Part-time</span>
+                                {% endif %}
+                                {% if faculty.assignment_status == 'TBA' %}
+                                <div class="mt-1">
+                                    <span class="badge bg-warning text-dark border border-warning fw-bold" style="font-size: 0.65rem;">TBA</span>
+                                </div>
                                 {% endif %}
                             </td>
 
@@ -414,15 +438,22 @@
                     </div>
                     {% if session.get('role') != 'user' %}
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label small text-muted fw-bold">STATUS</label>
                             <select class="form-select" name="employment_status">
                                 <option>Full-time</option>
                                 <option>Part-time</option>
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label small text-muted fw-bold">MAX HOURS/WEEK</label>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label small text-muted fw-bold">ASGN STATUS</label>
+                            <select class="form-select" name="assignment_status">
+                                <option value="Announced">Announced</option>
+                                <option value="TBA">TBA</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label small text-muted fw-bold">MAX HOURS</label>
                             <input type="number" class="form-control" name="max_weekly_hours" value="35">
                         </div>
                     </div>
@@ -515,7 +546,7 @@
                     </div>
                     {% if session.get('role') != 'user' %}
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label small text-muted fw-bold">STATUS</label>
                             <select class="form-select" name="employment_status">
                                 <option {% if faculty.employment_status=='Full-time' %}selected{% endif %}>Full-time
@@ -524,8 +555,15 @@
                                 </option>
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label small text-muted fw-bold">MAX HOURS/WEEK</label>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label small text-muted fw-bold">ASGN STATUS</label>
+                            <select class="form-select" name="assignment_status">
+                                <option value="Announced" {% if faculty.assignment_status=='Announced' %}selected{% endif %}>Announced</option>
+                                <option value="TBA" {% if faculty.assignment_status=='TBA' %}selected{% endif %}>TBA</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label small text-muted fw-bold">MAX HOURS</label>
                             <input type="number" class="form-control" name="max_weekly_hours"
                                 value="{{ faculty.max_weekly_hours }}">
                         </div>
@@ -623,12 +661,12 @@
 </div>
 
 <!-- 1. FACULTY ASSIGNMENT WIZARD (v5.2 STYLED) -->
-<div class="modal fade modal-xl" id="assignCoursesModal{{ faculty.id }}" tabindex="-1" data-max-hours="{{ faculty.max_weekly_hours }}">
-    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered">
+<div class="modal fade modal-xl workload-wizard-modal" id="assignCoursesModal{{ faculty.id }}" tabindex="-1" data-max-hours="{{ faculty.max_weekly_hours }}">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
 
             <!-- STEP 1: TEACHABLE COURSES -->
-            <div class="wizard-step-1">
+            <div class="wizard-step-1 flex-column h-100" style="display: flex;">
                 <div class="modal-header border-bottom py-3 px-4 bg-white">
                     <div class="d-flex align-items-center">
                         <div class="bg-success bg-opacity-10 p-2 rounded-2 me-3">
@@ -643,7 +681,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
 
-                <div class="modal-body bg-white p-0">
+                <div class="modal-body bg-white p-0 flex-grow-1" style="overflow-y: auto; min-height: 0;">
                     <!-- SUMMARY AREA -->
                     <div class="border-bottom p-4" style="background-color: #f9fbf9;">
                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -676,7 +714,7 @@
                                     <span class="fw-bold text-dark text-uppercase"
                                         style="font-size: 0.85rem; letter-spacing: 0.5px;">{{ sem }}</span>
                                 </div>
-                                <div class="course-list-container pe-1" style="max-height: 400px; overflow-y: auto;">
+                                <div class="course-list-container pe-1">
                                     {% for course in courses_by_sem[sem] %}
                                     <div class="course-readable-card mb-2">
                                         <input
@@ -722,7 +760,7 @@
             </div>
 
             <!-- STEP 2: FINAL LOAD -->
-            <div class="wizard-step-2" style="display: none;">
+            <div class="wizard-step-2 flex-column h-100" style="display: none;">
                 <div class="modal-header border-bottom py-3 px-4 bg-white">
                     <div class="d-flex align-items-center">
                         <div class="bg-success bg-opacity-10 p-2 rounded-2 me-3">
@@ -735,7 +773,7 @@
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-0 bg-white">
+                <div class="modal-body p-0 bg-white flex-grow-1 d-flex flex-column" style="overflow-y: auto; min-height: 0;">
                     <!-- HOUR COUNTER BAR -->
                     <div class="px-4 pt-3 pb-2 border-bottom" style="background:#f9fbf9;">
                         <div class="d-flex justify-content-between align-items-center mb-1">
@@ -751,7 +789,7 @@
                                 style="width:0%"></div>
                         </div>
                     </div>
-                    <div id="sectionList{{ faculty.id }}" class="p-3" style="max-height:480px; overflow-y:auto;"></div>
+                    <div id="sectionList{{ faculty.id }}" class="p-3"></div>
                 </div>
                 <div class="modal-footer bg-light border-top py-3 px-4 d-flex justify-content-between">
                     <button type="button" class="btn btn-light btn-back-step">
@@ -1117,7 +1155,7 @@
 
         sectionListDiv.innerHTML = '';
         if (selectedCourses.length === 0) {
-            sectionListDiv.innerHTML = '<div class="alert alert-warning border-0 shadow-sm m-2">No subjects selected. Go back to Step 1.</div>';
+            sectionListDiv.innerHTML = '<div class="alert alert-warning border-0 shadow-sm m-3">No subjects selected. Go back to Step 1.</div>';
         } else {
             const allDayOpts = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -1257,14 +1295,14 @@
             });
             sectionListDiv.innerHTML = content + '</div>';
         }
-        step1.style.display = 'none';
-        step2.style.display = 'block';
+        step1.style.setProperty('display', 'none', 'important');
+        step2.style.setProperty('display', 'flex', 'important');
         updateTotal(facultyId);
     });
 
     backBtnRef.addEventListener('click', function () {
-        step2.style.display = 'none';
-        step1.style.display = 'block';
+        step2.style.setProperty('display', 'none', 'important');
+        step1.style.setProperty('display', 'flex', 'important');
     });
 
     modal.querySelector(`#assignmentForm${facultyId}`).addEventListener('submit', function (e) {
@@ -1594,6 +1632,26 @@
 
     #facultyInfoModal {
         z-index: 1060 !important;
+    }
+
+    /* FIX: WORKLOAD MODAL WIZARD FLEXBOX */
+    .wizard-step-1, .wizard-step-2 {
+        min-height: 500px; /* Base height */
+    }
+
+    /* When the modal is shown, wizard steps should fill the modal-content height */
+    .workload-wizard-modal .modal-content > .wizard-step-1, 
+    .workload-wizard-modal .modal-content > .wizard-step-2 {
+        display: none; 
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+    }
+
+    /* Force steps to take full height of modal-content for scrollable behavior */
+    .workload-wizard-modal .modal-content {
+        height: 85vh; /* Standardized height for workload wizard */
+        overflow: hidden; /* Fix: prevent children from leaking out */
     }
 </style>
 

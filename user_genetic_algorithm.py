@@ -709,7 +709,7 @@ class UserGeneticScheduler:
         self._pen_type = {}   # code → 'HC' | 'SC1' | 'SC2' | 'NC'
         for code in ('ROOM_AVAILABILITY', 'ROOM_SUITABILITY', 'ROOM_CAPACITY_PROPORTIONAL',
                      'OPERATING_HOURS', 'LUNCH_BREAK', 'EVENING_AVOIDANCE',
-                     'PE_MORNING_PLACEMENT', 'PE_EARLY_WEEK', 'ASYNC_STRATEGIC_PLACEMENT',
+                     'PE_MORNING_PLACEMENT', 'PE_EARLY_WEEK',
                      'LEC_LAB_WEEKLY_DIST', 'LEC_LAB_PROXIMITY',
                      'MAX_CONSECUTIVE_STUDENT', 'MAX_CONSECUTIVE_FACULTY',
                      'LEC_LAB_SEQUENCE', 'NO_ISOLATED_LECTURES', 'NO_ISOLATED_LABS',
@@ -849,12 +849,11 @@ class UserGeneticScheduler:
             'LEC_LAB_WEEKLY_DIST':        'SC-I-08',
             'LEC_LAB_PROXIMITY':          'SC-I-09',
 
-            # --- SOFT CONSTRAINTS II (SC-II-01 to SC-II-05) ---
+            # --- SOFT CONSTRAINTS II (SC-II-01 to SC-II-04) ---
             'PE_MORNING_PLACEMENT':       'SC-II-01',
             'PE_EARLY_WEEK':              'SC-II-02',
-            'ASYNC_STRATEGIC_PLACEMENT':  'SC-II-03',
-            'LUNCH_BREAK':                'SC-II-04',
-            'ROOM_CAPACITY_PROPORTIONAL': 'SC-II-05'
+            'LUNCH_BREAK':                'SC-II-03',
+            'ROOM_CAPACITY_PROPORTIONAL': 'SC-II-04'
         }
 
     # ------------------------------------------------------------------ #
@@ -1419,12 +1418,24 @@ class UserGeneticScheduler:
                             penalty += p; hard_conflicts += 1; conflicts.add(i); violation_codes.add(cmap['ROOM_SUITABILITY']); violation_indices.add(i)
 
                     if include_sc2:
-                        students = sec_stu.get(g.section_id, 0)
-                        cap      = r.get('capacity', 9999)
-                        if cap < students:
-                            p = pen.get('ROOM_CAPACITY_PROPORTIONAL')
-                            if p:
-                                penalty += p; soft_score += p; violation_codes.add(cmap['ROOM_CAPACITY_PROPORTIONAL']); violation_indices.add(i)
+                        # SC-II-04: Absolute Room Capacity Fit
+                        # Exemptions: Virtual rooms, Outdoor/Fields
+                        r_name_up = (r.get('room_name', '') or '').upper()
+                        is_exempt = (g.room_id in self.online_room_ids or
+                                     g.room_id in self.tba_room_ids or
+                                     'COURT' in r_name_up or
+                                     'GYM' in r_name_up or
+                                     'FIELD' in r_name_up)
+
+                        if not is_exempt:
+                            students = sec_stu.get(g.section_id, 0)
+                            cap = r.get('capacity', 0)
+                            diff = abs(cap - students)
+                            p = pen.get('ROOM_CAPACITY_PROPORTIONAL', 0)
+                            if p > 0 and diff > 0:
+                                actual_p = p * (diff / 10.0)
+                                penalty += actual_p; soft_score += actual_p;
+                                violation_codes.add(cmap['ROOM_CAPACITY_PROPORTIONAL']); violation_indices.add(i)
                                 if pen_type.get('ROOM_CAPACITY_PROPORTIONAL', 'SC2') == 'SC1':
                                     sc1_violations += 1
                                 else:
@@ -1512,14 +1523,8 @@ class UserGeneticScheduler:
                             else:
                                 sc2_violations += 1
                 elif g.gene_type == 'Async':
-                    if g.day_idx != 0 and g.day_idx != last_day:
-                        p = pen['ASYNC_STRATEGIC_PLACEMENT']
-                        if p:
-                            penalty += p; soft_score += p; violation_codes.add(cmap['ASYNC_STRATEGIC_PLACEMENT']); violation_indices.add(i)
-                            if pen_type.get('ASYNC_STRATEGIC_PLACEMENT', 'SC2') == 'SC1':
-                                sc1_violations += 1
-                            else:
-                                sc2_violations += 1
+                    # DEPRECATED: ASYNC_STRATEGIC_PLACEMENT logic removed as per user request
+                    pass
 
             # Track Lec/Lab for sequence (HC-04) and proximity (SC-I-01/03) checks
             if g.gene_type in ('Lec', 'Lab'):

@@ -140,6 +140,25 @@
                         </li>
                     </ul>
                 </li>
+
+                <!-- Room Type Filter (Nested) -->
+                <li class="dropdown-submenu">
+                    <a class="dropdown-item" href="javascript:void(0);">Room Type</a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == 'Sync' %}active{% endif %}"
+                                href="{{ url_for('manage_rooms', sort=current_sort, search=search_query, filter_by='room_type', filter_val='Sync') }}">
+                                Sync (Physical)
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item {% if current_filter_val == 'Async' %}active{% endif %}"
+                                href="{{ url_for('manage_rooms', sort=current_sort, search=search_query, filter_by='room_type', filter_val='Async') }}">
+                                Async (Virtual)
+                            </a>
+                        </li>
+                    </ul>
+                </li>
             </ul>
         </div>
 
@@ -227,7 +246,14 @@
                             </td>
                             {% endif %}
 
-                            <td class="fw-bold text-dark ps-0 text-start">{{ room.room_name }}</td>
+                            <td class="ps-0 text-start">
+                                <div class="fw-bold text-dark">{{ room.room_name }}</div>
+                                {% if room.room_type == 'Async' %}
+                                <span class="badge bg-info text-white border-0 fw-bold" style="font-size: 0.65rem;">ASYNC</span>
+                                {% else %}
+                                <span class="badge bg-secondary text-white border-0 fw-bold" style="font-size: 0.65rem;">SYNC</span>
+                                {% endif %}
+                            </td>
                             <td class="text-muted small text-start">{{ room.building }}</td>
                             <td class="text-start">
                                 {% if room.room_departments %}
@@ -422,12 +448,27 @@
                             <label class="form-check-label" for="addCheckLab">Computer Laboratory</label>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small text-muted fw-bold">STATUS</label>
-                        <select class="form-select" name="status">
-                            <option>Available</option>
-                            <option>Unavailable (Maintenance)</option>
-                        </select>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small text-muted fw-bold">STATUS</label>
+                            <select class="form-select" name="status">
+                                <option>Available</option>
+                                <option>Unavailable (Maintenance)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small text-muted fw-bold">ROOM TYPE</label>
+                            <div class="d-flex gap-3 mt-1">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="room_type" value="Sync" id="addTypeSync" checked>
+                                    <label class="form-check-label small" for="addTypeSync">Sync (Physical)</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="room_type" value="Async" id="addTypeAsync">
+                                    <label class="form-check-label small" for="addTypeAsync">Async (Virtual)</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     {% endif %}
                     {% if session.get('role') != 'user' %}
@@ -505,13 +546,28 @@
                             <label class="form-check-label" for="editCheckLab{{ room.id }}">Computer Laboratory</label>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small text-muted fw-bold">STATUS</label>
-                        <select class="form-select" name="status">
-                            <option {% if room.status=='Available' %}selected{% endif %}>Available</option>
-                            <option {% if room.status=='Unavailable (Maintenance)' %}selected{% endif %}>Unavailable
-                                (Maintenance)</option>
-                        </select>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small text-muted fw-bold">STATUS</label>
+                            <select class="form-select" name="status">
+                                <option {% if room.status=='Available' %}selected{% endif %}>Available</option>
+                                <option {% if room.status=='Unavailable (Maintenance)' %}selected{% endif %}>Unavailable
+                                    (Maintenance)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small text-muted fw-bold">ROOM TYPE</label>
+                            <div class="d-flex gap-3 mt-1">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="room_type" value="Sync" id="editTypeSync{{ room.id }}" {% if room.room_type == 'Sync' or not room.room_type %}checked{% endif %}>
+                                    <label class="form-check-label small" for="editTypeSync{{ room.id }}">Sync</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="room_type" value="Async" id="editTypeAsync{{ room.id }}" {% if room.room_type == 'Async' %}checked{% endif %}>
+                                    <label class="form-check-label small" for="editTypeAsync{{ room.id }}">Async</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     {% endif %}
 
