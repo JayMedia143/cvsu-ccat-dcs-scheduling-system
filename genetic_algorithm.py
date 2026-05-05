@@ -196,7 +196,8 @@ class Chromosome:
     __slots__ = ('genes', 'fitness', 'hard_conflicts', 'soft_score',
                  'conflicting_indices', 'rank', 'crowding_distance',
                  'sc1_violations', 'sc2_violations', 'violation_codes',
-                 '_violated_indices', '_occ_room', '_occ_fac', '_occ_sec')
+                 '_violated_indices', '_occ_room', '_occ_fac', '_occ_sec',
+                 '_soft_violators_cache', '_soft_cache_gen')
 
     def __init__(self, genes):
         self.genes               = genes
@@ -213,6 +214,8 @@ class Chromosome:
         self._occ_room           = None  # Memory for Delta Fitness (Phase 4)
         self._occ_fac            = None
         self._occ_sec            = None
+        self._soft_violators_cache = None
+        self._soft_cache_gen       = -1
 
 
 def _norm_dept(s):
@@ -862,6 +865,28 @@ class GeneticScheduler:
         if ctype == 'SC2': return self._sc2_base * weight
         return 0
 
+    def _adaptive_relax_constraints(self, severe_counter):
+        """
+        Temporarily relax soft penalties of highly-blocking constraints during
+        severe stagnation (e.g. severe_counter >= 15) to expand search space
+        and help the crossovers/local-search escape local minima.
+        """
+        if severe_counter >= 15:
+            # Relax room suitability, proportional capacity, and max consecutive loads
+            for code in ('ROOM_SUITABILITY', 'ROOM_CAPACITY_PROPORTIONAL', 
+                         'MAX_CONSECUTIVE_STUDENT', 'MAX_CONSECUTIVE_FACULTY',
+                         'LEC_LAB_PROXIMITY', 'LEC_LAB_SEQUENCE'):
+                if code in self._pen:
+                    self._pen[code] = max(1, self._penalty(code) // 4)
+            print(f"⚠️ Stagnation counter={severe_counter}. Adaptive Constraint Relaxation active.")
+
+    def _rebuild_penalties(self):
+        """
+        Restore original full penalties to self._pen.
+        """
+        for code in list(self._pen.keys()):
+            self._pen[code] = self._penalty(code)
+
     # ------------------------------------------------------------------ #
     # UTILITIES                                                            #
     # ------------------------------------------------------------------ #
@@ -1035,7 +1060,15 @@ class GeneticScheduler:
             combined = [w * (0.05 + 0.95 * (ws / max(max_warm, 1))) for w, ws in zip(weights, warm_scores)]
             return random.choices(candidates, weights=combined, k=1)[0]
 
-        return random.choices(candidates, weights=weights, k=1)[0]
+    def _get_soft_violators(self, chromosome, generation):
+        """Cache-backed retrieval of soft violators for a chromosome.
+        Invalidates and recalculates when the generation ID mismatch is detected.
+        """
+        if (chromosome._soft_violators_cache is None or 
+                chromosome._soft_cache_gen != generation):
+            chromosome._soft_violators_cache = self._find_soft_violation_indices(chromosome)
+            chromosome._soft_cache_gen = generation
+        return chromosome._soft_violators_cache
 
     def _find_soft_violation_indices(self, chromosome, sc1_only=False):
         violators_set = set()
@@ -1594,31 +1627,34 @@ class GeneticScheduler:
             p_lb = pen.get('LUNCH_BREAK', 0)
             if p_lb:
                 lb_type_is_sc1 = pen_type.get('LUNCH_BREAK', 'SC2') == 'SC1'
-                for (_, day_idx), slots in sec_use.items():
+                lw_mask = self._lunch_window_mask
+                
+                # Check section lunch breaks
+                for (sec_id, day_idx), slots in sec_use.items():
                     # Periodic stop check for large schedules
                     if day_idx % 3 == 0: self._check_stop(stop_event, raise_exception=True)
-                    occ = set()
-                    for start, end, _i in slots:
-                        for s in range(max(start, lws), min(end, lwe)):
-                            occ.add(s)
-                    if occ and not any(s not in occ and (s + 1) not in occ
-                                       for s in range(lws, lwe - 1)):
-                        penalty += p_lb; soft_score += p_lb; violation_codes.add(cmap['LUNCH_BREAK'])
-                        for _, _, _i in slots: violation_indices.add(_i)
-                        if lb_type_is_sc1: sc1_violations += 1
-                        else: sc2_violations += 1
-                for (_, day_idx), slots in fac_use.items():
+                    occ_bits = sec_bits.get((sec_id, day_idx), 0) & lw_mask
+                    if occ_bits:
+                        free_in_window = (~occ_bits) & lw_mask
+                        # Check if there are 2 consecutive free slots in the window
+                        if not (free_in_window & (free_in_window >> 1)):
+                            penalty += p_lb; soft_score += p_lb; violation_codes.add(cmap['LUNCH_BREAK'])
+                            for _, _, _i in slots: violation_indices.add(_i)
+                            if lb_type_is_sc1: sc1_violations += 1
+                            else: sc2_violations += 1
+                            
+                # Check faculty lunch breaks
+                for (fac_id, day_idx), slots in fac_use.items():
                     if day_idx % 3 == 0: self._check_stop(stop_event, raise_exception=True)
-                    occ = set()
-                    for start, end, _i in slots:
-                        for s in range(max(start, lws), min(end, lwe)):
-                            occ.add(s)
-                    if occ and not any(s not in occ and (s + 1) not in occ
-                                       for s in range(lws, lwe - 1)):
-                        penalty += p_lb; soft_score += p_lb; violation_codes.add(cmap['LUNCH_BREAK'])
-                        for _, _, _i in slots: violation_indices.add(_i)
-                        if lb_type_is_sc1: sc1_violations += 1
-                        else: sc2_violations += 1
+                    occ_bits = fac_bits.get((fac_id, day_idx), 0) & lw_mask
+                    if occ_bits:
+                        free_in_window = (~occ_bits) & lw_mask
+                        # Check if there are 2 consecutive free slots in the window
+                        if not (free_in_window & (free_in_window >> 1)):
+                            penalty += p_lb; soft_score += p_lb; violation_codes.add(cmap['LUNCH_BREAK'])
+                            for _, _, _i in slots: violation_indices.add(_i)
+                            if lb_type_is_sc1: sc1_violations += 1
+                            else: sc2_violations += 1
 
         if not hard_only:
             # ── SC-I-01 & SC-I-03: Lec-Lab weekly distribution & proximity ───
@@ -2528,7 +2564,9 @@ class GeneticScheduler:
         """
         Hill-climbing local search to polish soft constraints without breaking hard constraints.
         Searches same-day time shifts, room swaps, and full-day relocations to fix
-        both per-gene and relational soft violations (isolation, proximity, daily load).
+        both per-gene and relational soft violations.
+        Uses Tabu memory list to avoid repeating recent moves, and fast violator list
+        spot-checking to avoid expensive O(N) full fitness recalculation in evaluation loops.
         """
         if chromosome.hard_conflicts > 0 or chromosome.soft_score == 0:
             return chromosome
@@ -2536,20 +2574,18 @@ class GeneticScheduler:
         refined = self._copy_chromosome(chromosome)
         occ_room, occ_fac, occ_sec = self._build_occ_sets(refined.genes)
 
-        # Get indices of genes causing soft penalties (now includes relational violations)
+        # Get indices of genes causing soft penalties
         violators = self._find_soft_violation_indices(refined)
         if not violators:
             return refined
 
-        # Use hardware-aware default kung walang override
+        # Use hardware-aware default if no override provided
         if max_attempts is None:
             max_attempts = self._hw_ls_max_attempts
 
         _max_violators = self._hw_ls_max_violators
 
-        # ── Local Search Limit ──
-        # Process only a small batch of violators to prevent exponential slowdown
-        # when target list is huge (new 42-constraint set overhead)
+        # Limit violators batch size to prevent slowdown
         if len(violators) > _max_violators:
             violators = random.sample(violators, _max_violators)
 
@@ -2557,6 +2593,9 @@ class GeneticScheduler:
         total_slots = self.total_slots
         improved    = False
         attempts    = 0
+
+        # Tabu List for local search: format (idx, test_day, test_start, test_room)
+        tabu_list = []
 
         while violators and attempts < max_attempts:
             # --- STOP SIGNAL CHECK ---
@@ -2575,7 +2614,7 @@ class GeneticScheduler:
             _gene_locked_day = getattr(gene, 'locked_day', -1)
 
             best_gene_state  = (orig_day, orig_start, orig_room)
-            best_local_score = self.calculate_fitness(refined, hard_only=False)
+            best_local_score = len(violators)
 
             # ── Build candidate search space ──────────────────────────────
             search_space = []
@@ -2587,22 +2626,19 @@ class GeneticScheduler:
                 if 0 <= ns <= total_slots - duration:
                     search_space.append((orig_day, ns, orig_room))
 
-            # 2. Alternative room, same time (fixes room utilisation violations)
+            # 2. Alternative room, same time
             phys_valid = [r for r in valid_rooms if r not in self.tba_room_ids and r not in self.online_room_ids]
             tba_valid = [r for r in valid_rooms if r in self.tba_room_ids or r in self.online_room_ids]
             
-            # Prefer physical rooms for relocation
             room_candidates = random.sample(phys_valid, min(3, len(phys_valid))) if phys_valid else []
             if len(room_candidates) < 3 and tba_valid:
-                 # Only add TBA if we don't have enough physical candidates
                  room_candidates += random.sample(tba_valid, min(3 - len(room_candidates), len(tba_valid)))
 
             for new_room in room_candidates:
                 if new_room != orig_room:
                     search_space.append((orig_day, orig_start, new_room))
 
-            # 3. Relocate to a different day entirely (fixes isolation / proximity)
-            #    Skip for split genes (locked_day must be respected — HC-27).
+            # 3. Relocate to a different day entirely (respected split gene locks)
             if _gene_locked_day < 0:
                 other_days = [d for d in range(days_count) if d != orig_day]
                 for alt_day in random.sample(other_days, min(3, len(other_days))):
@@ -2613,13 +2649,16 @@ class GeneticScheduler:
             # ── Evaluate candidates with CORRECT bitmask-based conflict check ──
             found_better = False
             for (test_day, test_start, test_room) in search_space:
-                # Cache-like skip: if we haven't moved rooms or days, skip deep refinement for speed
+                # Tabu Check
+                if (idx, test_day, test_start, test_room) in tabu_list:
+                    continue
+                # Cache-like skip
                 if test_day == orig_day and test_room == orig_room:
                     continue
+                
                 test_end = test_start + duration
                 mask = ((1 << duration) - 1) << test_start
 
-                # P2-fix: use bitmask lookup (occ_room keys are (room_id, day_idx))
                 conflict = (
                     (test_room not in self.multi_assignment_rooms and
                      (occ_room.get((test_room, test_day), 0) & mask) != 0) or
@@ -2637,7 +2676,7 @@ class GeneticScheduler:
                     gene.bitmask   = mask
 
                     self._add_to_occ(gene, occ_room, occ_fac, occ_sec)
-                    new_score = self.calculate_fitness(refined, hard_only=False)
+                    new_score = len(self._find_soft_violation_indices(refined))
                     self._remove_from_occ(gene, occ_room, occ_fac, occ_sec)
 
                     if new_score < best_local_score:
@@ -2645,7 +2684,7 @@ class GeneticScheduler:
                         best_gene_state  = (test_day, test_start, test_room)
                         found_better     = True
 
-            # Apply best found state
+            # Apply best found state (or original state if no improvement)
             test_day, test_start, test_room = best_gene_state
             gene.day_idx   = test_day
             gene.start_idx = test_start
@@ -2656,7 +2695,12 @@ class GeneticScheduler:
 
             if found_better:
                 improved = True
+                tabu_list.append((idx, test_day, test_start, test_room))
+                if len(tabu_list) > 30:
+                    tabu_list.pop(0)
                 violators = self._find_soft_violation_indices(refined)
+                if len(violators) > _max_violators:
+                    violators = random.sample(violators, _max_violators)
 
             attempts += 1
 
@@ -2696,6 +2740,8 @@ class GeneticScheduler:
         nc.rank                = chrom.rank
         nc.crowding_distance   = chrom.crowding_distance
         nc.sc2_violations      = chrom.sc2_violations
+        nc._soft_violators_cache = chrom._soft_violators_cache
+        nc._soft_cache_gen     = chrom._soft_cache_gen
         
         # Phase 4: Copy occupancy maps for delta fitness
         if chrom._occ_room is not None:
@@ -3585,7 +3631,7 @@ class GeneticScheduler:
 
     def _check_stop(self, stop_event=None, raise_exception=False):
         """
-        Upgraded stop check with Absolute Memory Signal and Throttled File Signal.
+        Unified high-speed stop check supporting Absolute Memory, Eventlet, and Throttled File signals.
         """
         is_stopped = False
         
@@ -3593,9 +3639,12 @@ class GeneticScheduler:
         if getattr(self, 'force_stop', False):
             is_stopped = True
             
-        # 2. Eventlet Stop Event (If provided)
-        if not is_stopped and stop_event and stop_event.is_set():
-            is_stopped = True
+        # 2. Eventlet / Standard Thread Event (If provided)
+        if not is_stopped and stop_event:
+            if hasattr(stop_event, 'ready') and stop_event.ready():
+                is_stopped = True
+            elif hasattr(stop_event, 'is_set') and stop_event.is_set():
+                is_stopped = True
             
         # 3. File-System Signal (Throttled backup)
         if not is_stopped:
@@ -3627,31 +3676,6 @@ class GeneticScheduler:
             self._remove_from_occ(gene, occ_room, occ_fac, occ_sec)
             self.randomize_gene_fast(gene, occ_room, occ_fac, occ_sec, use_warmth=True)
             self._add_to_occ(gene, occ_room, occ_fac, occ_sec)
-
-    def _check_stop(self, stop_event, raise_exception=False):
-        """Helper to check all stop signals (Eventlet, Standard, File).
-        File check is throttled per hardware tier to reduce Disk I/O overhead.
-        """
-        is_stopped = False
-        if stop_event:
-            if hasattr(stop_event, 'ready') and stop_event.ready(): is_stopped = True
-            elif hasattr(stop_event, 'is_set') and stop_event.is_set(): is_stopped = True
-            
-        if not is_stopped:
-            # Throttle expensive os.path.exists() calls based on hardware tier
-            hw_mode = self.hardware_profile.get('mode', 'Efficiency')
-            if hw_mode == 'Efficiency':   _fs_freq = 200   # low-end
-            elif hw_mode == 'Balanced':   _fs_freq = 50    # mid-range
-            else:                         _fs_freq = 1      # high-end (always check)
-
-            self._stop_check_count = getattr(self, '_stop_check_count', 0) + 1
-            if self._stop_check_count % _fs_freq == 0:
-                if os.path.exists(self.sig_path):
-                    is_stopped = True
-        
-        if is_stopped and raise_exception:
-            raise AlgorithmStopException("Stop signal detected.")
-        return is_stopped
 
     def inject_new_data(self, new_course=None, new_section=None):
         """
@@ -3998,9 +4022,11 @@ class GeneticScheduler:
                     elif sc1_phase:  last_best_sc1 = current_best.sc1_violations
                     else:            last_best_ss  = current_best.soft_score
                     stagnation_counter = 0; severe_counter = 0; sc1_stag_counter = 0
+                    self._rebuild_penalties()
                 else:
                     stagnation_counter += 1; severe_counter += 1
                     if sc1_phase: sc1_stag_counter += 1
+                    self._adaptive_relax_constraints(severe_counter)
 
                 # ── Stagnation recovery ────────────────────────────────────────
                 if severe_counter >= stag_severe:
@@ -4025,6 +4051,7 @@ class GeneticScheduler:
                         new_pop.append(nc)
                     population = new_pop[:pop_size]
                     stagnation_counter = 0; severe_counter = 0
+                    self._rebuild_penalties()
                     
                     # Rebuild pair map since new genomes were created
                     _new_best = self._find_best(population)
