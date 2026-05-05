@@ -13628,40 +13628,67 @@ def irregular_timetable_html(student_id):
     student = Student.query.filter_by(student_id=student_id, is_archived=False).first_or_404()
     if not student.is_irregular:
         abort(404)
+    
     assignment = IrregularAssignment.query.filter_by(student_id_fk=student.id)\
                      .order_by(IrregularAssignment.updated_at.desc()).first()
-    if not assignment or not assignment.assignments_json or assignment.assignments_json == '[]':
-        return (
-            "<div style='padding:40px;text-align:center;color:#5f6368;font-family:Arial,sans-serif;'>"
-            "<i style='font-size:2rem;'>----------------------</i><br><br>"
-            "<strong>No schedule assigned yet.</strong><br>"
-            "Please contact the administrator to set up your irregular schedule."
-            "</div>"
+    
+    has_assignment = assignment and assignment.assignments_json and assignment.assignments_json != '[]'
+    has_section = student.section_id is not None
+    
+    # 1. Fallback to "No schedule assigned yet" only if they have NEITHER custom subjects NOR an assigned section.
+    if not has_assignment and not has_section:
+        settings = get_settings()
+        _margins = _get_margins(settings)
+        html_content = (
+            f"<div class='a4-fallback-message' style='padding:100px 40px; text-align:center; color:#5f6368; font-family:Arial,sans-serif;'>"
+            f"  <i style='font-size:3rem; color:#bdc1c6; display:block; margin-bottom:20px;' class='bi bi-calendar-x'></i>"
+            f"  <strong style='font-size:1.3rem; color:#202124; display:block; margin-bottom:10px;'>No schedule assigned yet.</strong>"
+            f"  <p style='font-size:0.95rem; color:#5f6368; margin:0;'>Please contact the administrator to set up your irregular schedule.</p>"
+            f"</div>"
         )
-    pairs = json.loads(assignment.assignments_json)
+        for_canvas = request.args.get('canvas', 'false') == 'true'
+        return render_a4_page(html_content, 960, margins=_margins, for_canvas=for_canvas)
+
     schedules = []
-    for pair in pairs:
-        slots = ScheduledClass.query.options(
+    semester = "1st Semester"
+    if has_assignment:
+        semester = assignment.semester
+        pairs = json.loads(assignment.assignments_json)
+        for pair in pairs:
+            slots = ScheduledClass.query.options(
+                joinedload(ScheduledClass.course),
+                joinedload(ScheduledClass.section),
+                joinedload(ScheduledClass.faculty),
+                joinedload(ScheduledClass.room),
+            ).filter_by(
+                course_id=pair['course_id'],
+                section_id=pair['section_id'],
+                semester=assignment.semester,
+            ).all()
+            schedules.extend(slots)
+        schedules = _dedup_schedules(schedules)
+    elif has_section:
+        # INHERITANCE LOGIC: Inherit the section's schedule!
+        schedules = ScheduledClass.query.options(
             joinedload(ScheduledClass.course),
             joinedload(ScheduledClass.section),
             joinedload(ScheduledClass.faculty),
             joinedload(ScheduledClass.room),
         ).filter_by(
-            course_id=pair['course_id'],
-            section_id=pair['section_id'],
-            semester=assignment.semester,
+            section_id=student.section_id
         ).all()
-        schedules.extend(slots)
-    schedules = _dedup_schedules(schedules)
+        schedules = _dedup_schedules(schedules)
 
     path = os.path.join(basedir, 'static', 'assets', 'section_template.xlsx')
     for_canvas = request.args.get('canvas', 'false') == 'true'
     
     if not os.path.exists(path):
+        section_obj = Section.query.get(student.section_id) if student.section_id else None
+        entity_name = f"{student.full_name} ({section_obj.section_name})" if section_obj else student.full_name
         return render_blank_timetable_fallback(
-            entity_name=section.section_name,
+            entity_name=entity_name,
             semester=semester,
-            sem_ay=sem_ay,
+            sem_ay="",
             layout_type='section',
             for_canvas=for_canvas
         )
@@ -16106,6 +16133,18 @@ def student_schedule(student_id):
                         semester=assignment.semester,
                     ).all()
                     schedules.extend(slots)
+                schedules = _dedup_schedules(schedules)
+                schedules.sort(key=lambda sc: (sc.day, sc.start_time))
+            elif student.section_id:
+                # INHERITANCE LOGIC: Inherit the section's schedule!
+                schedules = ScheduledClass.query.options(
+                    joinedload(ScheduledClass.course),
+                    joinedload(ScheduledClass.faculty),
+                    joinedload(ScheduledClass.room),
+                    joinedload(ScheduledClass.section),
+                ).filter_by(
+                    section_id=student.section_id
+                ).all()
                 schedules = _dedup_schedules(schedules)
                 schedules.sort(key=lambda sc: (sc.day, sc.start_time))
         else:
