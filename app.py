@@ -6876,6 +6876,7 @@ def sync_constraints():
         {'code': 'PE_EARLY_WEEK',              'cat': 'Course',         'type': 'SC2', 'weight': 1,   'name': '(SC-II-02) Early Week PE Placement', 'desc': 'PE courses priority on Mon-Wed.'},
         {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'SC2', 'weight': 3,   'name': '(SC-II-03) Lunch Break Allocation', 'desc': '1-hour break for all (Students & Faculty) between 10 AM-2 PM.'},
         {'code': 'ROOM_CAPACITY_PROPORTIONAL', 'cat': 'Room',           'type': 'SC2', 'weight': 1,   'name': '(SC-II-04) Room Capacity Allocation', 'desc': 'Prioritize closest absolute fit for room capacity.'},
+        {'code': 'LAB_ROOM_SATURATION_GAP',    'cat': 'Room',           'type': 'SC2', 'weight': 10,  'name': '(SC-II-05) Lab Room Squeeze/Saturation', 'desc': 'Avoid wasteful 1 or 2 hour idle gaps in precious Computer Labs.'},
     ]
 
     added = 0
@@ -6936,6 +6937,32 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                 chrom = stats['best_chromosome']
                 matrix = scheduler.get_visualization_matrix(chrom)
                 generation_status['visual_matrix'] = matrix
+                
+                # Write live chromosome state to live_conflicts.json for local debugging
+                try:
+                    import json
+                    live_mock = []
+                    for g in chrom.genes:
+                        _dy = scheduler.days[g.day_idx] if 0 <= g.day_idx < len(scheduler.days) else 'Unknown'
+                        _st = scheduler.slot_to_time(g.start_idx)
+                        _en = scheduler.slot_to_time(g.end_idx)
+                        live_mock.append({
+                            'course_id': g.course_id,
+                            'section_id': g.section_id,
+                            'faculty_id': g.faculty_id,
+                            'room_id': g.room_id,
+                            'day': _dy,
+                            'start_time': _st,
+                            'end_time': _en,
+                            'session_type': g.gene_type
+                        })
+                    with open("live_conflicts.json", "w") as f:
+                        json.dump({
+                            'semester': generation_status.get('target_semester', '1st Semester'),
+                            'schedules': live_mock
+                        }, f)
+                except Exception as _je:
+                    print(f"Error writing live_conflicts.json: {_je}")
                 
                 # Accuracy tracking for Progress Bar: Count ONLY Conflict-Free genes
                 # Includes Hard and Soft violations now.
@@ -7676,11 +7703,13 @@ def check_feasibility():
 def pending_faculty():
     sort_by = request.args.get('sort', 'course-asc', type=str)
 
-    # Find ALL T.B.A. faculty records (seeders create multiple: TBA-01, TBA-02, etc.)
-    # GA randomly picks any of them, so we must check all their IDs
-    tba_ids = [f.id for f in Faculty.query.filter_by(full_name='T.B.A.').all()]
+    # Find ALL T.B.A. and placeholder faculty records (by name or 'TBA' status)
+    tba_ids = [f.id for f in Faculty.query.filter(or_(
+        Faculty.full_name == 'T.B.A.',
+        Faculty.assignment_status == 'TBA'
+    )).all()]
 
-    # Query real ScheduledClass records that are unassigned (NULL or any T.B.A. faculty)
+    # Query real ScheduledClass records that are unassigned (NULL or any T.B.A./placeholder faculty)
     # NSTP is excluded ---- it intentionally has no DCS faculty assigned
     query = (
         ScheduledClass.query
@@ -7699,9 +7728,11 @@ def pending_faculty():
 
     unassigned_scs = query.all()
 
-    # Real faculty for the dropdown (exclude T.B.A. and archived)
+    # Real faculty for the dropdown (exclude T.B.A., 'TBA' placeholders, and archived)
     all_faculty = Faculty.query.filter(
-        Faculty.full_name != 'T.B.A.', Faculty.is_archived == False
+        Faculty.full_name != 'T.B.A.',
+        Faculty.assignment_status != 'TBA',
+        Faculty.is_archived == False
     ).order_by(Faculty.full_name).all()
 
     # Build per-SC dept-filtered faculty map
@@ -7812,19 +7843,22 @@ def run_unassigned_resolver():
 def pending_sections():
     sort = request.args.get('sort', 'course-asc')
     tba_section = Section.query.filter_by(section_name='T.B.A.').first()
-    if not tba_section:
-        orphaned_scs = []
+    query = ScheduledClass.query.join(ScheduledClass.course)
+    
+    if tba_section:
+        query = query.filter(or_(
+            ScheduledClass.section_id == None,
+            ScheduledClass.section_id == tba_section.id
+        ))
     else:
-        query = (
-            ScheduledClass.query
-            .join(ScheduledClass.course)
-            .filter(ScheduledClass.section_id == tba_section.id)
-        )
-        if sort == 'course-desc':
-            query = query.order_by(Course.course_code.desc())
-        else:
-            query = query.order_by(Course.course_code.asc())
-        orphaned_scs = query.all()
+        query = query.filter(ScheduledClass.section_id == None)
+        
+    if sort == 'course-desc':
+        query = query.order_by(Course.course_code.desc())
+    else:
+        query = query.order_by(Course.course_code.asc())
+        
+    orphaned_scs = query.all()
 
     # All active (non-archived) sections except T.B.A.
     all_sections = Section.query.filter(
@@ -9951,6 +9985,23 @@ def check_constraints():
                 add_v('ROOM_IDLE_GAP', 'Room Idle Gap',
                       f'Room {s1.room.room_name} on {day} has a {gap_min}-minute gap '
                       f'between {s1.course.course_code} and {s2.course.course_code}.', s1, s2)
+
+    # =========================================================
+    # SC-II-05: LAB ROOM SATURATION GAP
+    # Penalize wasteful 1-hour or 2-hour gaps in physical Computer Labs.
+    # =========================================================
+    for (room_id, day), room_schedules in _room_day_groups.items():
+        r = room_schedules[0].room if room_schedules else None
+        if r and 'Computer Lab' in (r.capabilities or ''):
+            room_schedules.sort(key=lambda x: to_minutes(x.start_time))
+            for i in range(len(room_schedules) - 1):
+                s1 = room_schedules[i]
+                s2 = room_schedules[i+1]
+                gap_min = to_minutes(s2.start_time) - to_minutes(s1.end_time)
+                if gap_min in (30, 60, 90, 120):
+                    add_v('LAB_ROOM_SATURATION_GAP', 'Lab Room Squeeze/Saturation',
+                          f'Lab room {s1.room.room_name} on {day} has a wasteful {gap_min}-minute idle gap '
+                          f'between {s1.course.course_code} and {s2.course.course_code}.', s1, s2)
 
     # =========================================================
     # GROUP 3: LOAD, SEQUENCE & DAILY DISTRIBUTION CHECKS
@@ -17316,6 +17367,33 @@ def run_user_ga_in_background(user_id, username, scheduler, semester, user_dept)
                 if info.get('best_chromosome'):
                     matrix = scheduler.get_visualization_matrix(info['best_chromosome'])
                     user_generation_status[user_id]['visual_matrix'] = matrix
+                    
+                    # Write live chromosome state to live_conflicts.json for local debugging
+                    try:
+                        import json
+                        chrom = info['best_chromosome']
+                        live_mock = []
+                        for g in chrom.genes:
+                            _dy = scheduler.days[g.day_idx] if 0 <= g.day_idx < len(scheduler.days) else 'Unknown'
+                            _st = scheduler.slot_to_time(g.start_idx)
+                            _en = scheduler.slot_to_time(g.end_idx)
+                            live_mock.append({
+                                'course_id': g.course_id,
+                                'section_id': g.section_id,
+                                'faculty_id': g.faculty_id,
+                                'room_id': g.room_id,
+                                'day': _dy,
+                                'start_time': _st,
+                                'end_time': _en,
+                                'session_type': g.gene_type
+                            })
+                        with open("live_conflicts.json", "w") as f:
+                            json.dump({
+                                'semester': semester,
+                                'schedules': live_mock
+                            }, f)
+                    except Exception as _je:
+                        print(f"Error writing live_conflicts.json: {_je}")
                 
                 # Emit progress to the specific user via SocketIO
                 socketio.emit('user_ga_progress', serializable_info, room=f"user_{user_id}")

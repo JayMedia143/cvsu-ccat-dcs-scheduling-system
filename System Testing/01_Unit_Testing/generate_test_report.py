@@ -10,18 +10,18 @@ def run_tests_and_generate_table():
     try:
         subprocess.run(['pip', 'install', 'pytest-json-report'], check=True)
         # Use relative paths since we are running from within the infra folder or root
-        test_file = os.path.join(os.path.dirname(__file__), 'tests', 'unit', 'test_ga_logic.py')
+        test_file = os.path.join(os.path.dirname(__file__), 'test_ga_logic.py')
         report_file = os.path.join(os.path.dirname(__file__), 'report.json')
         subprocess.run(['python', '-m', 'pytest', '--json-report', f'--json-report-file={report_file}', test_file], capture_output=True)
     except Exception as e:
         print(f"Error running tests: {e}")
         return
 
-    if not os.path.exists('report.json'):
-        print("Error: report.json not found.")
+    if not os.path.exists(report_file):
+        print(f"Error: {report_file} not found.")
         return
 
-    with open('report.json', 'r') as f:
+    with open(report_file, 'r') as f:
         data = json.load(f)
 
     # -------------------------------------------------------------------------

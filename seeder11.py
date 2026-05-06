@@ -41,10 +41,10 @@ ROOMS = [
     # Lecture Rooms (ICT A1-A6)
     {'name': 'ICT A1', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'room_depts': 'Department of Computer Studies', 'room_type': 'Sync'},
     {'name': 'ICT A2', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'room_depts': 'Department of Computer Studies', 'room_type': 'Sync'},
-    {'name': 'ICT A3', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'room_depts': 'Department of Computer Studies', 'room_type': 'Async'},
-    {'name': 'ICT A4', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'room_depts': 'Department of Computer Studies', 'room_type': 'Async'},
-    {'name': 'ICT A5', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'room_depts': 'Department of Computer Studies', 'room_type': 'Async'},
-    {'name': 'ICT A6', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'room_depts': 'Department of Computer Studies', 'room_type': 'Async'},
+    {'name': 'ICT A3', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'room_depts': 'Department of Computer Studies', 'room_type': 'Sync'},
+    {'name': 'ICT A4', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'room_depts': 'Department of Computer Studies', 'room_type': 'Sync'},
+    {'name': 'ICT A5', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'room_depts': 'Department of Computer Studies', 'room_type': 'Sync'},
+    {'name': 'ICT A6', 'building': 'ICT Building A', 'capabilities': 'Lecture', 'status': 'Available', 'capacity': 45, 'room_depts': 'Department of Computer Studies', 'room_type': 'Sync'},
     
     # Laboratory Rooms (ICT B1-B6)
     {'name': 'ICT B1', 'building': 'ICT Building B', 'capabilities': 'Lecture,Computer Lab', 'status': 'Available', 'capacity': 40, 'room_depts': 'Department of Computer Studies', 'room_type': 'Sync'},
@@ -65,33 +65,33 @@ ROOMS = [
 
 # ── FACULTY (Mon-Thu restriction, Permanent NO Thu, Pelina NO Mon) ────────────
 FACULTY_DATA = [
-    {'name': 'GELERA, ARIES M.',            'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday', 'assign_status': 'Announced'},
-    {'name': 'PELIÑA, MARY ANN E.',         'status': 'Permanent',  'days': 'Tuesday,Wednesday', 'assign_status': 'Announced'},
-    {'name': 'ESTONILO, CHRISTOPHER G.',    'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday', 'assign_status': 'Announced'},
-    {'name': 'NOCON, YVANA JARDINE R.',     'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday', 'assign_status': 'Announced'},
-    {'name': 'NABABLIT, KARLO JOSE E.',     'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday', 'assign_status': 'Announced'},
-    {'name': 'VILLANUEVA, LESTER D.',       'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday', 'assign_status': 'Announced'},
-    {'name': 'MUYOT, ALLEN JOHN C.',        'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday', 'assign_status': 'Announced'},
-    {'name': 'OBON, ANA MARIE C.',          'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday', 'assign_status': 'Announced'},
-    {'name': 'SILVANO, MARY GRACE P.',      'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'Announced'},
-    {'name': 'CRUZ, JANESSA MARIELLE S.',   'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'Announced'},
-    {'name': 'AMBIL, KYLE ANGELO',          'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'Announced'},
-    {'name': 'MELITANTE, GIRLIE P.',        'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'Announced'},
-    {'name': 'BAUTISTA, RENATO A.',         'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'Announced'},
-    {'name': 'CABRIDO, ALYANA',             'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'Announced'},
-    {'name': 'CEDILLO, CEDRICK KENN',       'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'Announced'},
-    {'name': 'CLARITO, ANGELA C.',          'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'Announced'},
-    {'name': 'PERNALA, JOHN CHRISTIAN',     'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'Announced'},
-    {'name': 'TINAMBACAN, AARON',           'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'Announced'},
-    {'name': 'TOLEDO, IVAN',                'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'Announced'},
-    {'name': 'ORDOÑA, KARL VINCENT M.',     'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'Announced'},
-    {'name': 'CATALAN, RACQUEL A.',         'status': 'Part-timer', 'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'Announced'},
-    {'name': 'DCS Teacher E (CS)',          'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'TBA'},
-    {'name': 'DCS Teacher F (CS)',          'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'TBA'},
-    {'name': 'DCS Teacher A (IT)',          'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'TBA'},
-    {'name': 'DCS Teacher C (CS)',          'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'TBA'},
-    {'name': 'DCS Teacher G (DON) - IT',    'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'TBA'},
-    {'name': 'DCS Teacher H (JM) - IT',     'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday', 'assign_status': 'TBA'},
+    {'name': 'GELERA, ARIES M.',            'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
+    {'name': 'PELIÑA, MARY ANN E.',         'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
+    {'name': 'ESTONILO, CHRISTOPHER G.',    'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
+    {'name': 'NOCON, YVANA JARDINE R.',     'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
+    {'name': 'NABABLIT, KARLO JOSE E.',     'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
+    {'name': 'VILLANUEVA, LESTER D.',       'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
+    {'name': 'MUYOT, ALLEN JOHN C.',        'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
+    {'name': 'OBON, ANA MARIE C.',          'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
+    {'name': 'SILVANO, MARY GRACE P.',      'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
+    {'name': 'CRUZ, JANESSA MARIELLE S.',   'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
+    {'name': 'AMBIL, KYLE ANGELO',          'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
+    {'name': 'MELITANTE, GIRLIE P.',        'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
+    {'name': 'BAUTISTA, RENATO A.',         'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
+    {'name': 'CABRIDO, ALYANA',             'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
+    {'name': 'CEDILLO, CEDRICK KENN',       'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
+    {'name': 'CLARITO, ANGELA C.',          'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
+    {'name': 'PERNALA, JOHN CHRISTIAN',     'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
+    {'name': 'TINAMBACAN, AARON',           'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
+    {'name': 'TOLEDO, IVAN',                'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
+    {'name': 'ORDOÑA, KARL VINCENT M.',     'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
+    {'name': 'CATALAN, RACQUEL A.',         'status': 'Part-timer', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
+    {'name': 'DCS Teacher E (CS)',          'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
+    {'name': 'DCS Teacher F (CS)',          'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
+    {'name': 'DCS Teacher A (IT)',          'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
+    {'name': 'DCS Teacher C (CS)',          'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
+    {'name': 'DCS Teacher G (DON) - IT',    'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
+    {'name': 'DCS Teacher H (JM) - IT',     'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
 ]
 
 # ── REVISED LOADINGS (FROM IMAGES) ────────────────────────────────────────────
@@ -383,7 +383,7 @@ def seed_database():
 
         # 8. System Settings
         db.session.add(SystemSettings(
-            start_hour=7, end_hour=21, allowed_days="Monday,Tuesday,Wednesday,Thursday", 
+            start_hour=7, end_hour=21, allowed_days="Monday,Tuesday,Wednesday,Thursday,Friday", 
             campus_name="CCAT Campus", address="Rosario, Cavite", 
             section_school_name="CAVITE STATE UNIVERSITY", fac_dept_label="DEPARTMENT OF COMPUTER STUDIES", 
             sem_ay_value="1st Semester / 2026-2027",
@@ -438,6 +438,7 @@ def seed_database():
             {'code': 'PE_EARLY_WEEK',              'cat': 'Course',         'type': 'SC2', 'weight': 1,   'name': '(SC-II-02) Early Week PE Placement', 'desc': 'PE courses priority on Mon-Wed.'},
             {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'SC2', 'weight': 3,   'name': '(SC-II-03) Lunch Break Allocation', 'desc': '1-hour break for all (Students & Faculty) between 10 AM-2 PM.'},
             {'code': 'ROOM_CAPACITY_PROPORTIONAL', 'cat': 'Room',           'type': 'SC2', 'weight': 1,   'name': '(SC-II-04) Room Capacity Allocation', 'desc': 'Prioritize closest absolute fit for room capacity.'},
+            {'code': 'LAB_ROOM_SATURATION_GAP',    'cat': 'Room',           'type': 'SC2', 'weight': 10,  'name': '(SC-II-05) Lab Room Squeeze/Saturation', 'desc': 'Avoid wasteful 1 or 2 hour idle gaps in precious Computer Labs.'},
         ]
         for c in CONSTRAINTS:
             db.session.add(Constraint(logic_code=c['code'], category=c['cat'], constraint_type=c['type'], weight=c['weight'], name=c['name'], description=c['desc']))
