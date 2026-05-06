@@ -244,6 +244,13 @@ csrf = CSRFProtect(app)
 # Module 6: Initialize SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
+def ph_time(utc_dt):
+    if not utc_dt:
+        return ""
+    return utc_dt + timedelta(hours=8)
+
+app.jinja_env.filters['ph_time'] = ph_time
+
 @app.context_processor
 def inject_archive_vars():
     """Makes archive mode variables available to all templates automatically."""
@@ -1002,12 +1009,12 @@ def handle_connect():
             'role': role,
             'user_id': uid,
             'sessions': {sid: 'Viewing'},
-            'last_activity': datetime.utcnow().strftime('%H:%M:%S')
+            'last_activity': ph_time(datetime.utcnow()).strftime('%H:%M:%S')
         }
     else:
         # Add new session to existing user
         monitoring_online_users[uid]['sessions'][sid] = 'Viewing'
-        monitoring_online_users[uid]['last_activity'] = datetime.utcnow().strftime('%H:%M:%S')
+        monitoring_online_users[uid]['last_activity'] = ph_time(datetime.utcnow()).strftime('%H:%M:%S')
     
     # Broadcast update (send processed list)
     broadcast_monitoring_update()
@@ -1103,7 +1110,7 @@ def handle_status_update(data):
         # Update status for this specific session
         if sid in monitoring_online_users[uid]['sessions']:
             monitoring_online_users[uid]['sessions'][sid] = status
-            monitoring_online_users[uid]['last_activity'] = datetime.utcnow().strftime('%H:%M:%S')
+            monitoring_online_users[uid]['last_activity'] = ph_time(datetime.utcnow()).strftime('%H:%M:%S')
             
             # Broadcast update
             broadcast_monitoring_update()
@@ -1710,7 +1717,7 @@ def log_activity(action, details=None, draft_id=None, override_user_id=None, ove
                 'action': log.action,
                 'details': log.details,
                 'draft_id': log.draft_id,
-                'timestamp': log.timestamp.strftime('%H:%M:%S')
+                'timestamp': ph_time(log.timestamp).strftime('%H:%M:%S')
             }, room='monitoring_room')
         except Exception as e:
             db.session.rollback()
@@ -1733,7 +1740,7 @@ def log_security(event_type, username_attempted=None, details=None):
             'username': log.username_attempted,
             'event': log.event_type,
             'details': log.details,
-            'timestamp': log.timestamp.strftime('%H:%M:%S')
+            'timestamp': ph_time(log.timestamp).strftime('%H:%M:%S')
         }, room='monitoring_room')
     except Exception as e:
         db.session.rollback()

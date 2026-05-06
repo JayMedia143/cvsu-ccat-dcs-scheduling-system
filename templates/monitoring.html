@@ -104,8 +104,8 @@
                                     <td><span class="badge bg-soft-primary text-primary">{{ log.action }}</span></td>
                                     <td class="small text-muted">{{ log.details or '-' }}</td>
                                     <td class="text-end text-muted small pe-3">
-                                        <div class="fw-bold">{{ log.timestamp.strftime('%H:%M:%S') }}</div>
-                                        <div style="font-size: 0.65rem;">{{ log.timestamp.strftime('%Y-%m-%d') }}</div>
+                                        <div class="fw-bold">{{ (log.timestamp | ph_time).strftime('%H:%M:%S') }}</div>
+                                        <div style="font-size: 0.65rem;">{{ (log.timestamp | ph_time).strftime('%Y-%m-%d') }}</div>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -178,8 +178,8 @@
                                     <td class="small">{{ log.username_attempted or 'Unknown' }}</td>
                                     <td class="small mono">{{ log.ip_address }}</td>
                                     <td class="text-end text-muted small pe-3">
-                                        <div class="fw-bold">{{ log.timestamp.strftime('%H:%M:%S') }}</div>
-                                        <div style="font-size: 0.65rem;">{{ log.timestamp.strftime('%Y-%m-%d') }}</div>
+                                        <div class="fw-bold">{{ (log.timestamp | ph_time).strftime('%H:%M:%S') }}</div>
+                                        <div style="font-size: 0.65rem;">{{ (log.timestamp | ph_time).strftime('%Y-%m-%d') }}</div>
                                     </td>
                                 </tr>
                                 {% endfor %}
