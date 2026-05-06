@@ -1717,7 +1717,7 @@ def log_activity(action, details=None, draft_id=None, override_user_id=None, ove
                 'action': log.action,
                 'details': log.details,
                 'draft_id': log.draft_id,
-                'timestamp': ph_time(log.timestamp).strftime('%H:%M:%S')
+                'timestamp': ph_time(log.timestamp).strftime('%I:%M:%S %p')
             }, room='monitoring_room')
         except Exception as e:
             db.session.rollback()
@@ -1740,7 +1740,7 @@ def log_security(event_type, username_attempted=None, details=None):
             'username': log.username_attempted,
             'event': log.event_type,
             'details': log.details,
-            'timestamp': ph_time(log.timestamp).strftime('%H:%M:%S')
+            'timestamp': ph_time(log.timestamp).strftime('%I:%M:%S %p')
         }, room='monitoring_room')
     except Exception as e:
         db.session.rollback()
