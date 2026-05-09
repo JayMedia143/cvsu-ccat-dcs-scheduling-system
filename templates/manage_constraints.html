@@ -130,15 +130,38 @@
                 </span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="filterDropdown">
-                <li><a class="dropdown-item text-danger" href="{{ url_for('manage_constraints', filter='all', sort=current_sort, search=search_query) }}">
+                <li><a class="dropdown-item text-danger" href="{{ url_for('manage_constraints', filter='all', sort=current_sort, enforcement=current_enforcement, search=search_query) }}">
                     <i class="bi bi-x-circle me-2"></i>Clear Filter
                 </a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item google-sort-item {% if current_filter == 'all' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='all', sort=current_sort) }}">All Types</a></li>
-                <li><a class="dropdown-item google-sort-item {% if current_filter == 'HC' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='HC', sort=current_sort) }}">Hard Constraints</a></li>
-                <li><a class="dropdown-item google-sort-item {% if current_filter == 'SC1' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='SC1', sort=current_sort) }}">Soft Constraints I</a></li>
-                <li><a class="dropdown-item google-sort-item {% if current_filter == 'SC2' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='SC2', sort=current_sort) }}">Soft Constraints II</a></li>
-                <li><a class="dropdown-item google-sort-item {% if current_filter == 'NC' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='NC', sort=current_sort) }}">Not Constraints</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_filter == 'all' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='all', sort=current_sort, enforcement=current_enforcement) }}">All Types</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_filter == 'HC' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='HC', sort=current_sort, enforcement=current_enforcement) }}">Hard Constraints</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_filter == 'SC1' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='SC1', sort=current_sort, enforcement=current_enforcement) }}">Soft Constraints I</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_filter == 'SC2' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='SC2', sort=current_sort, enforcement=current_enforcement) }}">Soft Constraints II</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_filter == 'NC' %}active{% endif %}" href="{{ url_for('manage_constraints', filter='NC', sort=current_sort, enforcement=current_enforcement) }}">Not Constraints</a></li>
+            </ul>
+        </div>
+
+        <!-- Enforcement Filter Dropdown -->
+        <div class="dropdown">
+            <button class="btn google-sort-toggle dropdown-toggle" type="button" id="enforcementDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" title="Filter by Enforcement Mode">
+                <i class="bi bi-shield-lock me-md-2"></i>
+                <span class="d-none d-md-inline">
+                    Enforcement: 
+                    {% if current_enforcement == 'all' %}All
+                    {% elif current_enforcement == 'structural' %}Structural
+                    {% elif current_enforcement == 'dynamic' %}Dynamic
+                    {% endif %}
+                </span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="enforcementDropdown">
+                <li><a class="dropdown-item text-danger" href="{{ url_for('manage_constraints', filter=current_filter, sort=current_sort, enforcement='all', search=search_query) }}">
+                    <i class="bi bi-x-circle me-2"></i>Clear Enforcement
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item google-sort-item {% if current_enforcement == 'all' %}active{% endif %}" href="{{ url_for('manage_constraints', filter=current_filter, sort=current_sort, enforcement='all') }}">All Modes</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_enforcement == 'structural' %}active{% endif %}" href="{{ url_for('manage_constraints', filter=current_filter, sort=current_sort, enforcement='structural') }}">Structural (Built-in)</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_enforcement == 'dynamic' %}active{% endif %}" href="{{ url_for('manage_constraints', filter=current_filter, sort=current_sort, enforcement='dynamic') }}">Dynamic (Evaluated)</a></li>
             </ul>
         </div>
 
@@ -156,14 +179,14 @@
             <ul class="dropdown-menu dropdown-menu-end google-sort-menu" aria-labelledby="sortDropdown">
                 <li>
                     <a class="dropdown-item google-sort-item {% if current_sort == 'default' or not current_sort or current_sort == 'newest' %}active{% endif %}"
-                        href="{{ url_for('manage_constraints', sort='newest', filter=current_filter, search=search_query) }}">
+                        href="{{ url_for('manage_constraints', sort='newest', filter=current_filter, enforcement=current_enforcement, search=search_query) }}">
                         Sort by: Newest
                     </a>
                 </li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item google-sort-item {% if current_sort == 'name-asc' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='name-asc', filter=current_filter, search=search_query) }}">Sort by: Name (A-Z)</a></li>
-                <li><a class="dropdown-item google-sort-item {% if current_sort == 'name-desc' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='name-desc', filter=current_filter, search=search_query) }}">Sort by: Name (Z-A)</a></li>
-                <li><a class="dropdown-item google-sort-item {% if current_sort == 'category' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='category', filter=current_filter, search=search_query) }}">Sort by: Category</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_sort == 'name-asc' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='name-asc', filter=current_filter, enforcement=current_enforcement, search=search_query) }}">Sort by: Name (A-Z)</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_sort == 'name-desc' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='name-desc', filter=current_filter, enforcement=current_enforcement, search=search_query) }}">Sort by: Name (Z-A)</a></li>
+                <li><a class="dropdown-item google-sort-item {% if current_sort == 'category' %}active{% endif %}" href="{{ url_for('manage_constraints', sort='category', filter=current_filter, enforcement=current_enforcement, search=search_query) }}">Sort by: Category</a></li>
             </ul>
         </div>
 
@@ -179,8 +202,9 @@
                 <thead class="table-light">
                     <tr>
                         <th class="ps-0 text-start" style="width: 110px;">Category</th>
-                        <th class="text-start" style="width: 28%;">Rule Name</th>
+                        <th class="text-start" style="width: 25%;">Rule Name</th>
                         <th class="text-start">Description</th>
+                        <th class="text-start" style="width: 180px; min-width: 180px;">Enforcement</th>
                         <th class="text-center pe-0" style="min-width: 230px; width: 230px;">Priority Setting</th>
                     </tr>
                 </thead>
@@ -193,7 +217,8 @@
                         data-category="{{ item.category }}"
                         data-desc="{{ item.description }}"
                         data-type="{{ item.constraint_type }}"
-                        data-weight="{{ item.weight }}">
+                        data-weight="{{ item.weight }}"
+                        data-enforcement="{% if item.is_structural %}structural{% else %}dynamic{% endif %}">
 
                         <!-- Category -->
                         <td class="ps-0 text-start">
@@ -210,31 +235,53 @@
                             <span class="text-muted small d-block text-truncate" title="{{ item.description }}">{{ item.description }}</span>
                         </td>
 
+                        <!-- Enforcement -->
+                        <td class="text-start">
+                            {% if item.is_structural %}
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle d-inline-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                                <i class="bi bi-shield-lock-fill"></i> Structural (Built-in)
+                            </span>
+                            {% else %}
+                            <span class="badge bg-info-subtle text-info border border-info-subtle d-inline-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                                <i class="bi bi-gear-fill"></i> Dynamic (Evaluated)
+                            </span>
+                            {% endif %}
+                        </td>
+
                         <!-- Setting Dropdown — stop row-click propagation -->
                         <td class="text-center pe-0" onclick="event.stopPropagation()">
                             {% if not is_hist %}
-                            <div class="d-flex flex-column gap-2 align-items-stretch">
-                                <select name="type_{{ item.id }}" class="form-select form-select-sm fw-bold border-0 bg-light
-                                    {% if item.constraint_type == 'HC' %}text-danger
-                                    {% elif item.constraint_type == 'SC1' %}text-warning
-                                    {% elif item.constraint_type == 'SC2' %}text-info
-                                    {% else %}text-secondary{% endif %}"
-                                    style="cursor: pointer;"
-                                    onchange="this.className = 'form-select form-select-sm fw-bold border-0 bg-light ' +
-                                    (this.value == 'HC' ? 'text-danger' :
-                                     this.value == 'SC1' ? 'text-warning' :
-                                     this.value == 'SC2' ? 'text-info' : 'text-secondary')">
-                                    <option value="HC"  class="text-danger"    {% if item.constraint_type == 'HC'  %}selected{% endif %}>Hard Constraint (HC)</option>
-                                    <option value="SC1" class="text-warning"   {% if item.constraint_type == 'SC1' %}selected{% endif %}>Soft Constraint I (SC-I)</option>
-                                    <option value="SC2" class="text-info"      {% if item.constraint_type == 'SC2' %}selected{% endif %}>Soft Constraint II (SC-II)</option>
-                                    <option value="NC"  class="text-secondary" {% if item.constraint_type == 'NC'  %}selected{% endif %}>Not Constraint (NC)</option>
-                                </select>
-                                <div class="input-group input-group-sm" title="Penalty Weight (Higher = More Important)">
-                                    <span class="input-group-text bg-light border-0"><i class="bi bi-speedometer2"></i></span>
-                                    <input type="number" class="form-control border-control border-0 bg-light fw-bold"
-                                           name="weight_{{ item.id }}" value="{{ item.weight }}" min="1" max="100">
+                                {% if item.is_structural %}
+                                <div class="d-flex flex-column gap-1 align-items-center text-center">
+                                    <span class="badge bg-danger rounded-pill px-3 py-1.5 fs-7" style="font-size: 0.75rem;">Hard Constraint (HC)</span>
+                                    <small class="text-muted fw-bold text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.5px;">Built-in Law</small>
+                                    <input type="hidden" name="type_{{ item.id }}" value="HC">
+                                    <input type="hidden" name="weight_{{ item.id }}" value="1">
                                 </div>
-                            </div>
+                                {% else %}
+                                <div class="d-flex flex-column gap-2 align-items-stretch">
+                                    <select name="type_{{ item.id }}" class="form-select form-select-sm fw-bold border-0 bg-light
+                                        {% if item.constraint_type == 'HC' %}text-danger
+                                        {% elif item.constraint_type == 'SC1' %}text-warning
+                                        {% elif item.constraint_type == 'SC2' %}text-info
+                                        {% else %}text-secondary{% endif %}"
+                                        style="cursor: pointer;"
+                                        onchange="this.className = 'form-select form-select-sm fw-bold border-0 bg-light ' +
+                                        (this.value == 'HC' ? 'text-danger' :
+                                         this.value == 'SC1' ? 'text-warning' :
+                                         this.value == 'SC2' ? 'text-info' : 'text-secondary')">
+                                        <option value="HC"  class="text-danger"    {% if item.constraint_type == 'HC'  %}selected{% endif %}>Hard Constraint (HC)</option>
+                                        <option value="SC1" class="text-warning"   {% if item.constraint_type == 'SC1' %}selected{% endif %}>Soft Constraint I (SC-I)</option>
+                                        <option value="SC2" class="text-info"      {% if item.constraint_type == 'SC2' %}selected{% endif %}>Soft Constraint II (SC-II)</option>
+                                        <option value="NC"  class="text-secondary" {% if item.constraint_type == 'NC'  %}selected{% endif %}>Not Constraint (NC)</option>
+                                    </select>
+                                    <div class="input-group input-group-sm" title="Penalty Weight (Higher = More Important)">
+                                        <span class="input-group-text bg-light border-0"><i class="bi bi-speedometer2"></i></span>
+                                        <input type="number" class="form-control border-control border-0 bg-light fw-bold"
+                                               name="weight_{{ item.id }}" value="{{ item.weight }}" min="1" max="100">
+                                    </div>
+                                </div>
+                                {% endif %}
                             {% else %}
                             <div class="d-flex flex-column gap-1">
                                 <span class="badge {% if item.constraint_type == 'HC' %}bg-danger{% elif item.constraint_type == 'SC1' %}bg-warning text-dark{% elif item.constraint_type == 'SC2' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
@@ -247,7 +294,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="4" class="text-center py-5 text-muted">No constraints found matching your filter.</td>
+                        <td colspan="5" class="text-center py-5 text-muted">No constraints found matching your filter.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -270,19 +317,19 @@
     <nav aria-label="Page navigation">
         <ul class="pagination justify-content-center mb-2">
             <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('manage_constraints', page=pagination.prev_num, sort=current_sort, filter=current_filter, search=search_query) }}"><i class="bi bi-chevron-left"></i></a>
+                <a class="page-link" href="{{ url_for('manage_constraints', page=pagination.prev_num, sort=current_sort, filter=current_filter, enforcement=current_enforcement, search=search_query) }}"><i class="bi bi-chevron-left"></i></a>
             </li>
             {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
                 {% if page_num %}
                     <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
-                        <a class="page-link" href="{{ url_for('manage_constraints', page=page_num, sort=current_sort, filter=current_filter, search=search_query) }}">{{ page_num }}</a>
+                        <a class="page-link" href="{{ url_for('manage_constraints', page=page_num, sort=current_sort, filter=current_filter, enforcement=current_enforcement, search=search_query) }}">{{ page_num }}</a>
                     </li>
                 {% else %}
                     <li class="page-item disabled"><span class="page-link px-2" style="min-width:unset;">…</span></li>
                 {% endif %}
             {% endfor %}
             <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
-                <a class="page-link" href="{{ url_for('manage_constraints', page=pagination.next_num, sort=current_sort, filter=current_filter, search=search_query) }}"><i class="bi bi-chevron-right"></i></a>
+                <a class="page-link" href="{{ url_for('manage_constraints', page=pagination.next_num, sort=current_sort, filter=current_filter, enforcement=current_enforcement, search=search_query) }}"><i class="bi bi-chevron-right"></i></a>
             </li>
         </ul>
     </nav>
@@ -318,8 +365,14 @@
             <p id="detailDesc" class="text-dark" style="line-height:1.6;"></p>
         </div>
 
+        <!-- Enforcement Mode -->
+        <div class="mb-4">
+            <p class="text-muted small fw-bold text-uppercase mb-2" style="letter-spacing:.05em;">Enforcement Mode</p>
+            <span id="detailEnforcementBadge" class="badge"></span>
+        </div>
+
         <!-- Priority Badge -->
-        <div class="mb-3">
+        <div class="mb-4">
             <p class="text-muted small fw-bold text-uppercase mb-2" style="letter-spacing:.05em;">Priority Level</p>
             <span id="detailTypeBadge" class="badge rounded-pill fs-6 px-3 py-2"></span>
         </div>
@@ -407,16 +460,27 @@
 {% block scripts %}
 <script>
 function showConstraintDetail(row) {
-    const name     = row.dataset.name;
-    const category = row.dataset.category;
-    const desc     = row.dataset.desc;
-    const type     = row.dataset.type;
-    const weight   = row.dataset.weight;
+    const name        = row.dataset.name;
+    const category    = row.dataset.category;
+    const desc        = row.dataset.desc;
+    const type        = row.dataset.type;
+    const weight      = row.dataset.weight;
+    const enforcement = row.dataset.enforcement;
 
     document.getElementById('detailName').textContent     = name;
     document.getElementById('detailCategory').textContent = category;
     document.getElementById('detailDesc').textContent     = desc;
     document.getElementById('detailWeight').textContent   = weight;
+
+    // Set enforcement badge
+    const enfBadge = document.getElementById('detailEnforcementBadge');
+    if (enforcement === 'structural') {
+        enfBadge.textContent = '🔒 Structural (Built-in)';
+        enfBadge.className   = 'badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-6 px-3 py-2';
+    } else {
+        enfBadge.textContent = '⚙️ Dynamic (Evaluated)';
+        enfBadge.className   = 'badge bg-info-subtle text-info border border-info-subtle fs-6 px-3 py-2';
+    }
 
     const badge = document.getElementById('detailTypeBadge');
     const typeMap = {
@@ -442,11 +506,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const query = this.value;
             const currentSort = "{{ current_sort }}";
             const currentFilter = "{{ current_filter }}";
+            const currentEnforcement = "{{ current_enforcement }}";
             
             clearTimeout(debounceTimer);
 
             debounceTimer = setTimeout(() => {
-                const newUrl = `${window.location.pathname}?search=${encodeURIComponent(query)}&sort=${currentSort}&filter=${currentFilter}`;
+                const newUrl = `${window.location.pathname}?search=${encodeURIComponent(query)}&sort=${currentSort}&filter=${currentFilter}&enforcement=${currentEnforcement}`;
                 window.history.pushState({path: newUrl}, '', newUrl);
 
                 fetch(newUrl)

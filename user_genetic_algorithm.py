@@ -754,7 +754,6 @@ class UserGeneticScheduler:
                      'HOURLY_ALIGNMENT', 'COMPLETE_COURSE_SCHEDULING',
                      'STRICT_LEC_DURATION', 'STRICT_LAB_DURATION',
                      'STRICT_ASYNC_LEC_DUR', 'STRICT_ASYNC_LAB_DUR',
-                     'EARLY_START_ENFORCEMENT',
                      'LECTURE_SLOT_ALIGNMENT',
                      'FACULTY_DAY_SPLIT',
                      'VIRTUAL_ROOM_USAGE', 'ROOM_IDLE_GAP'):
@@ -843,52 +842,54 @@ class UserGeneticScheduler:
         # CONSTRAINT MAPPING (Internal Key -> Display Code)                  #
         # ------------------------------------------------------------------ #
         self.CONSTRAINT_MAP = {
-            # --- HARD CONSTRAINTS (HC-01 to ... ) ---
+            # --- HARD CONSTRAINTS (HC-01 to HC-28) ---
+            # A1: Built-In / Structural Hard Constraints (HC-01 to HC-20)
             'LOCKED_SCHEDULES':           'HC-01',
-            'MINOR_SUBJECT_GAP':          'HC-02',
-            'GLOBAL_DAY_RESTRICTION':     'HC-03',
-            'STRICT_ALLOC_ASYNC':         'HC-04',
-            'STRICT_LEC_DURATION':        'HC-05',
-            'STRICT_LAB_DURATION':        'HC-06',
-            'STRICT_ASYNC_LEC_DUR':       'HC-07',
-            'STRICT_ASYNC_LAB_DUR':       'HC-08',
-            'SECTION_OVERLAP':            'HC-09',
-            'FACULTY_OVERLAP':            'HC-10',
-            'SECTION_DAY_RESTRICTIONS':   'HC-11',
-            'MAX_CONSECUTIVE_STUDENT':    'HC-12',
-            'ROOM_OVERLAP':               'HC-13',
-            'SINGLE_FACULTY_PER_TIMESLOT':'HC-14',
-            'FACULTY_AVAILABILITY':       'HC-15',
-            'MAX_CONSECUTIVE_FACULTY':    'HC-16',
-            'SINGLE_ROOM_PER_SESSION':    'HC-17',
-            'ROOM_AVAILABILITY':          'HC-18',
-            'OPERATING_HOURS':            'HC-19',
-            'HOURLY_ALIGNMENT':           'HC-20',
-            'COMPLETE_COURSE_SCHEDULING': 'HC-21',
-            'PREASSIGNMENT_EXCLUSIVITY':  'HC-22',
-            'FACULTY_DAY_SPLIT':          'HC-23',
+            'GLOBAL_DAY_RESTRICTION':     'HC-02',
+            'STRICT_ALLOC_ASYNC':         'HC-03',
+            'STRICT_LEC_DURATION':        'HC-04',
+            'STRICT_LAB_DURATION':        'HC-05',
+            'STRICT_ASYNC_LEC_DUR':       'HC-06',
+            'STRICT_ASYNC_LAB_DUR':       'HC-07',
+            'SECTION_OVERLAP':            'HC-08',
+            'FACULTY_OVERLAP':            'HC-09',
+            'ROOM_OVERLAP':               'HC-10',
+            'SINGLE_FACULTY_PER_TIMESLOT':'HC-11',
+            'FACULTY_AVAILABILITY':       'HC-12',
+            'SINGLE_ROOM_PER_SESSION':    'HC-13',
+            'ROOM_AVAILABILITY':          'HC-14',
+            'OPERATING_HOURS':            'HC-15',
+            'HOURLY_ALIGNMENT':           'HC-16',
+            'COMPLETE_COURSE_SCHEDULING': 'HC-17',
+            'PREASSIGNMENT_EXCLUSIVITY':  'HC-18',
+            'FACULTY_DAY_SPLIT':          'HC-19',
+            'LUNCH_BREAK':                'HC-20',
 
-            # --- SOFT CONSTRAINTS I (SC-I-01 to SC-I-14) ---
+            # A2: Evaluated Hard Constraints (HC-21 to HC-28)
+            'MINOR_SUBJECT_GAP':          'HC-21',
+            'MAX_CONSECUTIVE_STUDENT':    'HC-22',
+            'MAX_CONSECUTIVE_FACULTY':    'HC-23',
+            'NO_ISOLATED_LECTURES':       'HC-24',
+            'NO_ISOLATED_LABS':           'HC-25',
+            'MIN_DAILY_SECTION_LOAD':     'HC-26',
+            'LEC_IN_LAB_FALLBACK':        'HC-27',
+            'LEC_LAB_SEQUENCE':           'HC-28',
+
+            # --- SOFT CONSTRAINTS I (SC-I-01 to SC-I-08) ---
             'VIRTUAL_ROOM_USAGE':         'SC-I-01',
-            'EARLY_START_ENFORCEMENT':    'SC-I-02',
-            'EVENING_AVOIDANCE':          'SC-I-03',
-            'ROOM_IDLE_GAP':              'SC-I-04',
-            'NO_ISOLATED_LECTURES':       'SC-I-05',
-            'NO_ISOLATED_LABS':           'SC-I-06',
-            'MIN_DAILY_SECTION_LOAD':     'SC-I-07',
-            'LEC_LAB_WEEKLY_DIST':        'SC-I-08',
-            'LEC_LAB_PROXIMITY':          'SC-I-09',
-            'LEC_IN_LAB_FALLBACK':        'SC-I-10',
-            'LEC_LAB_SEQUENCE':           'SC-I-11',
-            'STRICT_ALLOC_LEC':           'SC-I-12',
-            'STRICT_ALLOC_LAB':           'SC-I-13',
-            'ROOM_SUITABILITY':           'SC-I-14',
+            'EVENING_AVOIDANCE':          'SC-I-02',
+            'ROOM_IDLE_GAP':              'SC-I-03',
+            'LEC_LAB_WEEKLY_DIST':        'SC-I-04',
+            'LEC_LAB_PROXIMITY':          'SC-I-05',
+            'STRICT_ALLOC_LEC':           'SC-I-06',
+            'STRICT_ALLOC_LAB':           'SC-I-07',
+            'ROOM_SUITABILITY':           'SC-I-08',
 
-            # --- SOFT CONSTRAINTS II ---
+            # --- SOFT CONSTRAINTS II (SC-II-01 to SC-II-04) ---
             'PE_MORNING_PLACEMENT':       'SC-II-01',
             'PE_EARLY_WEEK':              'SC-II-02',
-            'LUNCH_BREAK':                'SC-II-03',
-            'ROOM_CAPACITY_PROPORTIONAL': 'SC-II-04'
+            'ROOM_CAPACITY_PROPORTIONAL': 'SC-II-03',
+            'LAB_ROOM_SATURATION_GAP':    'SC-II-04'
         }
 
     # ------------------------------------------------------------------ #
@@ -1952,15 +1953,7 @@ class UserGeneticScheduler:
                         else:
                             sc2_violations += 1
 
-        # ── SC-I-02: Early Start Enforcement ───────────────────────────────────
-        p_ese = pen.get('EARLY_START_ENFORCEMENT', 0)
-        if p_ese:
-            mfs = self._max_first_slot   # slot 1 = start+30min; slot 2+ = violation
-            for (room_id, day_idx), slots in room_use.items():
-                first_start, _, first_idx = min(slots, key=lambda x: x[0])
-                if first_start > mfs and not genes[first_idx].is_fixed:
-                    penalty += p_ese; soft_score += p_ese; violation_codes.add(cmap['EARLY_START_ENFORCEMENT']); violation_indices.add(first_idx)
-                    sc1_violations += 1
+
 
         # ── SC-I-04: Room Idle Gap Penalty ───────────────────────────────────
         p_rig = pen.get('ROOM_IDLE_GAP', 0)

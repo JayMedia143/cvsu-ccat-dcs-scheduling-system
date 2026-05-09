@@ -635,6 +635,18 @@ class Constraint(db.Model):
     weight = db.Column(db.Integer, nullable=False, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    @property
+    def is_structural(self):
+        return self.logic_code in {
+            'ROOM_OVERLAP', 'FACULTY_OVERLAP', 'SECTION_OVERLAP', 'LUNCH_BREAK',
+            'LOCKED_SCHEDULES', 'GLOBAL_DAY_RESTRICTION', 'STRICT_ALLOC_ASYNC',
+            'STRICT_LEC_DURATION', 'STRICT_LAB_DURATION', 'STRICT_ASYNC_LEC_DUR',
+            'STRICT_ASYNC_LAB_DUR', 'SINGLE_ROOM_PER_SESSION', 'OPERATING_HOURS',
+            'HOURLY_ALIGNMENT', 'COMPLETE_COURSE_SCHEDULING', 'FACULTY_DAY_SPLIT',
+            'MAX_CONSECUTIVE_STUDENT', 'MAX_CONSECUTIVE_FACULTY', 'PREASSIGNMENT_EXCLUSIVITY',
+            'FACULTY_AVAILABILITY', 'SINGLE_FACULTY_PER_TIMESLOT', 'ROOM_AVAILABILITY'
+        }
+
 class CodePrefixRule(db.Model):
     __tablename__ = 'code_prefix_rules'
     id          = db.Column(db.Integer, primary_key=True)
@@ -6812,6 +6824,7 @@ def manage_constraints():
     search_query = request.args.get('search', '', type=str)
     sort_by = request.args.get('sort', 'name-asc', type=str) # Default: HC-01 to HC-20
     filter_type = request.args.get('filter', 'all', type=str) # New Filter
+    filter_enforcement = request.args.get('enforcement', 'all', type=str)
 
     # Base Query
     query = Constraint.query
@@ -6819,6 +6832,21 @@ def manage_constraints():
     # Apply Type Filter (HC, SC1, SC2, NC)
     if filter_type != 'all':
         query = query.filter_by(constraint_type=filter_type)
+
+    # Apply Enforcement Filter
+    structural_codes = [
+        'ROOM_OVERLAP', 'FACULTY_OVERLAP', 'SECTION_OVERLAP', 'LUNCH_BREAK',
+        'LOCKED_SCHEDULES', 'GLOBAL_DAY_RESTRICTION', 'STRICT_ALLOC_ASYNC',
+        'STRICT_LEC_DURATION', 'STRICT_LAB_DURATION', 'STRICT_ASYNC_LEC_DUR',
+        'STRICT_ASYNC_LAB_DUR', 'SINGLE_ROOM_PER_SESSION', 'OPERATING_HOURS',
+        'HOURLY_ALIGNMENT', 'COMPLETE_COURSE_SCHEDULING', 'FACULTY_DAY_SPLIT',
+        'MAX_CONSECUTIVE_STUDENT', 'MAX_CONSECUTIVE_FACULTY', 'PREASSIGNMENT_EXCLUSIVITY',
+        'FACULTY_AVAILABILITY', 'SINGLE_FACULTY_PER_TIMESLOT', 'ROOM_AVAILABILITY'
+    ]
+    if filter_enforcement == 'structural':
+        query = query.filter(Constraint.logic_code.in_(structural_codes))
+    elif filter_enforcement == 'dynamic':
+        query = query.filter(Constraint.logic_code.notin_(structural_codes))
 
     # Apply Search
     if search_query:
@@ -6848,6 +6876,7 @@ def manage_constraints():
         pagination=pagination,
         current_sort=sort_by,
         current_filter=filter_type,
+        current_enforcement=filter_enforcement,
         search_query=search_query
     )
 
@@ -6862,53 +6891,54 @@ def sync_constraints():
     - Missing rows: inserts with the default type and weight=10.
     """
     MASTER_CONSTRAINTS = [
-        # ── HARD CONSTRAINTS (HC-01 to HC-23) ──────────────────────────────────────
+        # ── HARD CONSTRAINTS (HC-01 to HC-28) ──────────────────────────────────────
+        # A1: Built-In / Structural Hard Constraints (HC-01 to HC-20)
         {'code': 'LOCKED_SCHEDULES',           'cat': 'Administrative', 'type': 'HC',  'weight': 1,   'name': '(HC-01) Locked Schedules', 'desc': 'Manually plotted schedules are immovable.'},
-        {'code': 'MINOR_SUBJECT_GAP',          'cat': 'Administrative', 'type': 'HC',  'weight': 1,   'name': '(HC-02) Space for Minor Subjects', 'desc': 'Ensure free slots for unscheduled minor courses.'},
-        {'code': 'GLOBAL_DAY_RESTRICTION',     'cat': 'Administrative', 'type': 'HC',  'weight': 1,   'name': '(HC-03) Global Day Restriction', 'desc': 'No classes on Sundays or non-academic days.'},
-        {'code': 'STRICT_ALLOC_ASYNC',         'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-04) Strict Async Allocation', 'desc': 'Online classes must be in Virtual rooms.'},
-        {'code': 'STRICT_LEC_DURATION',        'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-05) Strict Lecture Duration', 'desc': 'Lec hours must match curriculum.'},
-        {'code': 'STRICT_LAB_DURATION',        'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-06) Strict Laboratory Duration', 'desc': 'Lab hours must match curriculum.'},
-        {'code': 'STRICT_ASYNC_LEC_DUR',       'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-07) Strict Async Lec Dur', 'desc': 'Async hours must match curriculum.'},
-        {'code': 'STRICT_ASYNC_LAB_DUR',       'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-08) Strict Async Lab Dur', 'desc': 'Async hours must match curriculum.'},
-        {'code': 'SECTION_OVERLAP',            'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-09) No Section Course Conflict', 'desc': 'Section cannot have 2 courses at once.'},
-        {'code': 'FACULTY_OVERLAP',            'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-10) No Faculty Course Conflict', 'desc': 'Faculty cannot teach 2 courses at once.'},
-        {'code': 'SECTION_DAY_RESTRICTIONS',   'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-11) Section Day Restrictions', 'desc': 'Follow section-specific day blocks.'},
-        {'code': 'MAX_CONSECUTIVE_STUDENT',    'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-12) Max Consecutive Student Load', 'desc': 'Max 6 consecutive hours for students.'},
-        {'code': 'ROOM_OVERLAP',               'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-13) No Multiple Sections in Room', 'desc': 'Room cannot host 2 sections at once.'},
-        {'code': 'SINGLE_FACULTY_PER_TIMESLOT','cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-14) Single Fac per Section Slot', 'desc': 'Section cannot have 2 faculty at once.'},
-        {'code': 'FACULTY_AVAILABILITY',       'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-15) Faculty Availability', 'desc': 'Faculty must be available.'},
-        {'code': 'MAX_CONSECUTIVE_FACULTY',    'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-16) Max Consecutive Faculty Load', 'desc': 'Max 6 consecutive hours for faculty.'},
-        {'code': 'SINGLE_ROOM_PER_SESSION',    'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-17) Single Room per Session', 'desc': 'Session cannot use 2 rooms at once.'},
-        {'code': 'ROOM_AVAILABILITY',          'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-18) Room Availability', 'desc': 'Room must be available.'},
-        {'code': 'OPERATING_HOURS',            'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-19) Operating Hours Compliance', 'desc': 'Sessions must be within campus hours.'},
-        {'code': 'HOURLY_ALIGNMENT',           'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-20) Hourly Slot Alignment', 'desc': 'Classes must start exactly on the hour.'},
-        {'code': 'COMPLETE_COURSE_SCHEDULING', 'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-21) Complete Course Scheduling', 'desc': 'All curriculum subjects must be plotted.'},
-        {'code': 'PREASSIGNMENT_EXCLUSIVITY',  'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-22) Pre-assignment Exclusivity', 'desc': 'Locked slots cannot be overwritten.'},
-        {'code': 'FACULTY_DAY_SPLIT',          'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-23) Faculty Day Split', 'desc': 'Sessions must land on designated split days.'},
+        {'code': 'GLOBAL_DAY_RESTRICTION',     'cat': 'Administrative', 'type': 'HC',  'weight': 1,   'name': '(HC-02) Global Day Restriction', 'desc': 'No classes on Sundays or non-academic days.'},
+        {'code': 'STRICT_ALLOC_ASYNC',         'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-03) Strict Async Allocation', 'desc': 'Online classes must be in Virtual rooms.'},
+        {'code': 'STRICT_LEC_DURATION',        'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-04) Strict Lecture Duration', 'desc': 'Lec hours must match curriculum.'},
+        {'code': 'STRICT_LAB_DURATION',        'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-05) Strict Laboratory Duration', 'desc': 'Lab hours must match curriculum.'},
+        {'code': 'STRICT_ASYNC_LEC_DUR',       'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-06) Strict Async Lecture Duration', 'desc': 'Async hours must match curriculum.'},
+        {'code': 'STRICT_ASYNC_LAB_DUR',       'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-07) Strict Async Lab Duration', 'desc': 'Async hours must match curriculum.'},
+        {'code': 'SECTION_OVERLAP',            'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-08) Section Overlap Prevention', 'desc': 'Section cannot have 2 courses at once.'},
+        {'code': 'FACULTY_OVERLAP',            'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-09) Faculty Overlap Prevention', 'desc': 'Faculty cannot teach 2 courses at once.'},
+        {'code': 'ROOM_OVERLAP',               'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-10) Room Overlap Prevention', 'desc': 'Room cannot host 2 sections at once.'},
+        {'code': 'SINGLE_FACULTY_PER_TIMESLOT','cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-11) Single Faculty per Section Slot', 'desc': 'Section cannot have 2 faculty at once.'},
+        {'code': 'FACULTY_AVAILABILITY',       'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-12) Faculty Day Off / Availability', 'desc': 'Faculty must be available.'},
+        {'code': 'SINGLE_ROOM_PER_SESSION',    'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-13) Single Room per Session', 'desc': 'Session cannot use 2 rooms at once.'},
+        {'code': 'ROOM_AVAILABILITY',          'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-14) Room Calendar Availability', 'desc': 'Room must be available.'},
+        {'code': 'OPERATING_HOURS',            'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-15) Operating Hours Compliance', 'desc': 'Sessions must be within campus hours.'},
+        {'code': 'HOURLY_ALIGNMENT',           'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-16) Hourly Slot Alignment', 'desc': 'Classes must start exactly on the hour.'},
+        {'code': 'COMPLETE_COURSE_SCHEDULING', 'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-17) Complete Course Plotting', 'desc': 'All curriculum subjects must be plotted.'},
+        {'code': 'PREASSIGNMENT_EXCLUSIVITY',  'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-18) Pre-assignment Exclusivity', 'desc': 'Locked slots cannot be overwritten.'},
+        {'code': 'FACULTY_DAY_SPLIT',          'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-19) Faculty Day Split Rule', 'desc': 'Sessions must land on designated split days.'},
+        {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-20) Lunch Break Allocation', 'desc': '1-hour break for all (Students & Faculty) between 10 AM-2 PM.'},
 
-        # ── SOFT CONSTRAINTS I (SC-I-01 to SC-I-14) ────────────────────────────────
+        # A2: Evaluated Hard Constraints (HC-21 to HC-28)
+        {'code': 'MINOR_SUBJECT_GAP',          'cat': 'Administrative', 'type': 'HC',  'weight': 1,   'name': '(HC-21) Minor Subject Gap Space', 'desc': 'Ensure free slots for unscheduled minor courses.'},
+        {'code': 'MAX_CONSECUTIVE_STUDENT',    'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-22) Max Consecutive Student Load', 'desc': 'Max 6 consecutive hours for students.'},
+        {'code': 'MAX_CONSECUTIVE_FACULTY',    'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-23) Max Consecutive Faculty Load', 'desc': 'Max 6 consecutive hours for faculty.'},
+        {'code': 'NO_ISOLATED_LECTURES',       'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-24) No Isolated Lectures', 'desc': 'Avoid single lecture subjects in a day.'},
+        {'code': 'NO_ISOLATED_LABS',           'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-25) No Isolated Labs', 'desc': 'Avoid single lab subjects in a day.'},
+        {'code': 'MIN_DAILY_SECTION_LOAD',     'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-26) Min Daily Section Load', 'desc': 'Ensure at least 3 hours of class per active day.'},
+        {'code': 'LEC_IN_LAB_FALLBACK',        'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-27) Lecture in Lab Fallback', 'desc': 'Allow lectures in labs only if no classrooms are free.'},
+        {'code': 'LEC_LAB_SEQUENCE',           'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-28) Lec-Lab Sequence', 'desc': 'Lecture should be scheduled before Laboratory.'},
+
+        # ── SOFT CONSTRAINTS I (SC-I-01 to SC-I-08) ────────────────────────────────
         {'code': 'VIRTUAL_ROOM_USAGE',         'cat': 'Room',           'type': 'SC1', 'weight': 10,  'name': '(SC-I-01) Virtual Room (Online) Penalty', 'desc': 'Avoid Online rooms for physical classes.'},
-        {'code': 'EARLY_START_ENFORCEMENT',    'cat': 'Room',           'type': 'SC1', 'weight': 1,   'name': '(SC-I-02) Early Start Enforcement', 'desc': 'Prioritize filling early morning slots.'},
-        {'code': 'EVENING_AVOIDANCE',          'cat': 'Time',           'type': 'SC1', 'weight': 1,   'name': '(SC-I-03) Evening Class Avoidance', 'desc': 'Avoid scheduling classes late in the evening.'},
-        {'code': 'ROOM_IDLE_GAP',              'cat': 'Room',           'type': 'SC1', 'weight': 10,  'name': '(SC-I-04) Room Idle Gap Penalty', 'desc': 'Incentivize compact room usage.'},
-        {'code': 'NO_ISOLATED_LECTURES',       'cat': 'Section',        'type': 'SC1', 'weight': 1,   'name': '(SC-I-05) No Isolated Lectures', 'desc': 'Avoid single lecture subjects in a day.'},
-        {'code': 'NO_ISOLATED_LABS',           'cat': 'Section',        'type': 'SC1', 'weight': 1,   'name': '(SC-I-06) No Isolated Labs', 'desc': 'Avoid single lab subjects in a day.'},
-        {'code': 'MIN_DAILY_SECTION_LOAD',     'cat': 'Section',        'type': 'SC1', 'weight': 1,   'name': '(SC-I-07) Min Daily Section Load', 'desc': 'Ensure at least 3 hours of class per active day.'},
-        {'code': 'LEC_LAB_WEEKLY_DIST',        'cat': 'Course',         'type': 'SC1', 'weight': 1,   'name': '(SC-I-08) Lec-Lab Weekly Dist.', 'desc': 'Lecture scheduled early, Lab scheduled late.'},
-        {'code': 'LEC_LAB_PROXIMITY',          'cat': 'Course',         'type': 'SC1', 'weight': 1,   'name': '(SC-I-09) Lec-Lab Proximity', 'desc': 'Max gap between Lecture and Laboratory.'},
-        {'code': 'LEC_IN_LAB_FALLBACK',        'cat': 'Room',           'type': 'SC1', 'weight': 5,   'name': '(SC-I-10) Lecture in Lab Fallback', 'desc': 'Allow lectures in labs only if no classrooms are free.'},
-        {'code': 'LEC_LAB_SEQUENCE',           'cat': 'Course',         'type': 'SC1', 'weight': 10,  'name': '(SC-I-11) Lec-Lab Sequence', 'desc': 'Lecture should be scheduled before Laboratory.'},
-        {'code': 'STRICT_ALLOC_LEC',           'cat': 'Course',         'type': 'SC1', 'weight': 10,  'name': '(SC-I-12) Strict Lecture Allocation', 'desc': 'Lecture must be in a physical room (Non-Virtual).'},
-        {'code': 'STRICT_ALLOC_LAB',           'cat': 'Course',         'type': 'SC1', 'weight': 10,  'name': '(SC-I-13) Strict Laboratory Allocation', 'desc': 'Laboratory must be in a Lab room.'},
-        {'code': 'ROOM_SUITABILITY',           'cat': 'Room',           'type': 'SC1', 'weight': 10,  'name': '(SC-I-14) Room Type Suitability', 'desc': 'Match subject type with room capabilities.'},
+        {'code': 'EVENING_AVOIDANCE',          'cat': 'Time',           'type': 'SC1', 'weight': 1,   'name': '(SC-I-02) Evening Class Avoidance', 'desc': 'Avoid scheduling classes late in the evening.'},
+        {'code': 'ROOM_IDLE_GAP',              'cat': 'Room',           'type': 'SC1', 'weight': 10,  'name': '(SC-I-03) Room Idle Gap Penalty', 'desc': 'Incentivize compact room usage.'},
+        {'code': 'LEC_LAB_WEEKLY_DIST',        'cat': 'Course',         'type': 'SC1', 'weight': 1,   'name': '(SC-I-04) Lec-Lab Weekly Dist.', 'desc': 'Lec and Lab must be scheduled on different days.'},
+        {'code': 'LEC_LAB_PROXIMITY',          'cat': 'Course',         'type': 'SC1', 'weight': 1,   'name': '(SC-I-05) Lec-Lab Proximity', 'desc': 'Max gap between Lecture and Laboratory.'},
+        {'code': 'STRICT_ALLOC_LEC',           'cat': 'Course',         'type': 'SC1', 'weight': 10,  'name': '(SC-I-06) Strict Lecture Allocation', 'desc': 'Lecture must be in a physical room (Non-Virtual).'},
+        {'code': 'STRICT_ALLOC_LAB',           'cat': 'Course',         'type': 'SC1', 'weight': 10,  'name': '(SC-I-07) Strict Laboratory Allocation', 'desc': 'Laboratory must be in a Lab room.'},
+        {'code': 'ROOM_SUITABILITY',           'cat': 'Room',           'type': 'SC1', 'weight': 10,  'name': '(SC-I-08) Room Type Suitability', 'desc': 'Match subject type with room capabilities.'},
 
         # ── SOFT CONSTRAINTS II (SC-II-01 to SC-II-04) ───────────────────────────────
         {'code': 'PE_MORNING_PLACEMENT',       'cat': 'Course',         'type': 'SC2', 'weight': 1,   'name': '(SC-II-01) Morning PE Placement', 'desc': 'PE courses priority before 12:00 PM.'},
         {'code': 'PE_EARLY_WEEK',              'cat': 'Course',         'type': 'SC2', 'weight': 1,   'name': '(SC-II-02) Early Week PE Placement', 'desc': 'PE courses priority on Mon-Wed.'},
-        {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'SC2', 'weight': 3,   'name': '(SC-II-03) Lunch Break Allocation', 'desc': '1-hour break for all (Students & Faculty) between 10 AM-2 PM.'},
-        {'code': 'ROOM_CAPACITY_PROPORTIONAL', 'cat': 'Room',           'type': 'SC2', 'weight': 1,   'name': '(SC-II-04) Room Capacity Allocation', 'desc': 'Prioritize closest absolute fit for room capacity.'},
-        {'code': 'LAB_ROOM_SATURATION_GAP',    'cat': 'Room',           'type': 'SC2', 'weight': 10,  'name': '(SC-II-05) Lab Room Squeeze/Saturation', 'desc': 'Avoid wasteful 1 or 2 hour idle gaps in precious Computer Labs.'},
+        {'code': 'ROOM_CAPACITY_PROPORTIONAL', 'cat': 'Room',           'type': 'SC2', 'weight': 1,   'name': '(SC-II-03) Room Capacity Allocation', 'desc': 'Prioritize closest absolute fit for room capacity.'},
+        {'code': 'LAB_ROOM_SATURATION_GAP',    'cat': 'Room',           'type': 'SC2', 'weight': 10,  'name': '(SC-II-04) Lab Room Squeeze/Saturation', 'desc': 'Avoid wasteful 1 or 2 hour idle gaps in precious Computer Labs.'},
     ]
 
     added = 0
@@ -6955,6 +6985,9 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
     _gen_start_time = time.time()
 
     with app.app_context():
+        db_constraints = Constraint.query.all()
+        constraints_config = {c.logic_code: {'type': c.constraint_type, 'weight': c.weight} for c in db_constraints}
+
         def update_progress(stats):
             generation_status['generation']    = stats['generation']
             generation_status['hard_conflicts'] = stats['hard_conflicts']
@@ -9977,10 +10010,6 @@ def check_constraints():
         # SC-II-03: Strategic Async Placement (Disabled as per user request)
         pass
 
-        # HC-14: Section Day Restrictions (must be within SystemSettings allowed_days)
-        if allowed_days_set and s.day not in allowed_days_set:
-            add_v('SECTION_DAY_RESTRICTIONS', 'Section Day Restrictions',
-                  f'Section {s.section.section_name} is scheduled on {s.day}, which is not an allowed academic day.', s)
 
         # HC-18: Faculty Availability (faculty must be available on the scheduled day)
         if s.faculty_id and s.faculty.full_name != 'T.B.A.':
@@ -10080,27 +10109,6 @@ def check_constraints():
                     add_v('SINGLE_FACULTY_PER_TIMESLOT', 'Single Faculty per Timeslot',
                           f'Section {s1.section.section_name} has 2 different faculty '
                           f'({s1.faculty.full_name} & {s2.faculty.full_name}) at the same time.', s1, s2)
-
-    # =========================================================
-    # SC-I-09: EARLY START ENFORCEMENT (per room per day)
-    # First class in each used room must start within 1 hour of system start time.
-    # =========================================================
-    _sys_start_m    = (_sys.start_hour if _sys else 7) * 60   # e.g. 7AM = 420 min
-    _max_first_m    = _sys_start_m                             # No grace period - must start exactly on system start
-    _room_day_first = {}                                        # (room_id, day) -> earliest schedule
-
-    for s in schedules:
-        if s.room_id in _v_rooms: continue
-        key = (s.room_id, s.day)
-        if key not in _room_day_first or to_minutes(s.start_time) < to_minutes(_room_day_first[key].start_time):
-            _room_day_first[key] = s
-            
-    for (room_id, day), first_s in _room_day_first.items():
-        if to_minutes(first_s.start_time) > _sys_start_m: # Report any idle time in the morning
-            sys_start_label = f"{_sys.start_hour}:00 AM" if _sys else "7:00 AM"
-            add_v('EARLY_START_ENFORCEMENT', 'Early Start Enforcement',
-                  f'First class in {first_s.room.room_name} on {day} starts at {first_s.start_time}. '
-                  f'Room is idle during {sys_start_label}----{first_s.start_time}.', first_s)
 
     # =========================================================
     # SC-I-04: ROOM IDLE GAP (Compact Room Usage)
@@ -10214,10 +10222,10 @@ def check_constraints():
             lec_day = day_rank.get(lec.day, 0)
             lab_day = day_rank.get(lab.day, 0)
 
-            # SC-I-08: Lec should be earlier in the week than Lab (Weekly Distribution)
-            if lab_day > 0 and lec_day > 0 and lab_day < lec_day:
+            # SC-I-08: Lecture and Lab should be scheduled on different days (Weekly Distribution)
+            if lab_day > 0 and lec_day > 0 and lab_day == lec_day:
                 add_v('LEC_LAB_WEEKLY_DIST', 'Lecture-Lab Weekly Distribution',
-                      f'Lab for {base} is earlier in the week than its Lecture.', lab, lec)
+                      f'Lecture and Lab for {base} are scheduled on the same day.', lab, lec)
 
             # SC-I-09: Lec and Lab should be within 2 days of each other (Proximity)
             if lec_day > 0 and lab_day > 0 and abs(lec_day - lab_day) > 2:
