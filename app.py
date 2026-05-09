@@ -9713,7 +9713,29 @@ def check_constraints():
 
     target_semester = session.get('selected_semester', '1st Semester')
 
-    all_schedules = _dedup_schedules(ScheduledClass.query.all())
+    # Sanitize and filter out orphaned schedules whose course or section was deleted
+    clean_schedules = []
+    for s in ScheduledClass.query.all():
+        if not s.course or not s.section:
+            continue
+        # Ensure room and faculty are not None by substituting dummy objects
+        if not s.room:
+            class DummyRoom:
+                id = -1
+                room_name = 'T.B.A.'
+                status = 'Available'
+                capacity = 999
+                capabilities = ''
+            s.room = DummyRoom()
+        if not s.faculty:
+            class DummyFaculty:
+                id = -1
+                full_name = 'T.B.A.'
+                available_days = ''
+            s.faculty = DummyFaculty()
+        clean_schedules.append(s)
+
+    all_schedules = _dedup_schedules(clean_schedules)
     # Filter by semester when a specific semester is selected
     if target_semester and target_semester != 'All':
         schedules = [s for s in all_schedules if s.course.semester_offered == target_semester]
@@ -10291,10 +10313,31 @@ def check_constraints():
     # =========================================================
     # GROUP 5: PRE-ASSIGNMENT INTEGRITY CHECKS
     # =========================================================
-    pre_assignments = PreAssignment.query.filter_by(is_archived=False).all()
+    raw_pre_assignments = PreAssignment.query.filter_by(is_archived=False).all()
+    clean_pre_assignments = []
+    for pa in raw_pre_assignments:
+        if not pa.course or not pa.section:
+            continue
+        if not pa.room:
+            class DummyRoom:
+                id = -1
+                room_name = 'T.B.A.'
+                status = 'Available'
+                capacity = 999
+                capabilities = ''
+            pa.room = DummyRoom()
+        if not pa.faculty:
+            class DummyFaculty:
+                id = -1
+                full_name = 'T.B.A.'
+                available_days = ''
+            pa.faculty = DummyFaculty()
+        clean_pre_assignments.append(pa)
+
+    pre_assignments = clean_pre_assignments
     if target_semester and target_semester != 'All':
         pre_assignments = [pa for pa in pre_assignments
-                           if pa.course and pa.course.semester_offered == target_semester]
+                           if pa.course.semester_offered == target_semester]
 
     if pre_assignments:
         # HC-01: Locked Schedules ---- pre-assigned class must not have been moved
