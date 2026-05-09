@@ -1,600 +1,637 @@
 import sys
 import os
 import argparse
+import json
 from collections import defaultdict
+import re
 
-# Force eventlet monkey patching to prevent any import warnings if app.py is loaded
 try:
     import eventlet
     eventlet.monkey_patch()
 except ImportError:
     pass
 
-# Import Flask app context and database models
-from sqlalchemy import or_, and_, func
+from sqlalchemy import or_
 try:
-    from app import app, db, ScheduledClass, Course, Section, Faculty, Room, Constraint, SystemSettings, PreAssignment, FacultyAssignment
-    from genetic_algorithm import GeneticScheduler
+    from app import (app, db, ScheduledClass, Course, Section, Faculty, Room,
+                     Constraint, SystemSettings, PreAssignment, FacultyAssignment)
+    from genetic_algorithm import GeneticScheduler, Gene, Chromosome
 except ImportError as e:
-    print("\033[91mError: Could not import app.py models or genetic_algorithm.py. Please make sure you are running this from the project root.\033[0m")
-    print(e)
+    print(f"\033[91mError: Could not import required modules.\033[0m\n{e}")
     sys.exit(1)
 
+
 class SafeObject:
-    """Helper class to pass database data to threads safely."""
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-# CLI Colors
+
 class Colors:
     HEADER = '\033[95m'
-    BLUE = '\033[94m'
-    CYAN = '\033[96m'
-    GREEN = '\033[92m'
+    BLUE   = '\033[94m'
+    CYAN   = '\033[96m'
+    GREEN  = '\033[92m'
     YELLOW = '\033[93m'
-    RED = '\033[91m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-    RESET = '\033[0m'
+    RED    = '\033[91m'
+    BOLD   = '\033[1m'
+    RESET  = '\033[0m'
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BANNER
+# ─────────────────────────────────────────────────────────────────────────────
 def print_banner():
-    banner = f"""
+    print(f"""
 {Colors.HEADER}{Colors.BOLD}========================================================================
-🧬 CVSU CCAT DCS SCHEDULER: ADVANCED CONSTRAINT DEEP-SCAN DEBUGGER 🧬
+🧬  CVSU DCS SCHEDULER — ACCURATE CONSTRAINT DEBUGGER  🧬
+        Powered by GA's own calculate_fitness() engine
 ========================================================================{Colors.RESET}
-This debugger scans the live database, builds occupation state tables,
-and isolates precisely which courses, faculty, sections, or room shortages
-are causing constraint violations or trapping the Genetic Algorithm.
-"""
-    print(banner)
+Exact same logic as the Genetic Algorithm.
+HC count here == HC count in the running system.
+""")
 
-def build_diagnostic_report(schedules, courses, sections, faculty, rooms, online_room_ids, start_hour, end_hour, allowed_days, selected_semester, mode_title):
-    total_slots = (end_hour - start_hour) * 2
 
-    print(f"\n{Colors.BLUE}⚙️ Loading Settings...{Colors.RESET}")
-    print(f"   - Operating Hours: {start_hour}:00 AM - {end_hour}:00 PM ({total_slots} 30-min slots)")
-    print(f"   - Allowed Days: {', '.join(allowed_days)}")
-    print(f"   - Target Semester: {Colors.CYAN}{selected_semester}{Colors.RESET}")
-    print(f"   - Total Scheduled Classes Loaded: {Colors.CYAN}{len(schedules)}{Colors.RESET}")
+# ─────────────────────────────────────────────────────────────────────────────
+# BUILD GENETIC SCHEDULER (mirrors app.py's generate route setup)
+# ─────────────────────────────────────────────────────────────────────────────
+def build_scheduler(selected_semester, start_hour, end_hour, allowed_days, selected_depts=None):
+    """Instantiate GeneticScheduler with the same data the GA uses."""
 
-    # Violations Scorecards
-    hc_scorecard = defaultdict(int)
-    sc_scorecard = defaultdict(int)
+    if selected_depts:
+        raw_courses = Course.query.filter(
+            Course.is_archived == False,
+            Course.semester_offered == selected_semester,
+            Course.department.in_(selected_depts)
+        ).all()
+    else:
+        raw_courses = Course.query.filter_by(
+            is_archived=False, semester_offered=selected_semester).all()
+    courses_data = [{
+        'id': c.id, 'course_code': c.course_code,
+        'department': c.department or '',
+        'lec_units': c.lec_units or 0, 'lab_units': c.lab_units or 0,
+        'synchronous_lec_hours':  c.synchronous_lec_hours  or 0,
+        'synchronous_lab_hours':  c.synchronous_lab_hours  or 0,
+        'asynchronous_lec_hours': c.asynchronous_lec_hours or 0,
+        'asynchronous_lab_hours': c.asynchronous_lab_hours or 0,
+    } for c in raw_courses]
 
-    # Details list
-    violations_details = defaultdict(list)
+    raw_rooms = Room.query.filter_by(is_archived=False).all()
+    rooms_data = [{
+        'id': r.id, 'room_name': r.room_name,
+        'capabilities': r.capabilities or '',
+        'status': r.status, 'capacity': r.capacity or 0,
+        'special_course_ids': r.special_course_ids or '',
+        'room_departments': r.room_departments or '',
+    } for r in raw_rooms]
 
-    # Occupation tables for overlap detection
-    room_use = defaultdict(list)    # (room_id, day_str) -> [(start_slot, end_slot, scheduled_class_obj)]
-    fac_use = defaultdict(list)     # (faculty_id, day_str) -> [(start_slot, end_slot, scheduled_class_obj)]
-    sec_use = defaultdict(list)     # (section_id, day_str) -> [(start_slot, end_slot, scheduled_class_obj)]
+    valid_course_ids = {c['id'] for c in courses_data}
 
-    # Faculty workload tracker
-    fac_weekly_hours = defaultdict(float)
+    _fa_fac_ids = [
+        r[0] for r in db.session.query(FacultyAssignment.faculty_id)
+        .join(Course, FacultyAssignment.course_id == Course.id)
+        .filter(Course.semester_offered == selected_semester)
+        .distinct().all() if r[0]
+    ]
+    raw_faculty = Faculty.query.filter(
+        Faculty.is_archived == False,
+        Faculty.max_weekly_hours > 0,
+        or_(Faculty.full_name == 'T.B.A.', Faculty.id.in_(_fa_fac_ids))
+    ).all()
+    faculty_data = [{
+        'id': f.id, 'full_name': f.full_name,
+        'available_days': f.available_days or '',
+        'max_weekly_hours': f.max_weekly_hours or 35,
+        'department': f.department or '',
+    } for f in raw_faculty]
 
-    def to_slot(time_str):
-        try:
-            h, m = map(int, time_str.split(':'))
-            return ((h - start_hour) * 2) + (1 if m >= 30 else 0)
-        except Exception:
-            return None
+    raw_sections = Section.query.filter_by(is_archived=False).all()
+    sections_data = [{
+        'id': s.id,
+        'course_ids': [c.id for c in s.courses if c.id in valid_course_ids],
+        'number_of_students': s.number_of_students or 0,
+        'section_name': s.section_name,
+    } for s in raw_sections]
 
-    def _norm_dept(s):
-        return (s or '').lower().replace('department of ', '').replace(' and ', ' & ').strip()
+    raw_pre = PreAssignment.query.filter_by(is_archived=False).all()
+    pre_assignments = [
+        SafeObject(
+            course_id=pa.course_id, section_id=pa.section_id,
+            faculty_id=pa.faculty_id, room_id=pa.room_id,
+            day=pa.day, start_time=pa.start_time, end_time=pa.end_time
+        )
+        for pa in raw_pre if pa.course_id in valid_course_ids
+    ]
 
-    # Scan and compile
-    for sc in schedules:
-        c = courses.get(sc.course_id)
-        sec = sections.get(sc.section_id)
-        fac = faculty.get(sc.faculty_id) if sc.faculty_id else None
-        r = rooms.get(sc.room_id) if sc.room_id else None
+    constraints_config = {
+        c.logic_code: {'type': c.constraint_type, 'weight': c.weight}
+        for c in Constraint.query.all()
+    }
 
-        day = sc.day
-        start_slot = to_slot(sc.start_time)
-        end_slot = to_slot(sc.end_time)
-
-        if start_slot is None or end_slot is None:
+    raw_splits = (FacultyAssignment.query
+                  .join(Course, FacultyAssignment.course_id == Course.id)
+                  .filter(Course.semester_offered == selected_semester)
+                  .all())
+    split_assignments = []
+    for fa in raw_splits:
+        if fa.course_id not in valid_course_ids:
             continue
+        for gtype, d1f, h1f, d2f, h2f in [
+            ('Lab', 'split_day_1', 'split_hours_1', 'split_day_2', 'split_hours_2'),
+            ('Lec', 'split_lec_day_1', 'split_lec_hours_1', 'split_lec_day_2', 'split_lec_hours_2'),
+        ]:
+            splits = []
+            d1, h1 = getattr(fa, d1f, None), getattr(fa, h1f, None)
+            d2, h2 = getattr(fa, d2f, None), getattr(fa, h2f, None)
+            if d1 and h1: splits.append({'day': d1, 'hours': h1})
+            if d2 and h2: splits.append({'day': d2, 'hours': h2})
+            if splits:
+                split_assignments.append({
+                    'faculty_id': fa.faculty_id,
+                    'course_id':  fa.course_id,
+                    'section_id': fa.section_id,
+                    'gtype': gtype, 'splits': splits,
+                })
 
-        duration_slots = end_slot - start_slot
-        duration_hours = duration_slots / 2.0
+    fa_map = {
+        (fa.course_id, fa.section_id): fa.faculty_id
+        for fa in raw_splits if fa.course_id in valid_course_ids
+    }
 
-        c_code = c.course_code if c else f"Course ID {sc.course_id}"
-        sec_name = sec.section_name if sec else f"Section ID {sc.section_id}"
-        fac_name = fac.full_name if fac else "T.B.A."
-        room_name = r.room_name if r else "No Room Specified"
+    # Blocked slots from SystemSettings
+    settings = SystemSettings.query.first()
+    blocked_slots = []
+    if settings and getattr(settings, 'blocked_slots_json', None):
+        try:
+            blocked_slots = json.loads(settings.blocked_slots_json)
+        except Exception:
+            pass
 
-        # 1. Operating Hours Out-of-bounds (HC-19)
-        if start_slot < 0 or end_slot > total_slots:
-            hc_scorecard['HC-19'] += 1
-            violations_details['HC-19 (Operating Hours Violation)'].append(
-                f"{c_code} ({sec_name}) scheduled at {sc.day} {sc.start_time}-{sc.end_time}, which is outside operating limits."
-            )
+    scheduler = GeneticScheduler(
+        courses_data, sections_data, faculty_data, rooms_data,
+        pre_assignments, constraints_config,
+        start_time=start_hour, end_time=end_hour,
+        allowed_days=allowed_days,
+        split_assignments=split_assignments,
+        fa_map=fa_map,
+        blocked_slots=blocked_slots,
+    )
+    return scheduler
 
-        # 2. Hourly Alignment (HC-20)
-        if start_slot % 2 != 0:
-            hc_scorecard['HC-20'] += 1
-            violations_details['HC-20 (Hourly Alignment Violation)'].append(
-                f"{c_code} ({sec_name}) scheduled at {sc.day} {sc.start_time}-{sc.end_time}, starting on a half-hour boundary."
-            )
 
-        # 3. Room Suitability
-        if r:
-            if r.status != 'Available':
-                hc_scorecard['HC-18'] += 1
-                violations_details['HC-18 (Room Availability Violation)'].append(
-                    f"Room {room_name} is set as Unavailable, but {c_code} ({sec_name}) is scheduled in it."
+# ─────────────────────────────────────────────────────────────────────────────
+# BUILD CHROMOSOME FROM RECORDS (list of dicts with course/section/room/day/time)
+# ─────────────────────────────────────────────────────────────────────────────
+def records_to_chromosome(scheduler, records):
+    """Use scheduler's own _build_seed_chromosome so logic is identical."""
+    chrom = scheduler._build_seed_chromosome(records)
+    scheduler._precalc_gene_masks(chrom.genes)
+    return chrom
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HUMAN-READABLE REPORT from a fully-evaluated Chromosome
+# ─────────────────────────────────────────────────────────────────────────────
+def print_accurate_report(scheduler, chromosome, mode_title, semester):
+    genes     = chromosome.genes
+    cmap_inv  = {v: k for k, v in scheduler.CONSTRAINT_MAP.items()}
+
+    # Quick lookup helpers
+    course_map  = scheduler.course_map
+    section_map = scheduler.section_map
+    faculty_map = scheduler.faculty_map
+    room_map    = scheduler.room_map
+
+    def gene_label(g):
+        c   = course_map.get(g.course_id,  {})
+        sec = section_map.get(g.section_id, {})
+        fac = faculty_map.get(g.faculty_id, {})
+        r   = room_map.get(g.room_id,       {})
+        day = scheduler.days[g.day_idx] if 0 <= g.day_idx < len(scheduler.days) else '?'
+        st  = scheduler.slot_to_time(g.start_idx)
+        en  = scheduler.slot_to_time(g.end_idx)
+        ccode   = c.get('course_code', f'CID={g.course_id}') if isinstance(c, dict) else getattr(c, 'course_code', f'CID={g.course_id}')
+        secname = sec.get('section_name', f'SID={g.section_id}') if isinstance(sec, dict) else getattr(sec, 'section_name', f'SID={g.section_id}')
+        facname = (fac.get('full_name', 'T.B.A.') if isinstance(fac, dict) else getattr(fac, 'full_name', 'T.B.A.')) or 'T.B.A.'
+        roomname = (r.get('room_name', '?') if isinstance(r, dict) else getattr(r, 'room_name', '?')) or '?'
+        return f"{ccode} ({secname}) [{g.gene_type}] | {day} {st}-{en} | {roomname} | {facname}"
+
+    # ── Header ────────────────────────────────────────────────────────────────
+    print(f"\n{Colors.GREEN}{Colors.BOLD}{'='*72}{Colors.RESET}")
+    print(f"📊 {Colors.BOLD}ACCURATE GA DIAGNOSTIC — {mode_title} ({semester.upper()}){Colors.RESET}")
+    print(f"{Colors.GREEN}{Colors.BOLD}{'='*72}{Colors.RESET}")
+    print(f"   Total genes (classes)  : {len(genes)}")
+    print(f"   Hard Conflicts (HC)    : {Colors.RED}{Colors.BOLD}{chromosome.hard_conflicts}{Colors.RESET}  ← exact same as GA display")
+    print(f"   SC-I Violations        : {Colors.YELLOW}{chromosome.sc1_violations}{Colors.RESET}")
+    print(f"   SC-II Violations       : {Colors.YELLOW}{chromosome.sc2_violations}{Colors.RESET}")
+    print(f"   Soft Score             : {chromosome.soft_score}")
+    print(f"   Active violation codes : {', '.join(chromosome.violation_codes) or 'none'}")
+
+    # ── Per-constraint detailed breakdown ────────────────────────────────────
+    # Re-run a targeted scan so we can print PER-GENE details
+    # This mirrors calculate_fitness() logic exactly.
+
+    # Build occ bitmasks (same as GA)
+    from collections import defaultdict as dd
+    room_bits = dd(int); fac_bits = dd(int); sec_bits = dd(int)
+    room_use  = dd(list); fac_use  = dd(list); sec_use  = dd(list)
+
+    HC_DETAILS  = dd(list)   # code → [human-readable strings]
+    SC1_DETAILS = dd(list)
+    SC2_DETAILS = dd(list)
+
+    multi_fac  = scheduler.multi_assignment_faculty
+    multi_room = scheduler.multi_assignment_rooms
+    exp_dur    = scheduler._expected_duration
+    online_ids = scheduler.online_room_ids
+    v_room_set = scheduler._virtual_room_set
+    is_pe      = scheduler._is_pe
+    sec_stu    = scheduler._sec_students
+    seven_pm   = scheduler.seven_pm_slot
+    five_pm    = scheduler.five_pm_slot
+    blocked    = scheduler._blocked_bitmasks
+    pen        = scheduler._pen
+
+    sec_course_genes = {}   # (sec_id, course_id) → {'Lec': (g,i), 'Lab': (g,i)}
+
+    for i, g in enumerate(genes):
+        gl = gene_label(g)
+
+        # HC-04: TBA Faculty in Sync Room
+        if not g.is_fixed:
+            r_info = room_map.get(g.room_id, {})
+            r_type = (r_info.get('room_type') if isinstance(r_info, dict) else getattr(r_info, 'room_type', 'Sync')) or 'Sync'
+            is_tba = scheduler._is_fac_tba.get(g.faculty_id, False)
+            if is_tba and r_type == 'Sync' and pen.get('STRICT_ALLOC_ASYNC', 0):
+                HC_DETAILS['HC-04 (TBA Faculty in Sync Room)'].append(gl)
+
+        # HC-19/Operating Hours via allowed_mask
+        if g.allowed_mask:
+            am = g.allowed_mask[g.day_idx]
+            if (g.bitmask & am) != g.bitmask:
+                HC_DETAILS['HC-19/HC-15 (Outside allowed hours or unavailable day)'].append(gl)
+
+        # HC-05/06: Strict Duration
+        if not g.is_fixed and getattr(g, 'locked_day', -1) < 0:
+            ed = exp_dur.get((g.course_id, g.gene_type))
+            if ed and g.duration_slots != ed:
+                tag = 'HC-05 (Wrong Lec Duration)' if g.gene_type == 'Lec' else 'HC-06 (Wrong Lab Duration)'
+                HC_DETAILS[tag].append(
+                    f"{gl}  [expected {ed//2}h, got {g.duration_slots//2}h]"
                 )
-            
-            # Exclusivity departments check
-            if r.room_departments and c and c.department:
-                # Use _norm_dept for comparison to align perfectly with the GA
-                r_depts_normalized = {_norm_dept(d) for d in r.room_departments.split(',') if d.strip()}
-                c_dept_normalized = _norm_dept(c.department)
-                if c_dept_normalized not in r_depts_normalized:
-                    # In genetic_algorithm.py, this is SC-I-14 Room Suitability
-                    sc_scorecard['SC-I-14'] += 1
-                    violations_details['SC-I-14 (Room Suitability Violation - Dept Exclusivity)'].append(
-                        f"Room {room_name} is restricted to department {r.room_departments}, but {c_code} of department {c.department} is scheduled there."
-                    )
 
-            # Room capabilities match (SC-I-14 Room Suitability)
-            if sc.session_type == 'Lab' and 'Computer Lab' not in (r.capabilities or ''):
-                sc_scorecard['SC-I-14'] += 1
-                violations_details['SC-I-14 (Room Suitability Violation - Capability Match)'].append(
-                    f"Lab class {c_code} ({sec_name}) is scheduled in Room {room_name} which lacks Computer Lab capabilities."
+        # HC-20: Hourly Alignment
+        if not g.is_fixed and g.start_idx % 2 != 0:
+            HC_DETAILS['HC-20 (Half-hour start)'].append(gl)
+
+        # HC-23: Faculty Day Split
+        ld = getattr(g, 'locked_day', -1)
+        if ld >= 0 and g.day_idx != ld and not g.is_fixed:
+            HC_DETAILS['HC-23 (Faculty Day Split)'].append(gl)
+
+        # SC-I-01: Virtual Room
+        if not g.is_fixed and g.room_id in v_room_set and g.gene_type != 'Async':
+            SC1_DETAILS['SC-I-01 (Virtual/Online Room)'].append(gl)
+
+        # SC-I-03: Evening Avoidance
+        if not g.is_fixed and g.room_id not in v_room_set:
+            if g.start_idx >= seven_pm:
+                SC1_DETAILS['SC-I-03 (Evening — after 7PM)'].append(gl)
+            elif g.start_idx >= five_pm:
+                SC1_DETAILS['SC-I-03 (Evening — 5–7PM)'].append(gl)
+
+        # SC-I-14: Room Suitability (Lab not in lab room, Lec not in lec room)
+        if not g.is_fixed:
+            r_info = room_map.get(g.room_id, {})
+            caps = (r_info.get('capabilities', '') if isinstance(r_info, dict) else getattr(r_info, 'capabilities', '')) or ''
+            if g.gene_type == 'Lab' and 'Computer Lab' not in caps and g.room_id not in online_ids:
+                SC1_DETAILS['SC-I-14 (Lab not in Lab room)'].append(gl)
+            elif g.gene_type == 'Lec' and 'Computer Lab' in caps:
+                SC1_DETAILS['SC-I-10 (Lec in Lab fallback)'].append(gl)
+
+        # Bitmask overlap tracking
+        _mask = g.bitmask
+        _d    = g.day_idx
+
+        # Room Overlap (HC-13)
+        if g.room_id not in online_ids and g.room_id not in multi_room:
+            rkey = (g.room_id, _d)
+            if (room_bits[rkey] & _mask) != 0:
+                r_info = room_map.get(g.room_id, {})
+                rn = (r_info.get('room_name', '?') if isinstance(r_info, dict) else getattr(r_info, 'room_name', '?'))
+                day = scheduler.days[_d] if 0 <= _d < len(scheduler.days) else '?'
+                for ps, pe, pi in room_use[rkey]:
+                    if ps < g.end_idx and pe > g.start_idx and not genes[pi].is_fixed:
+                        HC_DETAILS['HC-13 (Room Overlap)'].append(
+                            f"Room {rn} on {day}:\n"
+                            f"       {gene_label(genes[pi])}\n"
+                            f"     ↔ {gl}"
+                        )
+            room_bits[rkey] |= _mask
+
+        # Faculty Overlap (HC-10)
+        if g.faculty_id and g.faculty_id not in multi_fac:
+            fkey = (g.faculty_id, _d)
+            if (fac_bits[fkey] & _mask) != 0:
+                fac_info = faculty_map.get(g.faculty_id, {})
+                fn = (fac_info.get('full_name', '?') if isinstance(fac_info, dict) else getattr(fac_info, 'full_name', '?'))
+                day = scheduler.days[_d] if 0 <= _d < len(scheduler.days) else '?'
+                for ps, pe, pi in fac_use[fkey]:
+                    if ps < g.end_idx and pe > g.start_idx and not genes[pi].is_fixed:
+                        HC_DETAILS['HC-10 (Faculty Overlap)'].append(
+                            f"{fn} on {day}:\n"
+                            f"       {gene_label(genes[pi])}\n"
+                            f"     ↔ {gl}"
+                        )
+            fac_bits[fkey] |= _mask
+
+        # Section Overlap (HC-09)
+        skey = (g.section_id, _d)
+        if (sec_bits[skey] & _mask) != 0:
+            sec_info = section_map.get(g.section_id, {})
+            sn = (sec_info.get('section_name', '?') if isinstance(sec_info, dict) else getattr(sec_info, 'section_name', '?'))
+            day = scheduler.days[_d] if 0 <= _d < len(scheduler.days) else '?'
+            for ps, pe, pi in sec_use[skey]:
+                if ps < g.end_idx and pe > g.start_idx and not genes[pi].is_fixed:
+                    HC_DETAILS['HC-09 (Section Overlap)'].append(
+                        f"{sn} on {day}:\n"
+                        f"       {gene_label(genes[pi])}\n"
+                        f"     ↔ {gl}"
+                    )
+        sec_bits[skey] |= _mask
+
+        room_use[(g.room_id, _d)].append((g.start_idx, g.end_idx, i))
+        if g.faculty_id:
+            fac_use[(g.faculty_id, _d)].append((g.start_idx, g.end_idx, i))
+        sec_use[(g.section_id, _d)].append((g.start_idx, g.end_idx, i))
+
+        if g.gene_type in ('Lec', 'Lab'):
+            key = (g.section_id, g.course_id)
+            if key not in sec_course_genes:
+                sec_course_genes[key] = {}
+            sec_course_genes[key][g.gene_type] = (g, i)
+
+    # HC-12: Max Consecutive Student Load (> 12 slots = 6h, same as GA)
+    for (sec_id, day_idx), slots in sec_use.items():
+        sorted_slots = sorted(slots, key=lambda x: x[0])
+        streak = 0; last_end = -1
+        for start, end, idx in sorted_slots:
+            dur = end - start
+            if last_end < 0:
+                streak = dur
+            elif start <= last_end:
+                streak += dur
+            else:
+                streak = dur
+            last_end = max(last_end, end)
+            if streak > 12:
+                sec_info = section_map.get(sec_id, {})
+                sn  = (sec_info.get('section_name', f'SID={sec_id}') if isinstance(sec_info, dict)
+                        else getattr(sec_info, 'section_name', f'SID={sec_id}'))
+                day = scheduler.days[day_idx] if 0 <= day_idx < len(scheduler.days) else '?'
+                HC_DETAILS['HC-12 (Max 6h Consecutive Student Load)'].append(
+                    f"Section {sn} on {day}: {streak/2:.1f}h consecutive"
                 )
-            elif sc.session_type == 'Lec' and 'Lecture' not in (r.capabilities or '') and sc.room_id not in online_room_ids:
-                if 'Computer Lab' in (r.capabilities or ''):
-                    sc_scorecard['SC-I-10'] += 1
-                    violations_details['SC-I-10 (Lecture in Lab Fallback)'].append(
-                        f"Lecture class {c_code} ({sec_name}) is scheduled in Lab room {room_name} as a fallback."
-                    )
-                else:
-                    sc_scorecard['SC-I-14'] += 1
-                    violations_details['SC-I-14 (Room Suitability Violation - Capability Match)'].append(
-                        f"Lecture class {c_code} ({sec_name}) is scheduled in Room {room_name} which lacks Lecture capabilities."
-                    )
+                break
 
-        # 4. Curriculum Duration Checks (HC-05 / HC-06)
-        expected_slots = None
-        if c:
-            # Query split assignments from DB inside the active context
-            from app import FacultyAssignment
-            fa = FacultyAssignment.query.filter_by(course_id=sc.course_id, section_id=sc.section_id).first()
-            if fa:
-                if sc.session_type == 'Lab':
-                    splits = []
-                    if fa.split_day_1 == sc.day and fa.split_hours_1:
-                        splits.append(fa.split_hours_1)
-                    if fa.split_day_2 == sc.day and fa.split_hours_2:
-                        splits.append(fa.split_hours_2)
-                    if splits:
-                        expected_slots = int(max(splits) * 2)
-                    else:
-                        expected_slots = int((c.synchronous_lab_hours or c.lab_units or 0) * 2)
-                elif sc.session_type == 'Lec':
-                    splits = []
-                    if fa.split_lec_day_1 == sc.day and fa.split_lec_hours_1:
-                        splits.append(fa.split_lec_hours_1)
-                    if fa.split_lec_day_2 == sc.day and fa.split_lec_hours_2:
-                        splits.append(fa.split_lec_hours_2)
-                    if splits:
-                        expected_slots = int(max(splits) * 2)
-                    else:
-                        expected_slots = int((c.synchronous_lec_hours or c.lec_units or 0) * 2)
+    # HC-16: Max Consecutive Faculty Load (> 12 slots = 6h, same as GA)
+    for (fac_id, day_idx), slots in fac_use.items():
+        if fac_id in multi_fac:
+            continue
+        sorted_slots = sorted(slots, key=lambda x: x[0])
+        streak = 0; last_end = -1
+        for start, end, idx in sorted_slots:
+            dur = end - start
+            if last_end < 0:
+                streak = dur
+            elif start <= last_end:
+                streak += dur
             else:
-                if sc.session_type == 'Lab':
-                    expected_slots = int((c.synchronous_lab_hours or c.lab_units or 0) * 2)
-                elif sc.session_type == 'Lec':
-                    expected_slots = int((c.synchronous_lec_hours or c.lec_units or 0) * 2)
+                streak = dur
+            last_end = max(last_end, end)
+            if streak > 12:
+                fac_info = faculty_map.get(fac_id, {})
+                fn  = (fac_info.get('full_name', f'FID={fac_id}') if isinstance(fac_info, dict)
+                       else getattr(fac_info, 'full_name', f'FID={fac_id}'))
+                day = scheduler.days[day_idx] if 0 <= day_idx < len(scheduler.days) else '?'
+                HC_DETAILS['HC-16 (Max 6h Consecutive Faculty Load)'].append(
+                    f"{fn} on {day}: {streak/2:.1f}h consecutive"
+                )
+                break
 
-        if expected_slots is not None and expected_slots > 0:
-            if duration_slots != expected_slots:
-                if sc.session_type == 'Lec':
-                    hc_scorecard['HC-05'] += 1
-                    violations_details['HC-05 (Strict Lec Duration Mismatch)'].append(
-                        f"{c_code} ({sec_name}) expected {expected_slots} slots ({expected_slots/2.0}h), but scheduled for {duration_slots} slots ({duration_hours}h) on {day}."
-                    )
-                elif sc.session_type == 'Lab':
-                    hc_scorecard['HC-06'] += 1
-                    violations_details['HC-06 (Strict Lab Duration Mismatch)'].append(
-                        f"{c_code} ({sec_name}) expected {expected_slots} slots ({expected_slots/2.0}h), but scheduled for {duration_slots} slots ({duration_hours}h) on {day}."
-                    )
+    # SC-I-08/09/11: Lec-Lab sequence & proximity
+    for type_genes in sec_course_genes.values():
+        lec_entry = type_genes.get('Lec')
+        lab_entry = type_genes.get('Lab')
+        if not (lec_entry and lab_entry):
+            continue
+        lg, li = lec_entry
+        bg, bi = lab_entry
 
-        # 5. Faculty Day Split Checks (HC-23)
-        if c:
-            from app import FacultyAssignment
-            fa = FacultyAssignment.query.filter_by(course_id=sc.course_id, section_id=sc.section_id).first()
-            if fa:
-                if sc.session_type == 'Lab':
-                    split_days = []
-                    if fa.split_day_1: split_days.append(fa.split_day_1)
-                    if fa.split_day_2: split_days.append(fa.split_day_2)
-                    if split_days and sc.day not in split_days:
-                        hc_scorecard['HC-23'] += 1
-                        violations_details['HC-23 (Faculty Day Split Violation)'].append(
-                            f"Lab for {c_code} ({sec_name}) scheduled on {sc.day}, but curriculum split requires it on: {', '.join(split_days)}."
-                        )
-                elif sc.session_type == 'Lec':
-                    split_days = []
-                    if fa.split_lec_day_1: split_days.append(fa.split_lec_day_1)
-                    if fa.split_lec_day_2: split_days.append(fa.split_lec_day_2)
-                    if split_days and sc.day not in split_days:
-                        hc_scorecard['HC-23'] += 1
-                        violations_details['HC-23 (Faculty Day Split Violation)'].append(
-                            f"Lec for {c_code} ({sec_name}) scheduled on {sc.day}, but curriculum split requires it on: {', '.join(split_days)}."
-                        )
+        lec_day = scheduler.days[lg.day_idx] if 0 <= lg.day_idx < len(scheduler.days) else '?'
+        lab_day = scheduler.days[bg.day_idx] if 0 <= bg.day_idx < len(scheduler.days) else '?'
 
-        # 4. Faculty Availability (HC-15)
-        if fac:
-            fac_weekly_hours[fac.id] += duration_hours
-            if fac.available_days:
-                f_avail = [d.strip() for d in fac.available_days.split(',') if d.strip()]
-                if day not in f_avail:
-                    hc_scorecard['HC-15'] += 1
-                    violations_details['HC-15 (Faculty Availability Violation)'].append(
-                        f"Guro {fac_name} is not available on {day}, but {c_code} ({sec_name}) is scheduled then."
-                    )
+        c_info = course_map.get(lg.course_id, {})
+        ccode  = (c_info.get('course_code', '?') if isinstance(c_info, dict) else getattr(c_info, 'course_code', '?'))
+        s_info = section_map.get(lg.section_id, {})
+        sname  = (s_info.get('section_name', '?') if isinstance(s_info, dict) else getattr(s_info, 'section_name', '?'))
 
-        # Store in occupation lists for overlap scanning
-        if r and r.id not in online_room_ids:
-            room_use[(r.id, day)].append((start_slot, end_slot, sc, c_code, sec_name, room_name))
-        if fac:
-            fac_use[(fac.id, day)].append((start_slot, end_slot, sc, c_code, sec_name, fac_name))
-        if sec:
-            sec_use[(sec.id, day)].append((start_slot, end_slot, sc, c_code, sec_name))
-
-    # Room Overlaps (HC-13)
-    for (room_id, day), usages in room_use.items():
-        usages.sort()
-        for i in range(len(usages)):
-            for j in range(i + 1, len(usages)):
-                s1, e1, sc1, cc1, sec1, rname = usages[i]
-                s2, e2, sc2, cc2, sec2, _ = usages[j]
-                if max(s1, s2) < min(e1, e2):
-                    hc_scorecard['HC-13'] += 1
-                    violations_details['HC-13 (Room Overlap)'].append(
-                        f"Room {Colors.RED}{rname}{Colors.RESET} has overlapping classes on {day}:\n"
-                        f"     * {sc1.start_time}-{sc1.end_time}: {cc1} ({sec1})\n"
-                        f"     * {sc2.start_time}-{sc2.end_time}: {cc2} ({sec2})"
-                    )
-
-    # Faculty Overlaps (HC-10)
-    for (fac_id, day), usages in fac_use.items():
-        usages.sort()
-        for i in range(len(usages)):
-            for j in range(i + 1, len(usages)):
-                s1, e1, sc1, cc1, sec1, fname = usages[i]
-                s2, e2, sc2, cc2, sec2, _ = usages[j]
-                if max(s1, s2) < min(e1, e2):
-                    hc_scorecard['HC-10'] += 1
-                    violations_details['HC-10 (Faculty Overlap)'].append(
-                        f"Guro {Colors.YELLOW}{fname}{Colors.RESET} is double-booked on {day}:\n"
-                        f"     * {sc1.start_time}-{sc1.end_time}: {cc1} ({sec1}) in {rooms.get(sc1.room_id).room_name if rooms.get(sc1.room_id) else 'None'}\n"
-                        f"     * {sc2.start_time}-{sc2.end_time}: {cc2} ({sec2}) in {rooms.get(sc2.room_id).room_name if rooms.get(sc2.room_id) else 'None'}"
-                    )
-
-    # Section Overlaps (HC-09)
-    for (sec_id, day), usages in sec_use.items():
-        usages.sort()
-        for i in range(len(usages)):
-            for j in range(i + 1, len(usages)):
-                s1, e1, sc1, cc1, sec1 = usages[i]
-                s2, e2, sc2, cc2, sec2 = usages[j]
-                if max(s1, s2) < min(e1, e2):
-                    hc_scorecard['HC-09'] += 1
-                    violations_details['HC-09 (Section Overlap)'].append(
-                        f"Section {Colors.CYAN}{sec1}{Colors.RESET} has clashing classes on {day}:\n"
-                        f"     * {sc1.start_time}-{sc1.end_time}: {cc1} in {rooms.get(sc1.room_id).room_name if rooms.get(sc1.room_id) else 'None'}\n"
-                        f"     * {sc2.start_time}-{sc2.end_time}: {cc2} in {rooms.get(sc2.room_id).room_name if rooms.get(sc2.room_id) else 'None'}"
-                    )
-
-    # Informational Faculty Workloads
-    for f_id, hrs in fac_weekly_hours.items():
-        fac_obj = faculty.get(f_id)
-        if fac_obj and fac_obj.max_weekly_hours and hrs > fac_obj.max_weekly_hours:
-            sc_scorecard['SC-I-15'] += 1
-            violations_details['SC-I-15 (Faculty Workload Overload)'].append(
-                f"Guro {fac_obj.full_name} has loaded {hrs} contact hours, exceeding their configured limit of {fac_obj.max_weekly_hours} hours."
+        # HC-11 / SC-I-11: Lab before Lec (GA counts this as hard_conflicts += 1)
+        if (bg.day_idx < lg.day_idx or
+                (bg.day_idx == lg.day_idx and bg.start_idx < lg.start_idx)):
+            HC_DETAILS['SC-I-11/LEC_LAB_SEQUENCE (Lab placed before Lec — counted as HC by GA)'].append(
+                f"{ccode} ({sname}): Lec on {lec_day} {scheduler.slot_to_time(lg.start_idx)}"
+                f" | Lab on {lab_day} {scheduler.slot_to_time(bg.start_idx)}"
             )
 
-    # Virtual Room Usage details
-    virtual_schedules = [s for s in schedules if s.room_id in online_room_ids and s.session_type != 'Async']
-    if virtual_schedules:
-        sc_scorecard['SC-I-01'] = len(virtual_schedules)
-        for s in virtual_schedules:
-            cc = courses.get(s.course_id).course_code if courses.get(s.course_id) else f"Course ID {s.course_id}"
-            sn = sections.get(s.section_id).section_name if sections.get(s.section_id) else f"Section ID {s.section_id}"
-            violations_details['SC-I-01 (Virtual Room Usage)'].append(
-                f"{cc} ({sn}) is pushed to the virtual Online Room due to physical room saturation."
-            )
-            
-    # 6. Consecutive Load Checks (HC-12 Student / HC-16 Faculty)
-    for (sec_id, dname), usages in sec_use.items():
-        slot_occupied = [False] * total_slots
-        for s, e, sc, cc, sn in usages:
-            # Set slots as occupied
-            for slot in range(max(0, s), min(total_slots, e)):
-                slot_occupied[slot] = True
-        
-        # Find max consecutive slots
-        max_consec = 0
-        current_consec = 0
-        for occ in slot_occupied:
-            if occ:
-                current_consec += 1
-                max_consec = max(max_consec, current_consec)
-            else:
-                current_consec = 0
-                
-        if max_consec > 8: # More than 4 hours (8 slots)
-            hc_scorecard['HC-12'] += 1
-            sec_name = sections.get(sec_id).section_name if sections.get(sec_id) else f"Section ID {sec_id}"
-            violations_details['HC-12 (Max Consecutive Student Load Violation)'].append(
-                f"Section {Colors.CYAN}{sec_name}{Colors.RESET} has {max_consec/2.0} consecutive hours of classes on {dname}, exceeding the 4.0 hours limit."
+        # SC-I-08: Lab day before Lec day (soft only)
+        elif bg.day_idx < lg.day_idx:
+            SC1_DETAILS['SC-I-08 (Lab day before Lec day)'].append(
+                f"{ccode} ({sname}): Lec={lec_day}, Lab={lab_day}"
             )
 
-    for (fac_id, dname), usages in fac_use.items():
-        slot_occupied = [False] * total_slots
-        for s, e, sc, cc, sn, fname in usages:
-            for slot in range(max(0, s), min(total_slots, e)):
-                slot_occupied[slot] = True
-                
-        # Find max consecutive slots
-        max_consec = 0
-        current_consec = 0
-        for occ in slot_occupied:
-            if occ:
-                current_consec += 1
-                max_consec = max(max_consec, current_consec)
-            else:
-                current_consec = 0
-                
-        if max_consec > 8: # More than 4 hours (8 slots)
-            hc_scorecard['HC-16'] += 1
-            fac_name = faculty.get(fac_id).full_name if faculty.get(fac_id) else f"Faculty ID {fac_id}"
-            violations_details['HC-16 (Max Consecutive Faculty Load Violation)'].append(
-                f"Guro {Colors.YELLOW}{fac_name}{Colors.RESET} has {max_consec/2.0} consecutive hours of classes on {dname}, exceeding the 4.0 hours limit."
+        # SC-I-09: Lec-Lab more than 2 days apart
+        if abs(lg.day_idx - bg.day_idx) > 2:
+            SC1_DETAILS['SC-I-09 (Lec-Lab more than 2 days apart)'].append(
+                f"{ccode} ({sname}): Lec={lec_day}, Lab={lab_day}"
+                f" (gap={abs(lg.day_idx - bg.day_idx)} days)"
             )
 
-    # 7. Lec/Lab Sequence Check (SC-I-11)
-    sec_course_schedules = defaultdict(list)
-    for sc in schedules:
-        sec_course_schedules[(sc.section_id, sc.course_id)].append(sc)
-        
-    day_indices = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6}
-    
-    for (sec_id, course_id), sc_list in sec_course_schedules.items():
-        lec_classes = [sc for sc in sc_list if sc.session_type == 'Lec']
-        lab_classes = [sc for sc in sc_list if sc.session_type == 'Lab']
-        if lec_classes and lab_classes:
-            for lec_sc in lec_classes:
-                for lab_sc in lab_classes:
-                    lec_day_idx = day_indices.get(lec_sc.day, 9)
-                    lab_day_idx = day_indices.get(lab_sc.day, 9)
-                    if lec_day_idx >= lab_day_idx:
-                        sc_scorecard['SC-I-11'] += 1
-                        cc = courses.get(course_id).course_code if courses.get(course_id) else f"Course ID {course_id}"
-                        sn = sections.get(sec_id).section_name if sections.get(sec_id) else f"Section ID {sec_id}"
-                        violations_details['SC-I-11 (Lec/Lab Sequence Violation)'].append(
-                            f"For {Colors.CYAN}{cc} ({sn}){Colors.RESET}, Lecture is on {lec_sc.day} but Laboratory is on {lab_sc.day} (Lecture must precede Lab)."
-                        )
+    # ── Print HC Details ──────────────────────────────────────────────────────
+    total_hc_items = sum(len(v) for v in HC_DETAILS.values())
+    print(f"\n{Colors.RED}{Colors.BOLD}{'─'*72}")
+    print(f"🚨  HARD CONFLICTS: {chromosome.hard_conflicts}  (GA-exact)")
+    print(f"{'─'*72}{Colors.RESET}")
+    print(f"   Note: GA increments HC once per overlapping PAIR + once per")
+    print(f"   duration/alignment/sequence violation. Items below = raw events.\n")
 
-    # --- REPORT DISPLAY ──────────────────────────────────────────────────
-    print(f"\n{Colors.GREEN}{Colors.BOLD}========================================================================{Colors.RESET}")
-    print(f"📊 {Colors.BOLD}DIAGNOSTIC SCORECARD: {mode_title} ({selected_semester.upper()}){Colors.RESET}")
-    print(f"{Colors.GREEN}{Colors.BOLD}========================================================================{Colors.RESET}")
-
-    total_hc = sum(hc_scorecard.values())
-    total_sc = sum(sc_scorecard.values())
-
-    print(f"\n🚨 {Colors.RED}{Colors.BOLD}HARD CONFLICTS DETECTED: {total_hc}{Colors.RESET}")
-    if total_hc > 0:
-        for hc_code, count in sorted(hc_scorecard.items()):
-            print(f"   * [{Colors.RED}{hc_code}{Colors.RESET}] {count} violations")
+    if not HC_DETAILS:
+        print(f"   {Colors.GREEN}✅ No hard conflicts detected!{Colors.RESET}")
     else:
-        print(f"   * {Colors.GREEN}No Hard Conflicts! System is 100% mathematically feasible.{Colors.RESET}")
+        for code, msgs in sorted(HC_DETAILS.items()):
+            print(f"\n{Colors.RED}  📌 {code} ({len(msgs)} events){Colors.RESET}")
+            for m in msgs[:10]:
+                for line in m.split('\n'):
+                    print(f"     {line}")
+            if len(msgs) > 10:
+                print(f"     ... and {len(msgs) - 10} more")
 
-    print(f"\n💡 {Colors.YELLOW}{Colors.BOLD}SOFT CONSTRAINTS DETECTED: {total_sc}{Colors.RESET}")
-    if total_sc > 0:
-        for sc_code, count in sorted(sc_scorecard.items()):
-            print(f"   * [{Colors.YELLOW}{sc_code}{Colors.RESET}] {count} violations / fallbacks")
+    # ── Print Soft Details ────────────────────────────────────────────────────
+    total_sc_items = sum(len(v) for v in SC1_DETAILS.values()) + sum(len(v) for v in SC2_DETAILS.values())
+    print(f"\n{Colors.YELLOW}{Colors.BOLD}{'─'*72}")
+    print(f"💡  SOFT CONSTRAINTS: SC-I={chromosome.sc1_violations}  SC-II={chromosome.sc2_violations}")
+    print(f"{'─'*72}{Colors.RESET}")
+
+    if not SC1_DETAILS and not SC2_DETAILS:
+        print(f"   {Colors.GREEN}✅ No soft violations!{Colors.RESET}")
     else:
-        print(f"   * {Colors.GREEN}No soft constraint violations!{Colors.RESET}")
+        for code, msgs in sorted(SC1_DETAILS.items()):
+            print(f"\n{Colors.YELLOW}  📌 {code} ({len(msgs)} events){Colors.RESET}")
+            for m in msgs[:8]:
+                print(f"     {m}")
+            if len(msgs) > 8:
+                print(f"     ... and {len(msgs) - 8} more")
+        for code, msgs in sorted(SC2_DETAILS.items()):
+            print(f"\n{Colors.CYAN}  📌 {code} ({len(msgs)} events){Colors.RESET}")
+            for m in msgs[:8]:
+                print(f"     {m}")
 
-    print(f"\n{Colors.GREEN}{Colors.BOLD}========================================================================{Colors.RESET}")
-    print(f"🔍 {Colors.BOLD}DETAILED VIOLATION REPORT (ROOT CAUSE ANALYSIS){Colors.RESET}")
-    print(f"{Colors.GREEN}{Colors.BOLD}========================================================================{Colors.RESET}")
+    # ── Faculty Load Summary ───────────────────────────────────────────────────
+    print(f"\n{Colors.BLUE}{Colors.BOLD}{'─'*72}")
+    print(f"📋  FACULTY DAILY LOAD SUMMARY (flagged days only)")
+    print(f"{'─'*72}{Colors.RESET}")
 
-    if not violations_details:
-        print(f"\n{Colors.GREEN}🎉 Excellent! No anomalies detected. The current schedule layout is completely clean!{Colors.RESET}")
+    fac_day_slots = defaultdict(int)
+    for g in genes:
+        if g.faculty_id and g.faculty_id not in multi_fac:
+            fac_day_slots[(g.faculty_id, g.day_idx)] += g.duration_slots
+
+    overloaded = {}
+    for (fid, didx), total in sorted(fac_day_slots.items(), key=lambda x: -x[1]):
+        if total > 12:  # > 6 hours
+            fac_info = faculty_map.get(fid, {})
+            fn  = (fac_info.get('full_name', f'FID={fid}') if isinstance(fac_info, dict)
+                   else getattr(fac_info, 'full_name', f'FID={fid}'))
+            day = scheduler.days[didx] if 0 <= didx < len(scheduler.days) else '?'
+            overloaded.setdefault(fn, []).append(f"{day}: {total/2:.1f}h")
+
+    if overloaded:
+        for fn, days in sorted(overloaded.items()):
+            print(f"   {Colors.YELLOW}⚠️  {fn}{Colors.RESET} → {', '.join(days)}")
     else:
-        for category, msgs in sorted(violations_details.items()):
-            print(f"\n📌 {Colors.BOLD}{category}{Colors.RESET} ({len(msgs)} occurrences):")
-            for m in msgs[:15]:
-                print(f"   - {m}")
-            if len(msgs) > 15:
-                print(f"   - ...and {len(msgs) - 15} more occurrences.")
+        print(f"   {Colors.GREEN}All faculty within 6h/day limit.{Colors.RESET}")
 
-    print(f"\n{Colors.GREEN}{Colors.BOLD}========================================================================{Colors.RESET}")
+    # ── Online Room Overflow Summary ───────────────────────────────────────────
+    online_genes = [g for g in genes if g.room_id in online_ids and g.gene_type != 'Async']
+    if online_genes:
+        print(f"\n{Colors.CYAN}{Colors.BOLD}{'─'*72}")
+        print(f"🌐  ONLINE ROOM OVERFLOW ({len(online_genes)} classes pushed to virtual)")
+        print(f"{'─'*72}{Colors.RESET}")
+        for g in online_genes[:20]:
+            print(f"   {gene_label(g)}")
+        if len(online_genes) > 20:
+            print(f"   ... and {len(online_genes) - 20} more")
 
-def main():
-    parser = argparse.ArgumentParser(description="Advanced CVSU DCS Scheduler Debugger")
-    parser.add_argument('--simulate', '-s', action='store_true', help="Force-simulate initial chromosome GA placement diagnostics even if DB has saved schedules")
-    parser.add_argument('--semester', default='1st Semester', help="The target semester to analyze")
-    args = parser.parse_args()
+    print(f"\n{Colors.GREEN}{Colors.BOLD}{'='*72}{Colors.RESET}")
+    print(f"✅  Scan complete — HC={chromosome.hard_conflicts} | SC1={chromosome.sc1_violations} | SC2={chromosome.sc2_violations}")
+    print(f"{Colors.GREEN}{'='*72}{Colors.RESET}\n")
 
-    main_run(args.simulate, args.semester)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# MAIN
+# ─────────────────────────────────────────────────────────────────────────────
 def main_run(force_simulate, selected_semester):
     print_banner()
 
     with app.app_context():
-        # Get System Settings
         settings = SystemSettings.query.first()
-        start_hour = settings.start_hour if settings else 7
-        end_hour = settings.end_hour if settings else 20
-        allowed_days_str = settings.allowed_days if (settings and settings.allowed_days) else 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday'
-        allowed_days = [d.strip() for d in allowed_days_str.split(',') if d.strip()]
-        day_map = {d: i for i, d in enumerate(allowed_days)}
+        start_hour   = settings.start_hour   if settings else 7
+        end_hour     = settings.end_hour     if settings else 20
+        allowed_days = (
+            [d.strip() for d in settings.allowed_days.split(',') if d.strip()]
+            if (settings and settings.allowed_days)
+            else ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        )
 
-        # Check if there's a live running schedule file from the background thread
-        if os.path.exists("live_conflicts.json") and not force_simulate:
-            print(f"{Colors.GREEN}🔥 Active generation detected! Loading LIVE RUNNING CHROMOSOME state...{Colors.RESET}")
+        selected_depts = None
+        sig = "live_conflicts.json"
+        if os.path.exists(sig) and not force_simulate:
             try:
-                import json
-                with open("live_conflicts.json") as f:
+                with open(sig) as f:
                     data = json.load(f)
-                
                 selected_semester = data.get('semester', selected_semester)
-                schedules_raw = data.get('schedules', [])
-                
-                schedules = [SafeObject(**item) for item in schedules_raw]
-                
-                courses = {c.id: c for c in Course.query.all()}
-                sections = {s.id: s for s in Section.query.all()}
-                faculty = {f.id: f for f in Faculty.query.all()}
-                rooms = {r.id: r for r in Room.query.all()}
-                online_room_ids = {r.id for r in Room.query.filter(
-                    (Room.room_name.ilike('%online%')) | (Room.room_name.ilike('%virtual%'))
-                ).all()}
-                
-                build_diagnostic_report(schedules, courses, sections, faculty, rooms, online_room_ids, start_hour, end_hour, allowed_days, selected_semester, "LIVE RUNNING GENERATION")
-                return
-            except Exception as e:
-                print(f"{Colors.RED}⚠️ Failed to load live_conflicts.json, falling back to database: {e}{Colors.RESET}")
+                selected_depts = data.get('selected_depts', None)
+                if selected_depts:
+                    print(f"{Colors.GREEN}📌 Live run restricted to departments: {', '.join(selected_depts)}{Colors.RESET}")
+            except Exception:
+                pass
 
-        # Check existing schedules
-        existing_count = ScheduledClass.query.filter_by(semester=selected_semester, is_draft=False).count()
+        print(f"{Colors.BLUE}🔧 Building GeneticScheduler (same config as live run)...{Colors.RESET}")
+        scheduler = build_scheduler(selected_semester, start_hour, end_hour, allowed_days, selected_depts)
+        
+        # Disable stop checks in debugger context to prevent AlgorithmStopException
+        scheduler._check_stop = lambda *args, **kwargs: False
 
-        # Decide whether to run Database mode or Simulation mode
-        if existing_count > 0 and not force_simulate:
-            print(f"{Colors.GREEN}✅ Saved master schedule records found. Running LIVE DB DIAGNOSTICS...{Colors.RESET}")
-            # Fetch mappings
-            courses = {c.id: c for c in Course.query.all()}
-            sections = {s.id: s for s in Section.query.all()}
-            faculty = {f.id: f for f in Faculty.query.all()}
-            rooms = {r.id: r for r in Room.query.all()}
-            online_room_ids = {r.id for r in Room.query.filter(
-                (Room.room_name.ilike('%online%')) | (Room.room_name.ilike('%virtual%'))
-            ).all()}
+        print(f"   Courses: {len(scheduler.courses)} | Sections: {len(scheduler.sections)}"
+              f" | Faculty: {len(scheduler.faculty)} | Rooms: {len(scheduler.rooms)}")
 
-            schedules = ScheduledClass.query.filter_by(semester=selected_semester, is_draft=False).all()
-            build_diagnostic_report(schedules, courses, sections, faculty, rooms, online_room_ids, start_hour, end_hour, allowed_days, selected_semester, "LIVE DATABASE")
-        else:
-            print(f"{Colors.YELLOW}⚠️ No master schedule records found or --simulate requested. Simulating GA's Initial Population...{Colors.RESET}")
-            
-            # Gather raw data
-            raw_courses = Course.query.filter_by(is_archived=False, semester_offered=selected_semester).all()
-            courses_data = [{
-                'id': c.id, 'course_code': c.course_code, 'department': c.department or '',
-                'lec_units': c.lec_units or 0, 'lab_units': c.lab_units or 0,
-                'synchronous_lec_hours': c.synchronous_lec_hours or 0,
-                'synchronous_lab_hours': c.synchronous_lab_hours or 0,
-                'asynchronous_lec_hours': c.asynchronous_lec_hours or 0,
-                'asynchronous_lab_hours': c.asynchronous_lab_hours or 0,
-            } for c in raw_courses]
-
-            raw_rooms = Room.query.filter_by(is_archived=False).all()
-            rooms_data = [{'id': r.id, 'room_name': r.room_name, 'capabilities': r.capabilities, 'status': r.status, 'capacity': r.capacity, 'special_course_ids': r.special_course_ids or '', 'room_departments': r.room_departments or ''} for r in raw_rooms]
-
-            # Collect active faculty assignment IDs
-            _fa_faculty_ids = [r[0] for r in db.session.query(FacultyAssignment.faculty_id).join(Course, FacultyAssignment.course_id == Course.id).filter(Course.semester_offered == selected_semester).distinct().all() if r[0]]
-            raw_faculty = Faculty.query.filter(
-                Faculty.is_archived == False,
-                Faculty.max_weekly_hours > 0,
-                or_(Faculty.full_name == 'T.B.A.', Faculty.id.in_(_fa_faculty_ids))
-            ).all()
-            faculty_data = [{'id': f.id, 'full_name': f.full_name, 'available_days': f.available_days or '', 'max_weekly_hours': f.max_weekly_hours if f.max_weekly_hours is not None else 35, 'department': f.department or ''} for f in raw_faculty]
-
-            raw_sections = Section.query.filter_by(is_archived=False).all()
-            sections_data = [{'id': s.id, 'course_ids': [c.id for c in s.courses], 'number_of_students': s.number_of_students} for s in raw_sections]
-
-            valid_course_ids = {c['id'] for c in courses_data}
-            raw_pre = PreAssignment.query.filter_by(is_archived=False).all()
-            pre_assignments = []
-            for pa in raw_pre:
-                if pa.course_id in valid_course_ids:
-                    pre_assignments.append(SafeObject(
-                        course_id=pa.course_id, section_id=pa.section_id, 
-                        faculty_id=pa.faculty_id, room_id=pa.room_id, 
-                        day=pa.day, start_time=pa.start_time, end_time=pa.end_time
-                    ))
-
-            constraints_config = {c.logic_code: {'type': c.constraint_type, 'weight': c.weight} for c in Constraint.query.all()}
-
-            raw_splits = FacultyAssignment.query.join(Course, FacultyAssignment.course_id == Course.id).filter(Course.semester_offered == selected_semester).all()
-            split_assignments = []
-            for fa in raw_splits:
-                if fa.course_id not in valid_course_ids:
-                    continue
-                lab_splits = []
-                if fa.split_day_1 and fa.split_hours_1:
-                    lab_splits.append({'day': fa.split_day_1, 'hours': fa.split_hours_1})
-                if fa.split_day_2 and fa.split_hours_2:
-                    lab_splits.append({'day': fa.split_day_2, 'hours': fa.split_hours_2})
-                if lab_splits:
-                    split_assignments.append({
-                        'faculty_id': fa.faculty_id, 'course_id': fa.course_id, 'section_id': fa.section_id, 'gtype': 'Lab', 'splits': lab_splits
-                    })
-                lec_splits = []
-                if fa.split_lec_day_1 and fa.split_lec_hours_1:
-                    lec_splits.append({'day': fa.split_lec_day_1, 'hours': fa.split_lec_hours_1})
-                if fa.split_lec_day_2 and fa.split_lec_hours_2:
-                    lec_splits.append({'day': fa.split_lec_day_2, 'hours': fa.split_lec_hours_2})
-                if lec_splits:
-                    split_assignments.append({
-                        'faculty_id': fa.faculty_id, 'course_id': fa.course_id, 'section_id': fa.section_id, 'gtype': 'Lec', 'splits': lec_splits
-                    })
-
-            fa_map = { (fa.course_id, fa.section_id): fa.faculty_id for fa in raw_splits if fa.course_id in valid_course_ids }
-
-            print(f"📊 {Colors.BLUE}Initializing GeneticScheduler Engine...{Colors.RESET}")
-            scheduler = GeneticScheduler(
-                courses_data, sections_data, faculty_data, rooms_data, pre_assignments, constraints_config,
-                start_time=start_hour, end_time=end_hour, allowed_days=allowed_days,
-                split_assignments=split_assignments, fa_map=fa_map
-            )
-
-            # Generate initial chromosome using FFD & Compaction logic exactly as run_algorithm does!
-            print(f"🧬 {Colors.BLUE}Generating simulated initial chromosome layout...{Colors.RESET}")
+        # ── Mode 1: Live running chromosome ────────────────────────────────
+        if os.path.exists(sig) and not force_simulate:
+            print(f"\n{Colors.GREEN}🔥 live_conflicts.json detected — loading LIVE chromosome state...{Colors.RESET}")
             try:
-                chrom = scheduler.create_genome()
-            except Exception as e:
-                print(f"{Colors.RED}Simulation Failed: {e}{Colors.RESET}")
-                import traceback
-                traceback.print_exc()
+                with open(sig) as f:
+                    data = json.load(f)
+                selected_semester = data.get('semester', selected_semester)
+                records = data.get('schedules', [])
+                chrom = records_to_chromosome(scheduler, records)
+                scheduler.calculate_fitness(chrom, hard_only=False)
+                print_accurate_report(scheduler, chrom, "LIVE RUNNING GENERATION", selected_semester)
                 return
+            except Exception as e:
+                import traceback
+                print(f"{Colors.RED}⚠️  Failed to load live_conflicts.json: {e}{Colors.RESET}")
+                traceback.print_exc()
 
-            # Convert simulated chromosome genes to mock ScheduledClass objects for the report generator
-            schedules = []
-            for g in chrom.genes:
-                day_str = allowed_days[g.day_idx] if 0 <= g.day_idx < len(allowed_days) else "Unknown"
-                start_str = scheduler.slot_to_time(g.start_idx)
-                end_str = scheduler.slot_to_time(g.end_idx)
-                
-                # Create a mock ScheduledClass-like object
-                mock_sc = SafeObject(
-                    course_id=g.course_id,
-                    section_id=g.section_id,
-                    faculty_id=g.faculty_id,
-                    room_id=g.room_id,
-                    day=day_str,
-                    start_time=start_str,
-                    end_time=end_str,
-                    session_type=g.gene_type
-                )
-                schedules.append(mock_sc)
+        # ── Mode 2: Saved master schedule ──────────────────────────────────
+        existing = ScheduledClass.query.filter_by(
+            semester=selected_semester, is_draft=False).count()
 
-            # Dictionaries for quick lookup in reporter
-            courses_map = {c.id: c for c in Course.query.all()}
-            sections_map = {s.id: s for s in Section.query.all()}
-            faculty_map = {f.id: f for f in Faculty.query.all()}
-            rooms_map = {r.id: r for r in Room.query.all()}
-            online_room_ids = scheduler.online_room_ids
+        if existing > 0 and not force_simulate:
+            print(f"\n{Colors.GREEN}✅ Saved master schedule found — running DB diagnostics...{Colors.RESET}")
+            db_classes = ScheduledClass.query.filter_by(
+                semester=selected_semester, is_draft=False).all()
+            records = [{
+                'course_id':    sc.course_id,
+                'section_id':   sc.section_id,
+                'faculty_id':   sc.faculty_id,
+                'room_id':      sc.room_id,
+                'day':          sc.day,
+                'start_time':   sc.start_time,
+                'end_time':     sc.end_time,
+                'session_type': sc.session_type,
+            } for sc in db_classes]
+            chrom = records_to_chromosome(scheduler, records)
+            scheduler.calculate_fitness(chrom, hard_only=False)
+            print_accurate_report(scheduler, chrom, "SAVED DATABASE SCHEDULE", selected_semester)
 
-            build_diagnostic_report(schedules, courses_map, sections_map, faculty_map, rooms_map, online_room_ids, start_hour, end_hour, allowed_days, selected_semester, "INITIAL CHROMOSOME SIMULATION")
+        # ── Mode 3: Simulate fresh genome ──────────────────────────────────
+        else:
+            print(f"\n{Colors.YELLOW}⚠️  No schedule found or --simulate requested. Generating fresh genome...{Colors.RESET}")
+            chrom = scheduler.create_genome()
+            scheduler._precalc_gene_masks(chrom.genes)
+            scheduler.calculate_fitness(chrom, hard_only=False)
+            print_accurate_report(scheduler, chrom, "INITIAL CHROMOSOME SIMULATION", selected_semester)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Accurate CVSU DCS Scheduler Debugger")
+    parser.add_argument('--simulate', '-s', action='store_true',
+                        help="Force simulate initial chromosome even if DB/live data exists")
+    parser.add_argument('--semester', default='1st Semester',
+                        help="Target semester to analyze")
+    args = parser.parse_args()
+    main_run(args.simulate, args.semester)
+
 
 if __name__ == '__main__':
     main()

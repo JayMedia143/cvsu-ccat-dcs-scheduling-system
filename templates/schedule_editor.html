@@ -1835,6 +1835,9 @@
             <button class="btn btn-sm btn-primary" id="saveDraftBtn" style="display:none" onclick="handleGlobalSave()">
                 <i class="bi bi-cloud-check-fill me-1"></i><span class="d-none d-md-inline">Save as Draft</span>
             </button>
+            <button class="btn btn-sm btn-success" id="publishDraftBtn" style="display:none" onclick="publishDraft()">
+                <i class="bi bi-send-fill me-1"></i><span class="d-none d-md-inline">Publish to Master</span>
+            </button>
             <button class="btn btn-sm btn-success" id="attachDraftBtn" style="display:none" onclick="openAttachModal()">
                 <i class="bi bi-paperclip me-1"></i><span class="d-none d-md-inline">Attach</span>
             </button>
@@ -2554,6 +2557,32 @@
     </div>
 </div>
 
+<!-- PUBLISH CONFIRM MODAL -->
+<div class="modal fade" id="publishConfirmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 450px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header border-bottom-0 p-4">
+                <h5 class="modal-title fw-bold text-success d-flex align-items-center">
+                    <i class="bi bi-cloud-upload-fill me-2 fs-4"></i>Publish Draft to Live
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body px-4 py-0 text-center">
+                <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3"
+                    style="background:rgba(25,135,84,0.1); width:64px; height:64px">
+                    <i class="bi bi-send-fill fs-3 text-success"></i>
+                </div>
+                <p class="fw-bold mb-2 text-dark">Are you sure you want to publish this draft?</p>
+                <p class="text-muted small mb-4">This action will merge all draft entries into the live master schedule. Any existing conflicts will be checked, and the current active live schedule will be updated immediately.</p>
+            </div>
+            <div class="modal-footer bg-light border-top-0 px-4 py-3" style="border-bottom-left-radius: 16px; border-bottom-right-radius: 16px;">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success px-4" id="publishConfirmBtn" onclick="executePublish()">Yes, Publish Live</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 
 <script>
@@ -2801,7 +2830,9 @@
         try {
             const param = `${vt}_id=${entityId}&semester=${encodeURIComponent(currentSemester)}`;
             const [mRes, dRes] = await Promise.all([
-                fetch(`/api/schedule/entries?${param}`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+                currentDraftId
+                    ? Promise.resolve([])
+                    : fetch(`/api/schedule/entries?${param}`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
                 currentDraftId
                     ? fetch(`/api/draft/${currentDraftId}/entries`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
                     : Promise.resolve([]),
@@ -2975,26 +3006,28 @@
         block.style.top = top + 'px';
         block.style.height = height + 'px';
 
-        const lockIco = (lockStatus && entry.source === 'ga') ? '<i class="bi bi-lock-fill ms-1" style="font-size:.6rem"></i>' : '';
+        const isBlockLocked = (lockStatus && entry.source === 'ga' && USER_ROLE === 'user');
+        const lockIco = isBlockLocked ? '<i class="bi bi-lock-fill ms-1" style="font-size:.6rem"></i>' : '';
+        
+        // In Draft Mode, any master (non-draft) entry is read-only
+        const isMasterInDraftMode = (editorMode === 'draft' && !entry.is_draft);
+        const isReadOnly = isBlockLocked || isMasterInDraftMode;
+
         // Only admins/superadmins can delete master entries; users can only delete their own draft entries
-        const canDelete = USER_ROLE !== 'user' || entry.is_draft;
-        // In Draft Mode, master (non-draft) entries are read-only ONLY IF locked
-        const isMasterInDraftMode = (editorMode === 'draft' && !entry.is_draft && lockStatus);
-        const editOnclick = isMasterInDraftMode
-            ? `showToast('Schedule is locked. Unlock to allow modifications in draft.','error');event.stopPropagation()`
+        const canDelete = (USER_ROLE !== 'user' || entry.is_draft) && !isReadOnly;
+
+        const editOnclick = isReadOnly
+            ? `showToast(${isBlockLocked ? "'Schedule is locked. Cannot edit GA entries.'" : "'Cannot edit live schedule entries while in Draft Mode.'"}, 'error'); event.stopPropagation();`
             : `openEditModal(${entry.id},event)`;
 
         block.onclick = (e) => {
-            if (isMasterInDraftMode) {
-                showToast('Schedule is locked. Unlock to allow modifications in draft.', 'error');
+            if (isReadOnly) {
+                const warnMsg = isBlockLocked ? 'Schedule is locked. Cannot edit GA entries.' : 'Cannot edit live schedule entries while in Draft Mode.';
+                showToast(warnMsg, 'error');
             } else {
                 setSidebarMode('edit', entry);
             }
         };
-
-        const deleteOnclick = isMasterInDraftMode
-            ? `showToast('Schedule is locked. Unlock to allow deletions in draft.','error');event.stopPropagation()`
-            : `confirmDeleteEntry(${entry.id},event)`;
 
         block.innerHTML = `
         <div class="blk-title">${entry.course_code}${lockIco}</div>
@@ -3002,12 +3035,11 @@
         ${height >= 45 ? `<div class="blk-time">${fmt12(entry.start_time)} – ${fmt12(entry.end_time)}</div>` : ''}
         ${!IS_HIST ? `
         <div class="block-actions">
-            <button class="block-act-btn edt" onclick="${editOnclick}" title="Edit"><i class="bi bi-pencil"></i></button>
-            ${canDelete || isMasterInDraftMode ? `<button class="block-act-btn del" onclick="${deleteOnclick}" title="Delete"><i class="bi bi-x"></i></button>` : ''}
+            ${!isReadOnly ? `<button class="block-act-btn edt" onclick="${editOnclick}" title="Edit"><i class="bi bi-pencil"></i></button>` : ''}
+            ${canDelete ? `<button class="block-act-btn del" onclick="confirmDeleteEntry(${entry.id},event)" title="Delete"><i class="bi bi-x"></i></button>` : ''}
         </div>` : ''}`;
 
-        // In Draft Mode, master entries are not draggable
-        block.draggable = !isMasterInDraftMode && !IS_HIST;
+        block.draggable = !isReadOnly && !IS_HIST;
         block.addEventListener('dragstart', e => {
             if (IS_HIST) { e.preventDefault(); return; }
             draggingEntry = entry; wasDragging = true;
@@ -3672,6 +3704,58 @@
         }
     }
 
+    // ── DIRECT PUBLISH TO LIVE MASTER ──
+    function publishDraft() {
+        if (!currentDraftId) {
+            showToast("No active draft selected to publish.", "error");
+            return;
+        }
+        const modal = new bootstrap.Modal(document.getElementById('publishConfirmModal'));
+        modal.show();
+    }
+
+    async function executePublish() {
+        if (!currentDraftId) return;
+        const modalEl = document.getElementById('publishConfirmModal');
+        const inst = bootstrap.Modal.getInstance(modalEl);
+        if (inst) inst.hide();
+
+        showLoadingOverlay("Publishing draft entries to live master schedule...");
+        try {
+            const resp = await fetch(`/api/draft/${currentDraftId}/publish`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrf()
+                }
+            });
+            const res = await resp.json();
+            if (resp.ok && res.ok) {
+                showToast("Draft successfully published to Live Schedule!", "success");
+                
+                // Reset active draft and switch editor to direct mode
+                currentDraftId = null;
+                editorMode = 'direct';
+                
+                // Clear select option back to Master only
+                const draftSel = document.getElementById('draftSel');
+                if (draftSel) draftSel.value = '';
+
+                // Reload page to reflect live master entries
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showToast(res.error || "Failed to publish draft.", "error");
+            }
+        } catch (err) {
+            console.error(err);
+            showToast("Server error occurred while publishing.", "error");
+        } finally {
+            hideLoadingOverlay();
+        }
+    }
+
     let _allRecipients = [];
     async function openAttachModal() {
         if (!currentDraftId) {
@@ -4139,38 +4223,44 @@
         const badge = document.getElementById('modeBadge');
         const icon = document.getElementById('modeBadgeIcon');
         const label = document.getElementById('modeBadgeLabel');
-
+ 
         // Buttons
         const saveBtn = document.getElementById('saveDraftBtn');
+        const publishBtn = document.getElementById('publishDraftBtn');
         const attachBtn = document.getElementById('attachDraftBtn');
         const previewBtn = document.getElementById('previewDraftBtn');
-
+ 
         if (!badge) return;
         badge.style.display = '';
-
+ 
         if (editorMode === 'direct') {
             badge.className = 'mode-badge badge-direct';
             icon.className = 'bi bi-pencil-fill';
             label.textContent = 'Direct Edit Mode';
-
+ 
             // Topbar
             if (saveBtn) {
                 saveBtn.style.display = '';
                 saveBtn.innerHTML = '<i class="bi bi-cloud-check-fill me-1"></i><span class="d-none d-md-inline">Save as Draft</span>';
             }
+            if (publishBtn) publishBtn.style.display = 'none';
             if (attachBtn) attachBtn.style.display = 'none';
             if (previewBtn) previewBtn.classList.add('d-none');
-
+ 
         } else if (editorMode === 'draft') {
             const draftName = document.getElementById('draftSel').selectedOptions[0]?.textContent?.trim() || 'Draft';
             badge.className = 'mode-badge badge-draft';
             icon.className = 'bi bi-layers';
             label.textContent = `Draft: ${draftName}`;
-
+ 
             // Topbar
             if (saveBtn) {
                 saveBtn.style.display = currentDraftId ? '' : 'none';
                 saveBtn.innerHTML = '<i class="bi bi-cloud-check-fill me-1"></i><span class="d-none d-md-inline">Save as Copy</span>';
+            }
+            if (publishBtn) {
+                const showPublish = currentDraftId && (USER_ROLE === 'admin' || USER_ROLE === 'superadmin');
+                publishBtn.style.display = showPublish ? '' : 'none';
             }
             if (attachBtn) attachBtn.style.display = currentDraftId ? '' : 'none';
             if (previewBtn) previewBtn.classList.toggle('d-none', !currentDraftId);

@@ -266,7 +266,8 @@
                                 {% endif %}
                                 {% if faculty.assignment_status == 'TBA' %}
                                 <div class="mt-1">
-                                    <span class="badge bg-warning text-dark border border-warning fw-bold" style="font-size: 0.65rem;">TBA</span>
+                                    <span class="badge bg-warning text-dark border border-warning fw-bold"
+                                        style="font-size: 0.65rem;">TBA</span>
                                 </div>
                                 {% endif %}
                             </td>
@@ -558,8 +559,10 @@
                         <div class="col-md-4 mb-3">
                             <label class="form-label small text-muted fw-bold">ASGN STATUS</label>
                             <select class="form-select" name="assignment_status">
-                                <option value="Announced" {% if faculty.assignment_status=='Announced' %}selected{% endif %}>Announced</option>
-                                <option value="TBA" {% if faculty.assignment_status=='TBA' %}selected{% endif %}>TBA</option>
+                                <option value="Announced" {% if faculty.assignment_status=='Announced' %}selected{%
+                                    endif %}>Announced</option>
+                                <option value="TBA" {% if faculty.assignment_status=='TBA' %}selected{% endif %}>TBA
+                                </option>
                             </select>
                         </div>
                         <div class="col-md-4 mb-3">
@@ -661,7 +664,8 @@
 </div>
 
 <!-- 1. FACULTY ASSIGNMENT WIZARD (v5.2 STYLED) -->
-<div class="modal fade modal-xl workload-wizard-modal" id="assignCoursesModal{{ faculty.id }}" tabindex="-1" data-max-hours="{{ faculty.max_weekly_hours }}">
+<div class="modal fade modal-xl workload-wizard-modal" id="assignCoursesModal{{ faculty.id }}" tabindex="-1"
+    data-max-hours="{{ faculty.max_weekly_hours }}">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
 
@@ -773,7 +777,8 @@
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-0 bg-white flex-grow-1 d-flex flex-column" style="overflow-y: auto; min-height: 0;">
+                <div class="modal-body p-0 bg-white flex-grow-1 d-flex flex-column"
+                    style="overflow-y: auto; min-height: 0;">
                     <!-- HOUR COUNTER BAR -->
                     <div class="px-4 pt-3 pb-2 border-bottom" style="background:#f9fbf9;">
                         <div class="d-flex justify-content-between align-items-center mb-1">
@@ -1341,15 +1346,15 @@
         document.body.appendChild(submissionForm);
         submissionForm.submit();
     });
-                // LIVE HOUR COUNTER (Moved inside loop)
-                sectionListDiv.addEventListener('change', (e) => {
-                    if (e.target.classList.contains('assignment-checkbox')) updateTotal(facultyId);
-                });
-                sectionListDiv.addEventListener('input', (e) => {
-                    if (e.target.classList.contains('split-hrs-1') || e.target.classList.contains('split-hrs-2')) {
-                        updateTotal(facultyId);
-                    }
-                });
+    // LIVE HOUR COUNTER (Moved inside loop)
+    sectionListDiv.addEventListener('change', (e) => {
+        if (e.target.classList.contains('assignment-checkbox')) updateTotal(facultyId);
+    });
+    sectionListDiv.addEventListener('input', (e) => {
+        if (e.target.classList.contains('split-hrs-1') || e.target.classList.contains('split-hrs-2')) {
+            updateTotal(facultyId);
+        }
+    });
             }) ();
     {% endfor %}
         }
@@ -1635,14 +1640,16 @@
     }
 
     /* FIX: WORKLOAD MODAL WIZARD FLEXBOX */
-    .wizard-step-1, .wizard-step-2 {
-        min-height: 500px; /* Base height */
+    .wizard-step-1,
+    .wizard-step-2 {
+        min-height: 0px;
+        /* Base height */
     }
 
     /* When the modal is shown, wizard steps should fill the modal-content height */
-    .workload-wizard-modal .modal-content > .wizard-step-1, 
-    .workload-wizard-modal .modal-content > .wizard-step-2 {
-        display: none; 
+    .workload-wizard-modal .modal-content>.wizard-step-1,
+    .workload-wizard-modal .modal-content>.wizard-step-2 {
+        display: none;
         flex-direction: column;
         height: 100%;
         width: 100%;
@@ -1650,8 +1657,10 @@
 
     /* Force steps to take full height of modal-content for scrollable behavior */
     .workload-wizard-modal .modal-content {
-        height: 85vh; /* Standardized height for workload wizard */
-        overflow: hidden; /* Fix: prevent children from leaking out */
+        height: 85vh;
+        /* Standardized height for workload wizard */
+        overflow: hidden;
+        /* Fix: prevent children from leaking out */
     }
 </style>
 
@@ -1674,14 +1683,16 @@
                         <strong>Employee ID</strong>, <strong>Name</strong>, <strong>Status</strong>, and <strong>Max
                             Hours</strong>. Be sure to include <strong>Educational Attainment</strong>, <strong>Academic
                             Rank</strong>, and <strong>Available Days</strong> for accurate scheduling. Use <strong>'+
-                            T.B.A.'</strong> for numbered placeholders.</p>
+                            T.B.A.'</strong> for numbered placeholders.
+                    </p>
                 </div>
 
                 <!-- 2. ASSIGNING WORKLOAD -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-success small mb-1">2. Assigning Workload</h6>
                     <p class="small text-muted mb-0">Click the green <strong>Clipboard icon</strong> to open the 2-step
-                        <strong>Workload Wizard</strong>:</p>
+                        <strong>Workload Wizard</strong>:
+                    </p>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Step 1 (Teachable):</strong> Select the subjects the faculty is qualified to handle.
                         </li>
@@ -1703,7 +1714,8 @@
 
                 <!-- 4. FINDING & SORTING -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-warning small mb-1">{% if session.get('role') in ['admin', 'superadmin'] %}4.{% else %}3.{% endif %} Finding & Sorting</h6>
+                    <h6 class="fw-bold text-warning small mb-1">{% if session.get('role') in ['admin', 'superadmin']
+                        %}4.{% else %}3.{% endif %} Finding & Sorting</h6>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
                         <li><strong>Search Bar:</strong> Type any part of a name, ID, or department; the list will
                             update <strong>instantly</strong> as you type.</li>
@@ -1716,7 +1728,8 @@
 
                 <!-- 5. MANAGING & MASS ACTIONS -->
                 <div class="mb-4">
-                    <h6 class="fw-bold text-danger small mb-1">{% if session.get('role') in ['admin', 'superadmin'] %}5.{% else %}4.{% endif %} Managing & Mass Actions</h6>
+                    <h6 class="fw-bold text-danger small mb-1">{% if session.get('role') in ['admin', 'superadmin']
+                        %}5.{% else %}4.{% endif %} Managing & Mass Actions</h6>
                     <p class="small text-muted mb-0">Each row has icons for individual actions. To handle many records
                         at once:</p>
                     <ul class="small text-muted mt-2 mb-0 ps-3">
@@ -1736,11 +1749,13 @@
 
                 <!-- 6. PAGINATION -->
                 <div class="mb-0">
-                    <h6 class="fw-bold text-secondary small mb-1">{% if session.get('role') in ['admin', 'superadmin'] %}6.{% else %}5.{% endif %} Pagination</h6>
+                    <h6 class="fw-bold text-secondary small mb-1">{% if session.get('role') in ['admin', 'superadmin']
+                        %}6.{% else %}5.{% endif %} Pagination</h6>
                     <p class="small text-muted mb-0">Navigate between pages using the <strong>Page Numbers</strong> or
                         the <strong>Previous/Next</strong> buttons at the bottom. For larger lists, enter a page number
                         into the <strong>'Jump to'</strong> box to go there instantly. You can also use your keyboard's
-                        <strong>Left/Right arrow keys</strong> to flip through pages.</p>
+                        <strong>Left/Right arrow keys</strong> to flip through pages.
+                    </p>
                 </div>
 
             </div>

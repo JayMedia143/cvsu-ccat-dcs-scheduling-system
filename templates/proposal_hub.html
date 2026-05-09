@@ -1,32 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}CvSU Scheduling System | Decision Hub
-<!-- DECISION CONFIRMATION MODAL -->
-<div class="modal fade" id="decisionConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 2100;">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
-            <div class="modal-body p-4 text-center">
-                <div id="decisionConfirmIcon" class="mb-3">
-                    <i class="bi bi-exclamation-circle fs-1 text-warning"></i>
-                </div>
-                <h5 class="fw-bold" id="decisionConfirmTitle">Are you sure?</h5>
-                <p class="text-muted small mb-4" id="decisionConfirmText">Do you want to proceed with this decision?</p>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-light flex-grow-1 fw-bold"
-                        data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary flex-grow-1 fw-bold" id="confirmDecisionBtn">Yes,
-                        Proceed</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
+{% block title %}CvSU Scheduling System | Decision Hub{% endblock %}
 
 {% block content %}
 <script>
     // Critical Helpers for Early Loading (Avatars)
     window.handleAvatarError = function (img) {
+        if (img.id === 'mainProfileImg' || img.id === 'mainProfileImgMobile') {
+            img.classList.add('d-none');
+            const fallbackId = img.id === 'mainProfileImg' ? 'mainProfileFallback' : 'mainProfileFallbackMobile';
+            const fallback = document.getElementById(fallbackId);
+            if (fallback) fallback.classList.remove('d-none');
+            return;
+        }
         const name = img.alt || '?';
         const palette = ['#0084ff', '#e91e8c', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316'];
         let h = 0;
@@ -488,7 +474,7 @@
             </div>
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-primary w-100 rounded-pill"
-                    id="confirmDecisionBtn">Confirm</button>
+                    id="confirmJustificationBtn">Confirm</button>
             </div>
         </div>
     </div>
@@ -2433,27 +2419,6 @@
         </div>
     </div>
 </div>
-
-<!-- DECISION CONFIRMATION MODAL -->
-<div class="modal fade" id="decisionConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 2100;">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
-            <div class="modal-body p-4 text-center">
-                <div id="decisionConfirmIcon" class="mb-3">
-                    <i class="bi bi-exclamation-circle fs-1 text-warning"></i>
-                </div>
-                <h5 class="fw-bold" id="decisionConfirmTitle">Are you sure?</h5>
-                <p class="text-muted small mb-4" id="decisionConfirmText">Do you want to proceed with this decision?</p>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-light flex-grow-1 fw-bold"
-                        data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary flex-grow-1 fw-bold" id="confirmDecisionBtn">Yes,
-                        Proceed</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
@@ -3531,7 +3496,7 @@
 
         confirmBtn.className = `btn flex-grow-1 fw-bold ${action === 'approved' ? 'btn-success' : 'btn-danger'}`;
 
-        const modal = new bootstrap.Modal(modalEl);
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
         modal.show();
 
         confirmBtn.onclick = async () => {
@@ -3556,10 +3521,42 @@
                         showToast({ message: `Proposal ${action} successfully.`, type: action === 'approved' ? 'success' : 'danger' });
                     }
                     loadPendingDrafts();
-                    if (activePartner) loadUserHistory(activePartner);
+
+                    // Immediately update preview modal controls if it is open and matches this draft
+                    if (typeof pvActiveDraft !== 'undefined' && pvActiveDraft === id) {
+                        const controls = document.getElementById('pvDecisionControls');
+                        const badge = document.getElementById('pvDecisionBadge');
+                        const badgeSpan = document.getElementById('pvBadgeSpan');
+                        if (controls && badge && badgeSpan) {
+                            controls.classList.add('d-none');
+                            badge.classList.remove('d-none');
+                            badgeSpan.textContent = action.charAt(0).toUpperCase() + action.slice(1);
+                            badgeSpan.className = `badge rounded-pill px-3 py-2 ${action === 'approved' ? 'bg-success' : 'bg-danger'}`;
+                        }
+
+                        // Fetch creator_username to reload history
+                        try {
+                            const dr = await fetch(`/api/draft/${id}`);
+                            const ddata = await dr.json();
+                            if (ddata && ddata.creator_username) {
+                                loadUserHistory(ddata.creator_username);
+                                loadIntegratedHistory(ddata.creator_username);
+                            }
+                        } catch (e) {
+                            if (activePartner) {
+                                loadUserHistory(activePartner);
+                                loadIntegratedHistory(activePartner);
+                            }
+                        }
+                    } else {
+                        if (activePartner) {
+                            loadUserHistory(activePartner);
+                            loadIntegratedHistory(activePartner);
+                        }
+                    }
+
                     // Reload messages to update card badges
                     if (activePartner) loadConversations(activePartner);
-                    // If preview is open, it should ideally hide buttons - we handle this in render
                 } else {
                     alert(res.error || "Decision failed");
                 }
@@ -3617,7 +3614,6 @@
 
     window.viewDraft = async (id, name, sem) => {
         pvActiveDraft = id;
-        if (activePartner) loadUserHistory(activePartner); // Unified History
         pvCurrentType = 'section';
         pvEntityMap = null;
         const nameEl = document.getElementById('pvDraftName');
@@ -3633,15 +3629,25 @@
 
         document.body.classList.add('pv-active');
 
-        // Update decision controls in modal
+        // Update decision controls in modal and load user history dynamically
         const controls = document.getElementById('pvDecisionControls');
         const badge = document.getElementById('pvDecisionBadge');
         const badgeSpan = document.getElementById('pvBadgeSpan');
         if (controls && badge) {
-            // Fetch the specific draft info to get the latest status
+            // Fetch the specific draft info to get the latest status and creator
             try {
                 const dr = await fetch(`/api/draft/${id}`);
                 const ddata = await dr.json();
+
+                // Dynamically load history for the draft creator
+                if (ddata && ddata.creator_username) {
+                    loadUserHistory(ddata.creator_username);
+                    loadIntegratedHistory(ddata.creator_username);
+                } else if (activePartner) {
+                    loadUserHistory(activePartner);
+                    loadIntegratedHistory(activePartner);
+                }
+
                 if (ddata && (ddata.status === 'approved' || ddata.status === 'rejected')) {
                     controls.classList.add('d-none');
                     badge.classList.remove('d-none');
@@ -3652,12 +3658,21 @@
                     badge.classList.add('d-none');
                 }
             } catch (e) {
+                if (activePartner) {
+                    loadUserHistory(activePartner);
+                    loadIntegratedHistory(activePartner);
+                }
                 controls.classList.remove('d-none');
                 badge.classList.add('d-none');
             }
+        } else {
+            if (activePartner) {
+                loadUserHistory(activePartner);
+                loadIntegratedHistory(activePartner);
+            }
         }
 
-        const modal = new bootstrap.Modal(document.getElementById('hubPreviewModal'));
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('hubPreviewModal'));
         modal.show();
 
         document.getElementById('hubPreviewModal').addEventListener('shown.bs.modal', () => {
@@ -4452,27 +4467,6 @@
     });
 
 </script>
-
-<!-- DECISION CONFIRMATION MODAL -->
-<div class="modal fade" id="decisionConfirmModal" tabindex="-1" aria-hidden="true" style="z-index: 2100;">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
-            <div class="modal-body p-4 text-center">
-                <div id="decisionConfirmIcon" class="mb-3">
-                    <i class="bi bi-exclamation-circle fs-1 text-warning"></i>
-                </div>
-                <h5 class="fw-bold" id="decisionConfirmTitle">Are you sure?</h5>
-                <p class="text-muted small mb-4" id="decisionConfirmText">Do you want to proceed with this decision?</p>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-light flex-grow-1 fw-bold"
-                        data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary flex-grow-1 fw-bold" id="confirmDecisionBtn">Yes,
-                        Proceed</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block modals %}

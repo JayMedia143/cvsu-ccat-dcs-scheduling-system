@@ -624,15 +624,42 @@
             });
         }
 
-        document.querySelectorAll('.searchable-list-container input[type="text"]').forEach(input => {
-            input.addEventListener('keyup', function () {
-                const filter = this.value.toLowerCase();
-                const listItems = this.closest('.searchable-list-container').querySelectorAll('.list-group-item');
+        function handleModalSearch() {
+            const filter = this.value.toLowerCase().trim();
+            const listContainer = this.closest('.searchable-list-container');
+            if (listContainer) {
+                const listItems = listContainer.querySelectorAll('.list-group-item');
                 listItems.forEach(item => {
-                    item.style.display = item.textContent.toLowerCase().includes(filter) ? "" : "none";
+                    const text = item.textContent.toLowerCase().trim();
+                    if (text.includes(filter)) {
+                        item.style.removeProperty('display');
+                    } else {
+                        item.style.setProperty('display', 'none', 'important');
+                    }
                 });
+            }
+        }
+
+        function setupModalSearch() {
+            document.querySelectorAll('.searchable-list-container input[type="text"]').forEach(input => {
+                input.removeEventListener('input', handleModalSearch);
+                input.addEventListener('input', handleModalSearch);
+                // Trigger initially to filter on paste/pre-filled value
+                handleModalSearch.call(input);
             });
-        });
+        }
+
+        // Initialize immediately
+        setupModalSearch();
+
+        // Also bind to Bootstrap modal events to guarantee attachment upon rendering
+        const addPreAssignmentModalEl = document.getElementById('addPreAssignmentModal');
+        if (addPreAssignmentModalEl) {
+            addPreAssignmentModalEl.addEventListener('shown.bs.modal', function () {
+                setupModalSearch();
+            });
+        }
+
 
         window.submitBulkForm = function (actionType) {
             if (actionType === 'delete') {

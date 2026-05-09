@@ -953,7 +953,13 @@ def check_conflict(new_entry):
     
     # Get Room Name to check if it's a special room
     target_room = Room.query.get(int(new_entry['room_id']))
-    is_shared_room = target_room.room_name in ['University Field', 'T.B.A.']
+    is_shared_room = False
+    if target_room:
+        r_name_upper = target_room.room_name.upper()
+        is_shared_room = (
+            target_room.capacity >= 999 or
+            any(word in r_name_upper for word in ['COURT', 'GYM', 'T.B.A.', 'TBA', 'ONLINE', 'VIRTUAL', 'FIELD'])
+        )
 
     for item in existing:
         exist_start = datetime.strptime(item.start_time, fmt).time()
@@ -3241,6 +3247,9 @@ def save_code_assignment():
         if prefix and dept:
             existing = CodePrefixRule.query.filter_by(code=prefix).first()
             if existing:
+                if not existing.is_archived:
+                    flash("Prefix rule already exists.", "danger")
+                    return redirect(url_for('course_code_assignment'))
                 existing.department  = dept
                 existing.is_prefix   = True
                 existing.is_archived = False
@@ -3255,6 +3264,9 @@ def save_code_assignment():
         if code and dept:
             existing = CodePrefixRule.query.filter_by(code=code).first()
             if existing:
+                if not existing.is_archived:
+                    flash("Prefix rule already exists.", "danger")
+                    return redirect(url_for('course_code_assignment'))
                 existing.department  = dept
                 existing.is_prefix   = False
                 existing.is_archived = False
@@ -3365,6 +3377,20 @@ def bulk_delete_code_rules():
         db.session.commit()
         flash(f'{len(ids)} rule(s) permanently deleted.', 'danger')
     return redirect(url_for('code_rules_archive'))
+
+
+@app.route('/manage/courses/code-assignment/bulk-archive', methods=['POST'])
+@login_required
+@role_required('admin', 'superadmin')
+def bulk_archive_code_rules():
+    ids = request.form.getlist('row_ids')
+    if ids:
+        CodePrefixRule.query.filter(CodePrefixRule.id.in_(ids)).update({'is_archived': True}, synchronize_session=False)
+        db.session.commit()
+        # Re-apply prefix rules so courses affected by the archived rules are updated
+        updated = _apply_prefix_rules()
+        flash(f'{len(ids)} rule(s) moved to recycle bin. {updated} course(s) updated.', 'warning')
+    return redirect(url_for('course_code_assignment'))
 
 
 @app.route('/api/prefix-courses')
@@ -5295,7 +5321,6 @@ def view_timetable():
                                 import json
                                 pairs = json.loads(irreg.assignments_json or "[]")
                                 # list of {course_id: X, section_id: Y}
-                                from sqlalchemy import or_
                                 if pairs:
                                     filters = []
                                     for p in pairs:
@@ -6966,6 +6991,7 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                     with open("live_conflicts.json", "w") as f:
                         json.dump({
                             'semester': generation_status.get('target_semester', '1st Semester'),
+                            'selected_depts': generation_status.get('selected_depts', []),
                             'schedules': live_mock
                         }, f)
                 except Exception as _je:
@@ -8755,6 +8781,9 @@ def api_patch_schedule(sched_id):
     # Lock guard: user cannot edit GA entries when locked
     if role == 'user' and sc.source == 'ga' and lock_on:
         return jsonify({'ok': False, 'error': 'Schedule is locked. Cannot edit GA entries.'}), 403
+    # Master entries guard
+    if not sc.is_draft and role == 'user':
+        return jsonify({'ok': False, 'error': 'Cannot edit master schedule entries. Create a draft to make changes.'}), 403
     # Draft ownership guard
     if sc.is_draft and role == 'user':
         dv = DraftVersion.query.get(sc.draft_version_id) if sc.draft_version_id else None
@@ -8876,6 +8905,28 @@ def api_draft_create():
     dv = DraftVersion(name=name, semester=semester, department=department,
                       created_by=user_id, notes=notes)
     db.session.add(dv)
+    db.session.flush() # Flush to get the draft version ID before committing
+
+    # Auto-clone live master entries (is_draft=False) for this semester into the draft
+    master_entries = ScheduledClass.query.filter_by(semester=semester, is_draft=False).all()
+    for item in master_entries:
+        clone = ScheduledClass(
+            course_id=item.course_id,
+            section_id=item.section_id,
+            faculty_id=item.faculty_id,
+            room_id=item.room_id,
+            day=item.day,
+            start_time=item.start_time,
+            end_time=item.end_time,
+            semester=item.semester,
+            has_conflict=item.has_conflict,
+            session_type=item.session_type,
+            source=item.source,
+            is_draft=True,
+            draft_version_id=dv.id
+        )
+        db.session.add(clone)
+
     db.session.commit()
     return jsonify({'ok': True, 'draft': {
         'id': dv.id, 'name': dv.name, 'semester': dv.semester,
@@ -8999,6 +9050,36 @@ def api_draft_entries(draft_id):
         joinedload(ScheduledClass.faculty),
         joinedload(ScheduledClass.room),
     ).filter_by(draft_version_id=draft_id, is_draft=True).all()
+
+    if not draft_scs:
+        # On-demand self-healing: clone master entries for this draft's semester
+        master_entries = ScheduledClass.query.filter_by(semester=dv.semester, is_draft=False).all()
+        for item in master_entries:
+            clone = ScheduledClass(
+                course_id=item.course_id,
+                section_id=item.section_id,
+                faculty_id=item.faculty_id,
+                room_id=item.room_id,
+                day=item.day,
+                start_time=item.start_time,
+                end_time=item.end_time,
+                semester=item.semester,
+                has_conflict=item.has_conflict,
+                session_type=item.session_type,
+                source=item.source,
+                is_draft=True,
+                draft_version_id=dv.id
+            )
+            db.session.add(clone)
+        db.session.commit()
+
+        # Re-fetch the cloned entries
+        draft_scs = ScheduledClass.query.options(
+            joinedload(ScheduledClass.course),
+            joinedload(ScheduledClass.section),
+            joinedload(ScheduledClass.faculty),
+            joinedload(ScheduledClass.room),
+        ).filter_by(draft_version_id=draft_id, is_draft=True).all()
     for sc in draft_scs:
         entries.append({
             'id':           sc.id,
@@ -9074,6 +9155,29 @@ def api_draft_publish(draft_id):
     dv.is_published = True
     db.session.commit()
     return jsonify({'ok': True, 'published_count': len(draft_entries)})
+
+
+@app.route('/api/draft/<int:draft_id>', methods=['GET'])
+@login_required
+def api_draft_get(draft_id):
+    """Get draft details including status and creator username."""
+    dv = DraftVersion.query.get(draft_id)
+    if not dv:
+        return jsonify({'ok': False, 'error': 'Draft not found'}), 404
+    creator = User.query.get(dv.created_by)
+    creator_username = creator.username if creator else 'System'
+    return jsonify({
+        'ok': True,
+        'id': dv.id,
+        'name': dv.name,
+        'semester': dv.semester,
+        'department': dv.department,
+        'notes': dv.notes,
+        'status': dv.status,
+        'is_published': dv.is_published,
+        'creator_username': creator_username
+    })
+
 
 @app.route('/api/draft/<int:draft_id>', methods=['DELETE'])
 @login_required
@@ -9513,30 +9617,11 @@ def schedule_editor():
     is_user = session.get('role') == 'user'
     uid = session.get('user_id')
 
-    section_q = Section.query.filter_by(is_archived=False)
-    faculty_q = Faculty.query.filter_by(is_archived=False)
-    room_q    = Room.query.filter_by(is_archived=False)
-    course_q  = Course.query.filter_by(is_archived=False)
-
-    if is_user:
-        # DATA ISOLATION: Removed for Sections
-        faculty_q = faculty_q.filter_by(created_by_id=uid)
-        room_q    = room_q.filter_by(created_by_id=uid)
-        course_q  = course_q.filter_by(created_by_id=uid)
-
-    sections  = section_q.order_by(Section.section_name).all()
-    faculties = faculty_q.order_by(Faculty.full_name).all()
-    rooms     = room_q.order_by(Room.room_name).all()
-    courses   = course_q.order_by(Course.course_code).all()
-    semesters = ['1st Semester', '2nd Semester', 'Summer']
-
-    role    = session.get('role', 'user')
-    user_id = session.get('user_id')
-
     # Infer user's department (for regular users)
     user_dept = None
+    role = session.get('role', 'user')
     if role == 'user':
-        user = User.query.get(user_id)
+        user = User.query.get(uid)
         if user:
             if user.department:
                 # Use stored department directly
@@ -9546,12 +9631,34 @@ def schedule_editor():
                 fac = Faculty.query.filter(Faculty.full_name.ilike(f'%{user.username}%')).first()
                 user_dept = fac.department if fac else None
 
+    section_q = Section.query.filter_by(is_archived=False)
+    faculty_q = Faculty.query.filter_by(is_archived=False)
+    room_q    = Room.query.filter_by(is_archived=False)
+    course_q  = Course.query.filter_by(is_archived=False)
+
+    if is_user:
+        # DATA ISOLATION: Removed for Sections
+        faculty_q = faculty_q.filter_by(created_by_id=uid)
+        room_q    = room_q.filter_by(created_by_id=uid)
+        if user_dept:
+            course_q = course_q.filter(Course.department == user_dept)
+        else:
+            course_q = course_q.filter_by(created_by_id=uid)
+
+    sections  = section_q.order_by(Section.section_name).all()
+    faculties = faculty_q.order_by(Faculty.full_name).all()
+    rooms     = room_q.order_by(Room.room_name).all()
+    courses   = course_q.order_by(Course.course_code).all()
+    semesters = ['1st Semester', '2nd Semester', 'Summer']
+
+    user_id = uid
+
     # Draft versions visible to this user
     if role in ('admin', 'superadmin'):
         drafts = DraftVersion.query.order_by(DraftVersion.created_at.desc()).all()
     else:
         drafts = DraftVersion.query.filter_by(
-            department=user_dept, is_published=False
+            department=user_dept
         ).filter(
             (DraftVersion.created_by == user_id)
         ).order_by(DraftVersion.created_at.desc()).all()
@@ -17397,6 +17504,7 @@ def run_user_ga_in_background(user_id, username, scheduler, semester, user_dept)
                         with open("live_conflicts.json", "w") as f:
                             json.dump({
                                 'semester': semester,
+                                'selected_depts': [user_dept] if user_dept else [],
                                 'schedules': live_mock
                             }, f)
                     except Exception as _je:
