@@ -21,15 +21,13 @@
         {'code': 'FACULTY_DAY_SPLIT',          'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-19) Faculty Day Split Rule', 'desc': 'Sessions must land on designated split days.'},
         {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-20) Lunch Break Allocation', 'desc': '1-hour break for all (Students & Faculty) between 10 AM-2 PM.'},
 
-        # A2: Evaluated Hard Constraints (HC-21 to HC-28)
+        # A2: Evaluated Hard Constraints (HC-21 to HC-26)
         {'code': 'MINOR_SUBJECT_GAP',          'cat': 'Administrative', 'type': 'HC',  'weight': 1,   'name': '(HC-21) Minor Subject Gap Space', 'desc': 'Ensure free slots for unscheduled minor courses.'},
         {'code': 'MAX_CONSECUTIVE_STUDENT',    'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-22) Max Consecutive Student Load', 'desc': 'Max 6 consecutive hours for students.'},
         {'code': 'MAX_CONSECUTIVE_FACULTY',    'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-23) Max Consecutive Faculty Load', 'desc': 'Max 6 consecutive hours for faculty.'},
-        {'code': 'NO_ISOLATED_LECTURES',       'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-24) No Isolated Lectures', 'desc': 'Avoid single lecture subjects in a day.'},
-        {'code': 'NO_ISOLATED_LABS',           'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-25) No Isolated Labs', 'desc': 'Avoid single lab subjects in a day.'},
-        {'code': 'MIN_DAILY_SECTION_LOAD',     'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-26) Min Daily Section Load', 'desc': 'Ensure at least 3 hours of class per active day.'},
-        {'code': 'LEC_IN_LAB_FALLBACK',        'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-27) Lecture in Lab Fallback', 'desc': 'Allow lectures in labs only if no classrooms are free.'},
-        {'code': 'LEC_LAB_SEQUENCE',           'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-28) Lec-Lab Sequence', 'desc': 'Lecture should be scheduled before Laboratory.'},
+        {'code': 'MIN_DAILY_SECTION_LOAD',     'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-24) Min Daily Section Load', 'desc': 'Ensure at least 3 hours of class per active day.'},
+        {'code': 'LEC_IN_LAB_FALLBACK',        'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-25) Lecture in Lab Fallback', 'desc': 'Allow lectures in labs only if no classrooms are free.'},
+        {'code': 'LEC_LAB_SEQUENCE',           'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-26) Lec-Lab Sequence', 'desc': 'Lecture should be scheduled before Laboratory.'},
 
         # ── SOFT CONSTRAINTS I (SC-I-01 to SC-I-08) ────────────────────────────────
         {'code': 'VIRTUAL_ROOM_USAGE',         'cat': 'Room',           'type': 'SC1', 'weight': 10,  'name': '(SC-I-01) Virtual Room (Online) Penalty', 'desc': 'Avoid Online rooms for physical classes.'},
@@ -41,8 +39,6 @@
         {'code': 'STRICT_ALLOC_LAB',           'cat': 'Course',         'type': 'SC1', 'weight': 10,  'name': '(SC-I-07) Strict Laboratory Allocation', 'desc': 'Laboratory must be in a Lab room.'},
         {'code': 'ROOM_SUITABILITY',           'cat': 'Room',           'type': 'SC1', 'weight': 10,  'name': '(SC-I-08) Room Type Suitability', 'desc': 'Match subject type with room capabilities.'},
 
-        # ── SOFT CONSTRAINTS II (SC-II-01 to SC-II-04) ───────────────────────────────
-        {'code': 'PE_MORNING_PLACEMENT',       'cat': 'Course',         'type': 'SC2', 'weight': 1,   'name': '(SC-II-01) Morning PE Placement', 'desc': 'PE courses priority before 12:00 PM.'},
-        {'code': 'PE_EARLY_WEEK',              'cat': 'Course',         'type': 'SC2', 'weight': 1,   'name': '(SC-II-02) Early Week PE Placement', 'desc': 'PE courses priority on Mon-Wed.'},
-        {'code': 'ROOM_CAPACITY_PROPORTIONAL', 'cat': 'Room',           'type': 'SC2', 'weight': 1,   'name': '(SC-II-03) Room Capacity Allocation', 'desc': 'Prioritize closest absolute fit for room capacity.'},
-        {'code': 'LAB_ROOM_SATURATION_GAP',    'cat': 'Room',           'type': 'SC2', 'weight': 10,  'name': '(SC-II-04) Lab Room Squeeze/Saturation', 'desc': 'Avoid wasteful 1 or 2 hour idle gaps in precious Computer Labs.'},
+        # ── SOFT CONSTRAINTS II (SC-II-01 to SC-II-02) ───────────────────────────────
+        {'code': 'ROOM_CAPACITY_PROPORTIONAL', 'cat': 'Room',           'type': 'SC2', 'weight': 1,   'name': '(SC-II-01) Room Capacity Allocation', 'desc': 'Prioritize closest absolute fit for room capacity.'},
+        {'code': 'LAB_ROOM_SATURATION_GAP',    'cat': 'Room',           'type': 'SC2', 'weight': 10,  'name': '(SC-II-02) Lab Room Squeeze/Saturation', 'desc': 'Avoid wasteful 1 or 2 hour idle gaps in precious Computer Labs.'},

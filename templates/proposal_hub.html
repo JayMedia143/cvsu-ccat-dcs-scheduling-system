@@ -449,6 +449,7 @@
                     </div>
                     <div class="pv-pres-footer">
                         <span id="pvPresLabel">&hellip;</span> &nbsp;|&nbsp;
+                        <span id="pvPresZoomVal">40%</span> &nbsp;|&nbsp;
                         Press <kbd
                             style="color:#aaa;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:3px;padding:1px 5px;">ESC</kbd>
                         to exit &nbsp;|&nbsp;
@@ -1935,16 +1936,18 @@
 
     /* Cinema overlay */
     #pvCinemaOverlay {
-        position: absolute;
+        position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.7);
-        z-index: 500;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(25px);
+        z-index: 5000;
         display: none;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         cursor: grab;
         user-select: none;
+        touch-action: none;
     }
 
     #pvCinemaOverlay.active {
@@ -1956,8 +1959,8 @@
     }
 
     .pv-pres-container {
-        width: 100%;
-        height: 100%;
+        width: 100vw;
+        height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -1966,25 +1969,25 @@
     }
 
     .pv-pres-iframe-wrap {
-        width: 800px;
-        height: 1130px;
+        width: auto;
+        height: auto;
         background: white;
         box-shadow: 0 0 100px rgba(0, 0, 0, 0.8);
         transform-origin: center center;
         transition: transform 0.05s linear;
         pointer-events: auto;
+        border-radius: 4px;
         flex-shrink: 0;
     }
 
     .pv-pres-iframe-wrap iframe {
-        width: 100%;
-        height: 100%;
         border: none;
         pointer-events: none;
+        display: block;
     }
 
     .pv-pres-nav-btn {
-        position: absolute;
+        position: fixed;
         top: 50%;
         transform: translateY(-50%);
         width: 70px;
@@ -1998,7 +2001,7 @@
         justify-content: center;
         font-size: 2rem;
         cursor: pointer;
-        z-index: 10;
+        z-index: 5100;
         transition: all 0.3s;
     }
 
@@ -2017,13 +2020,13 @@
     }
 
     .pv-pres-close {
-        position: absolute;
-        top: 20px;
-        right: 20px;
+        position: fixed;
+        top: 30px;
+        right: 30px;
         color: rgba(255, 255, 255, 0.4);
         font-size: 2.5rem;
         cursor: pointer;
-        z-index: 10;
+        z-index: 5200;
         transition: color 0.3s;
         line-height: 1;
         background: none;
@@ -2035,7 +2038,7 @@
     }
 
     .pv-pres-footer {
-        position: absolute;
+        position: fixed;
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
@@ -2043,6 +2046,32 @@
         font-size: 0.9rem;
         letter-spacing: 1px;
         white-space: nowrap;
+        z-index: 5100;
+    }
+
+    /* Mobile Responsive Styling (Copied from View Timetable) */
+    @media (max-width: 767px) {
+        .pv-pres-footer {
+            display: none !important;
+        }
+        .pv-pres-nav-btn {
+            width: 45px !important;
+            height: 45px !important;
+            font-size: 1.2rem !important;
+            background: rgba(0, 0, 0, 0.5) !important;
+            position: fixed !important;
+        }
+        .pv-pres-prev {
+            left: 10px !important;
+        }
+        .pv-pres-next {
+            right: 10px !important;
+        }
+        .pv-pres-close {
+            top: 15px !important;
+            right: 15px !important;
+            font-size: 2rem !important;
+        }
     }
 
     /* Sent / Seen Status */
@@ -2733,10 +2762,14 @@
     async function loadUserHistory(username) {
         const section = document.getElementById('draftHistorySection');
         const timeline = document.getElementById('draftHistoryTimeline');
-        if (!section || !timeline || !username || username === 'Everyone') return;
+        if (!section || !timeline) return;
+
+        // Force regular users to always view their own proposals history timeline
+        const targetUser = _isAdmin ? username : currentUsername;
+        if (!targetUser || targetUser === 'Everyone') return;
 
         try {
-            const r = await fetch(`/api/hub/user/${encodeURIComponent(username)}/history`);
+            const r = await fetch(`/api/hub/user/${encodeURIComponent(targetUser)}/history`);
             const history = await r.json();
 
             if (history.length > 0) {
@@ -3648,7 +3681,12 @@
                     loadIntegratedHistory(activePartner);
                 }
 
-                if (ddata && (ddata.status === 'approved' || ddata.status === 'rejected')) {
+                if (ddata && (ddata.creator_role === 'admin' || ddata.creator_role === 'superadmin')) {
+                    controls.classList.add('d-none');
+                    badge.classList.remove('d-none');
+                    badgeSpan.textContent = "Admin Draft";
+                    badgeSpan.className = "badge rounded-pill px-3 py-2 bg-secondary text-white";
+                } else if (ddata && (ddata.status === 'approved' || ddata.status === 'rejected')) {
                     controls.classList.add('d-none');
                     badge.classList.remove('d-none');
                     badgeSpan.textContent = ddata.status.charAt(0).toUpperCase() + ddata.status.slice(1);
@@ -3716,9 +3754,14 @@
 
     async function loadIntegratedHistory(username) {
         const container = document.getElementById('integratedHistoryContent');
-        if (!container || !username || username === 'Everyone') return;
+        if (!container) return;
+
+        // Force regular users to always view their own proposals history
+        const targetUser = _isAdmin ? username : currentUsername;
+        if (!targetUser || targetUser === 'Everyone') return;
+
         try {
-            const r = await fetch(`/api/hub/user/${encodeURIComponent(username)}/history`);
+            const r = await fetch(`/api/hub/user/${encodeURIComponent(targetUser)}/history`);
             const history = await r.json();
             if (history.length > 0) {
                 container.innerHTML = history.map(h => `
@@ -3864,6 +3907,19 @@
             pvOpenPresentation(data.index);
         });
 
+        let pvLastTap = 0;
+        card.addEventListener('touchstart', (e) => {
+            if (window.innerWidth <= 768) {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - pvLastTap;
+                if (tapLength < 300 && tapLength > 0) {
+                    e.preventDefault();
+                    pvOpenPresentation(data.index);
+                }
+                pvLastTap = currentTime;
+            }
+        }, { passive: false });
+
         let innerContent = '';
         if (highRes) {
             innerContent = `<iframe src="${data.url}"></iframe>`;
@@ -3879,9 +3935,6 @@
         card.innerHTML = `
             <div class="card-header-bar">
                 <span>${data.label}</span>
-                <button class="card-maximize-btn" onclick="pvOpenPresentation(${data.index})" title="Maximize">
-                    <i class="bi bi-fullscreen"></i>
-                </button>
             </div>
             <div class="card-iframe-wrap">
                 ${innerContent}
@@ -4273,29 +4326,91 @@
 
         // Cinema events
         const cinemaOverlay = document.getElementById('pvCinemaOverlay');
+        const pvPresIframe = document.getElementById('pvPresIframe');
         if (cinemaOverlay) {
-            cinemaOverlay.addEventListener('mousedown', e => {
+            // --- MOUSE EVENTS (Desktop) ---
+            cinemaOverlay.addEventListener('mousedown', (e) => {
                 if (e.target.closest('.pv-pres-nav-btn') || e.target.closest('.pv-pres-close')) return;
                 pvPresIsDragging = true;
                 pvPresStartX = e.clientX - pvPresX;
                 pvPresStartY = e.clientY - pvPresY;
+                cinemaOverlay.style.cursor = 'grabbing';
             });
-            cinemaOverlay.addEventListener('mousemove', e => {
-                if (!pvPresIsDragging) return;
+
+            cinemaOverlay.addEventListener('click', (e) => {
+                if (e.target.id === 'pvCinemaOverlay' || e.target.id === 'pvPresBackdrop') {
+                    pvClosePresentation();
+                }
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!pvPresIsDragging || !cinemaOverlay.classList.contains('active')) return;
                 pvPresX = e.clientX - pvPresStartX;
                 pvPresY = e.clientY - pvPresStartY;
                 pvUpdatePresTransform();
             });
-            ['mouseup', 'mouseleave'].forEach(ev => cinemaOverlay.addEventListener(ev, () => { pvPresIsDragging = false; }));
-            cinemaOverlay.addEventListener('wheel', e => {
+
+            window.addEventListener('mouseup', () => {
+                pvPresIsDragging = false;
+                cinemaOverlay.style.cursor = 'grab';
+            });
+
+            cinemaOverlay.addEventListener('wheel', (e) => {
                 if (!cinemaOverlay.classList.contains('active')) return;
                 e.preventDefault();
-                pvPresScale = Math.max(0.4, Math.min(4.0, pvPresScale - e.deltaY * 0.0015));
+                const zoomSpeed = 0.0015;
+                const delta = -e.deltaY * zoomSpeed;
+                pvPresScale = Math.max(0.1, Math.min(4.0, pvPresScale + delta));
                 pvUpdatePresTransform();
             }, { passive: false });
-            cinemaOverlay.addEventListener('click', e => {
-                if (e.target.id === 'pvPresBackdrop' || e.target.id === 'pvCinemaOverlay') pvClosePresentation();
+
+            // --- TOUCH EVENTS (Mobile) ---
+            cinemaOverlay.addEventListener('touchstart', (e) => {
+                if (e.target.closest('.pv-pres-nav-btn') || e.target.closest('.pv-pres-close')) return;
+
+                if (e.touches.length === 1) {
+                    // Pan Start
+                    pvPresIsDragging = true;
+                    pvPresIsPinching = false;
+                    pvPresStartX = e.touches[0].clientX - pvPresX;
+                    pvPresStartY = e.touches[0].clientY - pvPresY;
+                } else if (e.touches.length === 2) {
+                    // Pinch Start
+                    pvPresIsPinching = true;
+                    pvPresIsDragging = false;
+                    pvPresLastTouchDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                }
+            }, { passive: true });
+
+            cinemaOverlay.addEventListener('touchmove', (e) => {
+                if (!cinemaOverlay.classList.contains('active')) return;
+
+                if (e.touches.length === 1 && pvPresIsDragging) {
+                    // Pan Move
+                    pvPresX = e.touches[0].clientX - pvPresStartX;
+                    pvPresY = e.touches[0].clientY - pvPresStartY;
+                    pvUpdatePresTransform();
+                } else if (e.touches.length === 2 && pvPresIsPinching) {
+                    // Pinch Move
+                    const dist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    const delta = (dist - pvPresLastTouchDistance) * 0.005;
+                    pvPresScale = Math.max(0.1, Math.min(4.0, pvPresScale + delta));
+                    pvPresLastTouchDistance = dist;
+                    pvUpdatePresTransform();
+                }
+            }, { passive: true });
+
+            cinemaOverlay.addEventListener('touchend', () => {
+                pvPresIsDragging = false;
+                pvPresIsPinching = false;
             });
+
             const nativeTypeSel = document.getElementById('pvViewSelNative');
             if (nativeTypeSel) {
                 nativeTypeSel.addEventListener('change', function () {
@@ -4304,6 +4419,40 @@
             }
             const pvPresWrapEl = document.getElementById('pvPresWrap');
             if (pvPresWrapEl) pvPresWrapEl.addEventListener('click', e => e.stopPropagation());
+
+            // --- IFRAME LOAD HANDLER (DYNAMIC SMART SIZING - Matched with View Timetable) ---
+            if (pvPresIframe) {
+                pvPresIframe.addEventListener('load', () => {
+                    if (!cinemaOverlay.classList.contains('active')) return;
+                    try {
+                        const doc = pvPresIframe.contentDocument || pvPresIframe.contentWindow.document;
+                        const paper = doc.querySelector('.a4') || doc.getElementById('a4Paper') || doc.body;
+
+                        if (paper) {
+                            const wrap = document.getElementById('pvPresWrap');
+                            setTimeout(() => {
+                                const actualW = paper.offsetWidth;
+                                const actualH = paper.offsetHeight;
+
+                                if (wrap) {
+                                    wrap.style.width = actualW + 'px';
+                                    wrap.style.height = actualH + 'px';
+                                    pvPresIframe.style.width = actualW + 'px';
+                                    pvPresIframe.style.height = actualH + 'px';
+                                }
+
+                                // Dynamic Scale Fitting for Mobile
+                                if (window.innerWidth <= 767) {
+                                    pvPresScale = (window.innerWidth * 0.95) / actualW;
+                                    pvPresX = 0;
+                                    pvPresY = 0;
+                                    pvUpdatePresTransform();
+                                }
+                            }, 50);
+                        }
+                    } catch (e) { console.warn("Presentation iframe measurement error:", e); }
+                });
+            }
         }
 
         // Keyboard: arrows + ESC
@@ -4320,19 +4469,32 @@
 
     // ── Presentation Mode ───────────────────────────────────────
     let pvPresIndex = -1;
-    let pvPresScale = 1.0, pvPresX = 0, pvPresY = 0;
+    let pvPresScale = 0.4, pvPresX = 0, pvPresY = 0;
     let pvPresIsDragging = false, pvPresStartX = 0, pvPresStartY = 0;
+    let pvPresLastTouchDistance = 0, pvPresIsPinching = false;
 
     function pvUpdatePresTransform() {
         const wrap = document.getElementById('pvPresWrap');
-        if (wrap) wrap.style.transform = `translate(${pvPresX}px,${pvPresY}px) scale(${pvPresScale})`;
+        if (wrap) {
+            wrap.style.transform = `translate(${pvPresX}px,${pvPresY}px) scale(${pvPresScale})`;
+        }
+        // Update Zoom Badge (copied from view timetable)
+        const badge = document.getElementById('pvPresZoomVal');
+        if (badge) {
+            if (window.innerWidth <= 767) {
+                badge.textContent = Math.round(pvPresScale * 100) + '% Fit';
+            } else {
+                badge.textContent = Math.round(pvPresScale * 100) + '%';
+            }
+        }
     }
 
     window.pvOpenPresentation = function (index) {
         pvPresIndex = index;
         const list = pvGetCurrentList();
         if (index < 0 || index >= list.length) return;
-        pvPresScale = Math.min(1.0, (window.innerHeight * 0.9) / 1130);
+        // Reset Transform for New Slide to 40% (0.4) on Desktop to match view timetable reference
+        pvPresScale = 0.4;
         pvPresX = 0; pvPresY = 0;
         pvUpdatePresTransform();
         const item = list[index];

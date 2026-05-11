@@ -639,7 +639,7 @@ class Constraint(db.Model):
     def is_structural(self):
         return self.logic_code in {
             'ROOM_OVERLAP', 'FACULTY_OVERLAP', 'SECTION_OVERLAP', 'LUNCH_BREAK',
-            'LOCKED_SCHEDULES', 'GLOBAL_DAY_RESTRICTION', 'STRICT_ALLOC_ASYNC',
+            'LOCKED_SCHEDULES', 'GLOBAL_DAY_RESTRICTION',
             'STRICT_LEC_DURATION', 'STRICT_LAB_DURATION', 'STRICT_ASYNC_LEC_DUR',
             'STRICT_ASYNC_LAB_DUR', 'SINGLE_ROOM_PER_SESSION', 'OPERATING_HOURS',
             'HOURLY_ALIGNMENT', 'COMPLETE_COURSE_SCHEDULING', 'FACULTY_DAY_SPLIT',
@@ -5139,9 +5139,17 @@ def generate_page():
     if session.get('role') == 'user':
         known_depts = [session.get('department')]
         saved_depts = [session.get('department')]
+        drafts = DraftVersion.query.filter_by(
+            department=session.get('department'),
+            is_published=False
+        ).order_by(DraftVersion.updated_at.desc()).all()
     else:
         known_depts = _get_depts()
         saved_depts = session.get('scheduled_depts', SCHEDULED_DEPARTMENTS)
+        drafts = DraftVersion.query.filter(
+            or_(DraftVersion.department == None, DraftVersion.department == ''),
+            DraftVersion.is_published == False
+        ).order_by(DraftVersion.updated_at.desc()).all()
 
     return render_template(
         'generate_schedule.html',
@@ -5149,6 +5157,7 @@ def generate_page():
         end_hour=s.end_hour,
         known_departments=known_depts,
         saved_depts=saved_depts,
+        drafts=drafts,
     )
 
 @app.route('/view-timetable')
@@ -5510,7 +5519,7 @@ def view_timetable():
 
 @app.route('/reports')
 @login_required
-@role_required('admin', 'superadmin')
+@role_required('admin', 'superadmin', 'user')
 def reports_page():
     _sem_rows = db.session.query(ScheduledClass.semester).distinct().all()
     available_semesters = sorted(
@@ -5612,7 +5621,7 @@ def api_layout_variables(layout_type):
 
 @app.route('/api/room-utilization')
 @login_required
-@role_required('admin', 'superadmin')
+@role_required('admin', 'superadmin', 'user')
 def api_room_utilization():
     """Return per-room utilization stats based on currently saved ScheduledClasses.
     Now respects the global semester filter and provides total class counts.
@@ -5633,9 +5642,11 @@ def api_room_utilization():
     if is_archive and archive_id:
         # Historical Mode: Query ArchivedSchedule
         total_q = ArchivedSchedule.query.filter_by(term_archive_id=archive_id)
+        if session.get('role') == 'user':
+            total_q = total_q.join(ArchivedCourse, (ArchivedSchedule.course_code == ArchivedCourse.course_code) & (ArchivedSchedule.term_archive_id == ArchivedCourse.term_archive_id)).filter(ArchivedCourse.department == session.get('department'))
+        total_scheduled_classes = total_q.distinct().count() if session.get('role') == 'user' else total_q.count()
         room_q = ArchivedSchedule.query.filter_by(term_archive_id=archive_id)
         schedules = room_q.all()
-        total_scheduled_classes = total_q.count()
     else:
         # Live Mode: Query ScheduledClass with DEDUPLICATION
         # The ScheduledClass table accumulates records across AI generations (intentional).
@@ -5646,9 +5657,11 @@ def api_room_utilization():
             ScheduledClass.day,
             ScheduledClass.start_time,
             ScheduledClass.end_time
-        ).filter(ScheduledClass.is_draft == False)
+        ).join(Course, ScheduledClass.course_id == Course.id).filter(ScheduledClass.is_draft == False)
         if selected_sem != 'All':
             total_cols = total_cols.filter(ScheduledClass.semester == selected_sem)
+        if session.get('role') == 'user':
+            total_cols = total_cols.filter(Course.department == session.get('department'))
         total_scheduled_classes = total_cols.distinct().count()
 
         room_q = ScheduledClass.query.filter(ScheduledClass.room_id.isnot(None), ScheduledClass.is_draft == False)
@@ -5692,13 +5705,35 @@ def api_room_utilization():
 
     if is_archive:
         # Fetch rooms from the archive to ensure we match the historical data
-        all_rooms = ArchivedRoom.query.filter_by(term_archive_id=archive_id).filter(ArchivedRoom.room_name != 'T.B.A.').order_by(ArchivedRoom.room_name).all()
+        all_rooms_q = ArchivedRoom.query.filter_by(term_archive_id=archive_id).filter(ArchivedRoom.room_name != 'T.B.A.')
+        if session.get('role') == 'user':
+            user_dept = session.get('department')
+            all_rooms_q = all_rooms_q.filter(or_(
+                ArchivedRoom.room_departments.ilike(f"{user_dept},%"),
+                ArchivedRoom.room_departments.ilike(f"%,{user_dept}"),
+                ArchivedRoom.room_departments.ilike(f"%,{user_dept},%"),
+                ArchivedRoom.room_departments == user_dept,
+                ArchivedRoom.room_departments == "",
+                ArchivedRoom.room_departments.is_(None)
+            ))
+        all_rooms = all_rooms_q.order_by(ArchivedRoom.room_name).all()
     else:
         # Live Mode: Fetch current rooms
-        all_rooms = Room.query.filter(
+        all_rooms_q = Room.query.filter(
             Room.is_archived == False,
             Room.room_name != 'T.B.A.'
-        ).order_by(Room.room_name).all()
+        )
+        if session.get('role') == 'user':
+            user_dept = session.get('department')
+            all_rooms_q = all_rooms_q.filter(or_(
+                Room.room_departments.ilike(f"{user_dept},%"),
+                Room.room_departments.ilike(f"%,{user_dept}"),
+                Room.room_departments.ilike(f"%,{user_dept},%"),
+                Room.room_departments == user_dept,
+                Room.room_departments == "",
+                Room.room_departments.is_(None)
+            ))
+        all_rooms = all_rooms_q.order_by(Room.room_name).all()
 
     rooms_data = []
     total_used_sum = 0.0
@@ -5911,9 +5946,11 @@ def _process_images(source_ws, target_ws, settings, layout_type):
 
 @app.route('/export/excel_bulk')
 @login_required
-@role_required('admin', 'superadmin')
+@role_required('admin', 'superadmin', 'user')
 def export_excel_bulk():
     report_type = request.args.get('type', 'section') # section, faculty, room
+    if session.get('role') == 'user':
+        report_type = 'section'
     export_semester = request.args.get('semester', '1st Semester')
     settings = get_settings()
 
@@ -6112,9 +6149,9 @@ def export_excel_bulk():
         f_educ = ""
         
         if report_type == 'section':
-             item_schedules = ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section)).filter_by(section_id=item.id, semester=export_semester).all()
+             item_schedules = _dedup_schedules(ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section)).filter_by(section_id=item.id, semester=export_semester).all())
         elif report_type == 'faculty':
-             item_schedules = ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section)).filter_by(faculty_id=item.id, semester=export_semester).all()
+             item_schedules = _dedup_schedules(ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section)).filter_by(faculty_id=item.id, semester=export_semester).all())
              f_educ = item.highest_educational_attainment or ""
              total_mins = 0
              daily_mins = {"Monday": 0, "Tuesday": 0, "Wednesday": 0, "Thursday": 0, "Friday": 0, "Saturday": 0}
@@ -6132,9 +6169,9 @@ def export_excel_bulk():
              f_hours = str(round(total_mins / 60, 2))
              f_prep = str(len(unique_subs))
         elif report_type == 'room':
-             item_schedules = ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section), joinedload(ScheduledClass.faculty)).filter_by(room_id=item.id, semester=export_semester).all()
+             item_schedules = _dedup_schedules(ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section), joinedload(ScheduledClass.faculty)).filter_by(room_id=item.id, semester=export_semester).all())
         else: # course
-             item_schedules = ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section), joinedload(ScheduledClass.faculty), joinedload(ScheduledClass.room)).filter_by(course_id=item.id, semester=export_semester).all()
+             item_schedules = _dedup_schedules(ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section), joinedload(ScheduledClass.faculty), joinedload(ScheduledClass.room)).filter_by(course_id=item.id, semester=export_semester).all())
 
         # A. BUILD VARIABLE MAP & DYNAMIC INJECTION
         # ----------------------------------------------------------------------------------------------------------
@@ -6836,12 +6873,12 @@ def manage_constraints():
     # Apply Enforcement Filter
     structural_codes = [
         'ROOM_OVERLAP', 'FACULTY_OVERLAP', 'SECTION_OVERLAP', 'LUNCH_BREAK',
-        'LOCKED_SCHEDULES', 'GLOBAL_DAY_RESTRICTION', 'STRICT_ALLOC_ASYNC',
+        'LOCKED_SCHEDULES', 'GLOBAL_DAY_RESTRICTION',
         'STRICT_LEC_DURATION', 'STRICT_LAB_DURATION', 'STRICT_ASYNC_LEC_DUR',
         'STRICT_ASYNC_LAB_DUR', 'SINGLE_ROOM_PER_SESSION', 'OPERATING_HOURS',
         'HOURLY_ALIGNMENT', 'COMPLETE_COURSE_SCHEDULING', 'FACULTY_DAY_SPLIT',
         'MAX_CONSECUTIVE_STUDENT', 'MAX_CONSECUTIVE_FACULTY', 'PREASSIGNMENT_EXCLUSIVITY',
-        'FACULTY_AVAILABILITY', 'SINGLE_FACULTY_PER_TIMESLOT', 'ROOM_AVAILABILITY'
+         'FACULTY_AVAILABILITY', 'SINGLE_FACULTY_PER_TIMESLOT', 'ROOM_AVAILABILITY'
     ]
     if filter_enforcement == 'structural':
         query = query.filter(Constraint.logic_code.in_(structural_codes))
@@ -6891,54 +6928,44 @@ def sync_constraints():
     - Missing rows: inserts with the default type and weight=10.
     """
     MASTER_CONSTRAINTS = [
-        # ── HARD CONSTRAINTS (HC-01 to HC-28) ──────────────────────────────────────
-        # A1: Built-In / Structural Hard Constraints (HC-01 to HC-20)
+        # ── HARD CONSTRAINTS (HC-01 to HC-26) ──────────────────────────────────────
+        # A1: Built-In / Structural Hard Constraints (HC-01 to HC-19)
         {'code': 'LOCKED_SCHEDULES',           'cat': 'Administrative', 'type': 'HC',  'weight': 1,   'name': '(HC-01) Locked Schedules', 'desc': 'Manually plotted schedules are immovable.'},
         {'code': 'GLOBAL_DAY_RESTRICTION',     'cat': 'Administrative', 'type': 'HC',  'weight': 1,   'name': '(HC-02) Global Day Restriction', 'desc': 'No classes on Sundays or non-academic days.'},
-        {'code': 'STRICT_ALLOC_ASYNC',         'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-03) Strict Async Allocation', 'desc': 'Online classes must be in Virtual rooms.'},
-        {'code': 'STRICT_LEC_DURATION',        'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-04) Strict Lecture Duration', 'desc': 'Lec hours must match curriculum.'},
-        {'code': 'STRICT_LAB_DURATION',        'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-05) Strict Laboratory Duration', 'desc': 'Lab hours must match curriculum.'},
-        {'code': 'STRICT_ASYNC_LEC_DUR',       'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-06) Strict Async Lecture Duration', 'desc': 'Async hours must match curriculum.'},
-        {'code': 'STRICT_ASYNC_LAB_DUR',       'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-07) Strict Async Lab Duration', 'desc': 'Async hours must match curriculum.'},
-        {'code': 'SECTION_OVERLAP',            'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-08) Section Overlap Prevention', 'desc': 'Section cannot have 2 courses at once.'},
-        {'code': 'FACULTY_OVERLAP',            'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-09) Faculty Overlap Prevention', 'desc': 'Faculty cannot teach 2 courses at once.'},
-        {'code': 'ROOM_OVERLAP',               'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-10) Room Overlap Prevention', 'desc': 'Room cannot host 2 sections at once.'},
-        {'code': 'SINGLE_FACULTY_PER_TIMESLOT','cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-11) Single Faculty per Section Slot', 'desc': 'Section cannot have 2 faculty at once.'},
-        {'code': 'FACULTY_AVAILABILITY',       'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-12) Faculty Day Off / Availability', 'desc': 'Faculty must be available.'},
-        {'code': 'SINGLE_ROOM_PER_SESSION',    'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-13) Single Room per Session', 'desc': 'Session cannot use 2 rooms at once.'},
-        {'code': 'ROOM_AVAILABILITY',          'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-14) Room Calendar Availability', 'desc': 'Room must be available.'},
-        {'code': 'OPERATING_HOURS',            'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-15) Operating Hours Compliance', 'desc': 'Sessions must be within campus hours.'},
-        {'code': 'HOURLY_ALIGNMENT',           'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-16) Hourly Slot Alignment', 'desc': 'Classes must start exactly on the hour.'},
-        {'code': 'COMPLETE_COURSE_SCHEDULING', 'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-17) Complete Course Plotting', 'desc': 'All curriculum subjects must be plotted.'},
-        {'code': 'PREASSIGNMENT_EXCLUSIVITY',  'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-18) Pre-assignment Exclusivity', 'desc': 'Locked slots cannot be overwritten.'},
-        {'code': 'FACULTY_DAY_SPLIT',          'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-19) Faculty Day Split Rule', 'desc': 'Sessions must land on designated split days.'},
-        {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-20) Lunch Break Allocation', 'desc': '1-hour break for all (Students & Faculty) between 10 AM-2 PM.'},
+        {'code': 'STRICT_LEC_DURATION',        'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-03) Strict Lecture Duration', 'desc': 'Lec hours must match curriculum.'},
+        {'code': 'STRICT_LAB_DURATION',        'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-04) Strict Laboratory Duration', 'desc': 'Lab hours must match curriculum.'},
+        {'code': 'STRICT_ASYNC_LEC_DUR',       'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-05) Strict Async Lecture Duration', 'desc': 'Async hours must match curriculum.'},
+        {'code': 'STRICT_ASYNC_LAB_DUR',       'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-06) Strict Async Lab Duration', 'desc': 'Async hours must match curriculum.'},
+        {'code': 'SECTION_OVERLAP',            'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-07) Section Overlap Prevention', 'desc': 'Section cannot have 2 courses at once.'},
+        {'code': 'FACULTY_OVERLAP',            'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-08) Faculty Overlap Prevention', 'desc': 'Faculty cannot teach 2 courses at once.'},
+        {'code': 'ROOM_OVERLAP',               'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-09) Room Overlap Prevention', 'desc': 'Room cannot host 2 sections at once.'},
+        {'code': 'SINGLE_FACULTY_PER_TIMESLOT','cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-10) Single Faculty per Section Slot', 'desc': 'Section cannot have 2 faculty at once.'},
+        {'code': 'FACULTY_AVAILABILITY',       'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-11) Faculty Day Off / Availability', 'desc': 'Faculty must be available.'},
+        {'code': 'SINGLE_ROOM_PER_SESSION',    'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-12) Single Room per Session', 'desc': 'Session cannot use 2 rooms at once.'},
+        {'code': 'ROOM_AVAILABILITY',          'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-13) Room Calendar Availability', 'desc': 'Room must be available.'},
+        {'code': 'OPERATING_HOURS',            'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-14) Operating Hours Compliance', 'desc': 'Sessions must be within campus hours.'},
+        {'code': 'HOURLY_ALIGNMENT',           'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-15) Hourly Slot Alignment', 'desc': 'Classes must start exactly on the hour.'},
+        {'code': 'COMPLETE_COURSE_SCHEDULING', 'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-16) Complete Course Plotting', 'desc': 'All curriculum subjects must be plotted.'},
+        {'code': 'PREASSIGNMENT_EXCLUSIVITY',  'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-17) Pre-assignment Exclusivity', 'desc': 'Locked slots cannot be overwritten.'},
+        {'code': 'FACULTY_DAY_SPLIT',          'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-18) Faculty Day Split Rule', 'desc': 'Sessions must land on designated split days.'},
+        {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-19) Lunch Break Allocation', 'desc': '1-hour break for all (Students & Faculty) between 10 AM-2 PM.'},
 
-        # A2: Evaluated Hard Constraints (HC-21 to HC-28)
-        {'code': 'MINOR_SUBJECT_GAP',          'cat': 'Administrative', 'type': 'HC',  'weight': 1,   'name': '(HC-21) Minor Subject Gap Space', 'desc': 'Ensure free slots for unscheduled minor courses.'},
-        {'code': 'MAX_CONSECUTIVE_STUDENT',    'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-22) Max Consecutive Student Load', 'desc': 'Max 6 consecutive hours for students.'},
-        {'code': 'MAX_CONSECUTIVE_FACULTY',    'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-23) Max Consecutive Faculty Load', 'desc': 'Max 6 consecutive hours for faculty.'},
-        {'code': 'NO_ISOLATED_LECTURES',       'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-24) No Isolated Lectures', 'desc': 'Avoid single lecture subjects in a day.'},
-        {'code': 'NO_ISOLATED_LABS',           'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-25) No Isolated Labs', 'desc': 'Avoid single lab subjects in a day.'},
-        {'code': 'MIN_DAILY_SECTION_LOAD',     'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-26) Min Daily Section Load', 'desc': 'Ensure at least 3 hours of class per active day.'},
-        {'code': 'LEC_IN_LAB_FALLBACK',        'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-27) Lecture in Lab Fallback', 'desc': 'Allow lectures in labs only if no classrooms are free.'},
-        {'code': 'LEC_LAB_SEQUENCE',           'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-28) Lec-Lab Sequence', 'desc': 'Lecture should be scheduled before Laboratory.'},
+        # A2: Evaluated Constraints (HC-20 to HC-25)
+        {'code': 'MAX_CONSECUTIVE_STUDENT',    'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-20) Max Consecutive Student Load', 'desc': 'Max 6 consecutive hours for students.'},
+        {'code': 'MAX_CONSECUTIVE_FACULTY',    'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-21) Max Consecutive Faculty Load', 'desc': 'Max 6 consecutive hours for faculty.'},
+        {'code': 'MIN_DAILY_SECTION_LOAD',     'cat': 'Section',        'type': 'NC',  'weight': 1,   'name': '(HC-22) Min Daily Section Load', 'desc': 'Ensure at least 3 hours of class per active day.'},
+        {'code': 'LEC_IN_LAB_FALLBACK',        'cat': 'Room',           'type': 'NC',  'weight': 1,   'name': '(HC-23) Lecture in Lab Fallback', 'desc': 'Allow lectures in labs only if no classrooms are free.'},
+        {'code': 'LEC_LAB_SEQUENCE',           'cat': 'Course',         'type': 'NC',  'weight': 1,   'name': '(HC-24) Lec-Lab Sequence', 'desc': 'Lecture should be scheduled before Laboratory.'},
+        {'code': 'ROOM_SUITABILITY',           'cat': 'Room',           'type': 'NC',  'weight': 1,   'name': '(HC-25) Room Type Suitability', 'desc': 'Match subject type with room capabilities.'},
 
-        # ── SOFT CONSTRAINTS I (SC-I-01 to SC-I-08) ────────────────────────────────
-        {'code': 'VIRTUAL_ROOM_USAGE',         'cat': 'Room',           'type': 'SC1', 'weight': 10,  'name': '(SC-I-01) Virtual Room (Online) Penalty', 'desc': 'Avoid Online rooms for physical classes.'},
-        {'code': 'EVENING_AVOIDANCE',          'cat': 'Time',           'type': 'SC1', 'weight': 1,   'name': '(SC-I-02) Evening Class Avoidance', 'desc': 'Avoid scheduling classes late in the evening.'},
-        {'code': 'ROOM_IDLE_GAP',              'cat': 'Room',           'type': 'SC1', 'weight': 10,  'name': '(SC-I-03) Room Idle Gap Penalty', 'desc': 'Incentivize compact room usage.'},
-        {'code': 'LEC_LAB_WEEKLY_DIST',        'cat': 'Course',         'type': 'SC1', 'weight': 1,   'name': '(SC-I-04) Lec-Lab Weekly Dist.', 'desc': 'Lec and Lab must be scheduled on different days.'},
-        {'code': 'LEC_LAB_PROXIMITY',          'cat': 'Course',         'type': 'SC1', 'weight': 1,   'name': '(SC-I-05) Lec-Lab Proximity', 'desc': 'Max gap between Lecture and Laboratory.'},
-        {'code': 'STRICT_ALLOC_LEC',           'cat': 'Course',         'type': 'SC1', 'weight': 10,  'name': '(SC-I-06) Strict Lecture Allocation', 'desc': 'Lecture must be in a physical room (Non-Virtual).'},
-        {'code': 'STRICT_ALLOC_LAB',           'cat': 'Course',         'type': 'SC1', 'weight': 10,  'name': '(SC-I-07) Strict Laboratory Allocation', 'desc': 'Laboratory must be in a Lab room.'},
-        {'code': 'ROOM_SUITABILITY',           'cat': 'Room',           'type': 'SC1', 'weight': 10,  'name': '(SC-I-08) Room Type Suitability', 'desc': 'Match subject type with room capabilities.'},
+        # ── SOFT CONSTRAINTS I (SC-I-01 to SC-I-04) ────────────────────────────────
+        {'code': 'VIRTUAL_ROOM_USAGE',         'cat': 'Room',           'type': 'NC',  'weight': 10,  'name': '(SC-I-01) Virtual Room (Online) Penalty', 'desc': 'Avoid Online rooms for physical classes.'},
+        {'code': 'EVENING_AVOIDANCE',          'cat': 'Time',           'type': 'NC',  'weight': 1,   'name': '(SC-I-02) Evening Class Avoidance', 'desc': 'Avoid scheduling classes late in the evening.'},
+        {'code': 'ROOM_IDLE_GAP',              'cat': 'Room',           'type': 'NC',  'weight': 10,  'name': '(SC-I-03) Room Idle Gap Penalty', 'desc': 'Incentivize compact room usage.'},
+        {'code': 'LEC_LAB_WEEKLY_DIST',        'cat': 'Course',         'type': 'NC',  'weight': 1,   'name': '(SC-I-04) Lec-Lab Weekly Dist.', 'desc': 'Lec and Lab must be scheduled on different days.'},
 
-        # ── SOFT CONSTRAINTS II (SC-II-01 to SC-II-04) ───────────────────────────────
-        {'code': 'PE_MORNING_PLACEMENT',       'cat': 'Course',         'type': 'SC2', 'weight': 1,   'name': '(SC-II-01) Morning PE Placement', 'desc': 'PE courses priority before 12:00 PM.'},
-        {'code': 'PE_EARLY_WEEK',              'cat': 'Course',         'type': 'SC2', 'weight': 1,   'name': '(SC-II-02) Early Week PE Placement', 'desc': 'PE courses priority on Mon-Wed.'},
-        {'code': 'ROOM_CAPACITY_PROPORTIONAL', 'cat': 'Room',           'type': 'SC2', 'weight': 1,   'name': '(SC-II-03) Room Capacity Allocation', 'desc': 'Prioritize closest absolute fit for room capacity.'},
-        {'code': 'LAB_ROOM_SATURATION_GAP',    'cat': 'Room',           'type': 'SC2', 'weight': 10,  'name': '(SC-II-04) Lab Room Squeeze/Saturation', 'desc': 'Avoid wasteful 1 or 2 hour idle gaps in precious Computer Labs.'},
+        # ── SOFT CONSTRAINTS II (SC-II-01) ───────────────────────────────
+        {'code': 'ROOM_CAPACITY_PROPORTIONAL', 'cat': 'Room',           'type': 'NC',  'weight': 1,   'name': '(SC-II-01) Room Capacity Allocation', 'desc': 'Prioritize closest absolute fit for room capacity.'},
     ]
 
     added = 0
@@ -6980,7 +7007,7 @@ def sync_constraints():
 # --- REAL-TIME GENERATION ROUTES ---
 # app.py
 
-def run_ga_in_background(scheduler, target_semester='1st Semester'):
+def run_ga_in_background(scheduler, target_semester='1st Semester', draft_id=None):
     global generation_status
     _gen_start_time = time.time()
 
@@ -7056,7 +7083,10 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
         # ------------------------------------ Warm start: load THIS semester's saved schedule as seed ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         seed_records = None
         try:
-            existing = ScheduledClass.query.filter_by(semester=target_semester).all()
+            if draft_id:
+                existing = ScheduledClass.query.filter_by(semester=target_semester, draft_version_id=draft_id, is_draft=True).all()
+            else:
+                existing = ScheduledClass.query.filter_by(semester=target_semester, is_draft=False).all()
             if existing:
                 seed_records = [
                     {
@@ -7070,7 +7100,7 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                     }
                     for sc in existing
                 ]
-                print(f"----------------- Warm-start: {len(seed_records)} genes from '{target_semester}' schedule.")
+                print(f"----------------- Warm-start: {len(seed_records)} genes from '{target_semester}' schedule (draft_id={draft_id}).")
         except Exception as _e:
             print(f"------------------------ Could not load warm-start seed: {_e}")
             seed_records = None
@@ -7130,7 +7160,10 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
         try:
             if best_schedule:
                 # 1. Replace only THIS semester's schedule (other semesters untouched)
-                db.session.query(ScheduledClass).filter_by(semester=target_semester).delete()
+                if draft_id:
+                    db.session.query(ScheduledClass).filter_by(semester=target_semester, draft_version_id=draft_id, is_draft=True).delete()
+                else:
+                    db.session.query(ScheduledClass).filter_by(semester=target_semester, is_draft=False).delete()
                 db.session.commit()
 
                 # 2. Convert GA genes -> DB records with semester tag
@@ -7144,58 +7177,7 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                 fac_slots_seen  = defaultdict(set)  # (faculty_id, day_idx) -> set of occupied slot indices
                 sec_slots_seen  = defaultdict(set)  # (section_id, day_idx) -> set of occupied slot indices
 
-                # ------------------------------------ HC-02 post-generation check (Minor Subject Gap) ------------------------------------------------------------------------------------------------------------------------------------------------
-                # HC-02 is excluded from the GA (needs full section-gap scan).
-                # We compute it here once and flag affected sections so the
-                # viewer highlights them. Violation = not enough free hours
-                # across all days to fit minor-dept courses for a section.
-                _hc02_violating_sections = set()
-                try:
-                    _hc02_cfg     = constraints_config.get('MINOR_SUBJECT_GAP', {})
-                    _hc02_enabled = (not _hc02_cfg) or (
-                        isinstance(_hc02_cfg, dict) and _hc02_cfg.get('type', 'HC') != 'NC'
-                    )
-                    if _hc02_enabled:
-                        _sel_depts_set = set(selected_depts)
-                        _op_hours      = float(scheduler.end_hour - scheduler.start_hour)
-                        _n_days        = len(scheduler.days)
-                        # Sum scheduled hours per section per day from GA genes
-                        _sec_day_h = defaultdict(lambda: defaultdict(float))
-                        for _g in best_schedule.genes:
-                            if 0 <= _g.day_idx < _n_days:
-                                _sec_day_h[_g.section_id][_g.day_idx] += (_g.end_idx - _g.start_idx) / 2.0
-                        # Check each section for minor-dept hour gap
-                        _hc02_details = []
-                        for _sec in raw_sections:
-                            _minor_h = sum(
-                                (c.synchronous_lec_hours  or c.lec_units or 0) +
-                                (c.synchronous_lab_hours  or c.lab_units or 0) +
-                                (c.asynchronous_lec_hours or 0) +
-                                (c.asynchronous_lab_hours or 0)
-                                for c in _sec.courses
-                                if c.semester_offered == target_semester
-                                and c.department and c.department not in _sel_depts_set
-                            )
-                            if _minor_h <= 0:
-                                continue
-                            _free = sum(
-                                max(0.0, _op_hours - _sec_day_h[_sec.id].get(d, 0.0))
-                                for d in range(_n_days)
-                            )
-                            if _free < _minor_h:
-                                _hc02_violating_sections.add(_sec.id)
-                                _hc02_details.append(
-                                    f"{_sec.section_name}: needs {_minor_h}h, only {_free:.1f}h free"
-                                )
-                        if _hc02_details:
-                            print(f"------------------------  HC-02 (Minor Subject Gap): {len(_hc02_details)} section(s) have insufficient free time for minor subjects:")
-                            for _msg in _hc02_details:
-                                print(f"   --------------- {_msg}")
-                        else:
-                            print("---------------- HC-02 (Minor Subject Gap): All sections have enough free time for minor subjects.")
-                        generation_status['hc02_violations'] = len(_hc02_details)
-                except Exception as _hc02_err:
-                    print(f"------------------------  HC-02 post-gen check error: {_hc02_err}")
+
 
                 for gene in best_schedule.genes:
                     if gene.day_idx < 0 or gene.day_idx >= len(days_list):
@@ -7236,10 +7218,6 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                             conflict = True
                         sec_slots_seen[sec_key] |= slots_used
 
-                    # 4. HC-02: flag all genes of sections that lack minor-subject gaps
-                    if not conflict and gene.section_id in _hc02_violating_sections:
-                        conflict = True
-
                     # Infer proper session_type for Fixed (pre-assigned) genes from room type
                     if gene.gene_type == 'Fixed':
                         _caps = room_info.get('capabilities', '')
@@ -7259,7 +7237,8 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                         has_conflict=conflict,
                         session_type=_stype,
                         source='ga',      # Module 3: mark as GA-generated
-                        is_draft=False,   # Module 3: GA output goes directly to master
+                        is_draft=True if draft_id else False,
+                        draft_version_id=draft_id if draft_id else None,
                     ))
 
                 issues_count = sum(1 for o in objects_to_save if o.has_conflict)
@@ -7280,15 +7259,29 @@ def run_ga_in_background(scheduler, target_semester='1st Semester'):
                         key=lambda f: int(re.search(r'\d+', f.employee_id or '0').group() or 0)
                     )
                     tba_id_list = [t.id for t in tba_sorted]
-                    tba_classes = (
-                        ScheduledClass.query
-                        .filter(
-                            ScheduledClass.faculty_id.in_(tba_id_list),
-                            ScheduledClass.semester == target_semester
+                    if draft_id:
+                        tba_classes = (
+                            ScheduledClass.query
+                            .filter(
+                                ScheduledClass.faculty_id.in_(tba_id_list),
+                                ScheduledClass.semester == target_semester,
+                                ScheduledClass.draft_version_id == draft_id,
+                                ScheduledClass.is_draft == True
+                            )
+                            .order_by(ScheduledClass.section_id, ScheduledClass.course_id)
+                            .all()
                         )
-                        .order_by(ScheduledClass.section_id, ScheduledClass.course_id)
-                        .all()
-                    )
+                    else:
+                        tba_classes = (
+                            ScheduledClass.query
+                            .filter(
+                                ScheduledClass.faculty_id.in_(tba_id_list),
+                                ScheduledClass.semester == target_semester,
+                                ScheduledClass.is_draft == False
+                            )
+                            .order_by(ScheduledClass.section_id, ScheduledClass.course_id)
+                            .all()
+                        )
                     if tba_classes:
                         _idx = 0
                         for _tba in tba_sorted:
@@ -7350,6 +7343,11 @@ def start_generation():
     target_semester = req_data.get('semester', '1st Semester')
     fresh_start = req_data.get('fresh_start', False)
     selected_depts = req_data.get('scheduled_depts', None)
+    draft_id = req_data.get('draft_version_id')
+    try:
+        draft_id = int(draft_id) if draft_id else None
+    except (ValueError, TypeError):
+        draft_id = None
 
     # Fallback to session, then to hardcoded default
     if not selected_depts:
@@ -7366,11 +7364,11 @@ def start_generation():
     generation_status['target_semester'] = target_semester
     generation_status['selected_depts'] = selected_depts
 
-    print(f"------------------- Starting Generation for: {target_semester} (Fresh Start: {fresh_start})")
+    print(f"------------------- Starting Generation for: {target_semester} (Fresh Start: {fresh_start}, draft_id={draft_id})")
     print(f"------------------- Scheduled Departments: {selected_depts}")
 
     # Module 7: Log action
-    log_activity('Generate Schedule', f"Started generation for {target_semester} (Fresh: {fresh_start})")
+    log_activity('Generate Schedule', f"Started generation for {target_semester} (Fresh: {fresh_start}, draft_id={draft_id})")
 
     # ------------------------------------ FRESH START: Clear existing schedule if requested ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     if fresh_start:
@@ -7384,10 +7382,13 @@ def start_generation():
                                       Course.department == dept)
                               .delete(synchronize_session=False))
             else:
-                num_deleted = ScheduledClass.query.filter_by(semester=target_semester).delete()
+                if draft_id:
+                    num_deleted = ScheduledClass.query.filter_by(semester=target_semester, draft_version_id=draft_id, is_draft=True).delete()
+                else:
+                    num_deleted = ScheduledClass.query.filter_by(semester=target_semester, is_draft=False).delete()
             
             db.session.commit()
-            print(f"---------------- Fresh Start: Deleted {num_deleted} existing records for {target_semester}.")
+            print(f"---------------- Fresh Start: Deleted {num_deleted} existing records for {target_semester} (draft_id={draft_id}).")
         except Exception as e:
             db.session.rollback()
             print(f"------------------------ Failed to clear schedule for fresh start: {e}")
@@ -7401,10 +7402,16 @@ def start_generation():
         _blocked_slots = []
     # 1. FILTER DATA BY SEMESTER + DEPARTMENT
     # Only schedule courses from user-selected departments; others are treated as minor subjects
+    # BUT we MUST also include any courses that have active pre-assignments (Locked Schedules)
+    # so they are not discarded and are correctly processed as locked/fixed schedules!
+    pre_assigned_cids = [pa[0] for pa in db.session.query(PreAssignment.course_id).filter_by(is_archived=False).all() if pa[0]]
     raw_courses = Course.query.filter(
         Course.is_archived == False,
         Course.semester_offered == target_semester,
-        Course.department.in_(selected_depts)
+        or_(
+            Course.department.in_(selected_depts),
+            Course.id.in_(pre_assigned_cids)
+        )
     ).all()
 
 
@@ -7558,7 +7565,7 @@ def start_generation():
     generation_status['hardware'] = scheduler.hardware_profile
     
     # 3. START THREAD (pass semester so save/seed are scoped correctly)
-    thread = threading.Thread(target=run_ga_in_background, args=(scheduler, target_semester))
+    thread = threading.Thread(target=run_ga_in_background, args=(scheduler, target_semester, draft_id))
     thread.start()
     
     return jsonify({'status': 'started', 'semester': target_semester})
@@ -7630,10 +7637,14 @@ def check_feasibility():
         _blocked_slots = []
 
     # ── Step 1: Filter Data ────────────────────────────────────────────────
+    pre_assigned_cids = [pa[0] for pa in db.session.query(PreAssignment.course_id).filter_by(is_archived=False).all() if pa[0]]
     raw_courses = Course.query.filter(
         Course.is_archived == False,
         Course.semester_offered == target_semester,
-        Course.department.in_(selected_depts)
+        or_(
+            Course.department.in_(selected_depts),
+            Course.id.in_(pre_assigned_cids)
+        )
     ).all()
     
     courses = []
@@ -9199,6 +9210,7 @@ def api_draft_get(draft_id):
         return jsonify({'ok': False, 'error': 'Draft not found'}), 404
     creator = User.query.get(dv.created_by)
     creator_username = creator.username if creator else 'System'
+    creator_role = creator.role if creator else 'user'
     return jsonify({
         'ok': True,
         'id': dv.id,
@@ -9208,7 +9220,8 @@ def api_draft_get(draft_id):
         'notes': dv.notes,
         'status': dv.status,
         'is_published': dv.is_published,
-        'creator_username': creator_username
+        'creator_username': creator_username,
+        'creator_role': creator_role
     })
 
 
@@ -9995,19 +10008,7 @@ def check_constraints():
                 add_v('EVENING_AVOIDANCE', 'Evening Avoidance',
                       f'Class in {s.room.room_name} starts at {s.start_time} (5:00 PM or later).', s)
 
-        # SC-II-01: PE Morning Placement (Starts before 12 PM)
-        is_pe = 'P.E.' in s.course.course_code.upper() or 'FITT' in s.course.course_code.upper()
-        if is_pe:
-            if to_minutes(s.start_time) >= 720: # 12:00 PM
-                add_v('PE_MORNING_PLACEMENT', 'PE Morning Placement',
-                      f'PE session {s.course.course_code} starts at {s.start_time} (Prefer morning).', s)
-            # SC-II-02: PE Early Week (Mon-Wed)
-            day_idx = day_rank.get(s.day, 0)
-            if day_idx > 2: # Thu, Fri, Sat
-                add_v('PE_EARLY_WEEK', 'PE Early Week Placement',
-                      f'PE session {s.course.course_code} is on {s.day} (Prefer Mon-Wed).', s)
-
-        # SC-II-03: Strategic Async Placement (Disabled as per user request)
+        # Strategic Async Placement is disabled
         pass
 
 
@@ -10130,22 +10131,6 @@ def check_constraints():
                       f'Room {s1.room.room_name} on {day} has a {gap_min}-minute gap '
                       f'between {s1.course.course_code} and {s2.course.course_code}.', s1, s2)
 
-    # =========================================================
-    # SC-II-05: LAB ROOM SATURATION GAP
-    # Penalize wasteful 1-hour or 2-hour gaps in physical Computer Labs.
-    # =========================================================
-    for (room_id, day), room_schedules in _room_day_groups.items():
-        r = room_schedules[0].room if room_schedules else None
-        if r and 'Computer Lab' in (r.capabilities or ''):
-            room_schedules.sort(key=lambda x: to_minutes(x.start_time))
-            for i in range(len(room_schedules) - 1):
-                s1 = room_schedules[i]
-                s2 = room_schedules[i+1]
-                gap_min = to_minutes(s2.start_time) - to_minutes(s1.end_time)
-                if gap_min in (30, 60, 90, 120):
-                    add_v('LAB_ROOM_SATURATION_GAP', 'Lab Room Squeeze/Saturation',
-                          f'Lab room {s1.room.room_name} on {day} has a wasteful {gap_min}-minute idle gap '
-                          f'between {s1.course.course_code} and {s2.course.course_code}.', s1, s2)
 
     # =========================================================
     # GROUP 3: LOAD, SEQUENCE & DAILY DISTRIBUTION CHECKS
@@ -10227,10 +10212,7 @@ def check_constraints():
                 add_v('LEC_LAB_WEEKLY_DIST', 'Lecture-Lab Weekly Distribution',
                       f'Lecture and Lab for {base} are scheduled on the same day.', lab, lec)
 
-            # SC-I-09: Lec and Lab should be within 2 days of each other (Proximity)
-            if lec_day > 0 and lab_day > 0 and abs(lec_day - lab_day) > 2:
-                add_v('LEC_LAB_PROXIMITY', 'Lecture-Lab Proximity',
-                      f'Lecture and Lab for {base} are more than 2 days apart.', lec, lab)
+
 
     # SC-I-05/SC-I-06: No isolated lecture/lab; SC-II-02: Min daily section load
     for sec_id, classes in section_courses_map.items():
@@ -10264,19 +10246,7 @@ def check_constraints():
                 add_v('MIN_DAILY_SECTION_LOAD', 'Min Daily Section Load',
                       f'Section {day_classes[0].section.section_name} has only {total_dur_h:.1f} hours of class on {day} (Target: >= 3.0h).', day_classes[0])
 
-            # SC-I-05 / SC-I-06: Isolated single class with nothing else that day.
-            # Use room capabilities to distinguish Lec vs Lab (same as GA gene_type logic)
-            # so a session is counted as ONE violation type only, preventing double-counting
-            # for courses that have both lec_units > 0 and lab_units > 0.
-            if len(day_classes) == 1:
-                c = day_classes[0]
-                is_lab_room = hasattr(c, 'room') and c.room and 'Computer Lab' in (c.room.capabilities or '')
-                if is_lab_room and (c.course.lab_units > 0 or c.course.synchronous_lab_hours > 0):
-                    add_v('NO_ISOLATED_LABS', 'No Isolated Laboratories',
-                          f'Section {c.section.section_name} has an isolated lab on {day}.', c)
-                elif not is_lab_room and (c.course.lec_units > 0 or c.course.synchronous_lec_hours > 0):
-                    add_v('NO_ISOLATED_LECTURES', 'No Isolated Lectures',
-                          f'Section {c.section.section_name} has an isolated lecture on {day}.', c)
+
 
     # =========================================================
     # GROUP 4: STRICT ALLOCATION CHECKS (HC-05/06/07) & HC-25
@@ -10297,20 +10267,20 @@ def check_constraints():
             found_types = allocation_audit.get((sec.id, course.id), set())
             fake_obj = Fake(sec, course)
 
-            # HC-05: Missing Lecture
+            # HC-03: Missing Lecture
             if (course.synchronous_lec_hours > 0 or course.lec_units > 0) and 'Lec' not in found_types:
-                add_v('STRICT_ALLOC_LEC', 'Missing Lecture',
+                add_v('STRICT_LEC_DURATION', 'Missing Lecture',
                       f'Lecture for {course.course_code} ({sec.section_name}) is not scheduled.', fake_obj)
 
-            # HC-06: Missing Laboratory
+            # HC-04: Missing Laboratory
             if (course.synchronous_lab_hours > 0 or course.lab_units > 0) and 'Lab' not in found_types:
-                add_v('STRICT_ALLOC_LAB', 'Missing Laboratory',
+                add_v('STRICT_LAB_DURATION', 'Missing Laboratory',
                       f'Laboratory for {course.course_code} ({sec.section_name}) is not scheduled.', fake_obj)
 
-            # HC-07: Missing Async
+            # HC-16: Missing Async
             has_async = ((course.asynchronous_lec_hours or 0) + (course.asynchronous_lab_hours or 0)) > 0
             if has_async and 'Async' not in found_types:
-                add_v('STRICT_ALLOC_ASYNC', 'Missing Async',
+                add_v('COMPLETE_COURSE_SCHEDULING', 'Missing Async',
                       f'Async session for {course.course_code} ({sec.section_name}) is not scheduled.', fake_obj)
 
             # HC-25: Complete Course Scheduling (no session at all for this sec/course pair)
@@ -10360,7 +10330,7 @@ def check_constraints():
                           f'was changed: expected {pa.day} {pa.start_time}----{pa.end_time} '
                           f'but found {s.day} {s.start_time}----{s.end_time}.', s)
 
-        # HC-26: Pre-assignment Exclusivity ---- no other class may overlap a pre-assigned slot
+        # HC-18: Pre-assignment Exclusivity ---- no other class may overlap a pre-assigned slot
         for pa in pre_assignments:
             pa_start = to_minutes(pa.start_time)
             pa_end   = to_minutes(pa.end_time)
@@ -10403,35 +10373,7 @@ def check_constraints():
         if minor_hours > 0:
             minor_dept_courses[sec.id] = minor_hours
 
-    if minor_dept_courses and is_active('MINOR_SUBJECT_GAP'):
-        # Build a map of scheduled hours per section per day
-        sec_day_busy = {}
-        for s in schedules:
-            dur = (to_minutes(s.end_time) - to_minutes(s.start_time)) / 60
-            sec_day_busy.setdefault(s.section_id, {})
-            sec_day_busy[s.section_id][s.day] = sec_day_busy[s.section_id].get(s.day, 0) + dur
 
-        op_hours = (_sys.end_hour - _sys.start_hour) if _sys else 13  # default 7am-8pm = 13h
-
-        for sec in all_sections:
-            if sec.id not in minor_dept_courses:
-                continue
-            needed = minor_dept_courses[sec.id]
-            # Count total free hours across all active days
-            busy_map = sec_day_busy.get(sec.id, {})
-            active_days_list = list(allowed_days_set) if allowed_days_set else ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
-            total_free = sum(max(0, op_hours - busy_map.get(day, 0)) for day in active_days_list)
-            if total_free < needed:
-                fake_obj = Fake(sec, sec.courses[0] if sec.courses else None)
-                if fake_obj.course:
-                    violations.append({
-                        'type': settings.get('MINOR_SUBJECT_GAP', 'HC'),
-                        'rule': 'Minor Subject Gap',
-                        'desc': (f'Section {sec.section_name} needs {needed}h for minor subjects '
-                                 f'but only has {total_free:.1f}h of free time available.'),
-                        'class_a': fake_obj,
-                        'class_b': None
-                    })
 
     # ---------------------------------------------------------
     # SORTING, SEARCH & PAGINATION
@@ -11300,25 +11242,22 @@ def build_variable_map(layout_type, settings, section_name=None, entity_name=Non
 
     school_val = getattr(s, f'{layout_type}_school_name', '') or 'CAVITE STATE UNIVERSITY'
 
-    # Signatories from JSON
-    sig_json_str = getattr(s, f'{layout_type}_signatories_json', None)
+    # Build signatories list directly from individual flat database columns to avoid stale JSON cached values
     signatories = []
-    if sig_json_str:
-        try:
-            signatories = json.loads(sig_json_str)
-        except Exception:
-            signatories = []
-    if not signatories:
-        for i in (1, 2, 3):
-            v_name = getattr(s, f'{layout_type}_signatory_{i}', '') or ''
-            v_title = ''
-            if layout_type != 'faculty':
-                # For non-faculty, check sig2/sig3 title columns
-                if i == 2: v_title = getattr(s, f'{layout_type}_sig2_title', '') or 'Director, Instruction'
-                elif i == 3: v_title = getattr(s, f'{layout_type}_sig3_title', '') or 'Campus Administrator'
-            
-            if v_name.strip():
-                signatories.append({'name': v_name, 'title': v_title})
+    
+    sig1_name = (getattr(s, f'{layout_type}_signatory_1', '') or '').strip()
+    if sig1_name:
+        signatories.append({'name': sig1_name, 'title': ''})
+        
+    sig2_name = (getattr(s, f'{layout_type}_signatory_2', '') or '').strip()
+    sig2_title = (getattr(s, f'{layout_type}_sig2_title', '') or '').strip()
+    if sig2_name:
+        signatories.append({'name': sig2_name, 'title': sig2_title or 'Director, Instruction'})
+        
+    sig3_name = (getattr(s, f'{layout_type}_signatory_3', '') or '').strip()
+    sig3_title = (getattr(s, f'{layout_type}_sig3_title', '') or '').strip()
+    if sig3_name:
+        signatories.append({'name': sig3_name, 'title': sig3_title or 'Campus Administrator'})
 
     from datetime import date as _date
     vmap = {
@@ -17517,7 +17456,7 @@ from user_genetic_algorithm import UserGeneticScheduler
 
 user_generation_status = {}
 
-def run_user_ga_in_background(user_id, username, scheduler, semester, user_dept):
+def run_user_ga_in_background(user_id, username, scheduler, semester, user_dept, draft_id):
     global user_generation_status
     _gen_start_time = time.time()
 
@@ -17576,10 +17515,16 @@ def run_user_ga_in_background(user_id, username, scheduler, semester, user_dept)
         try:
             # Load existing schedule for this department/semester as seed (Warm start)
             seed_records = []
-            existing = ScheduledClass.query.join(Course).filter(
-                ScheduledClass.semester == semester,
-                Course.department == user_dept
-            ).all()
+            if draft_id:
+                existing = ScheduledClass.query.filter_by(draft_version_id=draft_id, is_draft=True).join(Course).filter(
+                    ScheduledClass.semester == semester,
+                    Course.department == user_dept
+                ).all()
+            else:
+                existing = ScheduledClass.query.join(Course).filter(
+                    ScheduledClass.semester == semester,
+                    Course.department == user_dept
+                ).all()
             for sc in existing:
                 seed_records.append({
                     'course_id': sc.course_id, 'section_id': sc.section_id, 'faculty_id': sc.faculty_id,
@@ -17594,18 +17539,37 @@ def run_user_ga_in_background(user_id, username, scheduler, semester, user_dept)
             if best_chromosome and not user_generation_status[user_id].get('stop_requested'):
                 # 2. SAVE Results back to ScheduledClass
                 # Delete ONLY this department's schedule for this semester
-                to_delete = ScheduledClass.query.join(Course).filter(
-                    ScheduledClass.semester == semester,
-                    Course.department == user_dept
-                ).all()
+                if draft_id:
+                    to_delete = ScheduledClass.query.filter_by(draft_version_id=draft_id, is_draft=True).join(Course).filter(
+                        ScheduledClass.semester == semester,
+                        Course.department == user_dept
+                    ).all()
+                else:
+                    to_delete = ScheduledClass.query.join(Course).filter(
+                        ScheduledClass.semester == semester,
+                        Course.department == user_dept
+                    ).all()
                 for d_obj in to_delete:
                     db.session.delete(d_obj)
                 db.session.commit()
                 
+                # Load active pre-assignments for O(1) matching
+                active_pas = PreAssignment.query.filter_by(is_archived=False).all()
+                pa_lookup = {(pa.course_id, pa.section_id) for pa in active_pas}
+                
+                # Load all section IDs belonging to this user's department
+                user_sections = set()
+                for s in Section.query.filter_by(is_archived=False).all():
+                    for c in s.courses:
+                        if c.department == user_dept:
+                            user_sections.add(s.id)
+                            break
+
                 objects_to_save = []
                 days_list = scheduler.days
                 for g in best_chromosome.genes:
-                    if not g.is_fixed: # Only save the newly generated ones (this department's)
+                    is_pre_assignment = ((g.course_id, g.section_id) in pa_lookup) and (g.section_id in user_sections)
+                    if not g.is_fixed or is_pre_assignment: # Save newly generated ones OR pre-assignments of our sections
                         day_str   = days_list[g.day_idx]
                         start_str = scheduler.slot_to_time(g.start_idx)
                         end_str   = scheduler.slot_to_time(g.end_idx)
@@ -17628,13 +17592,14 @@ def run_user_ga_in_background(user_id, username, scheduler, semester, user_dept)
                             semester=semester,
                             session_type=_stype,
                             source='ga_user',
-                            is_draft=False
+                            is_draft=True if draft_id else False,
+                            draft_version_id=draft_id if draft_id else None
                         ))
                 
                 if objects_to_save:
                     db.session.bulk_save_objects(objects_to_save)
                     db.session.commit()
-                    log_activity("Generate Schedule (User)", f"Generated {len(objects_to_save)} classes for {user_dept} in {semester}.", override_user_id=user_id, override_username=username)
+                    log_activity("Generate Schedule (User)", f"Generated {len(objects_to_save)} classes for {user_dept} in {semester} inside draft {draft_id}.", draft_id=draft_id, override_user_id=user_id, override_username=username)
                 
                 user_generation_status[user_id]['done'] = True
                 socketio.emit('user_ga_done', {'ok': True}, room=f"user_{user_id}")
@@ -17668,13 +17633,17 @@ def user_auto_schedule():
     known_departments = sorted(list(set(c.department for c in Course.query.filter_by(is_archived=False).all() if c.department)))
     saved_depts = [user_dept] if user_dept else []
     
+    # Fetch unpublished drafts belonging to this department
+    drafts = DraftVersion.query.filter_by(department=user_dept, is_published=False).order_by(DraftVersion.updated_at.desc()).all()
+    
     return render_template(
         'user_auto_schedule.html',
         start_hour=s.start_hour,
         end_hour=s.end_hour,
         user_dept=user_dept,
         known_departments=known_departments,
-        saved_depts=saved_depts
+        saved_depts=saved_depts,
+        drafts=drafts
     )
 
 @app.route('/api/user/generate', methods=['POST'])
@@ -17689,6 +17658,10 @@ def api_user_generate():
     req_data = request.get_json() or {}
     target_semester = req_data.get('semester', '1st Semester')
     fresh_start = req_data.get('fresh_start', False)
+    draft_id = req_data.get('draft_version_id')
+    
+    if not draft_id:
+        return jsonify({'ok': False, 'error': 'Please select a draft version first.'}), 400
     
     if user_id in user_generation_status and user_generation_status[user_id].get('running'):
         return jsonify({'ok': False, 'error': 'Generation already in progress.'}), 400
@@ -17717,7 +17690,8 @@ def api_user_generate():
     # Normalize for comparison
     target_depts_norm = [d.strip().upper() for d in scheduled_depts if d]
     
-    locked_schedules = ScheduledClass.query.join(Course).filter(
+    # Query locked schedules from this specific draft
+    locked_schedules = ScheduledClass.query.filter_by(draft_version_id=draft_id, is_draft=True).join(Course).filter(
         ScheduledClass.semester == target_semester,
         func.not_(func.upper(func.trim(Course.department)).in_(target_depts_norm))
     ).all()
@@ -17783,6 +17757,12 @@ def api_user_generate():
     # Constraints
     constraints_config = {c.logic_code: {'type': c.constraint_type, 'weight': c.weight} for c in Constraint.query.all()}
     
+    # Load blocked slots from DB
+    try:
+        blocked_slots = json.loads(settings_db.blocked_slots_json or '[]') or []
+    except Exception:
+        blocked_slots = []
+        
     # 4. Initialize Scheduler
     scheduler = UserGeneticScheduler(
         courses_data, sections, faculty_data, room_data, 
@@ -17790,12 +17770,13 @@ def api_user_generate():
         start_time=settings_db.start_hour,
         end_time=settings_db.end_hour,
         allowed_days=active_days,
+        blocked_slots=blocked_slots,
         user_id=user_id
     )
     
-    # If fresh_start, delete this department's existing schedule for the semester
+    # If fresh_start, delete this department's existing schedule for the semester inside the draft
     if fresh_start:
-        to_delete = ScheduledClass.query.join(Course).filter(
+        to_delete = ScheduledClass.query.filter_by(draft_version_id=draft_id, is_draft=True).join(Course).filter(
             ScheduledClass.semester == target_semester,
             Course.department == user_dept
         ).all()
@@ -17805,7 +17786,7 @@ def api_user_generate():
 
     # 5. Run in Background
     username = session.get('username')
-    thread = threading.Thread(target=run_user_ga_in_background, args=(user_id, username, scheduler, target_semester, user_dept))
+    thread = threading.Thread(target=run_user_ga_in_background, args=(user_id, username, scheduler, target_semester, user_dept, draft_id))
     thread.start()
     
     return jsonify({'ok': True, 'status': 'started'})
@@ -17828,6 +17809,10 @@ def api_user_check_feasibility():
 
         req_data = request.get_json() or {}
         target_semester = req_data.get('semester', '1st Semester')
+        draft_id = req_data.get('draft_version_id')
+        
+        if not draft_id:
+            return jsonify({'summary': {'status': 'RED', 'message': 'Please select a draft version first.'}})
         
         # 1. Gather Data (Same as generate)
         settings_db = get_settings()
@@ -17844,7 +17829,8 @@ def api_user_check_feasibility():
         # Normalize for comparison
         target_depts_norm = [d.strip().upper() for d in scheduled_depts if d]
         
-        locked_schedules = ScheduledClass.query.join(Course).filter(
+        # Query locked schedules from this specific draft
+        locked_schedules = ScheduledClass.query.filter_by(draft_version_id=draft_id, is_draft=True).join(Course).filter(
             ScheduledClass.semester == target_semester,
             func.not_(func.upper(func.trim(Course.department)).in_(target_depts_norm))
         ).all()
@@ -17892,6 +17878,12 @@ def api_user_check_feasibility():
             if is_online or is_tba or is_dept_room:
                 room_data.append({'id': r.id, 'room_name': r.room_name, 'capabilities': r.capabilities, 'status': r.status})
         
+        # Load blocked slots from DB
+        try:
+            blocked_slots = json.loads(settings_db.blocked_slots_json or '[]') or []
+        except Exception:
+            blocked_slots = []
+            
         # 2. Initialize Scheduler and Run 3-Level Check
         scheduler = UserGeneticScheduler(
             courses_data, sections, faculty_data, room_data, 
@@ -17899,6 +17891,7 @@ def api_user_check_feasibility():
             start_time=settings_db.start_hour,
             end_time=settings_db.end_hour,
             allowed_days=active_days,
+            blocked_slots=blocked_slots,
             user_id=session.get('user_id')
         )
         

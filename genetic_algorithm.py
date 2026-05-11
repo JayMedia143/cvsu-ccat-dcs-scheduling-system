@@ -669,9 +669,9 @@ class GeneticScheduler:
         self._seq_lec_rooms = sorted([rid for rid in available if rid not in lab_rooms])
 
         # Identify rooms that allow multiple simultaneous assignments:
-        # - University Field (outdoor/NSTP), T.B.A. (placeholder — admin resolves later)
+        # - University Field/Court/Gym/Playground (outdoor/NSTP/PE), T.B.A. (placeholder — admin resolves later)
         self.multi_assignment_rooms = (
-            {r['id'] for r in rooms if 'FIELD' in r.get('room_name', '').upper()}
+            {r['id'] for r in rooms if any(word in r.get('room_name', '').upper() for word in ['FIELD', 'COURT', 'GYM', 'PLAYGROUND'])}
             | self.tba_room_ids
             | self.online_room_ids
         )
@@ -757,10 +757,9 @@ class GeneticScheduler:
         self._pen_type = {}   # code → 'HC' | 'SC1' | 'SC2' | 'NC'
         for code in ('ROOM_AVAILABILITY', 'ROOM_SUITABILITY', 'ROOM_CAPACITY_PROPORTIONAL',
                      'OPERATING_HOURS', 'LUNCH_BREAK', 'EVENING_AVOIDANCE',
-                     'PE_MORNING_PLACEMENT', 'PE_EARLY_WEEK',
-                     'LEC_LAB_WEEKLY_DIST', 'LEC_LAB_PROXIMITY',
+                     'LEC_LAB_WEEKLY_DIST',
                      'MAX_CONSECUTIVE_STUDENT', 'MAX_CONSECUTIVE_FACULTY',
-                     'LEC_LAB_SEQUENCE', 'NO_ISOLATED_LECTURES', 'NO_ISOLATED_LABS',
+                     'LEC_LAB_SEQUENCE',
                      'MIN_DAILY_SECTION_LOAD',
                      'FACULTY_AVAILABILITY',
                      'GLOBAL_DAY_RESTRICTION',
@@ -802,6 +801,25 @@ class GeneticScheduler:
 
         # Lazily-populated sorted-room cache per (section_id, gene_type)
         self._sorted_rooms_cache = {}
+
+        # ── HC-24 IMPOSSIBILITY FILTER ────────────────────────────────────────
+        # Pre-compute the total weekly scheduled hours for each section.
+        # Sections with total weekly hours < 6 (< 12 slots) can NEVER satisfy
+        # HC-24 (min 3 hrs/active day) — no matter where their genes are placed.
+        # These are marked as exempt to prevent the GA from looping forever on
+        # a mathematically unsolvable constraint. This is computed ONCE at init.
+        _sec_total_slots = defaultdict(int)
+        for _sec in sections:
+            _sid = _sec['id']
+            for _cid in _sec.get('course_ids', []):
+                _dur_lec = self._expected_duration.get((_cid, 'Lec'), 0)
+                _dur_lab = self._expected_duration.get((_cid, 'Lab'), 0)
+                _sec_total_slots[_sid] += _dur_lec + _dur_lab
+        # Sections with < 6 slots total (< 3 hours) are impossibly exempt.
+        self._hc24_exempt_sections = frozenset(
+            _sid for _sid, _slots in _sec_total_slots.items() if _slots < 6
+        )
+
 
         # Process pre-assignments (fixed genes)
         self.fixed_genes = []
@@ -855,50 +873,40 @@ class GeneticScheduler:
             # A1: Built-In / Structural Hard Constraints (HC-01 to HC-20)
             'LOCKED_SCHEDULES':           'HC-01',
             'GLOBAL_DAY_RESTRICTION':     'HC-02',
-            'STRICT_ALLOC_ASYNC':         'HC-03',
-            'STRICT_LEC_DURATION':        'HC-04',
-            'STRICT_LAB_DURATION':        'HC-05',
-            'STRICT_ASYNC_LEC_DUR':       'HC-06',
-            'STRICT_ASYNC_LAB_DUR':       'HC-07',
-            'SECTION_OVERLAP':            'HC-08',
-            'FACULTY_OVERLAP':            'HC-09',
-            'ROOM_OVERLAP':               'HC-10',
-            'SINGLE_FACULTY_PER_TIMESLOT':'HC-11',
-            'FACULTY_AVAILABILITY':       'HC-12',
-            'SINGLE_ROOM_PER_SESSION':    'HC-13',
-            'ROOM_AVAILABILITY':          'HC-14',
-            'OPERATING_HOURS':            'HC-15',
-            'HOURLY_ALIGNMENT':           'HC-16',
-            'COMPLETE_COURSE_SCHEDULING': 'HC-17',
-            'PREASSIGNMENT_EXCLUSIVITY':  'HC-18',
-            'FACULTY_DAY_SPLIT':          'HC-19',
-            'LUNCH_BREAK':                'HC-20',
+            'STRICT_LEC_DURATION':        'HC-03',
+            'STRICT_LAB_DURATION':        'HC-04',
+            'STRICT_ASYNC_LEC_DUR':       'HC-05',
+            'STRICT_ASYNC_LAB_DUR':       'HC-06',
+            'SECTION_OVERLAP':            'HC-07',
+            'FACULTY_OVERLAP':            'HC-08',
+            'ROOM_OVERLAP':               'HC-09',
+            'SINGLE_FACULTY_PER_TIMESLOT':'HC-10',
+            'FACULTY_AVAILABILITY':       'HC-11',
+            'SINGLE_ROOM_PER_SESSION':    'HC-12',
+            'ROOM_AVAILABILITY':          'HC-13',
+            'OPERATING_HOURS':            'HC-14',
+            'HOURLY_ALIGNMENT':           'HC-15',
+            'COMPLETE_COURSE_SCHEDULING': 'HC-16',
+            'PREASSIGNMENT_EXCLUSIVITY':  'HC-17',
+            'FACULTY_DAY_SPLIT':          'HC-18',
+            'LUNCH_BREAK':                'HC-19',
 
-            # A2: Evaluated Hard Constraints (HC-21 to HC-28)
-            'MINOR_SUBJECT_GAP':          'HC-21',
-            'MAX_CONSECUTIVE_STUDENT':    'HC-22',
-            'MAX_CONSECUTIVE_FACULTY':    'HC-23',
-            'NO_ISOLATED_LECTURES':       'HC-24',
-            'NO_ISOLATED_LABS':           'HC-25',
-            'MIN_DAILY_SECTION_LOAD':     'HC-26',
-            'LEC_IN_LAB_FALLBACK':        'HC-27',
-            'LEC_LAB_SEQUENCE':           'HC-28',
+            # A2: Evaluated Hard Constraints (HC-20 to HC-25)
+            'MAX_CONSECUTIVE_STUDENT':    'HC-20',
+            'MAX_CONSECUTIVE_FACULTY':    'HC-21',
+            'MIN_DAILY_SECTION_LOAD':     'HC-22',
+            'LEC_IN_LAB_FALLBACK':        'HC-23',
+            'LEC_LAB_SEQUENCE':           'HC-24',
+            'ROOM_SUITABILITY':           'HC-25',
 
-            # --- SOFT CONSTRAINTS I (SC-I-01 to SC-I-08) ---
+            # --- SOFT CONSTRAINTS I (SC-I-01 to SC-I-05) ---
             'VIRTUAL_ROOM_USAGE':         'SC-I-01',
             'EVENING_AVOIDANCE':          'SC-I-02',
             'ROOM_IDLE_GAP':              'SC-I-03',
             'LEC_LAB_WEEKLY_DIST':        'SC-I-04',
-            'LEC_LAB_PROXIMITY':          'SC-I-05',
-            'STRICT_ALLOC_LEC':           'SC-I-06',
-            'STRICT_ALLOC_LAB':           'SC-I-07',
-            'ROOM_SUITABILITY':           'SC-I-08',
 
-            # --- SOFT CONSTRAINTS II (SC-II-01 to SC-II-04) ---
-            'PE_MORNING_PLACEMENT':       'SC-II-01',
-            'PE_EARLY_WEEK':              'SC-II-02',
-            'ROOM_CAPACITY_PROPORTIONAL': 'SC-II-03',
-            'LAB_ROOM_SATURATION_GAP':    'SC-II-04'
+            # --- SOFT CONSTRAINTS II (SC-II-01 to SC-II-02) ---
+            'ROOM_CAPACITY_PROPORTIONAL': 'SC-II-01'
         }
 
     # ------------------------------------------------------------------ #
@@ -928,7 +936,7 @@ class GeneticScheduler:
             # Relax room suitability, proportional capacity, and max consecutive loads
             for code in ('ROOM_SUITABILITY', 'ROOM_CAPACITY_PROPORTIONAL', 
                          'MAX_CONSECUTIVE_STUDENT', 'MAX_CONSECUTIVE_FACULTY',
-                         'LEC_LAB_PROXIMITY', 'LEC_LAB_SEQUENCE'):
+                         'LEC_LAB_SEQUENCE'):
                 if code in self._pen:
                     self._pen[code] = max(1, self._penalty(code) // 4)
             print(f"⚠️ Stagnation counter={severe_counter}. Adaptive Constraint Relaxation active.")
@@ -974,7 +982,7 @@ class GeneticScheduler:
             return self._dept_rooms_lec_only.get(dept) or self._valid_rooms_lec_only
         return self._valid_rooms_async  # Async
 
-    def _smart_start(self, slots_needed, allow_evening=False, even_only=True):
+    def _smart_start(self, slots_needed, allow_evening=None, even_only=True):
         """
         Return a smart start slot with optional slot alignment constraints.
 
@@ -984,6 +992,8 @@ class GeneticScheduler:
         Weights: morning 4×, lunch 2×, afternoon 4×, evening 3× (if allow_evening).
         Daytime band extends to 7pm (seven_pm_slot); evening = 7pm–close.
         """
+        if allow_evening is None:
+            allow_evening = (self._pen_type.get('EVENING_AVOIDANCE', 'SC1') == 'NC')
         if even_only:
             valid = lambda s: s % 2 == 0
         else:
@@ -1031,9 +1041,12 @@ class GeneticScheduler:
             return random.choice(pool)
         # Fallback: any valid slot in full range
         fallback = [s for s in range(0, max_start + 1) if valid(s)]
+        _eve_mode = self._pen_type.get('EVENING_AVOIDANCE', 'NC')
+        if _eve_mode == 'HC':
+            fallback = [s for s in fallback if s < self.seven_pm_slot]
         if fallback:
             return random.choice(fallback)
-        return random.randint(0, max_start)
+        return random.randint(0, max(0, min(max_start, self.seven_pm_slot - 1 if _eve_mode == 'HC' else max_start)))
 
     def _best_room(self, gene_type, section_id, occ_room=None, rooms_override=None):
         """Return capacity-matched room using utilization-squared weighting.
@@ -1138,12 +1151,12 @@ class GeneticScheduler:
         for i, g in enumerate(chromosome.genes):
             if g.is_fixed:
                 continue
-            # SC-II-06: Evening Avoidance (SC2 — skip in sc1_only mode)
-            if not sc1_only and g.start_idx >= seven_pm_slot:
-                violators_set.add(i); continue
-            if is_pe.get(g.course_id):
-                if g.start_idx >= noon_slot or g.day_idx > 2:
-                    violators_set.add(i); continue
+            # EVENING_AVOIDANCE: check if active as soft constraint (SC1 or SC2)
+            _eve_mode = self._pen_type.get('EVENING_AVOIDANCE', 'NC')
+            if _eve_mode in ('SC1', 'SC2') and g.start_idx >= seven_pm_slot and g.room_id not in self._virtual_room_set:
+                violators_set.add(i)
+                continue
+
             if g.gene_type == 'Async':
                 if g.day_idx != 0 and g.day_idx != last_day:
                     violators_set.add(i); continue
@@ -1206,13 +1219,20 @@ class GeneticScheduler:
                         if g.start_idx < lwe and g.end_idx > lws:
                             violators_set.add(i)
 
-            # SC-II-01/02/05: NO_ISOLATED_LECTURES / NO_ISOLATED_LABS / MIN_DAILY_SECTION_LOAD
-            for (sec_id, day_idx), idxs in sec_day_genes.items():
-                if len(idxs) < 2:
-                    violators_set.add(idxs[0])
+            # MIN_DAILY_SECTION_LOAD: find soft violators where total hours < 3.0
+            p_mdl = self._pen.get('MIN_DAILY_SECTION_LOAD', 0)
+            if p_mdl:
+                for (sec_id, day_idx), idxs in sec_day_genes.items():
+                    # EXEMPTION: If any class in this section-day is Async, it is exempted
+                    if any(self._room_types.get(genes[_i].room_id) == 'Async' for _i in idxs):
+                        continue
+                    total_hrs = sum(genes[_i].duration_slots / 2 for _i in idxs)
+                    if total_hrs < 3.0:
+                        for _i in idxs:
+                            violators_set.add(_i)
 
         # SC-I-01: LEC_LAB_WEEKLY_DIST (Lab placed before Lec day)
-        # SC-I-03: LEC_LAB_PROXIMITY (Lec and Lab more than 3 days apart)
+        # LEC_LAB_SEQUENCE: Lecture must be scheduled before Laboratory
         for type_map in sec_course.values():
             lec_i = type_map.get('Lec')
             lab_i = type_map.get('Lab')
@@ -1222,7 +1242,8 @@ class GeneticScheduler:
             lab_g = genes[lab_i]
             if lab_g.day_idx < lec_g.day_idx:
                 violators_set.add(lab_i)
-            if abs(lec_g.day_idx - lab_g.day_idx) > 3:
+            if (lab_g.day_idx < lec_g.day_idx or 
+                (lab_g.day_idx == lec_g.day_idx and lab_g.start_idx < lec_g.start_idx)):
                 violators_set.add(lec_i)
                 violators_set.add(lab_i)
 
@@ -1285,6 +1306,43 @@ class GeneticScheduler:
         # Simple delta for now: if new position is busy, it's a conflict.
         # (This is a heuristic delta for high-speed mutation)
         return new_hc
+
+    def _get_density_guided_days(self, sec_id, occ_sec, min_day=0, priority_day=-1):
+        """
+        Returns days sorted by section activity density to cluster classes.
+        - Priority 1: Active days with remaining space (0 < load < 12 slots/6 hours), sorted descending to pack them first.
+        - Priority 2: Saturated days (load >= 12 slots) placed second to prevent consecutive hour violations.
+        - Priority 3: Completely empty days (load == 0) sorted last to keep them free and prevent isolated slots.
+        Optimized to be memory-free by doing on-the-fly bit_count lookups.
+        HC-24 GUARD: priority_day is injected at position 0 so it is always
+        tried first — keeps genes on their source day when removing would
+        drop section hours below the 3hr (6 slot) HC-24 minimum.
+        """
+        days_count = len(self.days)
+
+        def _density_key(d):
+            load = occ_sec.get((sec_id, d), 0).bit_count()
+            if load == 0:
+                return (2, 0)
+            elif load >= 12:
+                return (1, -load)
+            else:
+                return (0, -load)
+
+        sorted_days = sorted(range(days_count), key=_density_key)
+
+        # ── HC-24 SOURCE DAY GUARD: try priority_day first ─────────────────────
+        if priority_day >= 0 and priority_day in sorted_days:
+            sorted_days.remove(priority_day)
+            sorted_days.insert(0, priority_day)
+
+        # Apply min_day constraints if passed
+        if min_day > 0:
+            sorted_days = [d for d in sorted_days if d >= min_day]
+            if not sorted_days:
+                sorted_days = list(range(min_day, days_count))
+
+        return sorted_days
 
     def create_genome(self, skip_exhaustive=False):
         """
@@ -1397,12 +1455,20 @@ class GeneticScheduler:
             return out
 
         # ── Step 6: Try to place one session ──────────────────────────────
-        def _place_session(a):
+        def _place_session(a, enforce_seq=True):
             cid, sid, slots, gtype = a['cid'], a['sid'], a['slots'], a['type']
             dept = a['dept']
             mask_full = (1 << slots) - 1
             fac_id = _pick_faculty(cid, sid, gtype)
             is_big_lec = (gtype == 'Lec' and slots >= 6)
+
+            # Check for paired gene if sequence enforcement is on
+            paired_gene = None
+            if enforce_seq:
+                for g in genes:
+                    if g.course_id == cid and g.section_id == sid and g.gene_type != gtype:
+                        paired_gene = g
+                        break
 
             # ── FIX 4: Dynamic warmth sort before room scan ────────────────────
             # Instead of static alphabetical order, sort by current occupancy.
@@ -1432,17 +1498,26 @@ class GeneticScheduler:
 
             for room_list in (tier1, tier2):
                 for rid in room_list:
-                    # Spread section across days — sort by ascending section load
-                    _days_spread = sorted(
-                        range(n_days),
-                        key=lambda d: occ_sec.get((sid, d), 0).bit_count()
-                    )
+                    # Spread section across days — sort by density-guided preference
+                    _days_spread = self._get_density_guided_days(sid, occ_sec)
                     for d in _days_spread:
+                        if paired_gene:
+                            if gtype == 'Lec' and d > paired_gene.day_idx:
+                                continue
+                            if gtype == 'Lab' and d < paired_gene.day_idx:
+                                continue
+
                         start = self._try_pack(
                             rid, d, fac_id, sid, slots, mask_full,
                             occ_room, occ_fac, occ_sec
                         )
                         if start >= 0:
+                            if paired_gene and d == paired_gene.day_idx:
+                                if gtype == 'Lec' and start >= paired_gene.start_idx:
+                                    continue
+                                if gtype == 'Lab' and start < paired_gene.end_idx:
+                                    continue
+
                             m = mask_full << start
                             g = Gene(cid, sid, fac_id, rid, d,
                                      start, slots, gtype, False)
@@ -1462,6 +1537,11 @@ class GeneticScheduler:
                 for d in range(n_days):
                     if fa_avail and d not in fa_avail:
                         continue
+                    if paired_gene:
+                        if gtype == 'Lec' and d > paired_gene.day_idx:
+                            continue
+                        if gtype == 'Lab' and d < paired_gene.day_idx:
+                            continue
                     combined = (occ_sec.get((sid, d), 0)
                                 | (occ_fac.get((fac_id, d), 0)
                                    if fac_id and fac_id not in self.multi_assignment_faculty
@@ -1469,6 +1549,14 @@ class GeneticScheduler:
                                 | self._blocked_bitmasks.get(d, 0))
                     start = _compact_gap_scan(combined, slots, total_slots)
                     while start >= 0:
+                        if paired_gene and d == paired_gene.day_idx:
+                            if gtype == 'Lec' and start >= paired_gene.start_idx:
+                                start = _compact_gap_scan(combined, slots, total_slots, start + 2)
+                                continue
+                            if gtype == 'Lab' and start < paired_gene.end_idx:
+                                start = _compact_gap_scan(combined, slots, total_slots, start + 2)
+                                continue
+
                         m = mask_full << start
                         new_sec = occ_sec.get((sid, d), 0) | m
                         new_fac = (occ_fac.get((fac_id, d), 0) if fac_id is not None else 0) | m
@@ -1490,7 +1578,9 @@ class GeneticScheduler:
 
         # ── Step 7: Pack all sessions ──────────────────────────────────────
         for a in assignments:
-            _place_session(a)
+            success = _place_session(a, enforce_seq=True)
+            if not success:
+                _place_session(a, enforce_seq=False)
 
         # ── Step 8: Multi-pass reclaim — pull online genes into physical gaps
         self._reclaim_online_genes(genes, occ_room, occ_fac, occ_sec)
@@ -1651,7 +1741,7 @@ class GeneticScheduler:
                 break   # stable — no more reclaims possible
 
     def _try_compact_place(self, gene, occ_room, occ_fac, occ_sec,
-                            min_day=0, min_start_sd=-1, pref_fac=None):
+                            min_day=0, min_start_sd=-1, pref_fac=None, hc24_src_day=-1):
         """
         Compact placement: tries to append immediately after the last session
         in the gene's current room-day, then tries same room other days,
@@ -1684,8 +1774,8 @@ class GeneticScheduler:
 
         for rid in room_order:
             if rid in self.online_room_ids: continue
-            for d in range(len(self.days)):
-                if d < min_day: continue
+            day_order = self._get_density_guided_days(gene.section_id, occ_sec, min_day, priority_day=hc24_src_day)
+            for d in day_order:
                 if fa_avail_set and d not in fa_avail_set: continue
                 blocked = self._blocked_bitmasks.get(d, 0)
                 # Compact: start right after what's already in this room-day
@@ -1743,6 +1833,15 @@ class GeneticScheduler:
         room_bits = defaultdict(int)
         fac_bits  = defaultdict(int)
         sec_bits  = defaultdict(int)
+
+        # ── HC-24 PIGGYBACK ACCUMULATORS ─────────────────────────────────────
+        # Populated for free during the main gene scan below.
+        # sec_day_slots : (sec_id, day_idx) -> total duration_slots (int)
+        # sec_day_async : set of (sec_id, day_idx) that have ≥1 Async gene
+        # This eliminates any() + sum() generators in the HC-24 eval block.
+        sec_day_slots = defaultdict(int)
+        sec_day_async = set()
+        _room_types   = self._room_types  # local alias — avoids attr lookup in tight loop
 
         sec_course_genes = {}
 
@@ -1804,12 +1903,6 @@ class GeneticScheduler:
                         if p:
                             penalty += p; hard_conflicts += 1; conflicts.add(i); violation_codes.add(cmap['ROOM_AVAILABILITY']); violation_indices.add(i)
 
-                    # ── HC-04: TBA Faculty vs Sync Room (New Hybrid Rule) ────────────
-                    if self._is_fac_tba.get(g.faculty_id) and self._room_types.get(g.room_id) == 'Sync':
-                        p = pen.get('STRICT_ALLOC_ASYNC', HC_PENALTY)
-                        if p:
-                            penalty += p; hard_conflicts += 1; conflicts.add(i); violation_codes.add(cmap.get('STRICT_ALLOC_ASYNC', 'HC-04')); violation_indices.add(i)
-
                     # Department Exclusivity Rule: If room has assigned depts, gene must match
                     r_depts_set = self._room_depts.get(g.room_id)
                     if r_depts_set:
@@ -1818,25 +1911,25 @@ class GeneticScheduler:
                         if gene_dept not in r_depts_set:
                             p = pen.get('ROOM_SUITABILITY')
                             if p:
-                                penalty += p; hard_conflicts += 1; conflicts.add(i); violation_codes.add(cmap['ROOM_SUITABILITY']); violation_indices.add(i)
+                                _apply_violation('ROOM_SUITABILITY', p, [i], [g.is_fixed])
                                 continue
 
-                    # Sync-Only-Physical Rule: Relaxed to Soft for Overflow Tank support
+                    # ── VIRTUAL_ROOM_USAGE ──
                     if g.gene_type in ['Lec', 'Lab'] and g.room_id in self.online_room_ids:
-                        _code = 'STRICT_ALLOC_LEC' if g.gene_type == 'Lec' else 'STRICT_ALLOC_LAB'
-                        p = pen.get(_code, 100)
+                        p = pen.get('VIRTUAL_ROOM_USAGE', 100)
                         if p:
-                            _apply_violation(_code, p, [i], [g.is_fixed])
-                    
-                    # Original Suitability: Lab in Lab, Lec in Lec
-                    elif g.gene_type == 'Lab' and 'Computer Lab' not in r.get('capabilities', ''):
-                        p = pen.get('ROOM_SUITABILITY', 100)
-                        if p:
-                            _apply_violation('ROOM_SUITABILITY', p, [i], [g.is_fixed])
-                    elif g.gene_type == 'Lec' and 'Lecture' not in r.get('capabilities', ''):
-                        p = pen.get('ROOM_SUITABILITY', 100)
-                        if p:
-                            _apply_violation('ROOM_SUITABILITY', p, [i], [g.is_fixed])
+                            _apply_violation('VIRTUAL_ROOM_USAGE', p, [i], [g.is_fixed])
+
+                    # ── ROOM_SUITABILITY (HC) ──
+                    else:
+                        if g.gene_type == 'Lab' and 'Computer Lab' not in r.get('capabilities', ''):
+                            p = pen.get('ROOM_SUITABILITY', HC_PENALTY)
+                            if p:
+                                _apply_violation('ROOM_SUITABILITY', p, [i], [g.is_fixed])
+                        elif g.gene_type == 'Lec' and 'Lecture' not in r.get('capabilities', ''):
+                            p = pen.get('ROOM_SUITABILITY', HC_PENALTY)
+                            if p:
+                                _apply_violation('ROOM_SUITABILITY', p, [i], [g.is_fixed])
 
                     # ── SC-I-10: Lecture in Lab Fallback ──
                     if g.gene_type == 'Lec' and 'Computer Lab' in r.get('capabilities', ''):
@@ -1845,7 +1938,8 @@ class GeneticScheduler:
                             _apply_violation('LEC_IN_LAB_FALLBACK', p, [i], [g.is_fixed])
 
 
-                    if include_sc2:
+                    _cap_hc = pen_type.get('ROOM_CAPACITY_PROPORTIONAL', 'SC2') == 'HC'
+                    if include_sc2 or _cap_hc:
                         # SC-II-05: Room Capacity Allocation (Absolute Fit)
                         r_name = r.get('room_name', '').upper()
                         # Exemptions: Courts, Gymnasium, TBA, Online Room
@@ -1916,17 +2010,7 @@ class GeneticScheduler:
                         _apply_violation('EVENING_AVOIDANCE', p, [i], [g.is_fixed])
 
             if include_sc2:
-                # ── PE / Async soft constraints (SC2 — skip in SC-I phase) ────
-                if is_pe.get(g.course_id):
-                    if g.start_idx >= noon_slot:
-                        p = pen['PE_MORNING_PLACEMENT']
-                        if p:
-                            _apply_violation('PE_MORNING_PLACEMENT', p, [i], [g.is_fixed])
-                    if g.day_idx > 2:
-                        p = pen['PE_EARLY_WEEK']
-                        if p:
-                            _apply_violation('PE_EARLY_WEEK', p, [i], [g.is_fixed])
-                elif g.gene_type == 'Async':
+                if g.gene_type == 'Async':
                     # SC-II-03: Strategic Async Placement (Disabled as per user request — online rooms available)
                     pass
 
@@ -1944,46 +2028,51 @@ class GeneticScheduler:
             # Room overlap (HC-16)
             if g.room_id not in self.online_room_ids and g.room_id not in self.multi_assignment_rooms:
                 _rkey = (g.room_id, _d)
-                # if (room_bits[_rkey] & _mask) != 0:
-                #     penalty += HC_PENALTY; hard_conflicts += 1; violation_codes.add(cmap['ROOM_OVERLAP'])
-                #     if not g.is_fixed:
-                #         conflicts.add(i); violation_indices.add(i)
-                #     for _ps, _pe, _pi in room_use[_rkey]:
-                #         if _ps < g.end_idx and _pe > g.start_idx:
-                #             if not genes[_pi].is_fixed:
-                #                 conflicts.add(_pi); violation_indices.add(_pi)
+                if (room_bits[_rkey] & _mask) != 0:
+                    penalty += HC_PENALTY; hard_conflicts += 1; violation_codes.add(cmap['ROOM_OVERLAP'])
+                    if not g.is_fixed:
+                        conflicts.add(i); violation_indices.add(i)
+                    for _ps, _pe, _pi in room_use[_rkey]:
+                        if _ps < g.end_idx and _pe > g.start_idx:
+                            if not genes[_pi].is_fixed:
+                                conflicts.add(_pi); violation_indices.add(_pi)
                 room_bits[_rkey] |= _mask
 
             # Faculty overlap (HC-13)
             if g.faculty_id and g.faculty_id not in self.multi_assignment_faculty:
                 _fkey = (g.faculty_id, _d)
-                # if (fac_bits[_fkey] & _mask) != 0:
-                #     penalty += HC_PENALTY; hard_conflicts += 1; violation_codes.add(cmap['FACULTY_OVERLAP'])
-                #     if not g.is_fixed:
-                #         conflicts.add(i); violation_indices.add(i)
-                #     for _ps, _pe, _pi in fac_use[_fkey]:
-                #         if _ps < g.end_idx and _pe > g.start_idx:
-                #             if not genes[_pi].is_fixed:
-                #                 conflicts.add(_pi); violation_indices.add(_pi)
+                if (fac_bits[_fkey] & _mask) != 0:
+                    penalty += HC_PENALTY; hard_conflicts += 1; violation_codes.add(cmap['FACULTY_OVERLAP'])
+                    if not g.is_fixed:
+                        conflicts.add(i); violation_indices.add(i)
+                    for _ps, _pe, _pi in fac_use[_fkey]:
+                        if _ps < g.end_idx and _pe > g.start_idx:
+                            if not genes[_pi].is_fixed:
+                                conflicts.add(_pi); violation_indices.add(_pi)
                 fac_bits[_fkey] |= _mask
 
             # Section overlap (HC-12)
             _skey = (g.section_id, _d)
-            # if (sec_bits[_skey] & _mask) != 0:
-            #     penalty += HC_PENALTY; hard_conflicts += 1; violation_codes.add(cmap['SECTION_OVERLAP'])
-            #     if not g.is_fixed:
-            #         conflicts.add(i); violation_indices.add(i)
-            #     for _ps, _pe, _pi in sec_use[_skey]:
-            #         if _ps < g.end_idx and _pe > g.start_idx:
-            #             if not genes[_pi].is_fixed:
-            #                 conflicts.add(_pi); violation_indices.add(_pi)
+            if (sec_bits[_skey] & _mask) != 0:
+                penalty += HC_PENALTY; hard_conflicts += 1; violation_codes.add(cmap['SECTION_OVERLAP'])
+                if not g.is_fixed:
+                    conflicts.add(i); violation_indices.add(i)
+                for _ps, _pe, _pi in sec_use[_skey]:
+                    if _ps < g.end_idx and _pe > g.start_idx:
+                        if not genes[_pi].is_fixed:
+                            conflicts.add(_pi); violation_indices.add(_pi)
             sec_bits[_skey] |= _mask
 
             # Append to lists for HC-15/19/27 and lunch break
             room_use[(g.room_id,    _d)].append((g.start_idx, g.end_idx, i))
             if g.faculty_id:
                 fac_use[(g.faculty_id, _d)].append((g.start_idx, g.end_idx, i))
-            sec_use[(g.section_id,  _d)].append((g.start_idx, g.end_idx, i))
+            _sday = (g.section_id, _d)
+            sec_use[_sday].append((g.start_idx, g.end_idx, i))
+            # ── HC-24 PIGGYBACK: accumulate while we're already here ──
+            sec_day_slots[_sday] += g.duration_slots
+            if _room_types.get(g.room_id) == 'Async':
+                sec_day_async.add(_sday)
 
             # EARLY EXIT for hard_only mode
             _hc_cutoff = getattr(self, '_hc_eval_cutoff', 9999)
@@ -2038,10 +2127,7 @@ class GeneticScheduler:
                     p = pen['LEC_LAB_WEEKLY_DIST']
                     if p:
                         _apply_violation('LEC_LAB_WEEKLY_DIST', p, [lec_i, lab_i], [lec_g.is_fixed, lab_g.is_fixed])
-                if abs(lec_g.day_idx - lab_g.day_idx) > 2:
-                    p = pen['LEC_LAB_PROXIMITY']
-                    if p:
-                        _apply_violation('LEC_LAB_PROXIMITY', p, [lec_i, lab_i], [lec_g.is_fixed, lab_g.is_fixed])
+
 
         # ── SC-I-04: Room Idle Gap Penalty ───────────────────────────────────
         p_rig = pen.get('ROOM_IDLE_GAP', 0)
@@ -2071,8 +2157,7 @@ class GeneticScheduler:
                 if (lab_g.day_idx < lec_g.day_idx or
                         (lab_g.day_idx == lec_g.day_idx and
                          lab_g.start_idx < lec_g.start_idx)):
-                    penalty += p_lls; hard_conflicts += 1; violation_codes.add(cmap['LEC_LAB_SEQUENCE'])
-                    if not lab_g.is_fixed: conflicts.add(lab_i); violation_indices.add(lab_i)
+                    _apply_violation('LEC_LAB_SEQUENCE', p_lls, [lab_i], [lab_g.is_fixed])
 
         # ── Built-in: Max Consecutive Student Load (Enforced via Bitmask) ──
         for (sec_id, d), mask in sec_bits.items():
@@ -2092,38 +2177,34 @@ class GeneticScheduler:
                     if not genes[idx].is_fixed:
                         conflicts.add(idx); violation_indices.add(idx)
 
-        if not hard_only:
-            # ── SC-I-05 / SC-I-06 / SC-I-07: Isolation & min daily load ──────────
-            # These are now SC-I by default, but we check pen_type for flexibility.
-            p_nil = pen.get('NO_ISOLATED_LECTURES', 0)
-            p_nib = pen.get('NO_ISOLATED_LABS', 0)
-            p_mdl = pen.get('MIN_DAILY_SECTION_LOAD', 0)
-            
-            if p_nil or p_nib or p_mdl:
-                for (sec_id, day_idx), slots in sec_use.items():
-                    # EXEMPTION: If any class in this section-day is Async, it is exempted from isolation/load rules
-                    if any(self._room_types.get(genes[_i].room_id) == 'Async' for _, _, _i in slots):
+        # ── DYNAMIC EVALUATION: Minimum Daily Section Load (HC-24) ───────────
+        # PIGGYBACK OPTIMIZED: sec_day_slots and sec_day_async were pre-populated
+        # during the main gene scan above — no secondary iteration needed here.
+        # Cost per entry: 2× O(1) dict/set lookups + 1 integer compare.
+        p_mdl = pen.get('MIN_DAILY_SECTION_LOAD', 0)
+        if p_mdl:
+            type_mdl = pen_type.get('MIN_DAILY_SECTION_LOAD', 'SC1')
+            # Evaluate dynamically based on type and current phase:
+            # - Always run if it is a Hard Constraint (HC) to enforce it strictly.
+            # - Run if it is SC1 and we are not in hard_only mode.
+            # - Run if it is SC2 and include_sc2 is True.
+            if (type_mdl == 'HC') or (type_mdl == 'SC1' and not hard_only) or (type_mdl == 'SC2' and include_sc2):
+                _hc24_exempt = self._hc24_exempt_sections
+                for _sday, _total_slots in sec_day_slots.items():
+                    _sec_id, _day_idx = _sday
+                    # IMPOSSIBILITY FILTER: O(1) frozenset lookup
+                    if _sec_id in _hc24_exempt:
                         continue
-
-                    n = len(slots)
-                    # Check pen types to decide whether to include in this phase
-                    type_mdl = pen_type.get('MIN_DAILY_SECTION_LOAD', 'SC1')
-                    type_nil = pen_type.get('NO_ISOLATED_LECTURES', 'SC1')
-                    type_nib = pen_type.get('NO_ISOLATED_LABS', 'SC1')
-
-                    total_hrs = sum(genes[_i].duration_slots / 2 for _, _, _i in slots)
-                    if total_hrs < 3.0 and p_mdl and (type_mdl == 'SC1' or include_sc2):
-                        idxs = [_i for _, _, _i in slots]
+                    # ASYNC EXEMPTION: O(1) set lookup (pre-built during main scan)
+                    if _sday in sec_day_async:
+                        continue
+                    # MAIN CHECK: integer compare — no sum() needed
+                    if _total_slots < 6:  # 6 slots == 3.0 hours
+                        _slots = sec_use[_sday]
+                        idxs = [_i for _, _, _i in _slots]
                         fixed_list = [genes[_i].is_fixed for _i in idxs]
                         _apply_violation('MIN_DAILY_SECTION_LOAD', p_mdl, idxs, fixed_list)
-                    
-                    if n == 1:
-                        _, _, idx = slots[0]
-                        gt = genes[idx].gene_type
-                        if gt == 'Lec' and p_nil and (type_nil == 'SC1' or include_sc2):
-                            _apply_violation('NO_ISOLATED_LECTURES', p_nil, [idx], [genes[idx].is_fixed])
-                        elif gt == 'Lab' and p_nib and (type_nib == 'SC1' or include_sc2):
-                            _apply_violation('NO_ISOLATED_LABS', p_nib, [idx], [genes[idx].is_fixed])
+
 
         # ── SC-II-05: Room Fragmentation Penalty (Clustering) ────────────────
         # Penalize each physical room that is 'Active' but sparsely populated (< 4 hrs/day).
@@ -2202,10 +2283,20 @@ class GeneticScheduler:
                         lec_fac_lookup[(g.section_id, g.course_id)] = g.faculty_id
 
             random.shuffle(targets)
+            _hc24_active = bool(self._pen.get('MIN_DAILY_SECTION_LOAD', 0))
+            _hc24_exempt = self._hc24_exempt_sections
             for idx in targets:
                 gene = chromosome.genes[idx]
                 if gene.is_fixed: continue
+                _src_day = gene.day_idx
                 self._remove_from_occ(gene, occ_room, occ_fac, occ_sec)
+
+                # After removal, check if remaining load on source day is below 6 slots
+                _hc24_src = -1
+                if _hc24_active and gene.section_id not in _hc24_exempt:
+                    remaining_load = occ_sec.get((gene.section_id, _src_day), 0).bit_count()
+                    if 0 < remaining_load < 6:
+                        _hc24_src = _src_day
 
                 min_day, min_start_sd, pref_fac = 0, -1, None
                 if gene.gene_type == 'Lab':
@@ -2217,11 +2308,13 @@ class GeneticScheduler:
 
                 # Try compact placement first (append after existing sessions in room)
                 placed = self._try_compact_place(gene, occ_room, occ_fac, occ_sec,
-                                                  min_day, min_start_sd, pref_fac)
+                                                  min_day, min_start_sd, pref_fac,
+                                                  hc24_src_day=_hc24_src)
                 if not placed:
                     self.randomize_gene_fast(gene, occ_room, occ_fac, occ_sec,
                                               min_day, min_start_sd,
-                                              preferred_faculty=pref_fac)
+                                              preferred_faculty=pref_fac,
+                                              hc24_src_day=_hc24_src)
 
                 self._add_to_occ(gene, occ_room, occ_fac, occ_sec)
                 _recalc_mask(gene)
@@ -2544,7 +2637,8 @@ class GeneticScheduler:
 
     def randomize_gene_fast(self, gene, occ_room, occ_fac, occ_sec,
                             min_day=0, min_start_same_day=-1, use_warmth=True,
-                            preferred_faculty=None, preferred_room=None, stop_event=None):
+                            preferred_faculty=None, preferred_room=None, stop_event=None,
+                            hc24_src_day=-1):
         """Place gene using pre-built occ sets (caller must remove gene first).
         FIX 2: Added warmth-based room sorting + section-active-day preference.
         """
@@ -2587,6 +2681,11 @@ class GeneticScheduler:
             fallback_rooms = primary_rooms
 
         starts = [s for s in range(0, self.total_slots - slots_needed + 1) if s % 2 == 0]
+        _eve_mode = self._pen_type.get('EVENING_AVOIDANCE', 'NC')
+        if _eve_mode in ('SC1', 'SC2'):
+            day_starts = [s for s in starts if s < self.seven_pm_slot]
+            eve_starts = [s for s in starts if s >= self.seven_pm_slot]
+            starts = day_starts + eve_starts
 
         _locked_day = getattr(gene, 'locked_day', -1)
         _use_preferred_room = (preferred_room is not None
@@ -2627,17 +2726,19 @@ class GeneticScheduler:
         #   Tuesday:   BSCS201A = 4 slots used  → priority 2
         #   Wednesday: BSCS201A = 0 slots used  → priority 1 (least loaded)
         #   Thursday:  BSCS201A = 0 slots used  → priority 1 (tie → sorted by index)
-        _preferred_day_order = sorted(
-            range(days_count),
-            key=lambda d: occ_sec.get((sec_id, d), 0).bit_count()
-        )
-        # Apply min_day constraint after sorting
-        if min_day > 0:
-            _preferred_day_order = [
-                d for d in _preferred_day_order if d >= min_day
-            ]
-            if not _preferred_day_order:
-                _preferred_day_order = list(range(min_day, days_count))
+        # ── Density-Guided Day sorting to cluster classes ─────────────────────
+        # ── HC-24 SOURCE DAY PRIORITY (Layer 1+3) ────────────────────────────
+        # If the source day would drop below 3hrs (6 slots) when this gene
+        # leaves, inject source day at position 0 — gene stays there if a
+        # valid slot exists, preventing HC-24 regression. O(1) cost.
+        _hc24_priority = -1
+        if (hc24_src_day >= 0
+                and self._pen.get('MIN_DAILY_SECTION_LOAD', 0)
+                and sec_id not in self._hc24_exempt_sections
+                and occ_sec.get((sec_id, hc24_src_day), 0).bit_count() < 6):
+            _hc24_priority = hc24_src_day
+        _preferred_day_order = self._get_density_guided_days(sec_id, occ_sec, min_day,
+                                                             priority_day=_hc24_priority)
 
         fac_candidates = [orig_fac]
         if preferred_faculty is None and _dept_fac_ids:
@@ -2669,11 +2770,12 @@ class GeneticScheduler:
                             if d == min_day and min_start_same_day >= 0 and start <= min_start_same_day:
                                 continue
                             
-                            # Enforce Evening Avoidance if it is set as a Hard Constraint (Physical Rooms only)
-                            if rid not in self.online_room_ids and self._pen_type.get('EVENING_AVOIDANCE') == 'HC':
-                                if start >= self.seven_pm_slot:
-                                    continue
-                            
+                            # If EVENING_AVOIDANCE is a Hard Constraint, avoid evening starts (7pm onwards) for physical rooms
+                            if (self._pen_type.get('EVENING_AVOIDANCE', 'SC1') == 'HC' 
+                                    and rid not in self.online_room_ids 
+                                    and start >= self.seven_pm_slot):
+                                continue
+
                             mask = ((1 << slots_needed) - 1) << start
                             if (total_mask & mask) == 0:
                                 new_sec_mask = occ_sec.get((sec_id, d), 0) | mask
@@ -2910,6 +3012,8 @@ class GeneticScheduler:
         non_fixed = [i for i, g in enumerate(nc.genes) if not g.is_fixed]
         if not non_fixed:
             return nc
+        _hc24_active_rc          = bool(self._pen.get('MIN_DAILY_SECTION_LOAD', 0))
+        _hc24_exempt_sections_rc = self._hc24_exempt_sections
 
         perturb_count = max(1, len(non_fixed) // 3)
         indices = random.sample(non_fixed, min(perturb_count, len(non_fixed)))
@@ -2921,7 +3025,15 @@ class GeneticScheduler:
                           for g in nc.genes if g.gene_type == 'Lec' and g.faculty_id is not None}
         for idx in indices:
             gene = nc.genes[idx]
+            _src_day = gene.day_idx
             self._remove_from_occ(gene, occ_room, occ_fac, occ_sec)
+            # After removal occ_sec shows what OTHER genes contribute on src day
+            _hc24_src = -1
+            if (_hc24_active_rc
+                    and gene.section_id not in _hc24_exempt_sections_rc):
+                remaining_load = occ_sec.get((gene.section_id, _src_day), 0).bit_count()
+                if 0 < remaining_load < 6:
+                    _hc24_src = _src_day
             min_day = 0; min_start_sd = -1; pref_fac = None
             if gene.gene_type == 'Lab':
                 lec_info = lec_lookup.get((gene.section_id, gene.course_id))
@@ -2930,7 +3042,7 @@ class GeneticScheduler:
                     min_start_sd = lec_start - 1
                 pref_fac = lec_fac_lookup.get((gene.section_id, gene.course_id))
             self.randomize_gene_fast(gene, occ_room, occ_fac, occ_sec, min_day, min_start_sd,
-                                     preferred_faculty=pref_fac)
+                                     preferred_faculty=pref_fac, hc24_src_day=_hc24_src)
             self._add_to_occ(gene, occ_room, occ_fac, occ_sec)
             if gene.gene_type == 'Lec':
                 lec_lookup[(gene.section_id, gene.course_id)] = (gene.day_idx, gene.start_idx)
@@ -3024,7 +3136,7 @@ class GeneticScheduler:
             if _gene_locked_day < 0:
                 other_days = [d for d in range(days_count) if d != orig_day]
                 for alt_day in random.sample(other_days, min(3, len(other_days))):
-                    alt_start = self._smart_start(duration, allow_evening=False)
+                    alt_start = self._smart_start(duration)
                     if 0 <= alt_start <= total_slots - duration:
                         search_space.append((alt_day, alt_start, orig_room))
 
@@ -3339,6 +3451,9 @@ class GeneticScheduler:
         _starts = [s for s in range(0, max(1, total_slots - slots_needed + 1)) if s % 2 == 0]
         if not _starts:  # safety fallback
             _starts = list(range(0, max(1, total_slots - slots_needed + 1)))
+            
+        # Allow scanning all starts chronologically
+
 
         _locked_day = getattr(gene, 'locked_day', -1)
         if _locked_day >= 0:
@@ -3356,10 +3471,14 @@ class GeneticScheduler:
         
         phys_rooms = sorted([r for r in valid_rooms if r not in self.tba_room_ids and r not in self.online_room_ids])
         tba_rooms = sorted([r for r in valid_rooms if r in self.tba_room_ids or r in self.online_room_ids])
-        # Filter room pools for Sync genes (No Online Room fallback)
+        # Filter room pools for Sync genes (Physical classes prefer physical rooms, but we keep the Online Room in tba_rooms as a last-resort fallback)
         if gene.gene_type in ['Lec', 'Lab']:
             phys_rooms = [r for r in phys_rooms if r not in self.online_room_ids]
-            tba_rooms  = [r for r in tba_rooms  if r not in self.online_room_ids]
+            # Keep Online Room in tba_rooms so Phase 2 can use it as a last-resort safety fallback!
+            tba_rooms  = [r for r in tba_rooms]
+            for or_id in self.online_room_ids:
+                if or_id not in tba_rooms:
+                    tba_rooms.append(or_id)
 
         # Gravity Logic: Remove shuffles for days and starts to prioritize early slots
         # days and starts are already in chronological order [0, 1, 2...]
@@ -3373,9 +3492,8 @@ class GeneticScheduler:
                 s = random.choice(starts)
                 r = random.choice(phys_rooms)
                 
-                # Evening Avoidance check (Physical Rooms only)
-                if self._pen_type.get('EVENING_AVOIDANCE') == 'HC' and s >= self.seven_pm_slot:
-                    continue
+                # No evening limitation during random probes
+
                 
                 # Fast validation
                 end = s + slots_needed
@@ -3404,9 +3522,8 @@ class GeneticScheduler:
                     if day == min_day and min_start_same_day >= 0 and start <= min_start_same_day:
                         continue
                     
-                    # Evening Avoidance check (Physical Rooms only)
-                    if self._pen_type.get('EVENING_AVOIDANCE') == 'HC' and start >= self.seven_pm_slot:
-                        continue
+                    # No evening limitation during exhaustive place
+
                         
                     end = start + slots_needed
                     mask = ((1 << slots_needed) - 1) << start
@@ -3511,8 +3628,8 @@ class GeneticScheduler:
 
                 # Instead of looping ALL rooms, pick a few candidates
                 for room in rooms_alt[:10]: # Check top 10 prioritized rooms
-                    if room not in self.online_room_ids and self._pen_type.get('EVENING_AVOIDANCE') == 'HC' and start >= self.seven_pm_slot:
-                        continue
+                    # No evening filtering in prioritized rooms
+
                     if room in self.multi_assignment_rooms or (occ_room.get((room, day), 0) & mask) == 0:
                         gene.day_idx    = day
                         gene.start_idx  = start
@@ -3813,7 +3930,7 @@ class GeneticScheduler:
     # ------------------------------------------------------------------ #
     # ISOLATED HARD CONFLICT REPAIR  (DSatur-ordered)                    #
     # ------------------------------------------------------------------ #
-    def _hard_conflict_repair(self, chromosome, stop_event=None):
+    def _hard_conflict_repair(self, chromosome, stop_event=None, allow_backtrack=True):
         """
         Graph-coloring-inspired repair:
         """
@@ -3827,7 +3944,7 @@ class GeneticScheduler:
             return
 
         # NEW: Route based on count for ultra-low HC
-        if len(conflict_idxs) <= 5:
+        if allow_backtrack and len(conflict_idxs) <= 10:
             self._exhaustive_resolve_last_conflicts(chromosome)
             return
 
@@ -3899,7 +4016,7 @@ class GeneticScheduler:
 
         # ── SPEED FIX 1: Dynamic DSatur Threshold ──────────────────────────
         ordered = sorted(conflict_idxs, key=lambda i: (
-            0 if genes[i].gene_type == 'Lab' else 1,
+            0 if genes[i].gene_type == 'Lec' else 1,
             -genes[i].duration_slots
         ))
 
@@ -3916,11 +4033,22 @@ class GeneticScheduler:
                 if g.faculty_id is not None:
                     lec_fac_lookup[(g.section_id, g.course_id)] = g.faculty_id
 
+        _hc24_active = bool(self._pen.get('MIN_DAILY_SECTION_LOAD', 0))
+        _hc24_exempt_sections = self._hc24_exempt_sections
+
         for idx in ordered:
             if getattr(self, 'force_stop', False):
                 raise AlgorithmStopException("Stop in hard conflict repair.")
             self._check_stop(stop_event, raise_exception=True)
             gene = genes[idx]
+            _src_day = gene.day_idx
+            _hc24_src = -1
+            if (_hc24_active
+                    and gene.section_id not in _hc24_exempt_sections):
+                remaining_load = occ_sec.get((gene.section_id, _src_day), 0).bit_count()
+                if 0 < remaining_load < 6:
+                    _hc24_src = _src_day
+
             min_day = 0
             min_start_sd = -1
             pref_fac = None
@@ -3932,7 +4060,8 @@ class GeneticScheduler:
                 pref_fac = lec_fac_lookup.get((gene.section_id, gene.course_id))
 
             self.randomize_gene_fast(gene, occ_room, occ_fac, occ_sec,
-                                     min_day, min_start_sd, preferred_faculty=pref_fac)
+                                     min_day, min_start_sd, preferred_faculty=pref_fac,
+                                     hc24_src_day=_hc24_src)
             placed_ok = True
             mask = gene.bitmask
             d = gene.day_idx
@@ -4125,7 +4254,12 @@ class GeneticScheduler:
         """Pre-calculate static allowed_mask (operating hours + faculty avail + section blocked)."""
         total_slots = self.total_slots
         days_count  = len(self.days)
-        op_mask     = (1 << total_slots) - 1
+        op_mask_full = (1 << total_slots) - 1
+        
+        # Evening Avoidance logic: Avoid evening starts (7pm onwards) if EVENING_AVOIDANCE is HC.
+        # This keeps the search space aligned and prevents infinite hard conflict loops.
+        avoid_evening = (self._pen_type.get('EVENING_AVOIDANCE', 'SC1') == 'HC')
+        op_mask_daytime = (1 << self.seven_pm_slot) - 1 if avoid_evening else op_mask_full
         
         multi_fac = self.multi_assignment_faculty
         fac_avail = self._fac_avail_days
@@ -4135,8 +4269,12 @@ class GeneticScheduler:
             g.allowed_mask = []
             f_avail = fac_avail.get(g.faculty_id) if g.faculty_id and g.faculty_id not in multi_fac else None
             
+            # Non-fixed genes are restricted to daytime if avoid_evening is True.
+            # Pre-assignments (fixed genes) bypass evening restrictions.
+            base_mask = op_mask_full if g.is_fixed else op_mask_daytime
+            
             for d in range(days_count):
-                mask = op_mask
+                mask = base_mask
                 # HC-17/18: Faculty Availability
                 if f_avail is not None and d not in f_avail:
                     mask = 0 
@@ -4473,7 +4611,9 @@ class GeneticScheduler:
                         max(2, n_lns_off // 4)
                     )
                     
-                    if _cur_hc <= 5:
+                    # Optimize backtracking: only run heavy backtracking every 10 generations, or on interval stagnation steps (every 5th stagnation generation)
+                    _allow_bt = (generation % 10 == 0 or (stagnation_counter > 0 and stagnation_counter % 5 == 0))
+                    if _cur_hc <= 10 and _allow_bt:
                         nc = self._copy_chromosome(best_schedule)
                         self._exhaustive_resolve_last_conflicts(nc)
                         self.calculate_fitness(nc, hard_only=True)
@@ -4483,7 +4623,7 @@ class GeneticScheduler:
                     
                     for _ in range(_adaptive_lns):
                         nc = self._copy_chromosome(best_schedule)
-                        self._hard_conflict_repair(nc, stop_event=stop_event)
+                        self._hard_conflict_repair(nc, allow_backtrack=_allow_bt, stop_event=stop_event)
                         self.calculate_fitness(nc, hard_only=True)
                         offspring.append(nc)
 
@@ -4532,7 +4672,7 @@ class GeneticScheduler:
                                 child.hard_conflicts <= max(5, _best_hc // 3)
                             )
                             if _should_repair:
-                                self._hard_conflict_repair(child, stop_event=stop_event)
+                                self._hard_conflict_repair(child, stop_event=stop_event, allow_backtrack=False)
                                 self.calculate_fitness(child, hard_only=True)
                     offspring.append(child)
 
@@ -4660,7 +4800,7 @@ class GeneticScheduler:
                         nc = self._copy_chromosome(elite)
                         self._hard_conflict_repair(nc, stop_event=stop_event)
                         _fit(nc)
-                        if hard_phase and 0 < nc.hard_conflicts <= 5:
+                        if hard_phase and 0 < nc.hard_conflicts <= 10:
                             self._exhaustive_resolve_last_conflicts(nc)
                             _fit(nc)
                         new_pop.append(nc)

@@ -112,20 +112,25 @@
                         <div class="dropdown w-100">
                             <!-- Desktop Pill -->
                             <button class="pill-selector-btn dropdown-toggle d-none d-md-flex w-100" type="button"
-                                id="typeExportPill" data-bs-toggle="dropdown" aria-expanded="false">
+                                id="typeExportPill" data-bs-toggle="dropdown" aria-expanded="false"
+                                {% if session.get('role') == 'user' %}disabled style="opacity: 0.7; cursor: not-allowed;"{% endif %}>
                                 <span class="pill-btn-label">Report:</span>
                                 <span class="pill-btn-value text-dark" id="typeExportValue">All Section Schedules</span>
                             </button>
                             <!-- Mobile Native Select -->
                             <select class="form-select d-md-none w-100"
                                 style="border-radius: 6px; height: 38px; font-size: 0.8rem;"
-                                onchange="updateExportPill('type', this.value, this.options[this.selectedIndex].text, this)">
+                                onchange="updateExportPill('type', this.value, this.options[this.selectedIndex].text, this)"
+                                {% if session.get('role') == 'user' %}disabled{% endif %}>
                                 <option value="section">All Section Schedules</option>
+                                {% if session.get('role') in ['admin', 'superadmin'] %}
                                 <option value="faculty">All Faculty Loads</option>
                                 <option value="room">All Room Utilizations</option>
                                 <option value="course">All Course Schedules</option>
+                                {% endif %}
                             </select>
                             <!-- Desktop Menu -->
+                            {% if session.get('role') in ['admin', 'superadmin'] %}
                             <ul class="dropdown-menu google-sort-menu shadow-sm border-0 mt-2"
                                 aria-labelledby="typeExportPill">
                                 <li>
@@ -153,6 +158,7 @@
                                     </a>
                                 </li>
                             </ul>
+                            {% endif %}
                         </div>
                     </div>
 

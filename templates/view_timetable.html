@@ -1194,9 +1194,6 @@
                     <a href="${excelUrl}" class="card-maximize-btn text-decoration-none" title="Download Excel">
                         <i class="bi bi-file-earmark-excel"></i>
                     </a>
-                    <button class="card-maximize-btn" onclick="viewSchedule(currentType, '${data.id}')" title="Maximize">
-                        <i class="bi bi-fullscreen"></i>
-                    </button>
                 </div>
             </div>
             <div class="card-iframe-wrap" style="width:${data.paperW_raw}px; height:${data.paperH_raw}px;">
@@ -1206,6 +1203,19 @@
         if (window.innerWidth > 768) {
             card.addEventListener('dblclick', () => viewSchedule(currentType, data.id));
         }
+
+        let lastTap = 0;
+        card.addEventListener('touchstart', (e) => {
+            if (window.innerWidth <= 768) {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+                if (tapLength < 300 && tapLength > 0) {
+                    e.preventDefault();
+                    viewSchedule(currentType, data.id);
+                }
+                lastTap = currentTime;
+            }
+        }, { passive: false });
         
         canvas.appendChild(card);
         data.element = card;

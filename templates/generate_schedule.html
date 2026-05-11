@@ -561,14 +561,44 @@
     }
 
     /* PRE-FEASIBILITY UI */
-    .util-row { margin-bottom: 8px; }
-    .util-bar-bg { background: #eee; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 4px; }
-    .util-bar-fill { height: 100%; transition: width 0.5s ease; }
-    .bg-safe { background: #188038; }
-    .bg-warn { background: #f9ab00; }
-    .bg-crit { background: #d93025; }
-    .badge-feasible { background: #e6f4ea; color: #137333; }
-    .badge-overflow { background: #fce8e6; color: #c5221f; }
+    .util-row {
+        margin-bottom: 8px;
+    }
+
+    .util-bar-bg {
+        background: #eee;
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 4px;
+    }
+
+    .util-bar-fill {
+        height: 100%;
+        transition: width 0.5s ease;
+    }
+
+    .bg-safe {
+        background: #188038;
+    }
+
+    .bg-warn {
+        background: #f9ab00;
+    }
+
+    .bg-crit {
+        background: #d93025;
+    }
+
+    .badge-feasible {
+        background: #e6f4ea;
+        color: #137333;
+    }
+
+    .badge-overflow {
+        background: #fce8e6;
+        color: #c5221f;
+    }
 </style>
 
 <!-- BACKGROUND DASHBOARD -->
@@ -705,6 +735,39 @@
             <input type="hidden" id="semesterSelect" value="1st Semester">
         </div>
 
+        <!-- DRAFT SELECTION DROPDOWN -->
+        <div class="dropdown w-100 mt-3 text-start">
+            <label class="form-label mb-1 text-muted fw-semibold d-flex justify-content-between align-items-center" style="font-size: 0.8rem;">
+                <span>Active Draft Version</span>
+                <span class="badge bg-secondary" id="draftCountBadge">{{ drafts|length }} Drafts available</span>
+            </label>
+            <button
+                class="btn btn-outline-secondary dropdown-toggle w-100 d-flex justify-content-between align-items-center py-2 px-3"
+                type="button" id="draftDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                style="border-color: #dadce0; color: #3c4043; font-size: 0.9rem;">
+                <span id="selectedDraftLabel">{% if drafts %}{{ drafts[0].name }} ({{ drafts[0].semester }}){% else %}No Drafts Found{% endif %}</span>
+            </button>
+            <ul class="dropdown-menu w-100 shadow-sm" aria-labelledby="draftDropdown" id="draftDropdownMenu" style="max-height: 250px; overflow-y: auto;">
+                {% if drafts %}
+                    {% for draft in drafts %}
+                    <li><a class="dropdown-item {% if loop.first %}active-selection{% endif %}" href="#"
+                            onclick="selectDraft('{{ draft.id }}', '{{ draft.name }} ({{ draft.semester }})', this); return false;">
+                            {{ draft.name }} ({{ draft.semester }})
+                        </a></li>
+                    {% endfor %}
+                {% else %}
+                    <li class="dropdown-header text-center">No active drafts found. Please create one.</li>
+                {% endif %}
+                <li class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item d-flex align-items-center justify-content-center text-success fw-bold" href="#" onclick="showCreateDraftModal(); return false;" style="background: rgba(24, 128, 56, 0.05); font-size:0.85rem;">
+                        <i class="bi bi-plus-circle me-2"></i>Create New Draft
+                    </a>
+                </li>
+            </ul>
+            <input type="hidden" id="draftSelect" value="{% if drafts %}{{ drafts[0].id }}{% endif %}">
+        </div>
+
         <!-- DEPARTMENT DROPDOWN -->
         <div class="dropdown w-100 mt-3 text-start">
             <button
@@ -749,7 +812,36 @@
         <div class="modal-actions" style="margin-top: 20px; display: flex; gap: 10px;">
             <button class="btn btn-outline-secondary px-4 py-2" onclick="history.back()"
                 style="border-radius: 4px; flex: 1;">Cancel</button>
-            <button class="btn-primary" id="igniteBtn" style="margin-top: 0; flex: 1; background: var(--theme-blue);">Check Room Capacity</button>
+            <button class="btn-primary" id="igniteBtn"
+                style="margin-top: 0; flex: 1; background: var(--theme-blue);">Check Room Capacity</button>
+        </div>
+    </div>
+</div>
+
+<!-- CREATE DRAFT MODAL -->
+<div class="modal-overlay" id="createDraftModal" style="display: none; z-index: 110; background: rgba(0,0,0,0.4);">
+    <div class="modal-box" style="max-width: 400px; width: 90%; text-align: left;">
+        <h4 class="mb-3 d-flex align-items-center">
+            <i class="bi bi-file-earmark-plus text-success me-2"></i>
+            Create New Draft
+        </h4>
+        <p class="text-muted small">This will clone 100% of the current live admin-approved master schedule to build upon.</p>
+        
+        <div class="mb-3">
+            <label class="form-label small fw-bold text-muted" style="font-size:0.8rem;">Draft Name</label>
+            <input type="text" id="newDraftNameInput" class="form-control" placeholder="e.g., Admin Trial Draft 1" style="font-size: 0.9rem;">
+        </div>
+        
+        <div class="mb-3">
+            <label class="form-label small fw-bold text-muted" style="font-size:0.8rem;">Notes (Optional)</label>
+            <textarea id="newDraftNotesInput" class="form-control" rows="2" placeholder="e.g., Testing DCS scheduling run" style="font-size: 0.9rem;"></textarea>
+        </div>
+        
+        <div id="createDraftError" class="alert alert-danger small py-2" style="display: none; font-size: 0.8rem;"></div>
+        
+        <div class="d-flex gap-2 justify-content-end mt-4">
+            <button class="btn btn-sm btn-outline-secondary px-3" onclick="hideCreateDraftModal()">Cancel</button>
+            <button class="btn btn-sm btn-success px-3" onclick="submitCreateDraftOnTheFly()">Create Draft</button>
         </div>
     </div>
 </div>
@@ -774,103 +866,179 @@
 
 
 <style>
-    @keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-    .level-card { cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent !important; }
-    .level-card:hover { transform: translateY(-3px); border-color: #dee2e6 !important; background: #fdfdfd !important; }
-    .level-card.active { border-color: var(--theme-blue) !important; box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important; background: #fff !important; }
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .level-card {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid transparent !important;
+    }
+
+    .level-card:hover {
+        transform: translateY(-3px);
+        border-color: #dee2e6 !important;
+        background: #fdfdfd !important;
+    }
+
+    .level-card.active {
+        border-color: var(--theme-blue) !important;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1) !important;
+        background: #fff !important;
+    }
 </style>
 
 <!-- FEASIBILITY ASSESSMENT MODAL (3-LEVEL) -->
-<div id="feasibilityModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; align-items: center; justify-content: center; backdrop-filter: blur(6px); padding: 20px;">
-    <div style="max-width: 850px; width: 100%; max-height: 95vh; display: flex; flex-direction: column; gap: 0; animation: slideIn 0.3s ease-out;">
-        
+<div id="feasibilityModal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; align-items: center; justify-content: center; backdrop-filter: blur(6px); padding: 20px;">
+    <div
+        style="max-width: 800px; width: 100%; max-height: 72dvh; display: flex; flex-direction: column; gap: 0; animation: slideIn 0.3s ease-out;">
+
         <!-- Modal Body: White Box -->
-        <div style="background: #ffffff; border-radius: 20px 20px 0 0; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; flex-direction: column; flex-grow: 1; border-bottom: 1px solid #f0f0f0;">
-            <div style="overflow-y: auto; padding: 35px;">
-                <div class="d-flex justify-content-between align-items-end mb-4">
+        <div
+            style="background: #ffffff; border-radius: 15px 15px 0 0; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; flex-direction: column; flex-grow: 1; border-bottom: 1px solid #f0f0f0;">
+            <!-- Normal Content Container -->
+            <div id="feasibilityMainContent" style="overflow-y: auto; padding: 20px 24px; display: block;">
+                <div class="d-flex justify-content-between align-items-end mb-3">
                     <div>
-                        <h3 class="m-0 fw-bold text-dark">Capacity Assessment</h3>
+                        <h3 class="m-0 fw-bold text-dark" style="font-size: 1.4rem;">Capacity Assessment</h3>
                         <p class="m-0 text-muted small">Pre-Generation Resource Feasibility Report</p>
                     </div>
                     <div class="text-end">
-                        <div class="small text-muted fw-bold text-uppercase" style="font-size: 0.7rem; letter-spacing: 1px;">Total Sessions</div>
-                        <div class="h2 m-0 fw-bold text-primary" id="statTotal">--</div>
+                        <div class="small text-muted fw-bold text-uppercase"
+                            style="font-size: 0.65rem; letter-spacing: 1px;">Total Sessions</div>
+                        <div class="h3 m-0 fw-bold text-primary" id="statTotal" style="font-size: 1.6rem;">--</div>
                     </div>
                 </div>
-                
+
                 <!-- Summary Verdict -->
-                <div id="feasibilityAlert" class="alert mb-4 shadow-sm" style="border-radius: 12px;">
+                <div id="feasibilityAlert" class="alert mb-3 shadow-sm py-2 px-3"
+                    style="border-radius: 10px; margin-bottom: 12px !important;">
                     <div class="d-flex align-items-center gap-3">
-                        <div id="summaryIcon" style="font-size: 2rem;"></div>
+                        <div id="summaryIcon" style="font-size: 1.6rem;"></div>
                         <div>
-                            <div class="fw-bold h5 m-0" id="summaryStatus">--</div>
-                            <div class="small" id="summaryMessage">--</div>
+                            <div class="fw-bold m-0" id="summaryStatus" style="font-size: 0.95rem;">--</div>
+                            <div class="small" id="summaryMessage" style="font-size: 0.8rem;">--</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- 3 Levels Cards -->
-                <div class="row g-3 mb-4">
+                <div class="row g-2 mb-3">
                     <!-- Level 1 -->
                     <div class="col-md-4">
-                        <div class="level-card p-3 bg-white border rounded shadow-sm" id="card-l1" onclick="switchFeasibilityLevel('l1')">
-                            <div class="small fw-bold text-muted mb-2">LEVEL 1: RAW</div>
-                            <div id="lvl1Badge" class="mb-2"></div>
-                            <div class="h4 m-0" id="lvl1Overflow">0</div>
-                            <div class="small text-muted">Overflow Sessions</div>
+                        <div class="level-card p-2 px-3 bg-white border rounded shadow-sm" id="card-l1"
+                            onclick="switchFeasibilityLevel('l1')">
+                            <div class="fw-bold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">LEVEL
+                                1: RAW</div>
+                            <div id="lvl1Badge" class="mb-1" style="font-size: 0.65rem;"></div>
+                            <div class="h5 m-0 fw-bold" id="lvl1Overflow">0</div>
+                            <div class="text-muted" style="font-size: 0.68rem;">Overflow Sessions</div>
                         </div>
                     </div>
                     <!-- Level 2 -->
                     <div class="col-md-4">
-                        <div class="level-card p-3 bg-white border rounded shadow-sm" id="card-l2" onclick="switchFeasibilityLevel('l2')">
-                            <div class="small fw-bold text-primary mb-2">LEVEL 2: REALISTIC</div>
-                            <div id="lvl2Badge" class="mb-2"></div>
-                            <div class="h4 m-0" id="lvl2Overflow">0</div>
-                            <div class="small text-muted">Overflow Sessions</div>
-                            <div id="lvl2Needed" class="mt-2 small text-primary fw-bold" style="display:none;"></div>
+                        <div class="level-card p-2 px-3 bg-white border rounded shadow-sm" id="card-l2"
+                            onclick="switchFeasibilityLevel('l2')">
+                            <div class="fw-bold text-primary mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                                LEVEL 2: REALISTIC</div>
+                            <div id="lvl2Badge" class="mb-1" style="font-size: 0.65rem;"></div>
+                            <div class="h5 m-0 fw-bold" id="lvl2Overflow">0</div>
+                            <div class="text-muted" style="font-size: 0.68rem;">Overflow Sessions</div>
+                            <div id="lvl2Needed" class="mt-1 fw-bold text-primary"
+                                style="display:none; font-size: 0.68rem;"></div>
                         </div>
                     </div>
                     <!-- Level 3 -->
                     <div class="col-md-4">
-                        <div class="level-card p-3 bg-white border rounded shadow-sm" id="card-l3" onclick="switchFeasibilityLevel('l3')">
-                            <div class="small fw-bold text-muted mb-2">LEVEL 3: BUFFERED</div>
-                            <div id="lvl3Badge" class="mb-2"></div>
-                            <div class="h4 m-0" id="lvl3Overflow">0</div>
-                            <div class="small text-muted">Overflow Sessions</div>
+                        <div class="level-card p-2 px-3 bg-white border rounded shadow-sm" id="card-l3"
+                            onclick="switchFeasibilityLevel('l3')">
+                            <div class="fw-bold text-muted mb-1" style="font-size: 0.7rem; letter-spacing: 0.5px;">LEVEL
+                                3: BUFFERED</div>
+                            <div id="lvl3Badge" class="mb-1" style="font-size: 0.65rem;"></div>
+                            <div class="h5 m-0 fw-bold" id="lvl3Overflow">0</div>
+                            <div class="text-muted" style="font-size: 0.68rem;">Overflow Sessions</div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Details Section -->
-                <div class="row">
+                <div class="row g-2">
                     <!-- Room Utilization -->
                     <div class="col-md-6">
-                        <div class="p-3 bg-white border rounded shadow-sm h-100">
-                            <h6 class="fw-bold mb-3 border-bottom pb-2" id="utilTitle">Room Utilization (Realistic)</h6>
-                            <div id="utilizationList" style="max-height: 250px; overflow-y: auto; padding-right: 5px;"></div>
+                        <div class="p-2 px-3 bg-white border rounded shadow-sm h-100">
+                            <h6 class="fw-bold mb-2 border-bottom pb-1" id="utilTitle" style="font-size: 0.85rem;">Room
+                                Utilization (Realistic)</h6>
+                            <div id="utilizationList" style="max-height: 140px; overflow-y: auto; padding-right: 5px;">
+                            </div>
                         </div>
                     </div>
                     <!-- Overflow List -->
                     <div class="col-md-6">
-                        <div class="p-3 bg-white border rounded shadow-sm h-100">
-                            <h6 class="fw-bold mb-3 border-bottom pb-2" id="overflowTitle">Overflow Subjects (TBA)</h6>
+                        <div class="p-2 px-3 bg-white border rounded shadow-sm h-100">
+                            <h6 class="fw-bold mb-2 border-bottom pb-1" id="overflowTitle" style="font-size: 0.85rem;">
+                                Overflow Subjects (TBA)</h6>
                             <div id="overflowSection">
-                                <ul id="overflowList" class="small text-muted list-unstyled mb-0"></ul>
+                                <ul id="overflowList" class="small text-muted list-unstyled mb-0"
+                                    style="font-size: 0.75rem;"></ul>
                             </div>
-                            <div id="noOverflowMsg" class="text-success small py-4 text-center" style="display:none;">
-                                <i class="bi bi-check-circle-fill d-block h3 mb-2"></i>
+                            <div id="noOverflowMsg" class="text-success small py-3 text-center"
+                                style="display:none; font-size: 0.75rem;">
+                                <i class="bi bi-check-circle-fill d-block h4 mb-1"></i>
                                 Perfect Fit! All sessions fit in physical rooms.
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Connection/Session Idle Error Container -->
+            <div id="feasibilityErrorContent"
+                style="display: none; padding: 40px 24px; text-align: center; flex-direction: column; align-items: center; justify-content: center; gap: 15px;">
+                <div class="mb-2">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-light text-warning rounded-circle shadow-sm"
+                        style="width: 60px; height: 60px;">
+                        <i class="bi bi-exclamation-triangle-fill" style="font-size: 2.2rem;"></i>
+                    </div>
+                </div>
+                <h3 class="fw-bold text-dark m-0" style="font-size: 1.3rem;">Connection / Session Idle</h3>
+                <p class="text-muted m-0" style="max-width: 500px; font-size: 0.85rem; line-height: 1.5;">
+                    The database connection or session is currently idle. Let's wake it up and reconnect to pull your
+                    scheduling data.
+                </p>
+                <div class="alert alert-warning mb-2 py-2 px-3 d-flex align-items-center gap-2"
+                    style="border-radius: 10px; font-size: 0.8rem; max-width: 520px; text-align: left; border: 1px solid #ffeeba;">
+                    <i class="bi bi-info-circle-fill text-warning fs-5"></i>
+                    <span><strong>Session/Database is idle.</strong> Please click below to reconnect and query the
+                        system again without reloading.</span>
+                </div>
+                <div>
+                    <button class="btn btn-primary fw-bold px-4 py-2 d-flex align-items-center gap-2 shadow-sm"
+                        id="feasibilityReconnectBtn"
+                        style="border-radius: 10px; background: var(--theme-blue); border: none; font-size: 0.85rem;">
+                        <i class="bi bi-arrow-clockwise fs-5"></i> Reconnect & Retry
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Modal Footer: Separate White Box -->
-        <div style="background: #ffffff; padding: 25px 35px; border-radius: 0 0 20px 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; gap: 20px; flex-shrink: 0; border-top: 1px solid #eee;">
-            <button class="btn btn-outline-secondary p-3 fw-bold" style="flex: 1; border-radius: 12px;" onclick="closeFeasibility()">Go Back & Adjust</button>
-            <button id="confirmContinueBtn" class="btn btn-success fw-bold p-3" style="flex: 1; border-radius: 12px;">
+        <div id="feasibilityFooter"
+            style="background: #ffffff; padding: 15px 24px; border-radius: 0 0 15px 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; gap: 15px; flex-shrink: 0; border-top: 1px solid #eee;">
+            <button class="btn btn-outline-secondary p-2.5 fw-bold"
+                style="flex: 1; border-radius: 8px; font-size: 0.9rem;" onclick="closeFeasibility()">Go Back &
+                Adjust</button>
+            <button id="confirmContinueBtn" class="btn btn-success fw-bold p-2.5"
+                style="flex: 1; border-radius: 8px; font-size: 0.9rem;">
                 <i class="bi bi-play-fill"></i> Start AI Generation
             </button>
         </div>
@@ -878,20 +1046,58 @@
 </div>
 
 <style>
-    .badge-feasible { background: #e6f4ea; color: #1e7e34; }
-    .badge-overflow { background: #fdf2f2; color: #9b1c1c; }
-    .util-row { margin-bottom: 12px; }
-    .util-bar-bg { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; margin-top: 4px; }
-    .util-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
-    .bg-safe { background: var(--theme-green); }
-    .bg-warn { background: #ffc107; }
-    .bg-crit { background: #dc3545; }
-    .level-card { transition: transform 0.2s; }
-    .level-card:hover { transform: translateY(-3px); }
+    .badge-feasible {
+        background: #e6f4ea;
+        color: #1e7e34;
+    }
+
+    .badge-overflow {
+        background: #fdf2f2;
+        color: #9b1c1c;
+    }
+
+    .util-row {
+        margin-bottom: 12px;
+    }
+
+    .util-bar-bg {
+        height: 8px;
+        background: #eee;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 4px;
+    }
+
+    .util-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.5s ease;
+    }
+
+    .bg-safe {
+        background: var(--theme-green);
+    }
+
+    .bg-warn {
+        background: #ffc107;
+    }
+
+    .bg-crit {
+        background: #dc3545;
+    }
+
+    .level-card {
+        transition: transform 0.2s;
+    }
+
+    .level-card:hover {
+        transform: translateY(-3px);
+    }
 </style>
 
 <!-- LOADING OVERLAY FOR FEASIBILITY -->
-<div id="checkLoadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; color: white;">
+<div id="checkLoadingOverlay"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; color: white;">
     <div class="spinner-border text-light mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
     <h5 class="fw-bold">Analyzing Capacity...</h5>
     <p class="small text-white-50">Mapping curriculum load to physical rooms</p>
@@ -912,43 +1118,60 @@
                 <!-- 1. CONFIGURATION -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-primary small mb-1">1. Configuration & Scope</h6>
-                    <p class="small text-muted mb-0">Select the target <strong>Semester</strong> and the <strong>Departments</strong> to include in the generation. Use the <strong>'Fresh Start'</strong> toggle if you wish to clear any existing schedules for that semester and begin from a blank canvas.</p>
+                    <p class="small text-muted mb-0">Select the target <strong>Semester</strong> and the
+                        <strong>Departments</strong> to include in the generation. Use the <strong>'Fresh
+                            Start'</strong> toggle if you wish to clear any existing schedules for that semester and
+                        begin from a blank canvas.</p>
                 </div>
 
                 <!-- 2. CAPACITY ASSESSMENT -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-danger small mb-1">2. 🛡️ Capacity Assessment (Gatekeeper)</h6>
-                    <p class="small text-muted mb-0">Before the AI begins, the system performs a mandatory <strong>Resource Feasibility Check</strong>. Click <strong>'Check Room Capacity'</strong> to analyze whether your physical rooms can accommodate the total Lecture and Lab hours requested.</p>
+                    <p class="small text-muted mb-0">Before the AI begins, the system performs a mandatory
+                        <strong>Resource Feasibility Check</strong>. Click <strong>'Check Room Capacity'</strong> to
+                        analyze whether your physical rooms can accommodate the total Lecture and Lab hours requested.
+                    </p>
                 </div>
 
                 <!-- 3. REPORT LEVELS -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-info small mb-1">3. Understanding the 3-Level Report</h6>
-                    <p class="small text-muted mb-0">The assessment provides three perspectives: <strong>Raw</strong> (Pure capacity), <strong>Realistic</strong> (With 6hr/day limits), and <strong>Buffered</strong> (Real-world buffer). <em>Asynchronous classes are excluded as they do not consume physical slots.</em></p>
+                    <p class="small text-muted mb-0">The assessment provides three perspectives: <strong>Raw</strong>
+                        (Pure capacity), <strong>Realistic</strong> (With 6hr/day limits), and <strong>Buffered</strong>
+                        (Real-world buffer). <em>Asynchronous classes are excluded as they do not consume physical
+                            slots.</em></p>
                 </div>
 
                 <!-- 4. TBA OVERFLOW -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-warning small mb-1">4. Managing TBA Overflow</h6>
-                    <p class="small text-muted mb-0">If an **Overflow** is detected, some subjects will move to a <strong>'TBA'</strong> room. You can choose to <strong>'Continue with TBA'</strong> or return to setup to add more rooms for a perfect fit.</p>
+                    <p class="small text-muted mb-0">If an **Overflow** is detected, some subjects will move to a
+                        <strong>'TBA'</strong> room. You can choose to <strong>'Continue with TBA'</strong> or return to
+                        setup to add more rooms for a perfect fit.</p>
                 </div>
 
                 <!-- 5. HARDWARE OPTIMIZATION -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-success small mb-1">5. 🧠 Hardware-Aware Optimization</h6>
-                    <p class="small text-muted mb-0">The system automatically detects your computer's performance tier. It dynamically adjusts the <strong>AI Population Size</strong> and mutation rates to ensure optimal speed on your specific device.</p>
+                    <p class="small text-muted mb-0">The system automatically detects your computer's performance tier.
+                        It dynamically adjusts the <strong>AI Population Size</strong> and mutation rates to ensure
+                        optimal speed on your specific device.</p>
                 </div>
 
                 <!-- 6. VISUAL GRID -->
                 <div class="mb-4">
                     <h6 class="fw-bold text-dark small mb-1">6. The Real-Time Visual Grid</h6>
-                    <p class="small text-muted mb-0">The canvas maps every session in real-time: 🔴 <strong>Red</strong> (Conflicts), 🔵 <strong>Blue</strong> (Pre-assigned/Locked slots), and 🟢 <strong>Green</strong> (Optimized placement).</p>
+                    <p class="small text-muted mb-0">The canvas maps every session in real-time: 🔴 <strong>Red</strong>
+                        (Conflicts), 🔵 <strong>Blue</strong> (Pre-assigned/Locked slots), and 🟢 <strong>Green</strong>
+                        (Optimized placement).</p>
                 </div>
 
                 <!-- 7. BACKGROUND PROCESSING -->
                 <div class="mb-0">
                     <h6 class="fw-bold text-secondary small mb-1">7. Background Processing</h6>
-                    <p class="small text-muted mb-0">You can minimize the dashboard while generation is in progress. The AI will continue solving in the background, allowing you to browse other pages without interruption.</p>
+                    <p class="small text-muted mb-0">You can minimize the dashboard while generation is in progress. The
+                        AI will continue solving in the background, allowing you to browse other pages without
+                        interruption.</p>
                 </div>
             </div>
 
@@ -1020,6 +1243,92 @@
         }
     }
 
+    function selectDraft(id, label, el) {
+        const dLabel = document.getElementById('selectedDraftLabel');
+        const dInput = document.getElementById('draftSelect');
+        if (dLabel) dLabel.innerText = label;
+        if (dInput) dInput.value = id;
+
+        // Clear other active states in draft menu
+        if (el) {
+            const menu = el.closest('.dropdown-menu');
+            if (menu) {
+                menu.querySelectorAll('.dropdown-item').forEach(item => {
+                    item.classList.remove('active-selection');
+                });
+                el.classList.add('active-selection');
+            }
+        }
+    }
+
+    function showCreateDraftModal() {
+        document.getElementById('createDraftError').style.display = 'none';
+        document.getElementById('newDraftNameInput').value = '';
+        document.getElementById('newDraftNotesInput').value = '';
+        document.getElementById('createDraftModal').style.display = 'flex';
+    }
+
+    function hideCreateDraftModal() {
+        document.getElementById('createDraftModal').style.display = 'none';
+    }
+
+    function submitCreateDraftOnTheFly() {
+        const name = document.getElementById('newDraftNameInput').value.trim();
+        const notes = document.getElementById('newDraftNotesInput').value.trim();
+        const sem = document.getElementById('semesterSelect').value;
+        const errorDiv = document.getElementById('createDraftError');
+        
+        if (!name) {
+            errorDiv.innerText = "Draft name is required.";
+            errorDiv.style.display = 'block';
+            return;
+        }
+        
+        fetch('/api/draft/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content
+            },
+            body: JSON.stringify({
+                name: name,
+                semester: sem,
+                department: "",
+                notes: notes
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.ok) {
+                errorDiv.innerText = data.error || "An error occurred while creating draft.";
+                errorDiv.style.display = 'block';
+            } else {
+                hideCreateDraftModal();
+                const menu = document.getElementById('draftDropdownMenu');
+                const label = `${data.draft.name} (${data.draft.semester})`;
+                const header = menu.querySelector('.dropdown-header');
+                if (header) header.remove();
+                
+                const li = document.createElement('li');
+                li.innerHTML = `<a class="dropdown-item" href="#" onclick="selectDraft('${data.draft.id}', '${label}', this); return false;">${label}</a>`;
+                
+                const divider = menu.querySelector('.dropdown-divider');
+                menu.insertBefore(li, divider);
+                selectDraft(data.draft.id, label, li.querySelector('a'));
+                
+                const badge = document.getElementById('draftCountBadge');
+                if (badge) {
+                    const count = menu.querySelectorAll('li:not(.dropdown-divider):not(.dropdown-header):not(:last-child)').length;
+                    badge.innerText = `${count} Drafts available`;
+                }
+            }
+        })
+        .catch(err => {
+            errorDiv.innerText = "Connection error: " + err;
+            errorDiv.style.display = 'block';
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         var cvs = document.getElementById('mainCanvas'), ctx = cvs.getContext('2d');
         var ov = document.getElementById('appOverlay'), ss = document.getElementById('startScreen');
@@ -1062,8 +1371,8 @@
             if (confirm('Stop generation?')) {
                 if (pInt) clearInterval(pInt);
                 if (tInt) clearInterval(tInt);
-                fetch('/stop-generation', { 
-                    method: 'POST', 
+                fetch('/stop-generation', {
+                    method: 'POST',
                     headers: { 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content },
                     keepalive: true
                 });
@@ -1088,26 +1397,26 @@
             if (!mat) {
                 var fRows = 12, fCols = 28;
                 var fcW = (W - rHW) / fCols, fcH = (H - hH2) / fRows;
-                
+
                 if (Date.now() - lastFakeUpdate > 300) {
                     fakeBlocks = [];
-                    for(var i=0; i<25; i++) {
+                    for (var i = 0; i < 25; i++) {
                         var fr = Math.floor(Math.random() * fRows);
-                        var fs = Math.floor(Math.random() * (fCols-4));
+                        var fs = Math.floor(Math.random() * (fCols - 4));
                         var fl = 2 + Math.floor(Math.random() * 4);
-                        fakeBlocks.push({r:fr, s:fs, e:fs+fl});
+                        fakeBlocks.push({ r: fr, s: fs, e: fs + fl });
                     }
                     lastFakeUpdate = Date.now();
                 }
 
                 ctx.fillStyle = '#f8f9fa'; ctx.fillRect(0, 0, W, H);
                 ctx.strokeStyle = '#eee';
-                for(var r=0; r<fRows; r++) for(var c=0; c<fCols; c++) ctx.strokeRect(rHW + c*fcW, hH2 + r*fcH, fcW, fcH);
-                
+                for (var r = 0; r < fRows; r++) for (var c = 0; c < fCols; c++) ctx.strokeRect(rHW + c * fcW, hH2 + r * fcH, fcW, fcH);
+
                 ctx.strokeStyle = '#c5221f'; ctx.fillStyle = '#fce8e6';
                 fakeBlocks.forEach(b => {
-                    ctx.fillRect(rHW + b.s*fcW + 1, hH2 + b.r*fcH + 1, (b.e-b.s)*fcW - 2, fcH - 2);
-                    ctx.strokeRect(rHW + b.s*fcW, hH2 + b.r*fcH, (b.e-b.s)*fcW, fcH);
+                    ctx.fillRect(rHW + b.s * fcW + 1, hH2 + b.r * fcH + 1, (b.e - b.s) * fcW - 2, fcH - 2);
+                    ctx.strokeRect(rHW + b.s * fcW, hH2 + b.r * fcH, (b.e - b.s) * fcW, fcH);
                 });
 
                 ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.fillRect(0, 0, W, H);
@@ -1192,7 +1501,7 @@
             requestAnimationFrame(draw);
         }
 
-        window.closeFeasibility = function() {
+        window.closeFeasibility = function () {
             document.getElementById('feasibilityModal').style.display = 'none';
             document.getElementById('igniteBtn').disabled = false;
             document.getElementById('igniteBtn').innerText = 'Check Room Capacity';
@@ -1203,9 +1512,15 @@
             var sem = document.getElementById('semesterSelect').value;
             var isFresh = document.getElementById('freshStartCheck').checked;
             var selectedDepts = Array.from(document.querySelectorAll('.dept-checkbox:checked')).map(function (cb) { return cb.value; });
-            
+            var draftId = document.getElementById('draftSelect') ? document.getElementById('draftSelect').value : null;
+
             if (selectedDepts.length === 0) {
                 alert("Please select at least one department.");
+                return;
+            }
+
+            if (!draftId) {
+                alert("Please select or create an Active Draft Version before proceeding.");
                 return;
             }
 
@@ -1214,35 +1529,35 @@
 
             // ── Step 1: Pre-Feasibility Check (Gatekeeper) ──────────────────
             document.getElementById('checkLoadingOverlay').style.display = 'flex';
-            
+
             fetch('/api/check-feasibility', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content },
-                body: JSON.stringify({ semester: sem, scheduled_depts: selectedDepts })
+                body: JSON.stringify({ semester: sem, scheduled_depts: selectedDepts, draft_version_id: draftId })
             })
-            .then(r => r.json())
-            .then(report => {
-                document.getElementById('checkLoadingOverlay').style.display = 'none';
-                btn.innerText = 'Check Room Capacity'; // Reset text
-                btn.disabled = false;
-                try {
-                    showFeasibilityReport(report, sem, isFresh, selectedDepts);
-                } catch (uiErr) {
-                    console.error("UI Render Error:", uiErr);
-                }
-            })
-            .catch(err => {
-                document.getElementById('checkLoadingOverlay').style.display = 'none';
-                btn.innerText = 'Check Room Capacity';
-                btn.disabled = false;
-                console.error("Network/Server Error:", err);
-                alert("Feasibility Check failed. Please check your connection or server logs.");
-            });
+                .then(r => r.json())
+                .then(report => {
+                    document.getElementById('checkLoadingOverlay').style.display = 'none';
+                    btn.innerText = 'Check Room Capacity'; // Reset text
+                    btn.disabled = false;
+                    try {
+                        showFeasibilityReport(report, sem, isFresh, selectedDepts);
+                    } catch (uiErr) {
+                        console.error("UI Render Error:", uiErr);
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('checkLoadingOverlay').style.display = 'none';
+                    btn.innerText = 'Check Room Capacity';
+                    btn.disabled = false;
+                    console.error("Network/Server Error:", err);
+                    alert("Feasibility Check failed. Please check your connection or server logs.");
+                });
         });
 
         let currentFeasibilityReport = null;
 
-        window.switchFeasibilityLevel = function(lvlKey) {
+        window.switchFeasibilityLevel = function (lvlKey) {
             if (!currentFeasibilityReport) return;
             const lvls = currentFeasibilityReport.levels;
             const data = lvls[lvlKey];
@@ -1250,20 +1565,20 @@
             // Toggle Card State
             ['l1', 'l2', 'l3'].forEach(k => {
                 const c = document.getElementById(`card-${k}`);
-                if(c) c.classList.toggle('active', k === lvlKey);
+                if (c) c.classList.toggle('active', k === lvlKey);
             });
 
             // Update Titles
             const ut = document.getElementById('utilTitle');
             const ot = document.getElementById('overflowTitle');
-            if(ut) ut.innerText = `Room Utilization (${data.label})`;
-            if(ot) ot.innerText = `Overflow Subjects (${data.label})`;
+            if (ut) ut.innerText = `Room Utilization (${data.label})`;
+            if (ot) ot.innerText = `Overflow Subjects (${data.label})`;
 
             // Render Utilization
             const utilList = document.getElementById('utilizationList');
-            if(utilList) {
+            if (utilList) {
                 utilList.innerHTML = '';
-                const sortedRooms = Object.entries(data.utilization).sort((a,b) => b[1].utilization - a[1].utilization);
+                const sortedRooms = Object.entries(data.utilization).sort((a, b) => b[1].utilization - a[1].utilization);
                 sortedRooms.forEach(([rid, roomData]) => {
                     const pct = roomData.utilization;
                     const color = pct > 90 ? 'bg-crit' : (pct > 70 ? 'bg-warn' : 'bg-safe');
@@ -1286,11 +1601,11 @@
             const list = document.getElementById('overflowList');
             const sec = document.getElementById('overflowSection');
             const noMsg = document.getElementById('noOverflowMsg');
-            if(list) {
+            if (list) {
                 list.innerHTML = '';
                 if (data.overflow > 0) {
-                    if(sec) sec.style.display = 'block';
-                    if(noMsg) noMsg.style.display = 'none';
+                    if (sec) sec.style.display = 'block';
+                    if (noMsg) noMsg.style.display = 'none';
                     for (let course in data.details) {
                         const li = document.createElement('li');
                         li.className = 'mb-1';
@@ -1298,165 +1613,255 @@
                         list.appendChild(li);
                     }
                 } else {
-                    if(sec) sec.style.display = 'none';
-                    if(noMsg) noMsg.style.display = 'block';
+                    if (sec) sec.style.display = 'none';
+                    if (noMsg) noMsg.style.display = 'block';
                 }
             }
         };
 
         function showFeasibilityReport(report, sem, isFresh, depts) {
-            currentFeasibilityReport = report;
             const modal = document.getElementById('feasibilityModal');
-            const summary = report.summary;
-            const lvls = report.levels;
-            
-            modal.style.display = 'flex';
-            document.getElementById('statTotal').innerText = report.total_sessions;
-            
-            // 1. Overall Summary Verdict
-            const alertBox = document.getElementById('feasibilityAlert');
-            const statusLabel = document.getElementById('summaryStatus');
-            const messageLabel = document.getElementById('summaryMessage');
-            const iconBox = document.getElementById('summaryIcon');
-            
-            statusLabel.innerText = summary.status;
-            messageLabel.innerText = summary.message;
-            
-            let colorClass = 'alert-success';
-            let icon = '<i class="bi bi-check-circle-fill text-success"></i>';
-            if (summary.status === 'YELLOW') colorClass = 'alert-info';
-            if (summary.status === 'ORANGE') { colorClass = 'alert-warning'; icon = '<i class="bi bi-exclamation-triangle-fill text-warning"></i>'; }
-            if (summary.status === 'RED') { colorClass = 'alert-danger'; icon = '<i class="bi bi-x-circle-fill text-danger"></i>'; }
-            
-            alertBox.className = `alert mb-4 shadow-sm ${colorClass}`;
-            iconBox.innerHTML = icon;
-
-            // 2. Levels Summary Badges
-            const setLevelBadge = (id, data) => {
-                const badge = document.getElementById(id + 'Badge');
-                const overflow = document.getElementById(id + 'Overflow');
-                badge.className = data.feasible ? 'badge badge-feasible' : 'badge badge-overflow';
-                badge.innerText = data.feasible ? 'FEASIBLE' : 'OVERFLOW';
-                overflow.innerText = data.overflow;
-            };
-            setLevelBadge('lvl1', lvls.l1);
-            setLevelBadge('lvl2', lvls.l2);
-            setLevelBadge('lvl3', lvls.l3);
-
-            // Level 2 Extra Needs (Specific to Realistic)
-            const needBox = document.getElementById('lvl2Needed');
-            if (lvls.l2.needed && (lvls.l2.needed.lec > 0 || lvls.l2.needed.lab > 0)) {
-                needBox.style.display = 'block';
-                let txt = 'Need: ';
-                if (lvls.l2.needed.lec > 0) txt += `+${lvls.l2.needed.lec} Lec `;
-                if (lvls.l2.needed.lab > 0) txt += `+${lvls.l2.needed.lab} Lab`;
-                needBox.innerText = txt;
-            } else {
-                needBox.style.display = 'none';
-            }
-
-            // Default to Level 2 view
-            switchFeasibilityLevel('l2');
-
-            // Confirm Button (Step 2)
+            const mainContent = document.getElementById('feasibilityMainContent');
+            const errorContent = document.getElementById('feasibilityErrorContent');
+            const footer = document.getElementById('feasibilityFooter');
             const contBtn = document.getElementById('confirmContinueBtn');
-            const hasOverflow = lvls.l2.overflow > 0;
 
-            if (!hasOverflow) {
-                contBtn.innerHTML = '<i class="bi bi-play-fill"></i> Start AI Generation';
-                contBtn.className = 'btn btn-success fw-bold p-3';
-                contBtn.style.flex = '1';
-            } else {
-                contBtn.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Continue with TBA';
-                contBtn.className = 'btn btn-warning fw-bold p-3';
-                contBtn.style.flex = '1';
+            modal.style.display = 'flex';
+
+            try {
+                // If the report is invalid, has no levels, or has a server error status
+                if (!report || report.error || !report.levels || (report.summary && report.summary.status === 'RED' && report.summary.message && report.summary.message.includes('Server Error'))) {
+                    throw new Error(report ? (report.error || (report.summary ? report.summary.message : "")) : "Invalid feasibility data");
+                }
+
+                currentFeasibilityReport = report;
+                const summary = report.summary;
+                const lvls = report.levels;
+
+                if (mainContent) mainContent.style.display = 'block';
+                if (errorContent) errorContent.style.display = 'none';
+                if (footer) footer.style.display = 'flex';
+                if (contBtn) contBtn.style.display = 'block';
+
+                document.getElementById('statTotal').innerText = report.total_sessions;
+
+                // 1. Overall Summary Verdict
+                const alertBox = document.getElementById('feasibilityAlert');
+                const statusLabel = document.getElementById('summaryStatus');
+                const messageLabel = document.getElementById('summaryMessage');
+                const iconBox = document.getElementById('summaryIcon');
+
+                statusLabel.innerText = summary.status;
+                messageLabel.innerText = summary.message;
+
+                let colorClass = 'alert-success';
+                let icon = '<i class="bi bi-check-circle-fill text-success"></i>';
+                if (summary.status === 'YELLOW') colorClass = 'alert-info';
+                if (summary.status === 'ORANGE') { colorClass = 'alert-warning'; icon = '<i class="bi bi-exclamation-triangle-fill text-warning"></i>'; }
+                if (summary.status === 'RED') { colorClass = 'alert-danger'; icon = '<i class="bi bi-x-circle-fill text-danger"></i>'; }
+
+                alertBox.className = `alert mb-4 shadow-sm ${colorClass}`;
+                iconBox.innerHTML = icon;
+
+                // 2. Levels Summary Badges
+                const setLevelBadge = (id, data) => {
+                    const badge = document.getElementById(id + 'Badge');
+                    const overflow = document.getElementById(id + 'Overflow');
+                    badge.className = data.feasible ? 'badge badge-feasible' : 'badge badge-overflow';
+                    badge.innerText = data.feasible ? 'FEASIBLE' : 'OVERFLOW';
+                    overflow.innerText = data.overflow;
+                };
+                setLevelBadge('lvl1', lvls.l1);
+                setLevelBadge('lvl2', lvls.l2);
+                setLevelBadge('lvl3', lvls.l3);
+
+                // Level 2 Extra Needs (Specific to Realistic)
+                const needBox = document.getElementById('lvl2Needed');
+                if (lvls.l2.needed && (lvls.l2.needed.lec > 0 || lvls.l2.needed.lab > 0)) {
+                    needBox.style.display = 'block';
+                    let txt = 'Need: ';
+                    if (lvls.l2.needed.lec > 0) txt += `+${lvls.l2.needed.lec} Lec `;
+                    if (lvls.l2.needed.lab > 0) txt += `+${lvls.l2.needed.lab} Lab`;
+                    needBox.innerText = txt;
+                } else {
+                    needBox.style.display = 'none';
+                }
+
+                // Default to Level 2 view
+                switchFeasibilityLevel('l2');
+
+                // Confirm Button (Step 2)
+                const hasOverflow = lvls.l2.overflow > 0;
+
+                if (!hasOverflow) {
+                    contBtn.innerHTML = '<i class="bi bi-play-fill"></i> Start AI Generation';
+                    contBtn.className = 'btn btn-success fw-bold p-3';
+                    contBtn.style.flex = '1';
+                } else {
+                    contBtn.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Continue with TBA';
+                    contBtn.className = 'btn btn-warning fw-bold p-3';
+                    contBtn.style.flex = '1';
+                }
+
+                contBtn.onclick = function () {
+                    modal.style.display = 'none';
+                    igniteGeneration(sem, isFresh, depts);
+                };
+
+            } catch (err) {
+                console.error("Feasibility UI Render Error, showing idle fallback:", err);
+
+                if (mainContent) mainContent.style.display = 'none';
+                if (errorContent) errorContent.style.display = 'flex';
+                if (contBtn) contBtn.style.display = 'none';
+
+                // Bind the Reconnect Button
+                const recBtn = document.getElementById('feasibilityReconnectBtn');
+                if (recBtn) {
+                    recBtn.onclick = function () {
+                        try {
+                            // Store the current user's selections to automatically restore them on page refresh
+                            localStorage.setItem('retry_semester', document.getElementById('semesterSelect').value);
+                            localStorage.setItem('retry_fresh', document.getElementById('freshStartCheck').checked);
+
+                            var selectedDepts = Array.from(document.querySelectorAll('.dept-checkbox:checked')).map(function (cb) { return cb.value; });
+                            localStorage.setItem('retry_depts', JSON.stringify(selectedDepts));
+                            localStorage.setItem('autoTriggerFeasibility', 'true');
+                        } catch (storageErr) {
+                            console.error("Failed to write state to localStorage:", storageErr);
+                        }
+
+                        modal.style.display = 'none';
+                        window.location.reload();
+                    };
+                }
             }
-            
-            contBtn.onclick = function() {
-                modal.style.display = 'none';
-                igniteGeneration(sem, isFresh, depts);
-            };
         }
 
 
 
         function igniteGeneration(sem, isFresh, selectedDepts) {
+            var draftId = document.getElementById('draftSelect') ? document.getElementById('draftSelect').value : null;
+            if (!draftId) {
+                alert("Please select or create an Active Draft Version before proceeding.");
+                return;
+            }
             ss.style.display = 'none'; running = true; stat.innerText = 'Running...'; rsz(); requestAnimationFrame(draw);
             while (log.firstChild) log.removeChild(log.firstChild);
             t0 = Date.now(); tInt = setInterval(function () { var d = Date.now() - t0, dt = new Date(d); tmr.innerText = dt.toISOString().substr(11, 8); }, 1000);
-            
-            fetch('/start-generation', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content }, 
-                body: JSON.stringify({ semester: sem, fresh_start: isFresh, scheduled_depts: selectedDepts }) 
+
+            fetch('/start-generation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content },
+                body: JSON.stringify({ semester: sem, fresh_start: isFresh, scheduled_depts: selectedDepts, draft_version_id: draftId })
             })
-            .then(r => r.json())
-            .then(function () {
-                var lastG = 0;
-                pInt = setInterval(function () {
-                    fetch('/get-generation-status').then(r => r.json()).then(d => {
-                        if (d.visual_matrix) mat = d.visual_matrix;
-                        var hc = d.hard_conflicts || 0, sc1 = d.sc1_violations || 0, sc2 = d.sc2_violations || 0;
-                        hG.innerText = d.generation;
-                        hH.innerText = hc;
-                        hH.className = hc > 0 ? 'metric-val text-red' : 'metric-val text-green';
-                        wG.innerText = 'Gen ' + d.generation;
-                        wC.innerText = hc > 0 ? hc + ' HC' : (sc1 + sc2 > 0 ? (sc1 + sc2) + ' SC' : '✓ 0');
-                        var bd = document.getElementById('hudConflictBreakdown');
-                        if (bd) bd.innerText = 'HC:' + hc + '  SC-I:' + sc1 + '  SC-II:' + sc2;
+                .then(r => r.json())
+                .then(function () {
+                    var lastG = 0;
+                    pInt = setInterval(function () {
+                        fetch('/get-generation-status').then(r => r.json()).then(d => {
+                            if (d.visual_matrix) mat = d.visual_matrix;
+                            var hc = d.hard_conflicts || 0, sc1 = d.sc1_violations || 0, sc2 = d.sc2_violations || 0;
+                            hG.innerText = d.generation;
+                            hH.innerText = hc;
+                            hH.className = hc > 0 ? 'metric-val text-red' : 'metric-val text-green';
+                            wG.innerText = 'Gen ' + d.generation;
+                            wC.innerText = hc > 0 ? hc + ' HC' : (sc1 + sc2 > 0 ? (sc1 + sc2) + ' SC' : '✓ 0');
+                            var bd = document.getElementById('hudConflictBreakdown');
+                            if (bd) bd.innerText = 'HC:' + hc + '  SC-I:' + sc1 + '  SC-II:' + sc2;
 
-                        if (d.hardware) {
-                            var hw = d.hardware;
-                            var b = document.getElementById('hwBadge');
-                            var l = document.getElementById('hwLabel');
-                            var t = document.getElementById('hudTarget');
-                            var g = document.getElementById('hudGPS');
+                            if (d.hardware) {
+                                var hw = d.hardware;
+                                var b = document.getElementById('hwBadge');
+                                var l = document.getElementById('hwLabel');
+                                var t = document.getElementById('hudTarget');
+                                var g = document.getElementById('hudGPS');
 
-                            if (b) {
-                                b.innerText = hw.mode + ' Mode';
-                                b.className = 'hw-badge ' + (hw.mode === 'Performance' ? 'hw-perf' : (hw.mode === 'Balanced' ? 'hw-bal' : 'hw-eff'));
+                                if (b) {
+                                    b.innerText = hw.mode + ' Mode';
+                                    b.className = 'hw-badge ' + (hw.mode === 'Performance' ? 'hw-perf' : (hw.mode === 'Balanced' ? 'hw-bal' : 'hw-eff'));
+                                }
+                                if (l) l.innerText = hw.label;
+                                if (t && hw.target_gens) t.innerText = hw.target_gens.toLocaleString();
+                                if (g) g.innerText = (d.gen_per_sec || 0).toFixed(1);
                             }
-                            if (l) l.innerText = hw.label;
-                            if (t && hw.target_gens) t.innerText = hw.target_gens.toLocaleString();
-                            if (g) g.innerText = (d.gen_per_sec || 0).toFixed(1);
-                        }
 
-                        if (d.generation === 0 && !d.done) {
-                            fx.innerText = '=INITIALIZE(population=' + (d.pop_size || '...') + ')';
-                            if (!document.getElementById('initLogEntry')) {
-                                var iv = document.createElement('div'); iv.className = 'log-item'; iv.id = 'initLogEntry';
-                                iv.innerText = '⚙ Building initial population — evaluating chromosomes in parallel...';
-                                log.appendChild(iv);
+                            if (d.generation === 0 && !d.done) {
+                                fx.innerText = '=INITIALIZE(population=' + (d.pop_size || '...') + ')';
+                                if (!document.getElementById('initLogEntry')) {
+                                    var iv = document.createElement('div'); iv.className = 'log-item'; iv.id = 'initLogEntry';
+                                    iv.innerText = '⚙ Building initial population — evaluating chromosomes in parallel...';
+                                    log.appendChild(iv);
+                                }
                             }
-                        }
-                        if (d.generation > 0 && document.getElementById('initLogEntry')) {
-                            document.getElementById('initLogEntry').remove();
-                        }
-                        if (d.generation > lastG) {
-                            var div = document.createElement('div'); div.className = 'log-item';
-                            div.innerText = 'Gen ' + d.generation + ': ' + LOGS[Math.floor(Math.random() * LOGS.length)];
-                            log.appendChild(div); while (log.children.length > 60) log.removeChild(log.firstChild);
-                            log.scrollTop = log.scrollHeight;
-                            fx.innerText = hc === 0 ? '=SOFT_OPTIMIZE(gen=' + d.generation + ',sc=' + (sc1 + sc2) + ')' : '=RESOLVE_HC(gen=' + d.generation + ',hc=' + hc + ')';
-                            lastG = d.generation;
-                        }
-                        if (d.done) {
-                            clearInterval(pInt); clearInterval(tInt); running = false; stat.innerText = 'Saved'; fx.innerText = '=COMPLETE()';
-                            document.getElementById('finalConflictCount').innerText = hc;
-                            var fb = document.getElementById('finalConflictBreakdown');
-                            if (fb) fb.innerText = 'HC: ' + hc + '  |  SC-I: ' + sc1 + '  |  SC-II: ' + sc2;
-                            document.querySelector('#victoryScreen h2').innerText = (hc === 0 && sc1 === 0 && sc2 === 0) ? 'Perfect Schedule!' : 'Optimization Complete';
-                            var ic = document.querySelector('#victoryScreen .bi-check-circle-fill,#victoryScreen .bi-exclamation-circle-fill');
-                            if (ic) ic.className = (hc === 0 && sc1 === 0 && sc2 === 0) ? 'bi bi-check-circle-fill display-2' : 'bi bi-exclamation-circle-fill display-2 text-warning';
-                            var fgen = document.getElementById('finalGenerations');
-                            if (fgen) fgen.innerText = ((d.total_generations || d.generation || 0)).toLocaleString() + ' gens';
-                            var ftm = document.getElementById('finalTime');
-                            if (ftm) { var secs = d.total_time ? Math.round(d.total_time) : Math.round((Date.now() - t0) / 1000); ftm.innerText = Math.floor(secs / 60) + 'm ' + (secs % 60) + 's'; }
-                            vP = 1; setTimeout(function () { vs.style.display = 'flex'; }, 3000);
-                        }
+                            if (d.generation > 0 && document.getElementById('initLogEntry')) {
+                                document.getElementById('initLogEntry').remove();
+                            }
+                            if (d.generation > lastG) {
+                                var div = document.createElement('div'); div.className = 'log-item';
+                                div.innerText = 'Gen ' + d.generation + ': ' + LOGS[Math.floor(Math.random() * LOGS.length)];
+                                log.appendChild(div); while (log.children.length > 60) log.removeChild(log.firstChild);
+                                log.scrollTop = log.scrollHeight;
+                                fx.innerText = hc === 0 ? '=SOFT_OPTIMIZE(gen=' + d.generation + ',sc=' + (sc1 + sc2) + ')' : '=RESOLVE_HC(gen=' + d.generation + ',hc=' + hc + ')';
+                                lastG = d.generation;
+                            }
+                            if (d.done) {
+                                clearInterval(pInt); clearInterval(tInt); running = false; stat.innerText = 'Saved'; fx.innerText = '=COMPLETE()';
+                                document.getElementById('finalConflictCount').innerText = hc;
+                                var fb = document.getElementById('finalConflictBreakdown');
+                                if (fb) fb.innerText = 'HC: ' + hc + '  |  SC-I: ' + sc1 + '  |  SC-II: ' + sc2;
+                                document.querySelector('#victoryScreen h2').innerText = (hc === 0 && sc1 === 0 && sc2 === 0) ? 'Perfect Schedule!' : 'Optimization Complete';
+                                var ic = document.querySelector('#victoryScreen .bi-check-circle-fill,#victoryScreen .bi-exclamation-circle-fill');
+                                if (ic) ic.className = (hc === 0 && sc1 === 0 && sc2 === 0) ? 'bi bi-check-circle-fill display-2' : 'bi bi-exclamation-circle-fill display-2 text-warning';
+                                var fgen = document.getElementById('finalGenerations');
+                                if (fgen) fgen.innerText = ((d.total_generations || d.generation || 0)).toLocaleString() + ' gens';
+                                var ftm = document.getElementById('finalTime');
+                                if (ftm) { var secs = d.total_time ? Math.round(d.total_time) : Math.round((Date.now() - t0) / 1000); ftm.innerText = Math.floor(secs / 60) + 'm ' + (secs % 60) + 's'; }
+                                vP = 1; setTimeout(function () { vs.style.display = 'flex'; }, 3000);
+                            }
+                        });
+                    }, 100);
+                });
+        }
+    });
+
+    // ── Auto-trigger Feasibility Check on page reload (state restoration) ──────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+        try {
+            if (localStorage.getItem('autoTriggerFeasibility') === 'true') {
+                localStorage.removeItem('autoTriggerFeasibility'); // Prevent infinite loops
+
+                var savedSem = localStorage.getItem('retry_semester');
+                var savedFresh = localStorage.getItem('retry_fresh');
+                var savedDeptsStr = localStorage.getItem('retry_depts');
+
+                if (savedSem && document.getElementById('semesterSelect')) {
+                    document.getElementById('semesterSelect').value = savedSem;
+                }
+                if (savedFresh && document.getElementById('freshStartCheck')) {
+                    document.getElementById('freshStartCheck').checked = (savedFresh === 'true');
+                }
+                if (savedDeptsStr) {
+                    var savedDepts = JSON.parse(savedDeptsStr);
+                    document.querySelectorAll('.dept-checkbox').forEach(function (cb) {
+                        cb.checked = savedDepts.includes(cb.value);
                     });
-                }, 100);
-            });
+                    if (typeof updateDeptCount === 'function') {
+                        updateDeptCount();
+                    }
+                }
+
+                // Trigger the check after a short delay to let the page fully settle
+                setTimeout(function () {
+                    var igniteBtn = document.getElementById('igniteBtn');
+                    if (igniteBtn) {
+                        console.log("Automatically auto-triggering Capacity Assessment after reload...");
+                        igniteBtn.click();
+                    }
+                }, 400);
+            }
+        } catch (err) {
+            console.error("Error during auto-trigger restoration:", err);
         }
     });
 </script>
