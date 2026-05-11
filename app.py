@@ -8489,10 +8489,7 @@ def api_check_conflicts():
             joinedload(ScheduledClass.section),
             joinedload(ScheduledClass.faculty),
             joinedload(ScheduledClass.room),
-        ).filter_by(day=day, semester=semester).filter(
-            or_(ScheduledClass.is_draft == False,
-                ScheduledClass.draft_version_id == draft_version_id)
-        )
+        ).filter_by(day=day, semester=semester, draft_version_id=draft_version_id, is_draft=True)
 
     candidates = _dedup_schedules(q.all())
     hard_conflicts = []
@@ -13613,13 +13610,11 @@ def section_timetable_html(section_id):
                 joinedload(ScheduledClass.room),
             ]
             if draft_id:
-                schedules = _dedup_schedules(ScheduledClass.query.options(*_opts).filter(
-                    ScheduledClass.section_id == section_id,
-                    ScheduledClass.semester == semester,
-                    db.or_(
-                        ScheduledClass.is_draft == False,
-                        ScheduledClass.draft_version_id == draft_id
-                    )
+                schedules = _dedup_schedules(ScheduledClass.query.options(*_opts).filter_by(
+                    section_id=section_id,
+                    semester=semester,
+                    draft_version_id=draft_id,
+                    is_draft=True
                 ).all())
             else:
                 schedules = _dedup_schedules(ScheduledClass.query.options(*_opts).filter_by(
@@ -14519,13 +14514,11 @@ def faculty_timetable_html(faculty_id):
             joinedload(ScheduledClass.room),
         ]
         if draft_id:
-            schedules = _dedup_schedules(ScheduledClass.query.options(*_opts_f).filter(
-                ScheduledClass.faculty_id == faculty_id,
-                ScheduledClass.semester == semester,
-                db.or_(
-                    ScheduledClass.is_draft == False,
-                    ScheduledClass.draft_version_id == draft_id
-                )
+            schedules = _dedup_schedules(ScheduledClass.query.options(*_opts_f).filter_by(
+                faculty_id=faculty_id,
+                semester=semester,
+                draft_version_id=draft_id,
+                is_draft=True
             ).all())
         else:
             schedules = _dedup_schedules(ScheduledClass.query.options(*_opts_f).filter_by(
@@ -14626,13 +14619,11 @@ def room_timetable_html(room_id):
             joinedload(ScheduledClass.room),
         ]
         if draft_id:
-            schedules = _dedup_schedules(ScheduledClass.query.options(*_opts_r).filter(
-                ScheduledClass.room_id == room_id,
-                ScheduledClass.semester == semester,
-                db.or_(
-                    ScheduledClass.is_draft == False,
-                    ScheduledClass.draft_version_id == draft_id
-                )
+            schedules = _dedup_schedules(ScheduledClass.query.options(*_opts_r).filter_by(
+                room_id=room_id,
+                semester=semester,
+                draft_version_id=draft_id,
+                is_draft=True
             ).all())
         else:
             schedules = _dedup_schedules(ScheduledClass.query.options(*_opts_r).filter_by(
@@ -14704,12 +14695,21 @@ def course_timetable_html(course_id):
         semester  = _req_sem if _req_sem in _all_sems else (_all_sems[0] if _all_sems else '1st Semester')
         sem_ay    = request.args.get('sem_ay', '')
 
-        schedules = _dedup_schedules(ScheduledClass.query.options(
-            joinedload(ScheduledClass.course),
-            joinedload(ScheduledClass.section),
-            joinedload(ScheduledClass.faculty),
-            joinedload(ScheduledClass.room),
-        ).filter_by(course_id=course_id, semester=semester, is_draft=False).all())
+        draft_id = request.args.get('draft_id', type=int)
+        if draft_id:
+            schedules = _dedup_schedules(ScheduledClass.query.options(
+                joinedload(ScheduledClass.course),
+                joinedload(ScheduledClass.section),
+                joinedload(ScheduledClass.faculty),
+                joinedload(ScheduledClass.room),
+            ).filter_by(course_id=course_id, semester=semester, draft_version_id=draft_id, is_draft=True).all())
+        else:
+            schedules = _dedup_schedules(ScheduledClass.query.options(
+                joinedload(ScheduledClass.course),
+                joinedload(ScheduledClass.section),
+                joinedload(ScheduledClass.faculty),
+                joinedload(ScheduledClass.room),
+            ).filter_by(course_id=course_id, semester=semester, is_draft=False).all())
     # Define path to course template
     path = os.path.join(basedir, 'static', 'assets', 'course_template.xlsx')
     for_canvas = request.args.get('canvas', 'false') == 'true'
