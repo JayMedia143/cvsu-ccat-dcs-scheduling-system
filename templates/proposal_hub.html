@@ -325,17 +325,17 @@
                     <div class="dropdown d-none d-md-inline-block">
                         <button class="btn pv-pill-select dropdown-toggle p-0" type="button" id="pvSortDropdown"
                             data-bs-toggle="dropdown" aria-expanded="false" style="width: auto; text-align: left;">
-                            Sort by: Newest
+                            Sort by: A — Z
                         </button>
                         <ul class="dropdown-menu google-sort-menu" aria-labelledby="pvSortDropdown">
                             <li>
-                                <a class="dropdown-item google-sort-item active" href="javascript:void(0);"
+                                <a class="dropdown-item google-sort-item" href="javascript:void(0);"
                                     onclick="pvApplySort('newest', this)">
                                     Sort by: Newest
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item google-sort-item" href="javascript:void(0);"
+                                <a class="dropdown-item google-sort-item active" href="javascript:void(0);"
                                     onclick="pvApplySort('asc', this)">
                                     Sort by: A — Z
                                 </a>
@@ -353,7 +353,7 @@
                         style="appearance: none; -webkit-appearance: none; border: none; background: transparent; padding-right: 15px;"
                         onchange="pvApplySort(this.value)">
                         <option value="newest">Newest</option>
-                        <option value="asc">A — Z</option>
+                        <option value="asc" selected>A — Z</option>
                         <option value="desc">Z — A</option>
                     </select>
                 </div>
@@ -3625,7 +3625,7 @@
     // ──────────────── INFINITE CANVAS PREVIEW (full parity with schedule_editor draft preview) ────────────────
     let pvActiveDraft = null;
     let pvCurrentType = 'section';
-    let pvCurrentSort = 'newest'; // [STANDARD] Default to newest
+    let pvCurrentSort = 'asc'; // [STANDARD] Default to A — Z
     let pvTranslateX = 0, pvTranslateY = 0, pvScale = 0.12;
     let pvIsDragging = false, pvStartX = 0, pvStartY = 0;
     let pvModalOpen = false;

@@ -4811,14 +4811,16 @@ def add_faculty():
 def quick_add_tba_faculty():
     if session.get('role') == 'user':
         user_dept = session.get('department')
-        # Scoped TBA name: T.B.A. (DAS)
-        full_name_base = f'T.B.A. ({user_dept})'
+        dept_obj = Department.query.filter_by(name=user_dept).first()
+        dept_code = dept_obj.code if dept_obj and dept_obj.code else user_dept
+        
+        full_name_base = f'T.B.A. ({dept_code})'
         existing_tba = Faculty.query.filter_by(full_name=full_name_base).all()
         existing_ids = {f.employee_id for f in existing_tba}
         next_num = 1
-        while f'TBA-{user_dept}-{next_num:02d}' in existing_ids:
+        while f'TBA-{dept_code}-{next_num:04d}' in existing_ids:
             next_num += 1
-        new_id = f'TBA-{user_dept}-{next_num:02d}'
+        new_id = f'TBA-{dept_code}-{next_num:04d}'
         new_full_name = full_name_base
         dept = user_dept
     else:
@@ -4838,6 +4840,7 @@ def quick_add_tba_faculty():
         employment_status='Part-time',
         max_weekly_hours=999,
         available_days='Mon,Tue,Wed,Thu,Fri,Sat',
+        created_by_id=session.get('user_id'),
     )
     db.session.add(new_tba)
     db.session.commit()
@@ -5112,14 +5115,17 @@ def save_faculty_assignments(faculty_id):
     saved_cids = list({int(k.split('-')[0]) for k in assignment_keys})
     faculty.courses = Course.query.filter(Course.id.in_(saved_cids)).all() if saved_cids else []
     # Sync ScheduledClass: replace TBA faculty with the assigned real faculty
-    tba_ids = [f.id for f in Faculty.query.filter_by(full_name='T.B.A.').all()]
+    tba_ids = [f.id for f in Faculty.query.filter(
+        (Faculty.full_name == 'T.B.A.') |
+        (Faculty.full_name.like('T.B.A. (%'))
+    ).all()]
     if tba_ids and assignment_keys:
         for key in assignment_keys:
             cid, sid = key.split('-')
             ScheduledClass.query.filter(
                 ScheduledClass.course_id == int(cid),
                 ScheduledClass.section_id == int(sid),
-                ScheduledClass.faculty_id.in_(tba_ids)
+                ((ScheduledClass.faculty_id.in_(tba_ids)) | (ScheduledClass.faculty_id == None))
             ).update({'faculty_id': faculty_id}, synchronize_session=False)
     db.session.commit()
     
@@ -12532,6 +12538,10 @@ def build_schedule_overlays(schedules, grid_info, view_type):
         return str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
     def fmt_faculty(full_name, sex):
+        if not full_name:
+            return 'PROF. T.B.A.'
+        if full_name.upper().startswith('T.B.A.'):
+            return 'PROF. T.B.A.'
         parts = (full_name or '').split()
         surname = parts[-1].upper() if parts else (full_name or '').upper()
         prefix = 'MR.' if sex == 'M' else 'MS.' if sex == 'F' else 'PROF.'
@@ -13295,6 +13305,10 @@ def build_schedule_overlays(schedules, grid_info, view_type):
         return str(s).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
     def fmt_faculty(full_name, sex):
+        if not full_name:
+            return 'PROF. T.B.A.'
+        if full_name.upper().startswith('T.B.A.'):
+            return 'PROF. T.B.A.'
         parts = (full_name or '').split()
         surname = parts[-1].upper() if parts else (full_name or '').upper()
         prefix = 'MR.' if sex == 'M' else 'MS.' if sex == 'F' else 'PROF.'
@@ -17714,8 +17728,9 @@ def api_user_generate():
     raw_sections = Section.query.filter_by(is_archived=False).all()
     sections = []
     for s in raw_sections:
-        # Only include courses that are in the selected departments and offered this semester
-        dept_courses = [c for c in s.courses if c.department and c.department.strip().upper() in target_depts_norm and c.semester_offered == target_semester]
+        assigned_course_ids = [fa.course_id for fa in FacultyAssignment.query.filter_by(section_id=s.id).all()]
+        # Only include courses that are in the selected departments, offered this semester, and have workload assignments
+        dept_courses = [c for c in s.courses if c.department and c.department.strip().upper() in target_depts_norm and c.semester_offered == target_semester and c.id in assigned_course_ids]
         if dept_courses:
             sections.append({
                 'id': s.id, 'section_name': s.section_name, 
@@ -17763,6 +17778,52 @@ def api_user_generate():
     except Exception:
         blocked_slots = []
         
+    # Build split_assignments and fa_map for User Role
+    raw_splits = (
+        FacultyAssignment.query
+        .join(Course, FacultyAssignment.course_id == Course.id)
+        .filter(Course.semester_offered == target_semester)
+        .all()
+    )
+    valid_course_ids = {c['id'] for c in courses_data}
+    split_assignments = []
+    for fa in raw_splits:
+        if fa.course_id not in valid_course_ids:
+            continue
+        # Lab splits
+        lab_splits = []
+        if fa.split_day_1 and fa.split_hours_1:
+            lab_splits.append({'day': fa.split_day_1, 'hours': fa.split_hours_1})
+        if fa.split_day_2 and fa.split_hours_2:
+            lab_splits.append({'day': fa.split_day_2, 'hours': fa.split_hours_2})
+        if lab_splits:
+            split_assignments.append({
+                'faculty_id': fa.faculty_id,
+                'course_id':  fa.course_id,
+                'section_id': fa.section_id,
+                'gtype':      'Lab',
+                'splits':     lab_splits,
+            })
+        # Lec splits
+        lec_splits = []
+        if fa.split_lec_day_1 and fa.split_lec_hours_1:
+            lec_splits.append({'day': fa.split_lec_day_1, 'hours': fa.split_lec_hours_1})
+        if fa.split_lec_day_2 and fa.split_lec_hours_2:
+            lec_splits.append({'day': fa.split_lec_day_2, 'hours': fa.split_lec_hours_2})
+        if lec_splits:
+            split_assignments.append({
+                'faculty_id': fa.faculty_id,
+                'course_id':  fa.course_id,
+                'section_id': fa.section_id,
+                'gtype':      'Lec',
+                'splits':     lec_splits,
+            })
+
+    fa_map = {}
+    for fa in raw_splits:
+        if fa.course_id in valid_course_ids:
+            fa_map[(fa.course_id, fa.section_id)] = fa.faculty_id
+
     # 4. Initialize Scheduler
     scheduler = UserGeneticScheduler(
         courses_data, sections, faculty_data, room_data, 
@@ -17770,6 +17831,8 @@ def api_user_generate():
         start_time=settings_db.start_hour,
         end_time=settings_db.end_hour,
         allowed_days=active_days,
+        split_assignments=split_assignments,
+        fa_map=fa_map,
         blocked_slots=blocked_slots,
         user_id=user_id
     )
@@ -17844,7 +17907,8 @@ def api_user_check_feasibility():
         raw_sections = Section.query.filter_by(is_archived=False).all()
         sections = []
         for s in raw_sections:
-            dept_courses = [c for c in s.courses if c.department and c.department.strip().upper() in target_depts_norm and c.semester_offered == target_semester]
+            assigned_course_ids = [fa.course_id for fa in FacultyAssignment.query.filter_by(section_id=s.id).all()]
+            dept_courses = [c for c in s.courses if c.department and c.department.strip().upper() in target_depts_norm and c.semester_offered == target_semester and c.id in assigned_course_ids]
             if dept_courses:
                 sections.append({
                     'id': s.id, 'section_name': s.section_name, 
@@ -17884,6 +17948,52 @@ def api_user_check_feasibility():
         except Exception:
             blocked_slots = []
             
+        # Build split_assignments and fa_map for User Role
+        raw_splits = (
+            FacultyAssignment.query
+            .join(Course, FacultyAssignment.course_id == Course.id)
+            .filter(Course.semester_offered == target_semester)
+            .all()
+        )
+        valid_course_ids = {c['id'] for c in courses_data}
+        split_assignments = []
+        for fa in raw_splits:
+            if fa.course_id not in valid_course_ids:
+                continue
+            # Lab splits
+            lab_splits = []
+            if fa.split_day_1 and fa.split_hours_1:
+                lab_splits.append({'day': fa.split_day_1, 'hours': fa.split_hours_1})
+            if fa.split_day_2 and fa.split_hours_2:
+                lab_splits.append({'day': fa.split_day_2, 'hours': fa.split_hours_2})
+            if lab_splits:
+                split_assignments.append({
+                    'faculty_id': fa.faculty_id,
+                    'course_id':  fa.course_id,
+                    'section_id': fa.section_id,
+                    'gtype':      'Lab',
+                    'splits':     lab_splits,
+                })
+            # Lec splits
+            lec_splits = []
+            if fa.split_lec_day_1 and fa.split_lec_hours_1:
+                lec_splits.append({'day': fa.split_lec_day_1, 'hours': fa.split_lec_hours_1})
+            if fa.split_lec_day_2 and fa.split_lec_hours_2:
+                lec_splits.append({'day': fa.split_lec_day_2, 'hours': fa.split_lec_hours_2})
+            if lec_splits:
+                split_assignments.append({
+                    'faculty_id': fa.faculty_id,
+                    'course_id':  fa.course_id,
+                    'section_id': fa.section_id,
+                    'gtype':      'Lec',
+                    'splits':     lec_splits,
+                })
+
+        fa_map = {}
+        for fa in raw_splits:
+            if fa.course_id in valid_course_ids:
+                fa_map[(fa.course_id, fa.section_id)] = fa.faculty_id
+
         # 2. Initialize Scheduler and Run 3-Level Check
         scheduler = UserGeneticScheduler(
             courses_data, sections, faculty_data, room_data, 
@@ -17891,6 +18001,8 @@ def api_user_check_feasibility():
             start_time=settings_db.start_hour,
             end_time=settings_db.end_hour,
             allowed_days=active_days,
+            split_assignments=split_assignments,
+            fa_map=fa_map,
             blocked_slots=blocked_slots,
             user_id=session.get('user_id')
         )

@@ -674,11 +674,11 @@
         <div class="dropdown d-none d-md-inline-block">
             <button class="btn hud-pill-select dropdown-toggle p-0" type="button" id="sortDropdown"
                 data-bs-toggle="dropdown" aria-expanded="false" style="width: auto; text-align: left;">
-                Sort by: Newest
+                Sort by: A — Z
             </button>
             <ul class="dropdown-menu google-sort-menu" aria-labelledby="sortDropdown">
                 <li>
-                    <a class="dropdown-item google-sort-item active" href="javascript:void(0);"
+                    <a class="dropdown-item google-sort-item" href="javascript:void(0);"
                         onclick="applySort('newest', this)">
                         Sort by: Newest
                     </a>
@@ -687,7 +687,7 @@
                     <hr class="dropdown-divider op-0">
                 </li>
                 <li>
-                    <a class="dropdown-item google-sort-item" href="javascript:void(0);"
+                    <a class="dropdown-item google-sort-item active" href="javascript:void(0);"
                         onclick="applySort('asc', this)">
                         Sort by: A — Z
                     </a>
@@ -706,7 +706,7 @@
             style="appearance: none; -webkit-appearance: none; border: none; background: transparent; padding-right: 15px;"
             onchange="applySort(this.value)">
             <option value="newest">Newest</option>
-            <option value="asc">A — Z</option>
+            <option value="asc" selected>A — Z</option>
             <option value="desc">Z — A</option>
         </select>
     </div>
@@ -801,7 +801,7 @@
         if (!dir) {
             // Default to newest if called without args (e.g. initial load)
             const saved = localStorage.getItem('vt_sort_pref');
-            dir = saved || 'newest';
+            dir = saved || 'asc';
         } else {
             localStorage.setItem('vt_sort_pref', dir);
         }

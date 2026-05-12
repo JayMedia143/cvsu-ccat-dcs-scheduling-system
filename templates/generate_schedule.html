@@ -386,12 +386,12 @@
 
     /* MODALS */
     .modal-overlay {
-        position: absolute;
+        position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        height: 100dvh;
-        background: rgba(255, 255, 255, 0.9);
+        height: 100%;
+        background: rgba(255, 255, 255, 0.95);
         z-index: 100;
         display: flex;
         justify-content: center;
@@ -425,12 +425,12 @@
 
     /* VICTORY OVERLAY */
     .victory-overlay {
-        position: absolute;
+        position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.85);
         z-index: 90;
         display: none;
         flex-direction: column;
@@ -1225,7 +1225,8 @@
     }
     makeDraggable(document.getElementById('dragPanel'));
 
-    function selectSemester(val, el) {
+    window.selectSemester = function(val, el) {
+        console.log("selectSemester called with value:", val);
         const label = document.getElementById('selectedSemesterLabel');
         const input = document.getElementById('semesterSelect');
         if (label) label.innerText = val;
@@ -1241,9 +1242,10 @@
                 el.classList.add('active-selection');
             }
         }
-    }
+    };
 
-    function selectDraft(id, label, el) {
+    window.selectDraft = function(id, label, el) {
+        console.log("selectDraft called with ID:", id, "label:", label);
         const dLabel = document.getElementById('selectedDraftLabel');
         const dInput = document.getElementById('draftSelect');
         if (dLabel) dLabel.innerText = label;
@@ -1259,36 +1261,88 @@
                 el.classList.add('active-selection');
             }
         }
-    }
+    };
 
-    function showCreateDraftModal() {
-        document.getElementById('createDraftError').style.display = 'none';
-        document.getElementById('newDraftNameInput').value = '';
-        document.getElementById('newDraftNotesInput').value = '';
-        document.getElementById('createDraftModal').style.display = 'flex';
-    }
+    window.showCreateDraftModal = function() {
+        console.log("showCreateDraftModal called");
+        const err = document.getElementById('createDraftError');
+        const name = document.getElementById('newDraftNameInput');
+        const notes = document.getElementById('newDraftNotesInput');
+        const modal = document.getElementById('createDraftModal');
+        
+        if (err) err.style.display = 'none';
+        if (name) name.value = '';
+        if (notes) notes.value = '';
+        
+        if (modal) {
+            modal.style.setProperty('display', 'flex', 'important');
+            modal.style.setProperty('z-index', '3100', 'important'); // Ensure it overlays everything, including feasibility modals
+            console.log("createDraftModal successfully shown on top (z-index 3100)");
+        } else {
+            console.error("createDraftModal element not found!");
+        }
+    };
 
-    function hideCreateDraftModal() {
-        document.getElementById('createDraftModal').style.display = 'none';
-    }
+    window.hideCreateDraftModal = function() {
+        console.log("hideCreateDraftModal called");
+        const modal = document.getElementById('createDraftModal');
+        if (modal) {
+            modal.style.setProperty('display', 'none', 'important');
+        }
+    };
 
-    function submitCreateDraftOnTheFly() {
-        const name = document.getElementById('newDraftNameInput').value.trim();
-        const notes = document.getElementById('newDraftNotesInput').value.trim();
-        const sem = document.getElementById('semesterSelect').value;
+    window.submitCreateDraftOnTheFly = function() {
+        console.log("submitCreateDraftOnTheFly called");
+        const nameEl = document.getElementById('newDraftNameInput');
+        const notesEl = document.getElementById('newDraftNotesInput');
+        const semEl = document.getElementById('semesterSelect');
         const errorDiv = document.getElementById('createDraftError');
         
+        console.log("Diagnostic - nameEl:", nameEl);
+        console.log("Diagnostic - notesEl:", notesEl);
+        console.log("Diagnostic - semEl:", semEl);
+        console.log("Diagnostic - errorDiv:", errorDiv);
+        
+        // Robust Fallback Element Lookups using querySelector as secondary strategy
+        const finalNameEl = nameEl || document.querySelector('#newDraftNameInput');
+        const finalNotesEl = notesEl || document.querySelector('#newDraftNotesInput');
+        const finalSemEl = semEl || document.querySelector('#semesterSelect');
+        const finalErrorDiv = errorDiv || document.querySelector('#createDraftError');
+        
+        const name = finalNameEl ? finalNameEl.value.trim() : '';
+        const notes = finalNotesEl ? finalNotesEl.value.trim() : '';
+        
+        let sem = '1st Semester';
+        if (finalSemEl) {
+            sem = finalSemEl.value;
+        } else {
+            const labelEl = document.getElementById('selectedSemesterLabel') || document.querySelector('#selectedSemesterLabel');
+            if (labelEl) {
+                sem = labelEl.innerText.trim();
+            }
+        }
+        
+        console.log("Resolved Draft Parameters - Name:", name, "| Notes:", notes, "| Semester:", sem);
+        
         if (!name) {
-            errorDiv.innerText = "Draft name is required.";
-            errorDiv.style.display = 'block';
+            const errMsg = "Draft name is required.";
+            if (finalErrorDiv) {
+                finalErrorDiv.innerText = errMsg;
+                finalErrorDiv.style.display = 'block';
+            } else {
+                alert(errMsg);
+            }
             return;
         }
+        
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]') || document.querySelector('meta[name=csrf-token]');
+        const csrfToken = csrfMeta ? csrfMeta.content : '';
         
         fetch('/api/draft/create', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({
                 name: name,
@@ -1299,12 +1353,25 @@
         })
         .then(res => res.json())
         .then(data => {
+            console.log("Create draft API response:", data);
             if (!data.ok) {
-                errorDiv.innerText = data.error || "An error occurred while creating draft.";
-                errorDiv.style.display = 'block';
+                const errMsg = data.error || "An error occurred while creating draft.";
+                if (finalErrorDiv) {
+                    finalErrorDiv.innerText = errMsg;
+                    finalErrorDiv.style.display = 'block';
+                } else {
+                    alert(errMsg);
+                }
             } else {
-                hideCreateDraftModal();
+                window.hideCreateDraftModal();
+                
                 const menu = document.getElementById('draftDropdownMenu');
+                if (!menu) {
+                    console.warn("draftDropdownMenu not found, reloading page to refresh list...");
+                    window.location.reload();
+                    return;
+                }
+                
                 const label = `${data.draft.name} (${data.draft.semester})`;
                 const header = menu.querySelector('.dropdown-header');
                 if (header) header.remove();
@@ -1313,8 +1380,13 @@
                 li.innerHTML = `<a class="dropdown-item" href="#" onclick="selectDraft('${data.draft.id}', '${label}', this); return false;">${label}</a>`;
                 
                 const divider = menu.querySelector('.dropdown-divider');
-                menu.insertBefore(li, divider);
-                selectDraft(data.draft.id, label, li.querySelector('a'));
+                if (divider) {
+                    menu.insertBefore(li, divider);
+                } else {
+                    menu.appendChild(li);
+                }
+                
+                window.selectDraft(data.draft.id, label, li.querySelector('a'));
                 
                 const badge = document.getElementById('draftCountBadge');
                 if (badge) {
@@ -1324,10 +1396,16 @@
             }
         })
         .catch(err => {
-            errorDiv.innerText = "Connection error: " + err;
-            errorDiv.style.display = 'block';
+            console.error("Connection error creating draft:", err);
+            const errMsg = "Connection error: " + err;
+            if (finalErrorDiv) {
+                finalErrorDiv.innerText = errMsg;
+                finalErrorDiv.style.display = 'block';
+            } else {
+                alert(errMsg);
+            }
         });
-    }
+    };
 
     document.addEventListener('DOMContentLoaded', function () {
         var cvs = document.getElementById('mainCanvas'), ctx = cvs.getContext('2d');
