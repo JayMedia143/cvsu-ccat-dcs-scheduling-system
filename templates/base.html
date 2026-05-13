@@ -972,19 +972,30 @@
                     <div class="modal-body pt-2">
                         <p class="text-muted small mb-3">Adjust operating hours and active school days.</p>
 
-                        <!-- Operating Hours -->
+                        <!-- Operating & Evening Hours -->
                         <div class="row g-3 mb-4">
-                            <div class="col-6">
+                            <div class="col-4">
                                 <label class="form-label text-muted small fw-bold">START HOUR</label>
                                 <input type="number" name="start_hour" class="form-control"
                                     value="{{ global_settings.start_hour }}" min="0" max="23">
                                 <div class="form-text">e.g., 7 = 7:00 AM</div>
                             </div>
-                            <div class="col-6">
+                            <div class="col-4">
                                 <label class="form-label text-muted small fw-bold">END HOUR</label>
                                 <input type="number" name="end_hour" class="form-control"
                                     value="{{ global_settings.end_hour }}" min="0" max="23">
                                 <div class="form-text">e.g., 20 = 8:00 PM</div>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label text-muted small fw-bold">EVENING START</label>
+                                <select name="evening_start_hour" class="form-select">
+                                    <option value="17" {% if global_settings.evening_start_hour == 17 %}selected{% endif %}>5:00 PM</option>
+                                    <option value="18" {% if global_settings.evening_start_hour == 18 %}selected{% endif %}>6:00 PM</option>
+                                    <option value="19" {% if global_settings.evening_start_hour == 19 or not global_settings.evening_start_hour %}selected{% endif %}>7:00 PM</option>
+                                    <option value="20" {% if global_settings.evening_start_hour == 20 %}selected{% endif %}>8:00 PM</option>
+                                    <option value="21" {% if global_settings.evening_start_hour == 21 %}selected{% endif %}>9:00 PM</option>
+                                </select>
+                                <div class="form-text">Avoidance Limit</div>
                             </div>
                         </div>
 

@@ -533,7 +533,7 @@ class GeneticScheduler:
     # ------------------------------------------------------------------ #
     def __init__(self, courses, sections, faculty, rooms, pre_assignments,
                  constraints_config, start_time=7, end_time=20, allowed_days=None,
-                 split_assignments=None, fa_map=None, blocked_slots=None):
+                 split_assignments=None, fa_map=None, blocked_slots=None, evening_start_hour=19):
         self.hardware_profile = get_hardware_profile()
         hw = self.hardware_profile  # shortcut
 
@@ -606,7 +606,8 @@ class GeneticScheduler:
         self.fa_map = fa_map or {}
         self.start_hour = start_time
         self.end_hour   = end_time
-        self.total_slots = (end_time - start_time) * 2
+        self.evening_start_hour = evening_start_hour
+        self.total_slots = (evening_start_hour - start_time) * 2
         
         # Pre-calculate signal file path for high-frequency stop checks
         self.sig_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ga_stop.signal")
@@ -637,6 +638,19 @@ class GeneticScheduler:
                         avail_set.add(self.day_map[day])
                 if avail_set:
                     self._fac_avail_days[f['id']] = avail_set
+
+        # Pre-cache section available day indices
+        self._sec_avail_days = {}
+        for s in sections:
+            avail_str = s.get('available_days', '')
+            if avail_str:
+                avail_set = set()
+                for day in avail_str.split(','):
+                    day = day.strip()
+                    if day in self.day_map:
+                        avail_set.add(self.day_map[day])
+                if avail_set:
+                    self._sec_avail_days[s['id']] = avail_set
 
         # Precompute time-boundary slots
         self.noon_slot          = (12 - start_time) * 2
@@ -688,9 +702,9 @@ class GeneticScheduler:
         self._valid_rooms_lec_only = lec_only if lec_only else (available if available else all_rooms)
         self._lec_room_set = set(self._valid_rooms_lec_only)
 
-        # 7 PM slot — boundary between daytime and evening for room priority and avoidance penalty.
-        # Slots 0-23 = 7am-6:59pm (daytime), slots 24+ = 7pm-9pm (evening, last resort).
-        self.seven_pm_slot = (19 - start_time) * 2
+        # evening start slot — boundary between daytime and evening for room priority and avoidance penalty.
+        # Defaults to 19 (7:00 PM) but can be adjusted dynamically by the admin settings.
+        self.seven_pm_slot = (evening_start_hour - start_time) * 2
 
         # Special course → room mapping: if a course is assigned exclusively to a room,
         # the GA will force genes for that course to use only that room.
@@ -841,7 +855,7 @@ class GeneticScheduler:
                 continue
 
         self._sc2_base = 10 
-        self.seven_pm_slot = (19 - self.start_hour) * 2  # 7:00 PM
+        self.seven_pm_slot = (self.evening_start_hour - self.start_hour) * 2
         self.five_pm_slot  = (17 - self.start_hour) * 2  # 5:00 PM
         self._virtual_room_set = set(self.tba_room_ids) | self.online_room_ids
         for r in rooms:
@@ -1378,15 +1392,34 @@ class GeneticScheduler:
                 lab = (course.get('synchronous_lab_hours', 0)
                        or course.get('lab_units', 0)) or 0
                 dept = course.get('department', '')
-                if lab > 0:
-                    assignments.append({
-                        'cid': course_id, 'sid': sec_id,
-                        'slots': int(lab * 2), 'type': 'Lab', 'dept': dept
-                    })
-                if lec > 0:
+                # Lecture splits
+                lec_splits = self.split_map.get((course_id, sec_id, 'Lec'))
+                if lec_splits:
+                    for didx, slots, faculty_id in lec_splits:
+                        assignments.append({
+                            'cid': course_id, 'sid': sec_id,
+                            'slots': slots, 'type': 'Lec', 'dept': dept,
+                            'locked_day': didx, 'faculty_id': faculty_id
+                        })
+                elif lec > 0:
                     assignments.append({
                         'cid': course_id, 'sid': sec_id,
                         'slots': int(lec * 2), 'type': 'Lec', 'dept': dept
+                    })
+
+                # Lab splits
+                lab_splits = self.split_map.get((course_id, sec_id, 'Lab'))
+                if lab_splits:
+                    for didx, slots, faculty_id in lab_splits:
+                        assignments.append({
+                            'cid': course_id, 'sid': sec_id,
+                            'slots': slots, 'type': 'Lab', 'dept': dept,
+                            'locked_day': didx, 'faculty_id': faculty_id
+                        })
+                elif lab > 0:
+                    assignments.append({
+                        'cid': course_id, 'sid': sec_id,
+                        'slots': int(lab * 2), 'type': 'Lab', 'dept': dept
                     })
 
         # ── Step 2: MRV-aware sort ─────────────────────────────────────────
@@ -1499,8 +1532,11 @@ class GeneticScheduler:
             for room_list in (tier1, tier2):
                 for rid in room_list:
                     # Spread section across days — sort by density-guided preference
-                    _days_spread = self._get_density_guided_days(sid, occ_sec)
+                    _days_spread = [a['locked_day']] if 'locked_day' in a and a['locked_day'] >= 0 else self._get_density_guided_days(sid, occ_sec)
                     for d in _days_spread:
+                        sec_avail_set = self._sec_avail_days.get(sid)
+                        if sec_avail_set and d not in sec_avail_set:
+                            continue
                         if paired_gene:
                             if gtype == 'Lec' and d > paired_gene.day_idx:
                                 continue
@@ -1521,6 +1557,7 @@ class GeneticScheduler:
                             m = mask_full << start
                             g = Gene(cid, sid, fac_id, rid, d,
                                      start, slots, gtype, False)
+                            g.locked_day = a.get('locked_day', -1)
                             g.end_idx = start + slots
                             g.bitmask = m
                             genes.append(g)
@@ -1534,7 +1571,11 @@ class GeneticScheduler:
                 fa_avail = (self._fac_avail_days.get(fac_id)
                             if fac_id and fac_id not in self.multi_assignment_faculty
                             else None)
-                for d in range(n_days):
+                days_to_try = [a['locked_day']] if 'locked_day' in a and a['locked_day'] >= 0 else range(n_days)
+                for d in days_to_try:
+                    sec_avail_set = self._sec_avail_days.get(sid)
+                    if sec_avail_set and d not in sec_avail_set:
+                        continue
                     if fa_avail and d not in fa_avail:
                         continue
                     if paired_gene:
@@ -1567,6 +1608,7 @@ class GeneticScheduler:
                         m = mask_full << start
                         g = Gene(cid, sid, fac_id, online_id, d,
                                  start, slots, gtype, False)
+                        g.locked_day = a.get('locked_day', -1)
                         g.end_idx = start + slots
                         g.bitmask = m
                         genes.append(g)
@@ -1776,6 +1818,8 @@ class GeneticScheduler:
             if rid in self.online_room_ids: continue
             day_order = self._get_density_guided_days(gene.section_id, occ_sec, min_day, priority_day=hc24_src_day)
             for d in day_order:
+                sec_avail_set = self._sec_avail_days.get(gene.section_id)
+                if sec_avail_set and d not in sec_avail_set: continue
                 if fa_avail_set and d not in fa_avail_set: continue
                 blocked = self._blocked_bitmasks.get(d, 0)
                 # Compact: start right after what's already in this room-day
@@ -1848,6 +1892,9 @@ class GeneticScheduler:
         genes       = chromosome.genes
         pen      = self._pen
         pen_type = self._pen_type
+        
+
+
         room_map    = self.room_map
         noon_slot   = self.noon_slot
         eve_slot    = self.eve_slot
@@ -2756,6 +2803,8 @@ class GeneticScheduler:
                 for d in _days_iter:
                     if _locked_day >= 0 and d != _locked_day: continue
                     if min_day >= 0 and d < min_day: continue
+                    sec_avail_set = self._sec_avail_days.get(sec_id)
+                    if sec_avail_set and d not in sec_avail_set: continue
                     if _pref_avail_days and d not in _pref_avail_days: continue
 
                     f_mask = (occ_fac.get((fac_id, d), 0) if fac_id is not None else 0)
@@ -3975,12 +4024,20 @@ class GeneticScheduler:
         # ── Fix 7 (CORRECTED): Reciprocal Two-Gene Swap with Validation ──────
         # Build a temp occ set to validate swaps before committing.
         if len(conflict_idxs) >= 2:
-            _tmp_occ_r = defaultdict(int)
-            _tmp_occ_f = defaultdict(int)
-            _tmp_occ_s = defaultdict(int)
-            for i, g in enumerate(genes):
-                if i not in set(conflict_idxs):
-                    self._add_to_occ(g, _tmp_occ_r, _tmp_occ_f, _tmp_occ_s)
+            if getattr(chromosome, '_occ_room', None) is not None:
+                _tmp_occ_r = chromosome._occ_room.copy()
+                _tmp_occ_f = chromosome._occ_fac.copy()
+                _tmp_occ_s = chromosome._occ_sec.copy()
+                for idx in conflict_idxs:
+                    g = genes[idx]
+                    self._remove_from_occ(g, _tmp_occ_r, _tmp_occ_f, _tmp_occ_s)
+            else:
+                _tmp_occ_r = defaultdict(int)
+                _tmp_occ_f = defaultdict(int)
+                _tmp_occ_s = defaultdict(int)
+                for i, g in enumerate(genes):
+                    if i not in conflict_set:
+                        self._add_to_occ(g, _tmp_occ_r, _tmp_occ_f, _tmp_occ_s)
             _swap_tried = 0
             for _a in range(min(len(conflict_idxs), 8)):
                 for _b in range(_a + 1, min(len(conflict_idxs), 8)):
@@ -4020,10 +4077,20 @@ class GeneticScheduler:
             -genes[i].duration_slots
         ))
 
-        occ_room = defaultdict(int); occ_fac = defaultdict(int); occ_sec = defaultdict(int)
-        for i, g in enumerate(genes):
-            if i not in conflict_set:
-                self._add_to_occ(g, occ_room, occ_fac, occ_sec)
+        if getattr(chromosome, '_occ_room', None) is not None:
+            occ_room = chromosome._occ_room.copy()
+            occ_fac = chromosome._occ_fac.copy()
+            occ_sec = chromosome._occ_sec.copy()
+            for idx in conflict_set:
+                g = genes[idx]
+                self._remove_from_occ(g, occ_room, occ_fac, occ_sec)
+        else:
+            occ_room = defaultdict(int)
+            occ_fac = defaultdict(int)
+            occ_sec = defaultdict(int)
+            for i, g in enumerate(genes):
+                if i not in conflict_set:
+                    self._add_to_occ(g, occ_room, occ_fac, occ_sec)
 
         lec_lookup = {}
         lec_fac_lookup = {}
@@ -4884,6 +4951,15 @@ class GeneticScheduler:
                     })
 
                 # ── Termination ────────────────────────────────────────────────
+                # PERFECT SCHEDULE AUTO-STOP: If all conflicts and violations (HC, SC-I, and SC-II) are exactly 0,
+                # stop immediately to secure this flawless schedule.
+                if (current_best.hard_conflicts == 0 and 
+                        getattr(current_best, 'sc1_violations', -1) == 0 and 
+                        getattr(current_best, 'sc2_violations', -1) == 0):
+                    print(f"🎉 PERFECT SCHEDULE FOUND at Gen {generation}! (HC=0, SC-I=0, SC-II=0). Auto-stopping...")
+                    best_schedule = self._copy_chromosome(current_best)
+                    break
+
                 if current_phase == 'sc2' and current_best.hard_conflicts == 0:
                     if current_best.fitness == 0 and (generation - sc2_start_gen) >= 20:
                         break

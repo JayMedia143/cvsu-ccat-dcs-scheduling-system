@@ -359,6 +359,7 @@ class SystemSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     start_hour = db.Column(db.Integer, default=7)
     end_hour = db.Column(db.Integer, default=20)
+    evening_start_hour = db.Column(db.Integer, default=19)
     allowed_days = db.Column(db.String(255), default="Monday,Tuesday,Wednesday,Thursday,Friday,Saturday")
     
     # --- LAYOUT SETTINGS (ADD THESE!) ---
@@ -570,6 +571,7 @@ class Section(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     courses = db.relationship('Course', secondary=section_courses, lazy='subquery', backref=db.backref('sections', lazy=True))
+    available_days = db.Column(db.Text, nullable=False, default='Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday')
 
 class Faculty(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -2254,15 +2256,55 @@ def api_hub_decide(draft_id):
     return jsonify({'ok': True, 'message': f'Decision "{decision}" recorded.'})
 
 def _publish_draft_entries(draft_id):
-    """Helper to merge draft entries into master schedule."""
-    # Find all master entries for this draft's scope?
-    # Usually we delete old master entries for the same section/dept then move these.
-    # Implementation detail: assume it uses the existing merge logic from Module 3.
+    """Helper to merge draft entries into master schedule by cloning them."""
     dv = DraftVersion.query.get(draft_id)
     if not dv: return
     
-    # Option: just mark current entries as is_draft=False
-    ScheduledClass.query.filter_by(draft_version_id=draft_id).update({'is_draft': False})
+    draft_entries = ScheduledClass.query.filter_by(draft_version_id=draft_id, is_draft=True).all()
+    
+    # Clear existing master entries for the departments contained in this draft to avoid duplicate rows
+    dept_names = set()
+    for sc in draft_entries:
+        if sc.course and sc.course.department:
+            dept_names.add(sc.course.department)
+
+    if dept_names:
+        existing_master_classes = ScheduledClass.query.join(Course).filter(
+            ScheduledClass.is_draft == False,
+            ScheduledClass.semester == dv.semester,
+            Course.department.in_(list(dept_names))
+        ).all()
+        for mc in existing_master_classes:
+            db.session.delete(mc)
+        db.session.commit()
+    elif dv.department and dv.department != 'ALL':
+        existing_master_classes = ScheduledClass.query.join(Course).filter(
+            ScheduledClass.is_draft == False,
+            ScheduledClass.semester == dv.semester,
+            Course.department == dv.department
+        ).all()
+        for mc in existing_master_classes:
+            db.session.delete(mc)
+        db.session.commit()
+
+    # Clone all draft entries (is_draft=True) to master (is_draft=False)
+    for sc in draft_entries:
+        clone = ScheduledClass(
+            course_id=sc.course_id,
+            section_id=sc.section_id,
+            faculty_id=sc.faculty_id,
+            room_id=sc.room_id,
+            day=sc.day,
+            start_time=sc.start_time,
+            end_time=sc.end_time,
+            semester=sc.semester,
+            has_conflict=sc.has_conflict,
+            session_type=sc.session_type,
+            source=sc.source,
+            is_draft=False,
+            draft_version_id=None
+        )
+        db.session.add(clone)
     db.session.commit()
 
 
@@ -4102,10 +4144,14 @@ def add_section():
         flash(f"Section name '{section_name}' already exists!", "danger")
         return redirect(url_for('manage_sections'))
 
+    avail_days = request.form.getlist('available_days')
+    avail_days_str = ','.join(avail_days) if avail_days else 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'
+
     db.session.add(Section(
         section_name=section_name, 
         year_level=int(request.form.get('year_level')), 
         number_of_students=int(request.form.get('number_of_students', 40)),
+        available_days=avail_days_str,
         created_by_id=session.get('user_id') # Track creator
     ))
     db.session.commit()
@@ -4141,6 +4187,9 @@ def update_section(section_id):
     
     section.section_name = new_name
     section.year_level = int(request.form.get('year_level'))
+    
+    avail_days = request.form.getlist('available_days')
+    section.available_days = ','.join(avail_days) if avail_days else 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'
     
     # Conditional update for hidden fields
     if 'number_of_students' in request.form:
@@ -5146,15 +5195,13 @@ def generate_page():
         known_depts = [session.get('department')]
         saved_depts = [session.get('department')]
         drafts = DraftVersion.query.filter_by(
-            department=session.get('department'),
-            is_published=False
+            department=session.get('department')
         ).order_by(DraftVersion.updated_at.desc()).all()
     else:
         known_depts = _get_depts()
         saved_depts = session.get('scheduled_depts', SCHEDULED_DEPARTMENTS)
         drafts = DraftVersion.query.filter(
-            or_(DraftVersion.department == None, DraftVersion.department == ''),
-            DraftVersion.is_published == False
+            or_(DraftVersion.department == None, DraftVersion.department == '')
         ).order_by(DraftVersion.updated_at.desc()).all()
 
     return render_template(
@@ -6018,13 +6065,13 @@ def export_excel_bulk():
 
     for item in items:
         if report_type == 'section':
-            schedules = _dedup_schedules(ScheduledClass.query.filter_by(section_id=item.id, semester=export_semester).all())
+            schedules = _dedup_schedules(ScheduledClass.query.filter_by(section_id=item.id, semester=export_semester, is_draft=False).all())
         elif report_type == 'faculty':
-            schedules = _dedup_schedules(ScheduledClass.query.filter_by(faculty_id=item.id, semester=export_semester).all())
+            schedules = _dedup_schedules(ScheduledClass.query.filter_by(faculty_id=item.id, semester=export_semester, is_draft=False).all())
         elif report_type == 'room':
-            schedules = _dedup_schedules(ScheduledClass.query.filter_by(room_id=item.id, semester=export_semester).all())
+            schedules = _dedup_schedules(ScheduledClass.query.filter_by(room_id=item.id, semester=export_semester, is_draft=False).all())
         else: # course
-            schedules = _dedup_schedules(ScheduledClass.query.filter_by(course_id=item.id, semester=export_semester).all())
+            schedules = _dedup_schedules(ScheduledClass.query.filter_by(course_id=item.id, semester=export_semester, is_draft=False).all())
         
         for sc in schedules:
             master_ws.append([
@@ -6115,19 +6162,19 @@ def export_excel_bulk():
         if report_type == 'section': 
             display_name = item.section_name
             dept_name = "N/A"
-            item_schedules = ScheduledClass.query.filter_by(section_id=item.id, semester=export_semester).all()
+            item_schedules = ScheduledClass.query.filter_by(section_id=item.id, semester=export_semester, is_draft=False).all()
         elif report_type == 'faculty':
             display_name = item.full_name
             dept_name = item.department if hasattr(item, 'department') else "N/A"
-            item_schedules = ScheduledClass.query.filter_by(faculty_id=item.id, semester=export_semester).all()
+            item_schedules = ScheduledClass.query.filter_by(faculty_id=item.id, semester=export_semester, is_draft=False).all()
         elif report_type == 'room':
             display_name = item.room_name
             dept_name = item.building if hasattr(item, 'building') else "N/A"
-            item_schedules = ScheduledClass.query.filter_by(room_id=item.id, semester=export_semester).all()
+            item_schedules = ScheduledClass.query.filter_by(room_id=item.id, semester=export_semester, is_draft=False).all()
         else: # course
             display_name = item.course_code
             dept_name = item.course_name # fallback to subject title
-            item_schedules = ScheduledClass.query.filter_by(course_id=item.id, semester=export_semester).all()
+            item_schedules = ScheduledClass.query.filter_by(course_id=item.id, semester=export_semester, is_draft=False).all()
 
         if report_type == 'section': 
             display_name = item.section_name
@@ -6155,9 +6202,9 @@ def export_excel_bulk():
         f_educ = ""
         
         if report_type == 'section':
-             item_schedules = _dedup_schedules(ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section)).filter_by(section_id=item.id, semester=export_semester).all())
+             item_schedules = _dedup_schedules(ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section)).filter_by(section_id=item.id, semester=export_semester, is_draft=False).all())
         elif report_type == 'faculty':
-             item_schedules = _dedup_schedules(ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section)).filter_by(faculty_id=item.id, semester=export_semester).all())
+             item_schedules = _dedup_schedules(ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section)).filter_by(faculty_id=item.id, semester=export_semester, is_draft=False).all())
              f_educ = item.highest_educational_attainment or ""
              total_mins = 0
              daily_mins = {"Monday": 0, "Tuesday": 0, "Wednesday": 0, "Thursday": 0, "Friday": 0, "Saturday": 0}
@@ -6175,9 +6222,9 @@ def export_excel_bulk():
              f_hours = str(round(total_mins / 60, 2))
              f_prep = str(len(unique_subs))
         elif report_type == 'room':
-             item_schedules = _dedup_schedules(ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section), joinedload(ScheduledClass.faculty)).filter_by(room_id=item.id, semester=export_semester).all())
+             item_schedules = _dedup_schedules(ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section), joinedload(ScheduledClass.faculty)).filter_by(room_id=item.id, semester=export_semester, is_draft=False).all())
         else: # course
-             item_schedules = _dedup_schedules(ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section), joinedload(ScheduledClass.faculty), joinedload(ScheduledClass.room)).filter_by(course_id=item.id, semester=export_semester).all())
+             item_schedules = _dedup_schedules(ScheduledClass.query.options(joinedload(ScheduledClass.course), joinedload(ScheduledClass.section), joinedload(ScheduledClass.faculty), joinedload(ScheduledClass.room)).filter_by(course_id=item.id, semester=export_semester, is_draft=False).all())
 
         # A. BUILD VARIABLE MAP & DYNAMIC INJECTION
         # ----------------------------------------------------------------------------------------------------------
@@ -6435,6 +6482,21 @@ def export_excel_bulk():
                 e_r = s_r + slots - 1
                 
                 plot_key = (sc.day, s_r, e_r)
+                
+                # FIRST LAYER ONLY FILTER FOR ONLINE ROOMS
+                # Prevents overlapping visual blocks and merges for virtual rooms on the visual grid.
+                is_online_room = (report_type == 'room' and display_name and "ONLINE" in display_name.upper())
+                if is_online_room:
+                    # Check if there is already a plotted slot on this day that overlaps with this range
+                    has_overlap = False
+                    for (exist_day, exist_s, exist_e) in grid_slots.keys():
+                        if exist_day == sc.day:
+                            if max(s_r, exist_s) <= min(e_r, exist_e):
+                                has_overlap = True
+                                break
+                    if has_overlap:
+                        continue # Skip to ensure strictly first layer is plotted on the visual calendar
+                
                 if plot_key not in grid_slots:
                     grid_slots[plot_key] = []
                 
@@ -6465,22 +6527,50 @@ def export_excel_bulk():
                 
                 grid_slots[plot_key].append(txt)
 
-        # Phase 3: Plot aggregated slots
+        # Phase 3: Plot aggregated slots safely
         thin = Side(border_style="thin", color="000000")
         full_border = Border(top=thin, left=thin, right=thin, bottom=thin)
         for (day, s_r, e_r), texts in grid_slots.items():
             t_col = col_map[day]
+            
+            # Set borders and styles on all cells in the range BEFORE they get merged
+            # to avoid referencing read-only MergedCells.
+            for r in range(s_r, e_r + 1):
+                c = target_ws.cell(row=r, column=t_col)
+                if c.__class__.__name__ != 'MergedCell':
+                    c.border = full_border
+            
+            # Try merging the cells if it spans multiple slots
             if e_r > s_r:
                 try: target_ws.merge_cells(start_row=s_r, start_column=t_col, end_row=e_r, end_column=t_col)
                 except: pass
             
+            # Get the cell at the start row (should be the anchor of the merge)
             cell = target_ws.cell(row=s_r, column=t_col)
+            
+            # Recursive resolver to safely find the regular anchor cell of any MergedCell.
+            # Handles active merged ranges as well as unmerged ghost MergedCells.
+            # Avoids self-referencing loops in case of overlapping merges.
+            resolve_attempts = 0
+            while cell.__class__.__name__ == 'MergedCell' and resolve_attempts < 10:
+                resolve_attempts += 1
+                found = False
+                coord = cell.coordinate
+                for mrange in target_ws.merged_cells.ranges:
+                    if coord in mrange and (mrange.min_row != cell.row or mrange.min_col != cell.column):
+                        cell = target_ws.cell(row=mrange.min_row, column=mrange.min_col)
+                        found = True
+                        break
+                if not found:
+                    # Clear ghost or self-referencing MergedCell from openpyxl cache
+                    try:
+                        del target_ws._cells[(cell.row, cell.column)]
+                    except KeyError: pass
+                    cell = target_ws.cell(row=s_r, column=t_col)
+            
             cell.value = "\n---\n".join(texts)
             cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
             cell.font = Font(name='Arial Narrow', size=9)
-            
-            for r in range(s_r, e_r + 1):
-                target_ws.cell(row=r, column=t_col).border = full_border
 
 
         # C. POPULATE FACULTY SUMMARY TABLE (Bottom List)
@@ -6539,9 +6629,12 @@ def export_excel_bulk():
             for data in summary_data.values():
                 if curr_row > summary_max_data_row: break
                 
-                # TRIPLE-SAFE DATA: Use Course units if > 0, fallback to Calculated Hours (matches System View Image 3)
-                final_lec = data['lec_units'] if data['lec_units'] > 0 else data['lec_h']
-                final_lab = data['lab_units'] if data['lab_units'] > 0 else data['lab_h']
+                # TRIPLE-SAFE DATA: Use calculated contact hours if > 0, fallback to Course units
+                final_lec = data['lec_h'] if data['lec_h'] > 0 else data['lec_units']
+                final_lab = data['lab_h'] if data['lab_h'] > 0 else data['lab_units']
+
+                final_lec = int(final_lec) if final_lec.is_integer() else final_lec
+                final_lab = int(final_lab) if final_lab.is_integer() else final_lab
 
                 # Col A(1): Subject Code, Col C(3): Section, Col D(4): Lec, Col E(5): Lab, Col F(6): Total, Col G(7): Room(s), Col H(8): Students
                 target_ws.cell(row=curr_row, column=1).value = data['code']
@@ -7470,7 +7563,7 @@ def start_generation():
     # Sections (All active - algorithm will only schedule courses assigned to them that match the semester)
     raw_sections = Section.query.filter_by(is_archived=False).all()
     # Note: We still pass all course_ids assigned to section, but the algorithm only schedules those present in 'courses' list
-    sections = [{'id': s.id, 'course_ids': [c.id for c in s.courses], 'number_of_students': s.number_of_students} for s in raw_sections]
+    sections = [{'id': s.id, 'course_ids': [c.id for c in s.courses], 'number_of_students': s.number_of_students, 'available_days': s.available_days} for s in raw_sections]
     
     # Pre-assignments: Filter by ID AND matching the courses in the current semester
     # Logic: Only lock schedules if the course is actually running this sem
@@ -7565,6 +7658,7 @@ def start_generation():
         split_assignments=split_assignments,
         fa_map=fa_map,
         blocked_slots=_blocked_slots,
+        evening_start_hour=settings_db.evening_start_hour or 19
     )
     
     # Associate hardware profile with status
@@ -7688,7 +7782,7 @@ def check_feasibility():
 
     # Sections (All active)
     raw_sections = Section.query.filter_by(is_archived=False).all()
-    sections = [{'id': s.id, 'course_ids': [c.id for c in s.courses], 'number_of_students': s.number_of_students or 0} for s in raw_sections]
+    sections = [{'id': s.id, 'course_ids': [c.id for c in s.courses], 'number_of_students': s.number_of_students or 0, 'available_days': s.available_days} for s in raw_sections]
 
 
     pre_assignments_raw = PreAssignment.query.filter_by(is_archived=False).all()
@@ -7761,7 +7855,8 @@ def check_feasibility():
         courses, sections, faculty, rooms, pre_assignments, constraints_config,
         start_time=settings_db.start_hour, end_time=settings_db.end_hour,
         allowed_days=active_days, split_assignments=split_assignments,
-        fa_map=fa_map, blocked_slots=_blocked_slots
+        fa_map=fa_map, blocked_slots=_blocked_slots,
+        evening_start_hour=settings_db.evening_start_hour or 19
     )
 
     # ── Step 3: Run Check ──────────────────────────────────────────────────
@@ -9096,7 +9191,7 @@ def api_draft_entries(draft_id):
         joinedload(ScheduledClass.section),
         joinedload(ScheduledClass.faculty),
         joinedload(ScheduledClass.room),
-    ).filter_by(draft_version_id=draft_id, is_draft=True).all()
+    ).filter_by(draft_version_id=draft_id).all()
 
     if not draft_scs:
         # On-demand self-healing: clone master entries for this draft's semester
@@ -9126,7 +9221,7 @@ def api_draft_entries(draft_id):
             joinedload(ScheduledClass.section),
             joinedload(ScheduledClass.faculty),
             joinedload(ScheduledClass.room),
-        ).filter_by(draft_version_id=draft_id, is_draft=True).all()
+        ).filter_by(draft_version_id=draft_id).all()
     for sc in draft_scs:
         entries.append({
             'id':           sc.id,
@@ -9160,10 +9255,17 @@ def api_draft_publish(draft_id):
         return jsonify({'ok': False, 'error': 'Draft not found'}), 404
     if role == 'user' and dv.created_by != user_id:
         return jsonify({'ok': False, 'error': 'Not authorized to publish this draft'}), 403
-    if dv.is_published:
-        return jsonify({'ok': False, 'error': 'Already published'}), 400
+    # Allow republishing the same draft
+    # if dv.is_published:
+    #     return jsonify({'ok': False, 'error': 'Already published'}), 400
 
     draft_entries = ScheduledClass.query.filter_by(draft_version_id=draft_id, is_draft=True).all()
+
+    # Pre-calculate department names contained in this draft so we can exclude them from the cross-draft conflict check
+    dept_names = set()
+    for sc in draft_entries:
+        if sc.course and sc.course.department:
+            dept_names.add(sc.course.department)
 
     # Pre-publish conflict check against master
     fmt = '%H:%M'
@@ -9174,8 +9276,19 @@ def api_draft_publish(draft_id):
             t_e = datetime.strptime(sc.end_time,   fmt).time()
         except ValueError:
             continue
-        master = ScheduledClass.query.filter_by(
-            day=sc.day, semester=sc.semester, is_draft=False).all()
+
+        # Exclude master classes of the same departments being cleared/overwritten by this publish
+        master_query = ScheduledClass.query.join(Course).filter(
+            ScheduledClass.day == sc.day,
+            ScheduledClass.semester == sc.semester,
+            ScheduledClass.is_draft == False
+        )
+        if dept_names:
+            master_query = master_query.filter(~Course.department.in_(list(dept_names)))
+        elif dv.department and dv.department != 'ALL':
+            master_query = master_query.filter(Course.department != dv.department)
+            
+        master = master_query.all()
         for ms in master:
             try:
                 ms_s = datetime.strptime(ms.start_time, fmt).time()
@@ -9195,10 +9308,77 @@ def api_draft_publish(draft_id):
                         'error': 'Hard conflicts found before publish',
                         'conflicts': conflicts}), 400
 
-    # Publish: move all draft entries to master
+    # Clear existing master entries for the departments contained in this draft to avoid duplicate rows
+    dept_names = set()
     for sc in draft_entries:
-        sc.is_draft         = False
-        sc.draft_version_id = None
+        if sc.course and sc.course.department:
+            dept_names.add(sc.course.department)
+
+    if dept_names:
+        existing_master_classes = ScheduledClass.query.join(Course).filter(
+            ScheduledClass.is_draft == False,
+            ScheduledClass.semester == dv.semester,
+            Course.department.in_(list(dept_names))
+        ).all()
+        for mc in existing_master_classes:
+            db.session.delete(mc)
+        db.session.commit()
+    elif dv.department and dv.department != 'ALL':
+        existing_master_classes = ScheduledClass.query.join(Course).filter(
+            ScheduledClass.is_draft == False,
+            ScheduledClass.semester == dv.semester,
+            Course.department == dv.department
+        ).all()
+        for mc in existing_master_classes:
+            db.session.delete(mc)
+        db.session.commit()
+
+    # Publish: clone all draft entries to master
+    for sc in draft_entries:
+        clone = ScheduledClass(
+            course_id=sc.course_id,
+            section_id=sc.section_id,
+            faculty_id=sc.faculty_id,
+            room_id=sc.room_id,
+            day=sc.day,
+            start_time=sc.start_time,
+            end_time=sc.end_time,
+            semester=sc.semester,
+            has_conflict=sc.has_conflict,
+            session_type=sc.session_type,
+            source=sc.source,
+            is_draft=False,
+            draft_version_id=None
+        )
+        db.session.add(clone)
+    # Auto-unpublish other published drafts for the same semester that overlap with this draft
+    other_drafts_query = DraftVersion.query.filter(
+        DraftVersion.id != draft_id,
+        DraftVersion.semester == dv.semester,
+        DraftVersion.is_published == True
+    )
+    
+    if dv.department and dv.department != 'ALL':
+        other_drafts_query = other_drafts_query.filter(
+            db.or_(
+                DraftVersion.department == dv.department,
+                DraftVersion.department == 'ALL',
+                DraftVersion.department.is_(None)
+            )
+        )
+    elif dept_names:
+        other_drafts_query = other_drafts_query.filter(
+            db.or_(
+                DraftVersion.department.in_(list(dept_names)),
+                DraftVersion.department == 'ALL',
+                DraftVersion.department.is_(None)
+            )
+        )
+        
+    other_drafts = other_drafts_query.all()
+    for od in other_drafts:
+        od.is_published = False
+
     dv.is_published = True
     db.session.commit()
     return jsonify({'ok': True, 'published_count': len(draft_entries)})
@@ -10494,6 +10674,7 @@ def save_settings():
         # 1. Save Time Settings
         s_h = int(request.form.get('start_hour'))
         e_h = int(request.form.get('end_hour'))
+        eve_h = int(request.form.get('evening_start_hour', 19))
         
         # 2. Save Schedule Days (used by GA for plotting)
         selected_days = request.form.getlist('days')
@@ -10506,6 +10687,7 @@ def save_settings():
         else:
             settings.start_hour = s_h
             settings.end_hour = e_h
+            settings.evening_start_hour = eve_h
             settings.allowed_days = ",".join(sorted_days)
             settings.blocked_slots_json = request.form.get('blocked_slots_json', '[]') or '[]'
             db.session.commit()
@@ -16449,6 +16631,7 @@ with app.app_context():
                     _conn.commit()
             # Phase 1: Fixed Layout Variables
             _p1_cols = {
+                'evening_start_hour': "INTEGER DEFAULT 19",
                 'republic_text':      "VARCHAR(255) DEFAULT 'Republic of the Philippines'",
                 'contact_details':    "VARCHAR(255) DEFAULT '(046) 437-9505 / (046) 437-6659'",
                 'email':              "VARCHAR(255) DEFAULT 'cvsurosario@cvsu.edu.ph'",
@@ -17246,6 +17429,21 @@ def _generate_individual_excel_internal(item, schedules, report_type, semester):
             e_r = s_r + slots - 1
             
             plot_key = (sc.day, s_r, e_r)
+            
+            # FIRST LAYER ONLY FILTER FOR ONLINE ROOMS
+            # Prevents overlapping visual blocks and merges for virtual rooms on the visual grid.
+            is_online_room = (report_type == 'room' and display_name and "ONLINE" in display_name.upper())
+            if is_online_room:
+                # Check if there is already a plotted slot on this day that overlaps with this range
+                has_overlap = False
+                for (exist_day, exist_s, exist_e) in grid_slots.keys():
+                    if exist_day == sc.day:
+                        if max(s_r, exist_s) <= min(e_r, exist_e):
+                            has_overlap = True
+                            break
+                if has_overlap:
+                    continue # Skip to ensure strictly first layer is plotted on the visual calendar
+            
             if plot_key not in grid_slots: grid_slots[plot_key] = []
             
             ctype = f"({sc.session_type})" if sc.session_type else ""
@@ -17277,16 +17475,45 @@ def _generate_individual_excel_internal(item, schedules, report_type, semester):
     full_border = Border(top=thin, left=thin, right=thin, bottom=thin)
     for (day, s_r, e_r), texts in grid_slots.items():
         t_col = col_map[day]
+        
+        # Set borders and styles on all cells in the range BEFORE they get merged
+        # to avoid referencing read-only MergedCells.
+        for r in range(s_r, e_r + 1):
+            c = target_ws.cell(row=r, column=t_col)
+            if c.__class__.__name__ != 'MergedCell':
+                c.border = full_border
+                
+        # Try merging the cells if it spans multiple slots
         if e_r > s_r:
             try: target_ws.merge_cells(start_row=s_r, start_column=t_col, end_row=e_r, end_column=t_col)
             except: pass
         
+        # Get the cell at the start row (should be the anchor of the merge)
         cell = target_ws.cell(row=s_r, column=t_col)
+        
+        # Recursive resolver to safely find the regular anchor cell of any MergedCell.
+        # Handles active merged ranges as well as unmerged ghost MergedCells.
+        # Avoids self-referencing loops in case of overlapping merges.
+        resolve_attempts = 0
+        while cell.__class__.__name__ == 'MergedCell' and resolve_attempts < 10:
+            resolve_attempts += 1
+            found = False
+            coord = cell.coordinate
+            for mrange in target_ws.merged_cells.ranges:
+                if coord in mrange and (mrange.min_row != cell.row or mrange.min_col != cell.column):
+                    cell = target_ws.cell(row=mrange.min_row, column=mrange.min_col)
+                    found = True
+                    break
+            if not found:
+                # Clear ghost or self-referencing MergedCell from openpyxl cache
+                try:
+                    del target_ws._cells[(cell.row, cell.column)]
+                except KeyError: pass
+                cell = target_ws.cell(row=s_r, column=t_col)
+                    
         cell.value = "\n---\n".join(texts)
         cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
         cell.font = Font(name='Arial Narrow', size=9)
-        for r in range(s_r, e_r + 1):
-            target_ws.cell(row=r, column=t_col).border = full_border
 
     # 4. Faculty Summary Table (DUPLICATED FROM BULK)
     if report_type == 'faculty':
@@ -17342,9 +17569,12 @@ def _generate_individual_excel_internal(item, schedules, report_type, semester):
             if curr_row > summary_max_data_row: break
             d = summary_data[key]
             
-            # Use Units if available, fallback to calculated hours
-            final_lec = d['lec_units'] if d['lec_units'] > 0 else d['lec_h']
-            final_lab = d['lab_units'] if d['lab_units'] > 0 else d['lab_h']
+            # Use calculated contact hours if available, fallback to course units
+            final_lec = d['lec_h'] if d['lec_h'] > 0 else d['lec_units']
+            final_lab = d['lab_h'] if d['lab_h'] > 0 else d['lab_units']
+
+            final_lec = int(final_lec) if final_lec.is_integer() else final_lec
+            final_lab = int(final_lab) if final_lab.is_integer() else final_lab
             row_total = final_lec + final_lab
             
             # Alignment with Screenshot: A:Code, B:Section, D:Lec, E:Lab, F:Total, G:Room, H:Students
@@ -17647,8 +17877,8 @@ def user_auto_schedule():
     known_departments = sorted(list(set(c.department for c in Course.query.filter_by(is_archived=False).all() if c.department)))
     saved_depts = [user_dept] if user_dept else []
     
-    # Fetch unpublished drafts belonging to this department
-    drafts = DraftVersion.query.filter_by(department=user_dept, is_published=False).order_by(DraftVersion.updated_at.desc()).all()
+    # Fetch drafts belonging to this department
+    drafts = DraftVersion.query.filter_by(department=user_dept).order_by(DraftVersion.updated_at.desc()).all()
     
     return render_template(
         'user_auto_schedule.html',
@@ -17734,7 +17964,8 @@ def api_user_generate():
         if dept_courses:
             sections.append({
                 'id': s.id, 'section_name': s.section_name, 
-                'course_ids': [c.id for c in dept_courses]
+                'course_ids': [c.id for c in dept_courses],
+                'available_days': s.available_days
             })
 
     # Courses data (global map for scheduler)
@@ -17834,7 +18065,8 @@ def api_user_generate():
         split_assignments=split_assignments,
         fa_map=fa_map,
         blocked_slots=blocked_slots,
-        user_id=user_id
+        user_id=user_id,
+        evening_start_hour=settings_db.evening_start_hour or 19
     )
     
     # If fresh_start, delete this department's existing schedule for the semester inside the draft
@@ -17912,7 +18144,8 @@ def api_user_check_feasibility():
             if dept_courses:
                 sections.append({
                     'id': s.id, 'section_name': s.section_name, 
-                    'course_ids': [c.id for c in dept_courses]
+                    'course_ids': [c.id for c in dept_courses],
+                    'available_days': s.available_days
                 })
 
         all_courses = Course.query.filter_by(is_archived=False).all()
@@ -18004,7 +18237,8 @@ def api_user_check_feasibility():
             split_assignments=split_assignments,
             fa_map=fa_map,
             blocked_slots=blocked_slots,
-            user_id=session.get('user_id')
+            user_id=session.get('user_id'),
+            evening_start_hour=settings_db.evening_start_hour or 19
         )
         
         report = scheduler.check_room_feasibility()

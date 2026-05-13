@@ -27,7 +27,7 @@ DEPARTMENTS = [
 # ── USERS ────────────────────────────────────────────────────────────────────
 USERS = [
     {'user': 'Jeremychristian', 'role': 'superadmin', 'dept': None, 'pass': 'sosa'},
-    {'user': 'admin1', 'role': 'admin', 'dept': 'Department of Computer Studies', 'pass': 'admin123'},
+    {'user': 'admin', 'role': 'admin', 'dept': 'Department of Computer Studies', 'pass': 'admin'},
     {'user': 'DAS', 'role': 'user', 'dept': 'Department of Arts and Sciences', 'pass': '1234'},
     {'user': 'DBA', 'role': 'user', 'dept': 'Department of Business Administration', 'pass': '1234'},
     {'user': 'DE', 'role': 'user', 'dept': 'Department of Engineering', 'pass': '1234'},
@@ -65,14 +65,14 @@ ROOMS = [
 
 # ── FACULTY (Mon-Thu restriction, Permanent NO Thu, Pelina NO Mon) ────────────
 FACULTY_DATA = [
-    {'name': 'GELERA, ARIES M.',            'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
-    {'name': 'PELIÑA, MARY ANN E.',         'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
-    {'name': 'ESTONILO, CHRISTOPHER G.',    'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
-    {'name': 'NOCON, YVANA JARDINE R.',     'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
-    {'name': 'NABABLIT, KARLO JOSE E.',     'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
-    {'name': 'VILLANUEVA, LESTER D.',       'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
-    {'name': 'MUYOT, ALLEN JOHN C.',        'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
-    {'name': 'OBON, ANA MARIE C.',          'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday,Friday', 'assign_status': 'Announced'},
+    {'name': 'GELERA, ARIES M.',            'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday',                 'assign_status': 'Announced'},
+    {'name': 'PELIÑA, MARY ANN E.',         'status': 'Permanent',  'days': 'Tuesday,Wednesday',                         'assign_status': 'Announced'},
+    {'name': 'ESTONILO, CHRISTOPHER G.',    'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday',                 'assign_status': 'Announced'},
+    {'name': 'NOCON, YVANA JARDINE R.',     'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday',                 'assign_status': 'Announced'},
+    {'name': 'NABABLIT, KARLO JOSE E.',     'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday',                 'assign_status': 'Announced'},
+    {'name': 'VILLANUEVA, LESTER D.',       'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday',                 'assign_status': 'Announced'},
+    {'name': 'MUYOT, ALLEN JOHN C.',        'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday',                 'assign_status': 'Announced'},
+    {'name': 'OBON, ANA MARIE C.',          'status': 'Permanent',  'days': 'Monday,Tuesday,Wednesday,Thursday',         'assign_status': 'Announced'},
     {'name': 'SILVANO, MARY GRACE P.',      'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
     {'name': 'CRUZ, JANESSA MARIELLE S.',   'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
     {'name': 'AMBIL, KYLE ANGELO',          'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
@@ -86,18 +86,18 @@ FACULTY_DATA = [
     {'name': 'TOLEDO, IVAN',                'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
     {'name': 'ORDOÑA, KARL VINCENT M.',     'status': 'Instructor', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
     {'name': 'CATALAN, RACQUEL A.',         'status': 'Part-timer', 'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'Announced'},
-    {'name': 'DCS Teacher E (CS)',          'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
-    {'name': 'DCS Teacher F (CS)',          'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
     {'name': 'DCS Teacher A (IT)',          'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
+    {'name': 'DCS Teacher B (CS)',          'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
     {'name': 'DCS Teacher C (CS)',          'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
-    {'name': 'DCS Teacher G (DON) - IT',    'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
-    {'name': 'DCS Teacher H (JM) - IT',     'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
+    {'name': 'DCS Teacher D (CS)',          'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
+    {'name': 'DCS Teacher E (DON) - IT',    'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
+    {'name': 'DCS Teacher F (JM) - IT',     'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
+    {'name': 'T.B.A.',                      'status': 'TBA',        'days': 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday', 'assign_status': 'TBA'},
 ]
 
 # ── REVISED LOADINGS (FROM IMAGES) ────────────────────────────────────────────
 # Format: (Fac_Name, Code, Name, Lec_Units, Lab_Units, Lec_Hrs, Lab_Hrs, Sections_List)
 LOADINGS = [
-    # IMAGE 1
     ('AMBIL, KYLE ANGELO', 'COSC 60', 'Digital Logic and Design', 2, 1, 2, 3, ['BSCS 201 A', 'BSCS 201 B', 'BSCS 201 C', 'BSCS 201 D']),
     ('AMBIL, KYLE ANGELO', 'ITEC 85', 'Information Assurance and Security I', 2, 1, 2, 3, ['BSIT 301 A', 'BSIT 301 B', 'BSIT 301 C', 'BSIT 301 D']),
     ('BAUTISTA, RENATO A.', 'DCIT 50', 'Object Oriented Programming', 2, 1, 2, 3, ['BSCS 201 A', 'BSCS 201 B', 'BSCS 201 C', 'BSCS 201 D']),
@@ -107,66 +107,58 @@ LOADINGS = [
     ('CABRIDO, ALYANA', 'ITEC 110', 'System Administration and Maintenance', 2, 1, 2, 3, ['BSIT 401 A', 'BSIT 401 B', 'BSIT 401 C']),
     ('CEDILLO, CEDRICK KENN', 'ITEC 80', 'Human Computer Interaction', 2, 1, 2, 3, ['BSCS 401 A', 'BSCS 401 B', 'BSCS 401 C']),
     ('CEDILLO, CEDRICK KENN', 'ITEC 80', 'Introduction to Human Computer Interaction', 2, 1, 2, 3, ['BSIT 301 A', 'BSIT 301 B', 'BSIT 301 C', 'BSIT 301 D', 'BSIT 301 E']),
-    
-    # IMAGE 2
     ('CLARITO, ANGELA C.', 'DCIT 24', 'Information Management', 2, 1, 2, 3, ['BSIT 201 A', 'BSIT 201 B', 'BSIT 201 C']),
     ('CLARITO, ANGELA C.', 'DCIT 24', 'Information Management', 2, 1, 2, 3, ['BSCS 201 A', 'BSCS 201 B', 'BSCS 201 C', 'BSCS 201 D']),
+    ('CLARITO, ANGELA C.', 'ICT 11', 'Empowerment Technologies (E-Tech: ICT for Professional Track', 4, 0, 4, 0, ['Grade 11']),
     ('CRUZ, JANESSA MARIELLE S.', 'COSC 101', 'Computer Graphics and Visual Computing', 2, 1, 2, 3, ['BSCS 301 A', 'BSCS 301 B', 'BSCS 301 C', 'BSCS 301 D', 'BSCS 301 E']),
     ('CRUZ, JANESSA MARIELLE S.', 'ITEC 55', 'Platform Technologies', 2, 1, 2, 3, ['BSIT 202 A', 'BSIT 202 B', 'BSIT 202 C']),
     ('ESTONILO, CHRISTOPHER G.', 'DCIT 60', 'Methods of Research', 3, 0, 3, 0, ['BSIT 301 C']),
     ('ESTONILO, CHRISTOPHER G.', 'COSC 200A', 'Undergraduate Thesis I', 3, 0, 3, 0, ['BSCS 401 A']),
     ('GELERA, ARIES M.', 'DCIT 60', 'Methods of Research', 3, 0, 3, 0, ['BSIT 301 B']),
-    ('GELERA, ARIES M.', 'ITEC 200B', 'Capstone Project and Research 2', 3, 0, 3, 0, ['BSIT 401 C']),
+    ('GELERA, ARIES M.', 'COSC 200A', 'Undergraduate Thesis I', 3, 0, 3, 0, ['BSCS 401 C']),
     ('MELITANTE, GIRLIE P.', 'DCIT 21', 'Introduction to Computing', 2, 1, 2, 3, ['BSCS 101 B', 'BSCS 101 C']),
     ('MELITANTE, GIRLIE P.', 'INSY 50', 'Fundamentals of Information Systems', 3, 0, 3, 0, ['BSCS 201 A', 'BSCS 201 B', 'BSCS 201 C', 'BSCS 201 D']),
     ('MELITANTE, GIRLIE P.', 'BSHM 23', 'Applied Business Tools and Technologies', 2, 1, 2, 3, ['BSHM 201 D', 'BSHM 201 E', 'BSHM 201 F']),
+    ('MELITANTE, GIRLIE P.', 'CvSU 101', 'Institutional Orientation', 1, 0, 1, 0, ['BSIT 101 A', 'BSIT 101 B', 'BSIT 101 C']),
     ('MUYOT, ALLEN JOHN C.', 'DCIT 22', 'Computer Programming I', 1, 2, 1, 6, ['BSCS 101 A', 'BSCS 101 B']),
     ('NABABLIT, KARLO JOSE E.', 'DCIT 60', 'Methods of Research', 3, 0, 3, 0, ['BSIT 301 A']),
     ('NABABLIT, KARLO JOSE E.', 'COSC 200A', 'Undergraduate Thesis I', 3, 0, 3, 0, ['BSCS 401 B']),
     ('NOCON, YVANA JARDINE R.', 'INSY 55', 'System Analysis and Design', 2, 1, 2, 3, ['BSIT 301 A', 'BSIT 301 B', 'BSIT 301 C']),
-    ('OBON, ANA MARIE C.', 'DCIT 65', 'Social and Professional Issues', 3, 0, 3, 0, ['BSIT 301 A', 'BSIT 301 B', 'BSIT 301 C']),
+    ('OBON, ANA MARIE C.', 'DCIT 65', 'Social and Professional Issues', 3, 0, 3, 0, ['BSIT 401 A', 'BSIT 401 B', 'BSIT 401 C']),
     ('OBON, ANA MARIE C.', 'TLEP 08', 'Teaching Common Competencies in ICT', 3, 0, 3, 0, ['BTVTED 301 A', 'BTVTED 301 B']),
     ('PELIÑA, MARY ANN E.', 'DCIT 60', 'Methods of Research', 3, 0, 3, 0, ['BSIT 301 D', 'BSIT 301 E']),
-    ('PELIÑA, MARY ANN E.', 'COSC 200A', 'Undergraduate Thesis I', 3, 0, 3, 0, ['BSCS 401 C']),
-
-    # IMAGE 3
-    ('PERNALA, JOHN CHRISTIAN', 'COSC 50', 'Discrete Structures I', 3, 0, 3, 0, ['BSCS 101 A', 'BSCS 101 B', 'BSCS 101 C']),
+    ('PELIÑA, MARY ANN E.', 'ITEC 200B', 'Capstone Project and Research 2', 3, 0, 3, 0, ['BSIT 401 C']),
+    ('PERNALA, JOHN CHRISTIAN', 'COSC 50', 'Discreet Structures I', 3, 0, 3, 0, ['BSCS 101 A', 'BSCS 101 B', 'BSCS 101 C']),
     ('PERNALA, JOHN CHRISTIAN', 'DCIT 22', 'Computer Programming I', 1, 2, 1, 6, ['BSCS 101 C']),
     ('PERNALA, JOHN CHRISTIAN', 'DCIT 22', 'Computer Programming I', 1, 2, 1, 6, ['BSIT 101 A', 'BSIT 101 B', 'BSIT 101 C']),
     ('SILVANO, MARY GRACE P.', 'DCIT 21', 'Introduction to Computing', 2, 1, 2, 3, ['BSIT 101 A', 'BSIT 101 B', 'BSIT 101 C']),
     ('SILVANO, MARY GRACE P.', 'DCIT 21', 'Introduction to Computing', 2, 1, 2, 3, ['BSCS 101 A']),
     ('SILVANO, MARY GRACE P.', 'BSHM 23', 'Applied Business Tools and Technologies', 2, 1, 2, 3, ['BSHM 201 A', 'BSHM 201 B', 'BSHM 201 C']),
+    ('SILVANO, MARY GRACE P.', 'CvSU 101', 'Institutional Orientation', 1, 0, 1, 0, ['BSCS 101 A', 'BSCS 101 B', 'BSCS 101 C']),
     ('TINAMBACAN, AARON', 'DCIT 26', 'Application Development and Emerging Technologies', 2, 1, 2, 3, ['BSCS 301 A', 'BSCS 301 B', 'BSCS 301 C', 'BSCS 301 D', 'BSCS 301 E']),
     ('TINAMBACAN, AARON', 'DCIT 26', 'Application Development and Emerging Technologies', 2, 1, 2, 3, ['BSIT 301 A', 'BSIT 301 B', 'BSIT 301 C']),
     ('VILLANUEVA, LESTER D.', 'ITEC 90', 'Network Fundamentals', 2, 1, 2, 3, ['BSIT 301 A', 'BSIT 301 B', 'BSIT 301 C']),
-    ('DCS Teacher A (IT)', 'ITEC 111', 'Integrated Programming and Technologies 2', 2, 1, 2, 3, ['BSIT 401 A', 'BSIT 401 B', 'BSIT 401 C']),
+    ('DCS Teacher A (IT)', 'ITEC 111', 'Integrated Programming and Gtechnologies 2', 2, 1, 2, 3, ['BSIT 401 A', 'BSIT 401 B', 'BSIT 401 C']),
     ('DCS Teacher A (IT)', 'COSC 80', 'Operating Systems', 2, 1, 2, 3, ['BSCS 301 A', 'BSCS 301 B', 'BSCS 301 C', 'BSCS 301 D', 'BSCS 301 E']),
-    ('DCS Teacher C (CS)', 'COSC 105', 'Intelligence Systems', 2, 1, 2, 3, ['BSCS 401 A', 'BSCS 401 B', 'BSCS 401 C']),
-    ('DCS Teacher C (CS)', 'DCIT 65', 'Social and Professional Issues', 3, 0, 3, 0, ['BSCS 301 A', 'BSCS 301 B']),
-    ('DCS Teacher C (CS)', 'ITEC 116', 'Systems Integration and Architecture 2', 2, 1, 2, 3, ['BSIT 401 A', 'BSIT 401 B', 'BSIT 401 C']),
-    ('DCS Teacher E (CS)', 'COSC 55', 'Discrete Structures II', 3, 0, 3, 0, ['BSCS 201 A', 'BSCS 201 B', 'BSCS 201 C', 'BSCS 201 D']),
-    ('DCS Teacher E (CS)', 'INSY 55', 'System Analysis and Design', 2, 1, 2, 3, ['BSIT 301 D', 'BSIT 301 E']),
-    ('DCS Teacher E (CS)', 'COSC 111', 'Internet of Things', 2, 1, 2, 3, ['BSCS 401 A', 'BSCS 401 B', 'BSCS 401 C']),
-    ('DCS Teacher F (CS)', 'DCIT 26', 'Application Development and Emerging Technologies', 2, 1, 2, 3, ['BSIT 301 D', 'BSIT 301 E']),
-    ('DCS Teacher F (CS)', 'DCIT 65', 'Social and Professional Issues', 3, 0, 3, 0, ['BSCS 301 C', 'BSCS 301 D', 'BSCS 301 E']),
-    ('DCS Teacher F (CS)', 'COSC 100', 'Automata Theory and Formal Languages', 3, 0, 3, 0, ['BSCS 401 A', 'BSCS 401 B', 'BSCS 401 C']),
-
-    # IMAGE 4
-    ('CATALAN, RACQUEL A.', 'COSC 50', 'Discrete Structure', 3, 0, 3, 0, ['BSIT 101 A', 'BSIT 101 B', 'BSIT 101 C']),
+    ('DCS Teacher B (CS)', 'COSC 105', 'Intelligence Systems', 2, 1, 2, 3, ['BSCS 401 A', 'BSCS 401 B', 'BSCS 401 C']),
+    ('DCS Teacher B (CS)', 'TLE 3', 'Technology and Livelihood', 4, 0, 4, 0, ['Grade 9']),
+    ('DCS Teacher B (CS)', 'TLE 4', 'ICT Skills and Development', 4, 0, 4, 0, ['Grade 10']),
+    ('DCS Teacher B (CS)', 'ITEC 116', 'Systems Integration and Architecture 2', 2, 1, 2, 3, ['BSIT 401 A', 'BSIT 401 B', 'BSIT 401 C']),
+    ('DCS Teacher C (CS)', 'COSC 55', 'Discreet Structures II', 3, 0, 3, 0, ['BSCS 201 A', 'BSCS 201 B', 'BSCS 201 C', 'BSCS 201 D']),
+    ('DCS Teacher C (CS)', 'INSY 55', 'System Analysis and Design', 2, 1, 2, 3, ['BSIT 301 D', 'BSIT 301 E']),
+    ('DCS Teacher C (CS)', 'COSC 111', 'Internet of Things', 2, 1, 2, 3, ['BSCS 401 A', 'BSCS 401 B', 'BSCS 401 C']),
+    ('DCS Teacher D (CS)', 'DCIT 26', 'Application Development and Emerging Technologies', 2, 1, 2, 3, ['BSIT 301 D', 'BSIT 301 E']),
+    ('DCS Teacher D (CS)', 'DCIT 65', 'Social and Professional Issues', 3, 0, 3, 0, ['BSCS 301 A', 'BSCS 301 B', 'BSCS 301 C', 'BSCS 301 D', 'BSCS 301 E']),
+    ('DCS Teacher D (CS)', 'COSC 100', 'Automata Theory and Formal Languages', 3, 0, 3, 0, ['BSCS 401 A', 'BSCS 401 B', 'BSCS 401 C']),
+    ('CATALAN, RACQUEL A.', 'COSC 50', 'Discreet Structure', 3, 0, 3, 0, ['BSIT 101 A', 'BSIT 101 B', 'BSIT 101 C']),
     ('TOLEDO, IVAN', 'ITEC 85', 'Information Assurance and Security I', 2, 1, 2, 3, ['BSIT 301 E']),
     ('TOLEDO, IVAN', 'COSC 85', 'Networks and Communication', 2, 1, 2, 3, ['BSCS 301 C']),
     ('ORDOÑA, KARL VINCENT M.', 'ITEC 90', 'Network Fundamentals', 2, 1, 2, 3, ['BSIT 301 D', 'BSIT 301 E']),
-    ('DCS Teacher G (DON) - IT', 'COSC 85', 'Networks and Communication', 2, 1, 2, 3, ['BSCS 301 D', 'BSCS 301 E']),
-    ('DCS Teacher H (JM) - IT', 'COSC 85', 'Networks and Communication', 2, 1, 2, 3, ['BSCS 301 A', 'BSCS 301 B']),
+    ('DCS Teacher E (DON) - IT', 'COSC 85', 'Networks and Communication', 2, 1, 2, 3, ['BSCS 301 D', 'BSCS 301 E']),
+    ('DCS Teacher F (JM) - IT', 'COSC 85', 'Networks and Communication', 2, 1, 2, 3, ['BSCS 301 A', 'BSCS 301 B']),
 ]
 
-IMAGE_EXTRA = [
-    ('AMBIL, KYLE ANGELO', 'TLE 3', 'Technology and Livelihood', 4, 0, 4, 0, ['Grade 9']),
-    ('CABRIDO, ALYANA', 'TLE 4', 'ICT Skills and Development', 4, 0, 4, 0, ['Grade 10']),
-    ('CLARITO, ANGELA C.', 'ICT 11', 'Empowerment Technologies (E-Tech: ICT for Professional Track)', 4, 0, 4, 0, ['Grade 11']),
-    ('SILVANO, MARY GRACE P.', 'CvSU 101', 'Institutional Orientation', 1, 0, 1, 0, ['BSCS 101 A', 'BSCS 101 B', 'BSCS 101 C']),
-    ('MELITANTE, GIRLIE P.', 'CvSU 101', 'Institutional Orientation', 1, 0, 1, 0, ['BSIT 101 A', 'BSIT 101 B', 'BSIT 101 C']),
-]
+IMAGE_EXTRA = []
 
 # ── NEW CURRICULUM COURSES (NOT IN LOADING IMAGES) ────────────────────────────
 # Format: (Code, Title, Lec_Units, Lab_Units, Lec_Hrs, Lab_Hrs, Department_Code)
@@ -316,7 +308,14 @@ def seed_database():
             elif 'Grade 9' in name: yr = 1
             elif 'Grade 10' in name: yr = 2
             elif 'Grade 11' in name: yr = 3
-            obj = Section(section_name=name, year_level=yr, number_of_students=40)
+            
+            if yr == 1:
+                # 1st Years: Friday is unassigned/blank (due to NSTP)
+                avail_days = 'Monday,Tuesday,Wednesday,Thursday,Saturday,Sunday'
+            else:
+                avail_days = 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'
+                
+            obj = Section(section_name=name, year_level=yr, number_of_students=40, available_days=avail_days)
             db.session.add(obj)
             section_map[name] = obj
         db.session.commit()

@@ -722,7 +722,7 @@
                     {% for draft in drafts %}
                     <li><a class="dropdown-item {% if loop.first %}active-selection{% endif %}" href="#"
                             onclick="selectDraft('{{ draft.id }}', '{{ draft.name }} ({{ draft.semester }})', this); return false;">
-                            {{ draft.name }} ({{ draft.semester }})
+                            {{ draft.name }} ({{ draft.semester }}){% if draft.is_published %} <span class="badge bg-success ms-1" style="font-size:0.75rem;">✓ Approved</span>{% endif %}
                         </a></li>
                     {% endfor %}
                 {% else %}

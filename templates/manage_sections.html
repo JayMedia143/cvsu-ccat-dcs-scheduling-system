@@ -205,11 +205,11 @@
                                 <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
                             </th>
                             {% endif %}
-                            <!-- Adjusted Widths for Compact Look -->
                             <th class="ps-0 text-start" style="width: 25%;">SECTION NAME</th>
                             <th class="text-start" style="width: 15%;">YEAR LEVEL</th>
                             <th class="text-start" style="width: 12%;">POPULATION</th>
-                            <th class="text-start" style="width: 40%;">ASSIGNED COURSES</th>
+                            <th class="text-start" style="width: 12%;">AVAILABILITY</th>
+                            <th class="text-start" style="width: 28%;">ASSIGNED COURSES</th>
                             <th class="text-center pe-0" style="width: 1%; white-space: nowrap;">ACTIONS</th>
                         </tr>
                     </thead>
@@ -238,6 +238,15 @@
                             </td>
 
                             <td class="text-start text-dark">{{ section.number_of_students }}</td>
+
+                            <td class="text-start">
+                                {% set avail_list = (section.available_days or '').split(',') | select | list %}
+                                {% set avail_count = avail_list | length %}
+                                <span class="badge bg-secondary rounded-pill cursor-help text-white fw-bold" style="padding: 5px 10px; font-size: 0.75rem;"
+                                    title="{{ avail_list | join(', ') if avail_list else 'No days set' }}">
+                                    {{ avail_count }} Days
+                                </span>
+                            </td>
 
                             <!-- Compact Course List -->
                             <td>
@@ -636,6 +645,18 @@
                             <option value="4">Fourth Year</option>
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">AVAILABLE DAYS</label>
+                        <div class="d-flex flex-wrap gap-2 mt-1">
+                            {% for day in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="available_days" value="{{ day }}"
+                                    id="add_day_{{ day }}" checked>
+                                <label class="form-check-label small" for="add_day_{{ day }}">{{ day[:3] }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
@@ -676,6 +697,19 @@
                             <option value="3" {% if section.year_level==3 %}selected{% endif %}>Third Year</option>
                             <option value="4" {% if section.year_level==4 %}selected{% endif %}>Fourth Year</option>
                         </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted fw-bold">AVAILABLE DAYS</label>
+                        <div class="d-flex flex-wrap gap-2 mt-1">
+                            {% set avail = (section.available_days or 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday').split(',') %}
+                            {% for day in ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="available_days" value="{{ day }}"
+                                    id="edit_day_{{ section.id }}_{{ day }}" {% if day in avail %}checked{% endif %}>
+                                <label class="form-check-label small" for="edit_day_{{ section.id }}_{{ day }}">{{ day[:3] }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
