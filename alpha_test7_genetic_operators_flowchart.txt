@@ -1,0 +1,66 @@
+graph TD
+    %% Styling definitions
+    classDef init fill:#1E293B,stroke:#475569,stroke-width:2px,color:#FFF,font-weight:bold;
+    classDef process fill:#2563EB,stroke:#3B82F6,stroke-width:1px,color:#FFF;
+    classDef evaluate fill:#991B1B,stroke:#EF4444,stroke-width:2px,color:#FFF,font-weight:bold;
+    classDef condition fill:#D97706,stroke:#F59E0B,stroke-width:2px,color:#FFF,font-weight:bold;
+    classDef genetic fill:#059669,stroke:#10B981,stroke-width:1px,color:#FFF;
+    classDef finish fill:#0D9488,stroke:#14B8A6,stroke-width:2px,color:#FFF,font-weight:bold;
+
+    %% 1. Initialization Phase
+    A[1. Start Execution]:::init --> B[2. Query Database]:::process
+    B --> C["3. Load Campus Data:<br>• Courses (87)<br>• Sections (43)<br>• Faculty (29)<br>• Rooms (17)"]:::process
+    C --> D[4. Parse Pre-assignments as Fixed Genes]:::process
+
+    %% 2. Pre-Feasibility & Filter
+    subgraph PreCheck ["1. Pre-Feasibility & Filter"]
+        D --> E["5. check_room_feasibility()<br>Greedy FFD Pass"]:::process
+        E --> F{"6. Feasible? (Green/Yellow/Orange/Red)"}:::condition
+        F --> G["7. HC-24 Filter:<br>Exempt sections with <12 slots"]:::process
+    end
+
+    %% 3. Population Generation
+    subgraph PopInit ["2. Population Initialization"]
+        G --> H["8. create_genome()<br>Initialize Population Pool"]:::process
+        H --> I[9. Standard Copy of Fixed Genes]:::process
+        I --> J[10. Iterate Sections & Courses]:::process
+        J --> K[11. Filter Valid Rooms for Lec/Lab]:::process
+        K --> L["12. 🎲 Random Placement:<br>• Random Day<br>• Random Time<br>• Random Faculty<br>• Random Room"]:::process
+        L --> M{13. Population Full?}:::condition
+        M -- No --> I
+    end
+
+    %% 4. Evolution Loop (NSGA-II)
+    subgraph EvalLoop ["3. NSGA-II Evaluation & Sorting"]
+        M -- Yes --> N[14. Start Evolution Loop]:::init
+        N --> O["15. Calculate Fitness (Multi-Objective)<br>HC and SC separately"]:::evaluate
+        O --> P["16. ⚡ Bitmask Caching Scan"]:::evaluate
+        P --> Q["17. 📊 NSGA-II Sorting<br>Fast Non-dominated Sort & Crowding Distance"]:::process
+        Q --> R[18. Identify Best Chromosome]:::process
+    end
+
+    %% 5. Termination Check
+    subgraph FeasCheck ["4. Feasibility Check"]
+        R --> S{19. Hard Conflicts == 0?}:::condition
+        S -- Yes --> T["20. ✅ Feasible Schedule Found!"]:::finish
+        T --> U[21. Return Best Schedule]:::finish
+    end
+
+    %% 6. Genetic Operators
+    subgraph ReproMut ["5. Reproduction & Mutation"]
+        S -- No --> V["22. Elitism Selection<br>Preserve Top Chromosomes"]:::genetic
+        V --> W["23. Refill New Population Pool"]:::genetic
+        W --> X["24. select_parents()<br>🏆 Tournament Selection"]:::genetic
+        X --> Y["25. crossover(p1, p2)<br>✂️ Specialized Crossover"]:::genetic
+        Y --> Z[26. Append Child to Pool]:::process
+        Z --> AA{27. Pool Full?}:::condition
+        AA -- No --> X
+        AA -- Yes --> AB["28. proportional_mutate(chrom)<br>🎲 Adaptive Mutation"]:::genetic
+        AB --> AC{29. Has Conflicts?}:::condition
+        AC -- No --> AD["30. 🎲 10% Random Move"]:::genetic
+        AC -- Yes --> AE["31. 🎲 Blind Repair:<br>Move conflicts to random slots"]:::genetic
+        AD --> AF[32. Replace Population]:::process
+        AE --> AF
+    end
+
+    AF --> N

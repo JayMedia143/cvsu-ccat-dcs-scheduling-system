@@ -1,0 +1,40 @@
+%%{init: {"flowchart": {"nodeSpacing": 25, "rankSpacing": 50}}}%%
+flowchart LR
+    %% Actors
+    SA["👤 Superadmin"]
+    DA["👤 Admin"]
+    UF["👤 User (Faculty)"]
+    ST["👤 Student"]
+
+    SA -. inherits .-> DA
+    DA -. inherits .-> UF
+    UF -. inherits .-> ST
+
+    %% Subsystem Boundary
+    subgraph Subsystem ["Schedule Visualization & Diagnostics"]
+        SECTION([View Section Schedule])
+        FILTER([Filter Schedule])
+        FACULTY([View Faculty Schedule])
+        ROOM([View Room Schedule])
+        PERSONAL([View Personal Schedule])
+        DIAGNOSTICS([Run Live Diagnostics])
+    end
+
+    %% Connections
+    ST --> SECTION
+    ST --> FILTER
+
+    UF --> FACULTY
+    UF --> ROOM
+    UF --> PERSONAL
+
+    DA --> DIAGNOSTICS
+
+    %% Styling
+    classDef actor fill:#f3f4f6,stroke:#4b5563,stroke-width:2px,color:#1f2937,font-weight:bold,font-size:18px;
+    classDef usecase fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1,font-weight:bold,font-size:18px;
+    classDef sys fill:#ffffff,stroke:#1e3a8a,stroke-width:3px,color:#1e3a8a,font-weight:bold,font-size:20px;
+
+    class SA,DA,UF,ST actor;
+    class SECTION,FILTER,FACULTY,ROOM,PERSONAL,DIAGNOSTICS usecase;
+    class Subsystem sys;

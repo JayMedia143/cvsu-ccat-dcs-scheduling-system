@@ -1,0 +1,126 @@
+graph TD
+    %% Styling definitions
+    classDef init fill:#1E293B,stroke:#475569,stroke-width:2px,color:#FFF,font-weight:bold;
+    classDef process fill:#2563EB,stroke:#3B82F6,stroke-width:1px,color:#FFF;
+    classDef evaluate fill:#991B1B,stroke:#EF4444,stroke-width:2px,color:#FFF,font-weight:bold;
+    classDef condition fill:#D97706,stroke:#F59E0B,stroke-width:2px,color:#FFF,font-weight:bold;
+    classDef genetic fill:#059669,stroke:#10B981,stroke-width:1px,color:#FFF;
+    classDef finish fill:#0D9488,stroke:#14B8A6,stroke-width:2px,color:#FFF,font-weight:bold;
+    classDef note fill:#F8FAFC,stroke:#E2E8F0,stroke-width:1px,color:#475569,font-size:11px;
+
+    %% 1. Initialization Phase
+    A[1. Hardware Scaling]:::init --> B[2. Start Execution]:::init
+    A --- A_Note["[Description] Checks how powerful your computer is.<br>[Sample] A fast laptop makes 200 schedules at once.<br>[Visualization] A manager dividing work among available workers."]:::note
+    
+    B --- B_Note["[Description] The formal entry point of the algorithm.<br>[Sample] Setting the timer to 0 and preparing the logs.<br>[Visualization] Flipping the master switch in a power plant."]:::note
+    
+    B --> C[3. Query Database]:::process
+    C --- C_Note["[Description] Gets the list of classes, teachers, and rooms from the database.<br>[Sample] Querying the list of 87 courses and 29 professors.<br>[Visualization] A librarian pulling books from the shelves."]:::note
+    
+    C --> D[4. Load Campus Data]:::process
+    D --- D_Note["[Description] Counts and organizes the data pulled from the database.<br>[Sample] Loaded 87 courses, 43 sections, 29 faculty, 17 rooms.<br>[Visualization] Grouping stacked books by subject and counting pages."]:::note
+    
+    D --> E[5. Parse Pre-assignments]:::process
+    E --- E_Note["[Description] Locks in schedules that cannot be changed.<br>[Sample] Locking Prof A's class to Monday 8 AM.<br>[Visualization] Hammering a nail into a calendar date."]:::note
+
+    %% 2. Pre-Feasibility & Filter
+    subgraph PreCheck ["1. Pre-Feasibility & Filter (Sanity Check)"]
+        E --> F["6. check_room_feasibility()"]:::process
+        F --- F_Note["[Description] A quick check to see if all classes can fit in the rooms.<br>[Sample] 500 hours of classes needed but only 300 hours of room space = Error.<br>[Visualization] Fitting 10 gallons of water in a 5-gallon bucket."]:::note
+        
+        F --> G{"7. Is it Feasible?"}:::condition
+        G --- G_Note["[Description] Decision box for the feasibility result.<br>[Sample] Returns 'Green' if everything fits perfectly.<br>[Visualization] A traffic light turning green or red."]:::note
+        
+        G -- Yes --> H[8. HC-24 Filter]:::process
+        H --- H_Note["[Description] Gives a pass to sections with very few available time slots.<br>[Sample] Exempting Section X from the no-gap rule because they only have 2 classes.<br>[Visualization] Giving a student with an injury a pass on running a race."]:::note
+        G -- No --> STOP[Stop Execution]:::finish
+    end
+
+    %% 3. Population Generation
+    subgraph PopInit ["2. Population Initialization"]
+        H --> I["9. create_genome()"]:::process
+        I --- I_Note["[Description] Creates a blank template for a single schedule.<br>[Sample] A blank grid with 5 days and 12 hours per day.<br>[Visualization] Buying a blank calendar book."]:::note
+        
+        I --> J[10. Copy Fixed Genes]:::process
+        J --- J_Note["[Description] Places the locked schedules into the blank template.<br>[Sample] Copying Prof A's Monday 8 AM class into the new schedule.<br>[Visualization] Writing down national holidays on your new calendar."]:::note
+        
+        J --> K["11. Iterate Sections and Courses"]:::process
+        K --- K_Note["[Description] Loops through all remaining classes to find them a spot.<br>[Sample] Processing the next subject: Data Structures for Section A.<br>[Visualization] Going through a stack of sticky notes representing classes."]:::note
+        
+        K --> L[12. Filter Valid Rooms]:::process
+        L --- L_Note["[Description] Ensures a class goes to the correct type of room.<br>[Sample] Putting a Lab class in a Lab room, not a lecture room.<br>[Visualization] Checking if a room has a stove before scheduling a cooking class."]:::note
+        
+        L --> M[13. Heuristic Placement]:::process
+        M --- M_Note["[Description] Smartly places classes to avoid gaps and pack them tightly.<br>[Sample] Putting a 1-hour class in a 1-hour gap instead of an empty day.<br>[Visualization] Playing Tetris and fitting a piece perfectly."]:::note
+        
+        M --> N{"14. Population Full?"}:::condition
+        N --- N_Note["[Description] Checks if counter reached population size.<br>[Sample] Checking if we have reached the 200 schedules limit.<br>[Visualization] A bus driver checking if all seats are taken."]:::note
+        N -- No --> J
+    end
+
+    %% 4. Evolution Loop (NSGA-II)
+    subgraph EvalLoop ["3. NSGA-II Evaluation & Sorting"]
+        N -- Yes --> O[15. Start Loop]:::init
+        O --- O_Note["[Description] Starts the main generational loop.<br>[Sample] Generation counter sets to 1.<br>[Visualization] The starting gun of a marathon race."]:::note
+        
+        O --> P[16. Inject New Data]:::process
+        P --- P_Note["[Description] Inserts user edits made while the program is running.<br>[Sample] User blocks Prof B on Fridays mid-run.<br>[Visualization] Dropping a new ingredient into boiling soup."]:::note
+        
+        P --> Q[17. Calculate Fitness]:::evaluate
+        Q --- Q_Note["[Description] Scores each schedule based on conflicts and preferences.<br>[Sample] A schedule gets a score of 10 conflicts and 85% soft score.<br>[Visualization] Judges scoring athletes in a tournament."]:::note
+        
+        Q --> R[18. ⚡ Bitmask Caching Scan]:::evaluate
+        R --- R_Note["[Description] A super-fast scanner to check for schedule overlaps.<br>[Sample] Checks 8 hours of schedule conflicts in one microsecond.<br>[Visualization] Using a stencil overlay on a map to see matches."]:::note
+        
+        R --> S["19. 📊 NSGA-II Sorting"]:::process
+        S --- S_Note["[Description] Sorts schedules from best to worst based on multiple goals.<br>[Sample] Schedules are ranked into Front 1, Front 2, etc.<br>[Visualization] Sorting athletes by both speed and strength."]:::note
+        
+        S --> T[20. Identify Best]:::process
+        T --- T_Note["[Description] Picks the top-ranked schedule from the batch.<br>[Sample] Selecting the schedule with 0 hard conflicts and the highest soft score.<br>[Visualization] Crowning the gold medalist of the tournament."]:::note
+    end
+
+    %% 5. Termination Check
+    subgraph FeasCheck ["4. Auto-Stop Check"]
+        T --> U{"21. Flawless Schedule?"}:::condition
+        U --- U_Note["[Description] Checks if Hard Conflicts = 0 and preferences are met.<br>[Sample] Checking if conflicts count is exactly zero.<br>[Visualization] A teacher checking a perfect test score."]:::note
+        
+        U -- Yes --> V["22. 🎉 Perfect Auto-Stop!"]:::finish
+        V --- V_Note["[Description] Stops the program early if a perfect schedule is found.<br>[Sample] Stops at Round 50 instead of 1000, saving time.<br>[Visualization] Handing in an exam early because you know you got 100%."]:::note
+        
+        V --> W[23. 🔍 Local Search Refinement]:::process
+        W --- W_Note["[Description] Polishes the final schedule to remove any small remaining gaps.<br>[Sample] Swapping two classes on the same day to remove a 1-hour student gap.<br>[Visualization] Polishing a finished diamond to make it shine."]:::note
+        
+        W --> X[24. Return Best Schedule]:::finish
+        X --- X_Note["[Description] Saves the schedule and returns it to the user.<br>[Sample] Exporting the final schedule as a PDF or database record.<br>[Visualization] Delivering a finished custom-built car to the customer."]:::note
+    end
+
+    %% 6. Genetic Operators
+    subgraph ReproMut ["5. Reproduction & Mutation"]
+        U -- No --> Y[25. Elitism Selection]:::genetic
+        Y --- Y_Note["[Description] Carries over the best schedules to the next round without changing them.<br>[Sample] Copying the top 20 schedules directly to the next generation.<br>[Visualization] Exempting the top students from the final exam."]:::note
+        
+        Y --> Z[26. Refill New Pool]:::genetic
+        Z --> AA["27. select_parents()"]:::genetic
+        AA --- AA_Note["[Description] Tournament Selection: Small groups compete, and the best win.<br>[Sample] Comparing 3 random schedules and picking the one with the best score.<br>[Visualization] A small battle where the winner gets to pass on genes."]:::note
+        
+        AA --> AB["28. crossover(p1, p2)"]:::genetic
+        AB --- AB_Note["[Description] Combines the best parts of two parent schedules.<br>[Sample] Taking Monday-Wednesday from Parent 1 and Thursday-Friday from Parent 2.<br>[Visualization] Cutting two good recipes in half and pasting them together."]:::note
+        
+        AB --> AC[29. Append Child to Pool]:::process
+        AC --> AD{"30. Pool Full?"}:::condition
+        AD -- No --> AA
+        AD -- Yes --> AE["31. proportional_mutate()"]:::genetic
+        AE --- AE_Note["[Description] Changes the mutation rate based on how boring the population is.<br>[Sample] Increasing mutation rate from 5% to 15% because all schedules look identical.<br>[Visualization] Turning up the heat on a stove when the water stops boiling."]:::note
+        
+        AE --> AF{"32. Has Conflicts?"}:::condition
+        AF -- No --> AG[33. 🎲 10% Random Move]:::genetic
+        AG --- AG_Note["[Description] Forces a random change to explore new ideas.<br>[Sample] Moving a random class to a different room just to see what happens.<br>[Visualization] Blindly throwing a dart to see if you hit a better spot."]:::note
+        
+        AF -- Yes --> AH[34. 🛠️ Targeted Repair]:::genetic
+        AH --- AH_Note["[Description] Sadyang inaayos ang conflict sa pamamagitan ng paghahanap ng bakante.<br>[Sample] Moving a double-booked teacher to a free day.<br>[Visualization] A mechanic replacing a broken part."]:::note
+        
+        AG --> AI[35. Replace Population]:::process
+        AH --> AI
+    end
+
+    AI --> O

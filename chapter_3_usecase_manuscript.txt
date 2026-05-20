@@ -1,0 +1,89 @@
+### 3. Use-Case Diagrams of the System
+
+The Use-Case diagram illustrates the functional interactions between the primary actors and the automated scheduling system. The system enforces a strict hierarchical multi-role security model consisting of three distinct user tiers: User (Regular Faculty), Admin (Department Chairperson), and Superadmin (System Administrator).
+
+[INSERT RENDERED IMAGE OF OVERALL USE-CASE DIAGRAM HERE]
+
+Figure 3. Overall Use-Case Diagram of the System
+
+As shown in Figure 3, the automated scheduling architecture is governed by core enterprise capabilities. Every transaction within the application boundary strictly incorporates authentication (`<<include>> Auth`) to guarantee data integrity and role verification. While regular users access interactive viewing and collaborative proposal drafting, administrators govern curriculum loads and algorithmic execution. The superadmin maintains overriding system governance and live monitoring capabilities.
+
+#### 3.1 User Authentication and Access Security Subsystem
+
+The User Authentication and Access Security subsystem forms the primary gateway of the application. It guarantees that all interactions are strictly authenticated and authorized based on departmental boundaries.
+
+[INSERT RENDERED IMAGE OF SUB_USECASE_1_AUTH HERE]
+
+Figure 3.1. Use-Case Diagram of User Authentication & Access Security Subsystem
+
+Figure 3.1 details the authentication lifecycle. When an actor logs into the system, the application automatically validates credentials against encrypted records. To protect against automated brute-force attacks, the gateway enforces strict rate limiting. Once validated, the system establishes a secure role session and enforces a Department Barrier, ensuring that faculty members and department chairs can only view and mutate schedules within their designated academic units. Users can also securely update their personal profile information and profile pictures before terminating their session via logout.
+
+#### 3.2 Curriculum and Data Management Subsystem
+
+The Curriculum and Data Management subsystem provides administrators with comprehensive tools to establish and maintain the foundational academic parameters required for automated timetable generation.
+
+[INSERT RENDERED IMAGE OF SUB_USECASE_2_CURRICULUM HERE]
+
+Figure 3.2. Use-Case Diagram of Curriculum & Data Management Subsystem
+
+As depicted in Figure 3.2, department chairpersons (Admins) manage master courses, sections, faculty workloads, and room allocations. The subsystem allows chairs to assign specific available days to sections and enforce day-off restrictions or maximum teaching hours for faculty members. Furthermore, administrators can handle complex edge cases such as irregular student course assignments and configure pre-assignments for locked subjects. The Superadmin maintains oversight of the Recycle Bin, allowing for bulk restoration or permanent purging of archived records.
+
+#### 3.3 AI Schedule Generation (GA Solver) Subsystem
+
+The AI Schedule Generation subsystem encapsulates the core algorithmic engine of the application, utilizing a Genetic Algorithm (GA) to autonomously resolve multi-variable scheduling conflicts.
+
+[INSERT RENDERED IMAGE OF SUB_USECASE_3_GA_SOLVER HERE]
+
+Figure 3.3. Use-Case Diagram of AI Schedule Generation (GA Solver) Subsystem
+
+Figure 3.3 demonstrates the workflow for automated schedule optimization. Administrators configure genetic parameters, including population size, elitism ratios, and mutation rates. Upon initializing the population with master curriculum data, the administrator triggers the asynchronous background GA solver. The engine calculates fitness scores by evaluating strict hard constraints (e.g., room and faculty double-booking) and soft constraints (e.g., faculty day-off preferences). Administrators can track live generation progress in real-time. Once an optimal timetable solution is achieved, administrators or superadmins can apply a Global AI-Lock to finalize and protect the master schedule from unauthorized alterations.
+
+#### 3.4 Draft Workflow and Proposal Hub Subsystem
+
+The Draft Workflow and Proposal Hub subsystem facilitates real-time departmental collaboration, allowing faculty members to actively participate in the scheduling refinement process.
+
+[INSERT RENDERED IMAGE OF SUB_USECASE_4_PROPOSAL_HUB HERE]
+
+Figure 3.4. Use-Case Diagram of Draft Workflow & Proposal Hub Subsystem
+
+As shown in Figure 3.4, regular faculty members can create departmental schedule drafts and submit formal timetable proposals. Using real-time WebSockets (SocketIO), faculty can attach schedule drafts directly into live chat messages within the Proposal Hub to discuss adjustments with colleagues. Department chairpersons evaluate submitted proposals through a centralized Decision Terminal, where they can approve, reject, or place drafts on hold. Approved proposals are seamlessly merged into the live master departmental timetable.
+
+#### 3.5 Schedule Visualization and Diagnostics Subsystem
+
+The Schedule Visualization and Diagnostics subsystem provides dynamic, multi-dimensional viewing tools and real-time conflict auditing for all system stakeholders.
+
+[INSERT RENDERED IMAGE OF SUB_USECASE_5_VISUALIZATION HERE]
+
+Figure 3.5. Use-Case Diagram of Schedule Visualization & Diagnostics Subsystem
+
+Figure 3.5 highlights the visualization capabilities available to users and administrators. Stakeholders can view interactive timetable grids filtered dynamically by student section, faculty member, or physical classroom. Regular faculty members can access their customized personal teaching schedules. To maintain continuous schedule integrity, the subsystem features an interactive Live Diagnostics and Issues Checker, which audits the grid in real-time to instantly flag overlapping rooms, double-booked faculty, or scheduling inconsistencies.
+
+#### 3.6 Historical Snapshot and Archive Mode Subsystem
+
+The Historical Snapshot and Archive Mode subsystem ensures institutional continuity and regulatory compliance by preserving immutable records of past academic terms.
+
+[INSERT RENDERED IMAGE OF SUB_USECASE_6_ARCHIVE_MODE HERE]
+
+Figure 3.6. Use-Case Diagram of Historical Snapshot & Archive Mode Subsystem
+
+As illustrated in Figure 3.6, administrators can capture permanent, immutable term archive snapshots at the conclusion of an academic semester. When stakeholders activate Ghost Mode, the application loads historical timetables while engaging a Global Mutation Firewall. This firewall automatically locks down all data modification routes (POST, PUT, DELETE), guaranteeing that archived records remain strictly read-only. Administrators can browse summary snapshot metadata or reconstruct historical curriculum entities when necessary.
+
+#### 3.7 Official Reports Generation and Layout Exporting Subsystem
+
+The Official Reports Generation subsystem provides robust formatting and exporting utilities to produce official university documentation that adheres to rigorous institutional standards.
+
+[INSERT RENDERED IMAGE OF SUB_USECASE_7_REPORTS HERE]
+
+Figure 3.7. Use-Case Diagram of Reports Generation & Layout Exporting Subsystem
+
+Figure 3.7 outlines the document rendering workflow. Administrators select desired layout types (such as section-specific, faculty-specific, or room-specific timetables) and configure dynamic signatories. The subsystem provides granular formatting controls, enabling administrators to adjust page margins, paper dimensions, and image alignments. The engine renders schedules into the official university format (VPAA-QF-11) and supports exporting to universally portable formats, including high-resolution PDF documents and Excel spreadsheets.
+
+#### 3.8 Live User Monitoring and Security (Bantay-System) Subsystem
+
+The Live User Monitoring subsystem, known as Bantay-System, provides superadmins with advanced administrative auditing and real-time security oversight.
+
+[INSERT RENDERED IMAGE OF SUB_USECASE_8_MONITORING HERE]
+
+Figure 3.8. Use-Case Diagram of Live Monitoring Bantay-System Subsystem
+
+As depicted in Figure 3.8, the Superadmin utilizes the Bantay-System to monitor live user WebSocket connections across the entire enterprise. The subsystem actively tracks user activity states, distinguishing between passive timetable viewing and active schedule drafting. Real-time monitoring updates are broadcast to the administrative dashboard, while the system records comprehensive audit trails and logs security events, including authentication attempts and session IP tracking, to guarantee absolute institutional accountability.

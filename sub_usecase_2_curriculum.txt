@@ -1,0 +1,39 @@
+%%{init: {"flowchart": {"nodeSpacing": 25, "rankSpacing": 50}}}%%
+flowchart LR
+    %% Actors
+    SA["👤 Superadmin"]
+    DA["👤 Admin"]
+    UF["👤 User"]
+
+    SA -. inherits .-> DA
+    DA -. inherits .-> UF
+
+    %% Subsystem Boundary
+    subgraph Subsystem ["Curriculum & Data Management"]
+        COURSES([Manage Courses])
+        ROOMS([Manage Rooms])
+        FACULTY([Manage Faculty Loads])
+        SECTIONS([Manage Sections])
+        IRREGULAR([Assign Irregulars])
+        PREASSIGN([Set Preassignments])
+        RECYCLE([Manage Recycle Bin])
+    end
+
+    %% Connections
+    UF --> COURSES
+    UF --> ROOMS
+    UF --> FACULTY
+
+    DA --> SECTIONS
+    DA --> IRREGULAR
+    DA --> PREASSIGN
+    DA --> RECYCLE
+
+    %% Styling
+    classDef actor fill:#f3f4f6,stroke:#4b5563,stroke-width:2px,color:#1f2937,font-weight:bold,font-size:18px;
+    classDef usecase fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1,font-weight:bold,font-size:18px;
+    classDef sys fill:#ffffff,stroke:#1e3a8a,stroke-width:3px,color:#1e3a8a,font-weight:bold,font-size:20px;
+
+    class SA,DA,UF actor;
+    class COURSES,ROOMS,FACULTY,SECTIONS,IRREGULAR,PREASSIGN,RECYCLE usecase;
+    class Subsystem sys;

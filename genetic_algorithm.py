@@ -612,6 +612,8 @@ class GeneticScheduler:
         # Pre-calculate signal file path for high-frequency stop checks
         self.sig_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ga_stop.signal")
 
+        self.stop_error = None
+
         # Quick-lookup maps
         self.room_map    = {r['id']: r for r in rooms}
         self.course_map  = {c['id']: c for c in courses}
@@ -792,6 +794,32 @@ class GeneticScheduler:
 
         # Pre-cache section student counts
         self._sec_students = {s['id']: s.get('number_of_students', 0) for s in sections}
+
+        # --- SMART ROOM CAPACITY ALLOCATION PRE-CALCULATION ---
+        # Sort sections by population descending (Timsort)
+        self._sorted_sections = sorted(sections, key=lambda s: -s.get('number_of_students', 0))
+
+        # Sort physical classrooms by capacity descending (excluding TBA, online, courts, gym)
+        self._sorted_physical_rooms = sorted(
+            [r for r in rooms
+             if r['id'] not in self.online_room_ids
+             and r['id'] not in self.tba_room_ids
+             and not any(ex in r.get('room_name', '').upper() for ex in ['COURT', 'GYM', 'FIELD', 'PLAYGROUND'])],
+            key=lambda r: -r.get('capacity', 0)
+        )
+
+        # Pre-calculate section ideal capacity mapping (Proportional relative rank matching)
+        self._section_ideal_capacity = {}
+        _n_sec = len(self._sorted_sections)
+        _n_rms = len(self._sorted_physical_rooms)
+        for _idx, _sec in enumerate(self._sorted_sections):
+            _sid = _sec['id']
+            if _n_rms > 0:
+                _rm_idx = min(_n_rms - 1, int(_idx * _n_rms / _n_sec))
+                self._section_ideal_capacity[_sid] = self._sorted_physical_rooms[_rm_idx].get('capacity', 0)
+            else:
+                self._section_ideal_capacity[_sid] = 0
+
 
         # Pre-cache required (section_id, course_id) pairs for HC-25
         # Only include courses that are actually in this run's course_map (i.e. current semester).
@@ -1423,8 +1451,8 @@ class GeneticScheduler:
                     })
 
         # ── Step 2: MRV-aware sort ─────────────────────────────────────────
-        # Labs first, then by (fewest_eligible_rooms, longest_duration).
-        # This ensures the most room-constrained sessions are packed first,
+        # Labs first, then by (largest student population, fewest_eligible_rooms, longest_duration).
+        # This ensures the most room-constrained and largest sessions are packed first,
         # which is the core of the First-Fit Decreasing heuristic.
         def _mrv_key(a):
             type_pri = 0 if a['type'] == 'Lab' else 1
@@ -1434,10 +1462,12 @@ class GeneticScheduler:
             else:
                 eligible = len(self._dept_rooms_lec_only.get(dept)
                                or self._valid_rooms_lec_only)
-            # (type, scarcity ascending, duration descending)
-            return (type_pri, eligible, -a['slots'])
+            sec_stu = self._sec_students.get(a['sid'], 0)
+            # (type, largest population first, scarcity ascending, duration descending)
+            return (type_pri, -sec_stu, eligible, -a['slots'])
 
         assignments.sort(key=_mrv_key)
+
 
         # ── Step 3: State for compact packing ─────────────────────────────
         lec_fac_map = {}   # {(cid, sid): faculty_id} for Lab reuse
@@ -1503,15 +1533,15 @@ class GeneticScheduler:
                         paired_gene = g
                         break
 
-            # ── FIX 4: Dynamic warmth sort before room scan ────────────────────
-            # Instead of static alphabetical order, sort by current occupancy.
-            # Most-occupied rooms come first → bin packing / gravity effect.
-            def _sort_by_warmth(room_list):
+            # ── FIX 4: Capacity and Dynamic warmth sort before room scan ───────
+            # Sort by capacity descending (largest rooms first) to match large sections,
+            # and warmth descending (most occupied first) to pack tightly.
+            def _sort_by_capacity_and_warmth(room_list):
                 return sorted(
                     room_list,
-                    key=lambda rid: -sum(
-                        occ_room.get((rid, d), 0).bit_count()
-                        for d in range(n_days)
+                    key=lambda rid: (
+                        -self.room_map.get(rid, {}).get('capacity', 0),
+                        -sum(occ_room.get((rid, d), 0).bit_count() for d in range(n_days))
                     )
                 )
 
@@ -1525,9 +1555,10 @@ class GeneticScheduler:
                 tier1_raw = _dept_filter(self._seq_lec_rooms, dept)
                 tier2_raw = []
 
-            # Apply warmth sort to both tiers
-            tier1 = _sort_by_warmth(tier1_raw)
-            tier2 = _sort_by_warmth(tier2_raw) if tier2_raw else []
+            # Apply capacity and warmth sort to both tiers
+            tier1 = _sort_by_capacity_and_warmth(tier1_raw)
+            tier2 = _sort_by_capacity_and_warmth(tier2_raw) if tier2_raw else []
+
 
             for room_list in (tier1, tier2):
                 for rid in room_list:
@@ -1687,8 +1718,11 @@ class GeneticScheduler:
           - TBA rooms are excluded (kept clean as admin placeholder).
 
         Labs are scanned against lab rooms first, then lec rooms.
-        Lecs are scanned against lec rooms only (no lab room spill here —
-        the GA's soft constraints already penalise lec-in-lab fallback).
+        Lecs are scanned against lec rooms first.
+        Short Lec genes (1hr=2slots, 2hr=4slots) additionally try lab rooms
+        as a secondary pool after lec rooms are exhausted — this is the
+        Directed Repair for the Lec→Lab fallback (matching the
+        LEC_IN_LAB_FALLBACK penalty logic in calculate_fitness).
         """
         online_ids = self.online_room_ids
         if not online_ids:
@@ -1737,6 +1771,17 @@ class GeneticScheduler:
                     phys = [r for r in lec_pool
                             if r not in online_ids and r not in self.tba_room_ids
                             and r not in async_phys]
+                    # ── Directed Repair: Lec→Lab fallback for short classes (1hr/2hr) ──
+                    # If all Lec rooms are full AND this is a short Lec gene (1hr=2slots or 2hr=4slots),
+                    # try Lab rooms as a secondary pool. This mirrors the LEC_IN_LAB_FALLBACK penalty
+                    # logic in calculate_fitness — the penalty is 0 when Lab rooms are full,
+                    # so actively moving there is safe and removes the penalty entirely.
+                    if g.duration_slots in (2, 4):
+                        lab_pool_fb = self._dept_rooms_lab.get(dept) or self._valid_rooms_lab
+                        phys_lab_fb = [r for r in lab_pool_fb
+                                       if r not in online_ids and r not in self.tba_room_ids
+                                       and r not in async_phys]
+                        phys = phys + phys_lab_fb  # Lec rooms tried first, lab rooms tried second
 
                 fa_avail = (self._fac_avail_days.get(g.faculty_id)
                             if g.faculty_id and g.faculty_id not in self.multi_assignment_faculty
@@ -1961,6 +2006,49 @@ class GeneticScheduler:
                                 _apply_violation('ROOM_SUITABILITY', p, [i], [g.is_fixed])
                                 continue
 
+                    # ── HC-23 Extension: Online-room Lec fallback pressure ──
+                    # Applies ONLY to 1-hour (2 slots) and 2-hour (4 slots) Lec classes.
+                    # 3hr+ classes are exempt — too large to fill Lab gaps without blocking Lab subjects.
+                    # Penalty drives GA to move short Lec classes from Online → Lab gaps.
+                    # Terminates automatically (0 penalty) when:
+                    #   (a) All Lab rooms are full at that timeslot, OR
+                    #   (b) Moving to Lab would cause faculty/section overlap, OR
+                    #   (c) Moving to Lab would violate Max Consecutive Hours (faculty or section)
+                    if (g.gene_type == 'Lec'
+                            and g.room_id in self.online_room_ids
+                            and g.duration_slots in (2, 4)):  # 1hr=2slots, 2hr=4slots only
+                        p = pen.get('LEC_IN_LAB_FALLBACK', 0)
+                        if p:
+                            _dept_fb = self.course_map.get(g.course_id, {}).get('department', '')
+                            _lab_rooms_fb = self._dept_rooms_lab.get(_dept_fb) or []
+                            _day_fb, _gmask_fb = g.day_idx, g.bitmask
+                            _fac_cur  = fac_bits.get((g.faculty_id, _day_fb), 0) if g.faculty_id else 0
+                            _sec_cur  = sec_bits.get((g.section_id, _day_fb), 0)
+                            _new_fac  = _fac_cur | _gmask_fb
+                            _new_sec  = _sec_cur | _gmask_fb
+                            # Pre-check: would placing anywhere on this day violate consecutive hours?
+                            # If yes, no point scanning Lab rooms — terminate penalty immediately.
+                            _consec_ok = (
+                                (g.faculty_id is None or g.faculty_id in self.multi_assignment_faculty
+                                 or _is_valid_break_mask(_new_fac))
+                                and _is_valid_break_mask(_new_sec)
+                            )
+                            _any_lab_feasible = False
+                            if _consec_ok:
+                                _any_lab_feasible = any(
+                                    (room_bits.get((rid, _day_fb), 0) & _gmask_fb) == 0
+                                    and (g.faculty_id is None
+                                         or g.faculty_id in self.multi_assignment_faculty
+                                         or (_fac_cur & _gmask_fb) == 0)
+                                    and (_sec_cur & _gmask_fb) == 0
+                                    for rid in _lab_rooms_fb
+                                )
+                            if _any_lab_feasible:
+                                # A conflict-free Lab slot exists (no overlap, no consecutive violation)
+                                # → gene should be there, not Online → penalize
+                                _apply_violation('LEC_IN_LAB_FALLBACK', p, [i], [g.is_fixed])
+                            # else: Lab infeasible (puno, conflict, or consecutive hours) → 0 penalty (terminate)
+
                     # ── VIRTUAL_ROOM_USAGE ──
                     if g.gene_type in ['Lec', 'Lab'] and g.room_id in self.online_room_ids:
                         p = pen.get('VIRTUAL_ROOM_USAGE', 100)
@@ -1978,29 +2066,41 @@ class GeneticScheduler:
                             if p:
                                 _apply_violation('ROOM_SUITABILITY', p, [i], [g.is_fixed])
 
-                    # ── SC-I-10: Lecture in Lab Fallback ──
+                    # ── HC-23: Lecture in Lab Fallback (Intelligent Check) ──
+                    # Penalize ONLY if a Lec room was free at this gene's day+timeslot.
+                    # If all Lec rooms were occupied → true fallback → 0 penalty.
                     if g.gene_type == 'Lec' and 'Computer Lab' in r.get('capabilities', ''):
-                        p = pen.get('LEC_IN_LAB_FALLBACK', 50)
+                        p = pen.get('LEC_IN_LAB_FALLBACK', 0)
                         if p:
-                            _apply_violation('LEC_IN_LAB_FALLBACK', p, [i], [g.is_fixed])
+                            _lec_rooms = self._lec_room_set
+                            _day, _gmask = g.day_idx, g.bitmask
+                            _any_lec_free = any(
+                                (room_bits.get((rid, _day), 0) & _gmask) == 0
+                                for rid in _lec_rooms
+                            )
+                            if _any_lec_free:
+                                # A Lec room WAS available → unnecessary Lab usage → penalize
+                                _apply_violation('LEC_IN_LAB_FALLBACK', p, [i], [g.is_fixed])
+                            # else: All Lec rooms were full → true fallback → 0 penalty
 
 
                     _cap_hc = pen_type.get('ROOM_CAPACITY_PROPORTIONAL', 'SC2') == 'HC'
                     if include_sc2 or _cap_hc:
-                        # SC-II-05: Room Capacity Allocation (Absolute Fit)
+                        # SC-II-05: Room Capacity Allocation (Pre-Sorted Smart Relative Rank Matching)
                         r_name = r.get('room_name', '').upper()
-                        # Exemptions: Courts, Gymnasium, TBA, Online Room
-                        if not any(ex in r_name for ex in ['COURT', 'GYM', 'T.B.A.', 'ONLINE', 'VIRTUAL']):
+                        # Exemptions: Courts, Gymnasium, TBA, Online Room, Field, Playground
+                        if not any(ex in r_name for ex in ['COURT', 'GYM', 'T.B.A.', 'ONLINE', 'VIRTUAL', 'FIELD', 'PLAYGROUND']):
                             students = sec_stu.get(g.section_id, 0)
                             cap      = r.get('capacity', 0)
-                            # Penalty is the absolute difference to prioritize 'Closest Fit'
-                            diff = abs(cap - students)
-                            p = pen.get('ROOM_CAPACITY_PROPORTIONAL', 0)
-                            if p and diff > 0:
-                                # Scale penalty by distance (higher diff = higher penalty)
-                                # but keep it within reasonable soft bounds.
-                                actual_p = p * (diff / 10.0) 
-                                _apply_violation('ROOM_CAPACITY_PROPORTIONAL', actual_p, [i], [g.is_fixed])
+                            
+                            # 1. Feasibility: Under-Capacity check (Hard Constraint if configured as HC/SC since students must fit)
+                            if cap < students:
+                                p = pen.get('ROOM_CAPACITY_PROPORTIONAL', 0) or HC_PENALTY
+                                _apply_violation('ROOM_CAPACITY_PROPORTIONAL', p * 10, [i], [g.is_fixed])
+                            else:
+                                # 2. Optimization: Over-Capacity check bypassed (0 penalty when students fit)
+                                pass
+
 
                     # ── SC-I-01: Virtual Room (TBA) Penalty ──────────────────
                     if not g.is_fixed and g.room_id in v_room_set and g.gene_type != 'Async':
@@ -2253,16 +2353,7 @@ class GeneticScheduler:
                         _apply_violation('MIN_DAILY_SECTION_LOAD', p_mdl, idxs, fixed_list)
 
 
-        # ── SC-II-05: Room Fragmentation Penalty (Clustering) ────────────────
-        # Penalize each physical room that is 'Active' but sparsely populated (< 4 hrs/day).
-        # Optimization: Only run this if we are already HC-free (SC-polishing phase).
-        if include_sc2 and hard_conflicts == 0:
-            p_frag = pen.get('ROOM_CAPACITY_PROPORTIONAL', 0)
-            if p_frag:
-                for bits in room_bits.values():
-                    used_slots = bits.bit_count()
-                    if 0 < used_slots < 8: # Less than 4 hours active in a day
-                        penalty += p_frag; soft_score += p_frag; sc2_violations += 1
+        # Legacy Room Fragmentation Penalty block removed to allow clean zero-penalty convergence
 
         chromosome.fitness             = penalty
         chromosome.hard_conflicts      = hard_conflicts
@@ -2720,7 +2811,12 @@ class GeneticScheduler:
             fallback_rooms = self._dept_rooms_lec_only.get(dept)
         else:
             primary_rooms  = self._dept_rooms_lec_only.get(dept)
-            fallback_rooms = []
+            # HC-23: If LEC_IN_LAB_FALLBACK is active, Lab rooms serve as last-resort
+            # fallback for Lec genes — only used after all Lec rooms are exhausted.
+            if self._pen_type.get('LEC_IN_LAB_FALLBACK', 'NC') != 'NC':
+                fallback_rooms = self._dept_rooms_lab.get(dept) or []
+            else:
+                fallback_rooms = []
 
         if not primary_rooms:
             primary_rooms = self._valid_rooms_lec
@@ -2749,11 +2845,18 @@ class GeneticScheduler:
             )
 
         def _warm_sort(room_list):
-            """Sort room list by warmth descending, excluding online rooms."""
+            """Sort room list by capacity descending, then warmth descending, excluding online rooms."""
             phys = [r for r in room_list if r not in self.online_room_ids]
             if not phys:
                 return room_list
-            return sorted(phys, key=_room_warmth, reverse=True)
+            return sorted(
+                phys,
+                key=lambda rid: (
+                    -self.room_map.get(rid, {}).get('capacity', 0),
+                    -_room_warmth(rid)
+                )
+            )
+
 
         # Apply warmth sort to room pools
         warm_primary  = _warm_sort(primary_rooms)
@@ -3098,6 +3201,10 @@ class GeneticScheduler:
                 if gene.faculty_id is not None:
                     lec_fac_lookup[(gene.section_id, gene.course_id)] = gene.faculty_id
 
+        # ── Directed Repair Pass: pull any online-room Lec/Lab genes into physical gaps ──
+        # This is especially important for short Lec genes (1hr/2hr) that can fill Lab room
+        # gaps — the new _reclaim_online_genes now includes Lab rooms as Lec fallback.
+        self._reclaim_online_genes(nc.genes, occ_room, occ_fac, occ_sec)
         return nc
 
     # ------------------------------------------------------------------ #
@@ -4603,6 +4710,42 @@ class GeneticScheduler:
         
         try:
             while self.is_running:
+                # --- FEASIBILITY CONFLICT ASSESSMENT TIMEOUT (1 MINUTE) ---
+                if (time.time() - _algo_t0 > 60) and (best_schedule.hard_conflicts > 0):
+                    if self._pen_type.get('VIRTUAL_ROOM_USAGE', 'NC') == 'HC':
+                        self.is_running = False
+                        self.stop_error = (
+                            "It is not possible to generate a conflict-free schedule without using Virtual/Online Rooms "
+                            "because there are not enough physical classrooms. Please consider changing 'Virtual Room Usage' "
+                            "to a Soft Constraint or disabling it to allow online classes."
+                        )
+                        print(f"🛑 GA Stopped: {self.stop_error}")
+                        raise ValueError(self.stop_error)
+                    elif self._pen_type.get('EVENING_AVOIDANCE', 'NC') == 'HC':
+                        self.is_running = False
+                        self.stop_error = (
+                            "It is not possible to generate a conflict-free schedule with strict Evening Avoidance active "
+                            "because the total class hours exceed the available daytime slots within the allowed days. "
+                            "Please consider changing 'Evening Avoidance' to a Soft Constraint, extending the allowed days (e.g. including Thursday-Saturday), "
+                            "or adjusting the evening start threshold."
+                        )
+                        print(f"🛑 GA Stopped: {self.stop_error}")
+                        raise ValueError(self.stop_error)
+                    elif self._pen_type.get('LEC_LAB_SEQUENCE', 'NC') != 'NC':
+                        self.is_running = False
+                        self.stop_error = (
+                            "Lec-Lab Sequence Ordering Cannot Be Fully Satisfied. "
+                            "The system is unable to generate a conflict-free schedule that guarantees Lecture sessions are always placed "
+                            "before Lab sessions for all courses. This scheduling infeasibility commonly occurs when: "
+                            "(1) available rooms and time slots are too limited to freely reorder sessions across the week, "
+                            "(2) many courses share the same rooms or faculty, reducing flexibility to sequence Lec before Lab, or "
+                            "(3) allowed scheduling days are restricted (e.g. Mon-Wed only), leaving no room to re-arrange session ordering. "
+                            "To resolve this, consider: changing 'Lec-Lab Sequence' to Non-Constraint (NC) to let the system freely place sessions, "
+                            "adding more available rooms, expanding operating hours, or allowing more scheduling days (e.g. include Thursday-Saturday)."
+                        )
+                        print(f"🛑 GA Stopped: {self.stop_error}")
+                        raise ValueError(self.stop_error)
+
                 # --- ABSOLUTE UNTHROTTLED STOP SIGNAL CHECK ---
                 if self.force_stop:
                     raise AlgorithmStopException("Force stop.")

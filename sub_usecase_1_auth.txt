@@ -1,0 +1,39 @@
+%%{init: {"flowchart": {"nodeSpacing": 25, "rankSpacing": 50}}}%%
+flowchart LR
+    %% Actors
+    SA["👤 Superadmin"]
+    DA["👤 Admin"]
+    UF["👤 User"]
+
+    SA -. inherits .-> DA
+    DA -. inherits .-> UF
+
+    %% Subsystem Boundary (Strict UI Terminology)
+    subgraph Subsystem ["User Authentication & Access Security"]
+        LOGIN([Login to System])
+        VALIDATE([Validate Credentials])
+        LIMIT([Enforce Rate Limiting])
+        SESSION([Establish Role Session])
+        BARRIER([Select Department Schedule])
+        PROFILE([Update Profile & Pic])
+        LOGOUT([Logout])
+    end
+
+    %% Connections
+    UF --> LOGIN
+    UF --> PROFILE
+    UF --> LOGOUT
+
+    LOGIN --> VALIDATE
+    LOGIN --> LIMIT
+    LOGIN --> SESSION
+    LOGIN --> BARRIER
+
+    %% Styling
+    classDef actor fill:#f3f4f6,stroke:#4b5563,stroke-width:2px,color:#1f2937,font-weight:bold,font-size:18px;
+    classDef usecase fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1,font-weight:bold,font-size:18px;
+    classDef sys fill:#ffffff,stroke:#1e3a8a,stroke-width:3px,color:#1e3a8a,font-weight:bold,font-size:20px;
+
+    class SA,DA,UF actor;
+    class LOGIN,VALIDATE,LIMIT,SESSION,BARRIER,PROFILE,LOGOUT usecase;
+    class Subsystem sys;

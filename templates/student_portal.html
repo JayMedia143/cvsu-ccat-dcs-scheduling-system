@@ -15,11 +15,24 @@
 
 <body class="auth-page">
 
+    <!-- Loader overlay -->
+    <div id="auth-loader">
+        <img src="{{ url_for('static', filename='assets/X-Logo-GIF.gif') }}" alt="Loading...">
+    </div>
+    <script>
+        var _showLoader = !sessionStorage.getItem('studentPortalSubmitted');
+        sessionStorage.removeItem('studentPortalSubmitted');
+        if (_showLoader) {
+            var _loaderStart = Date.now();
+            document.getElementById('auth-loader').style.display = 'flex';
+        }
+    </script>
+
     <div class="auth-right">
         <div class="auth-form-box">
 
-            <div class="auth-system-badge">
-                <span class="auth-badge-dot"></span> CvSU-CCAT DCS
+            <div class="auth-system-badge" style="display: inline-flex; align-items: center; justify-content: center; padding: 8px 12px;">
+                <img src="{{ url_for('static', filename='assets/GenX Logo.png') }}" alt="GenX Logo" style="height: 26px; object-fit: contain;">
             </div>
 
             <div class="auth-accent-line"></div>
@@ -76,7 +89,19 @@
             var btn = document.querySelector('.btn-auth');
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Looking up...';
             btn.disabled = true;
+            sessionStorage.setItem('studentPortalSubmitted', '1');
         });
+
+        // Hide page-load loader after 2s minimum (only if it was shown)
+        if (typeof _showLoader !== 'undefined' && _showLoader) {
+            window.addEventListener('load', function () {
+                var elapsed = Date.now() - _loaderStart;
+                var remaining = Math.max(2000 - elapsed, 0);
+                setTimeout(function () {
+                    document.getElementById('auth-loader').style.display = 'none';
+                }, remaining);
+            });
+        }
     </script>
 
     <!-- STUDENT PORTAL INFO MODAL -->

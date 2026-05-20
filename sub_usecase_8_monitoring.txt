@@ -1,0 +1,29 @@
+%%{init: {"flowchart": {"nodeSpacing": 12, "rankSpacing": 40}}}%%
+flowchart LR
+    %% Actors
+    SA["👤 Superadmin"]
+
+    %% Subsystem Boundary
+    subgraph Subsystem ["Live Monitoring Bantay-System"]
+        SOCKETS([Monitor Socket Connections])
+        STATUS([Track User Status])
+        BROADCAST([Broadcast Live Updates])
+        ACTIVITY([Audit Activity Logs])
+        SECURITY([Record Security Events])
+    end
+
+    %% Connections
+    SA --> SOCKETS
+    SA --> STATUS
+    SA --> BROADCAST
+    SA --> ACTIVITY
+    SA --> SECURITY
+
+    %% Styling
+    classDef actor fill:#f3f4f6,stroke:#4b5563,stroke-width:2px,color:#1f2937,font-weight:bold,font-size:18px;
+    classDef usecase fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1,font-weight:bold,font-size:18px;
+    classDef sys fill:#ffffff,stroke:#1e3a8a,stroke-width:3px,color:#1e3a8a,font-weight:bold,font-size:20px;
+
+    class SA actor;
+    class SOCKETS,STATUS,BROADCAST,ACTIVITY,SECURITY usecase;
+    class Subsystem sys;

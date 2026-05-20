@@ -1,0 +1,63 @@
+graph TD
+    %% Styling definitions
+    classDef init fill:#1E293B,stroke:#475569,stroke-width:2px,color:#FFF,font-weight:bold;
+    classDef process fill:#2563EB,stroke:#3B82F6,stroke-width:1px,color:#FFF;
+    classDef evaluate fill:#991B1B,stroke:#EF4444,stroke-width:2px,color:#FFF,font-weight:bold;
+    classDef condition fill:#D97706,stroke:#F59E0B,stroke-width:2px,color:#FFF,font-weight:bold;
+    classDef genetic fill:#059669,stroke:#10B981,stroke-width:1px,color:#FFF;
+    classDef finish fill:#0D9488,stroke:#14B8A6,stroke-width:2px,color:#FFF,font-weight:bold;
+
+    %% 1. Initialization Phase
+    A[1. Start Execution]:::init --> B[2. Query Database]:::process
+    B --> C["3. Load Campus Data:<br>• Courses (87)<br>• Sections (43)<br>• Faculty (29)<br>• Rooms (17)"]:::process
+    C --> D[4. Parse Pre-assignments as Fixed Genes]:::process
+
+    %% 2. Population Generation
+    subgraph PopInit ["1. Population Initialization"]
+        D --> E["5. create_genome()<br>Initialize Population Pool"]:::process
+        E --> F[6. Standard Copy of Fixed Genes]:::process
+        F --> G[7. Iterate Sections & Courses]:::process
+        G --> H[8. Filter Valid Rooms for Lec/Lab]:::process
+        H --> I["9. 🧠 Smart Placement:<br>• Density-Guided Day<br>• Warmth-Scored Room<br>• Random Time"]:::process
+        I --> J{10. Population Full?}:::condition
+        J -- No --> F
+    end
+
+    %% 3. Main Loop & Evaluation (TEST 2 VERSION)
+    subgraph EvalCache ["2. Evaluation & Conflict Detection"]
+        J -- Yes --> K[11. Start Evolution Loop]:::init
+        K --> L["12. calculate_fitness()<br>Iterate Chromosomes"]:::evaluate
+        L --> M["13. ⚡ O(1) In-Memory Hash Maps<br>Uses dictionaries indexed by<br>(day, slot) for instant lookup"]:::evaluate
+        M --> N{"14. Check 20 Hard Constraints<br>(Overlaps, Lunch, Availability, etc.)"}:::condition
+        N -- Collision Detected --> O["15. Add Penalty Score<br>Record to conflicting_indices"]:::evaluate
+        N -- No Collision --> P[16. Sum Total Penalties as Fitness]:::process
+        O --> P
+        P --> Q[17. Sort Population by Fitness]:::process
+        Q --> R[18. Identify Best Chromosome]:::process
+    end
+
+    %% 4. Termination Check
+    subgraph FeasCheck ["3. Feasibility Check"]
+        R --> S{19. Hard Conflicts == 0?}:::condition
+        S -- Yes --> T["20. ✅ Feasible Schedule Found!"]:::finish
+        T --> U[21. Return Best Schedule]:::finish
+    end
+
+    %% 5. Genetic Operators
+    subgraph ReproMut ["4. Reproduction & Mutation"]
+        S -- No --> V["22. Elitism Selection<br>Preserve Top Chromosomes"]:::genetic
+        V --> W["23. Refill New Population Pool"]:::genetic
+        W --> X["24. select_parents()<br>🎲 Rank Selection"]:::genetic
+        X --> Y["25. crossover(p1, p2)<br>🎲 50/50 Stochastic Inheritance"]:::genetic
+        Y --> Z[26. Append Child to Pool]:::process
+        Z --> AA{27. Pool Full?}:::condition
+        AA -- No --> X
+        AA -- Yes --> AB["28. proportional_mutate(chrom)<br>Blind Random Mutation"]:::genetic
+        AB --> AC{29. Has Conflicts?}:::condition
+        AC -- No --> AD["30. 🎲 10% Random Move"]:::genetic
+        AC -- Yes --> AE["31. 🧠 Smart Repair:<br>Move conflicts using<br>Density & Warmth"]:::genetic
+        AD --> AF[32. Replace Population]:::process
+        AE --> AF
+    end
+
+    AF --> K

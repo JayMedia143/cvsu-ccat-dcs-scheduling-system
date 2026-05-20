@@ -1,0 +1,102 @@
+CVSU SCHEDULING SYSTEM: GENETIC ALGORITHM PRESENTATION SCRIPT
+PPT PRESENTATION SCRIPT (8 MINUTES)
+
+Total Duration: Exactly 8 Minutes (Approx. 1,180 words spoken at a relaxed 140 WPM)
+Presenters: 3 Speakers (Speaker 1, Speaker 2, Speaker 3)
+Division: Balanced equally (~2.6 to 2.7 minutes per speaker, ~390-395 words each)
+Language: Simple Natural Taglish (Conversational College Tone)
+
+SPEAKER 1: INITIALIZATION & PRE-FEASIBILITY (Boxes 1-8)
+Speak Time: ~2.7 Minutes | Word Count: ~390 Words
+
+[SLIDE: Title Slide - The CvSU Genetic Algorithm Scheduler]
+Visual: Sleek, premium dark teal theme featuring the "GenX Logo" and a high-tech circuit background with the text: "Inside the AI: A 35-Step Scheduling Algorithm".
+
+SPEAKER 1:
+"Magandang araw po sa inyong lahat! Ngayong araw, e-explain po namin kung paano gumagana ang aming Genetic Algorithm. As we all know, sobrang hirap pong gumawa ng schedule kapag manual. Kaya naman, gumawa po kami ng 35 steps para mapadali ito. Hahatiin po natin ang presentation na ito sa tatlong parts para madaling makita ang buong process—mula sa initialization, pag-evolve, hanggang sa pagbuo ng flawless na schedule."
+
+[SLIDE: Phase 1 - Smart Initialization & Data Loading (Boxes 1-5)]
+Visual: Flowchart showing Box 1 (Hardware Scaling) connected to Box 2 (Start), Box 3 (DB Query), Box 4 (Load Data), and Box 5 (Parse Pre-assignments). 
+
+SPEAKER 1:
+"Simulan po natin sa Initialization. Sa Box 1, andito ang Hardware Scaling. Sobrang heavy po kasi ng Genetic Algorithm dahil daan-daang schedules ang pinoproseso nito nang sabay-sabay. Para maiwasan ang system crash o pag-freeze, tinitingnan muna ng system ang CPU at memory ng computer. 
+
+Kung maganda at mabilis ang computer natin, automatic na tataas ito para mag-generate ng 200 or mahigit pang schedules para mas mabilis mahanap ang best schedule. Pero kung medyo lumang computer naman ang gamit, kusa itong bababa sa 50 schedules para hindi mag-lag ang PC niyo. Mai-compare po natin ito sa isang factory manager na binibilang muna ang workers bago mag-start para ma-distribute ang trabaho nang patas at sapat sa capacity ng bawat isa.
+
+Pagkatapos nito, sa Box 2 po magsisimula ang process. Dito po natin ni-re-reset sa zero ang timers at binubuksan ang log files. Sa Box 3 naman, andyan ang Database Query, o kung paano natin kinukuha ang data. Gumagamit po tayo ng mabilis na queries para makuha ang listahan ng courses, sections, faculty, at rooms nang sabay-sabay para iwas-lag. Parang librarian lang po na kinukuha na lahat ng libro sa table bago mag-start ang research. Dito naman sa Box 4, lo-load natin ang data sa memory para ma-compute ng system kung ilan talaga ang schedules—tulad ng mayroon tayong 87 courses, 43 sections, 29 faculty, at 17 rooms. At sa Box 5, ipi-parse natin ang Pre-assignments, o yung mga locked schedules. Mahalaga po ito para ma-lock natin ang mga fixed schedules na hindi pwedeng galawin, tulad ng schedule ni Professor A tuwing Lunes ng 8:00 AM. Nilo-lock na natin sila parang pinapako natin sa calendar para alam ng system na kailangang buuin ang buong schedule sa paligid ng mga ito."
+
+[SLIDE: Phase 2 - Pre-Feasibility & The HC-24 Gatekeeper (Boxes 6-8)]
+Visual: Subgraph diagram showing Box 6 (Custom Feasibility) branching to Box 7 (Feasible Check with color codes: Green, Yellow, Orange, Red) and Box 8 (HC-24 Filter).
+
+SPEAKER 1:
+"Next naman po, magpo-proceed tayo sa Pre-Feasibility check, o yung taga-check bago magpatuloy ang ating system. Bago tayo mag-aksaya ng mahabang computer processing sa isang imposibleng layout, sa Box 6 ay magra-run muna ang isang mabilisang check. Dito po titingnan kung magkakasya ang kabuuang oras ng classes sa rooms. Parang tinitingnan mo lang kung kasya ang 10 gallons ng tubig sa isang 5-gallon na balde bago mo pa man ito isalin.
+
+Sa Box 7 naman natin e-evaluate ang resulta: Green kung Perfectly Feasible, Yellow kung Tight Fit, Orange kung Highly Constrained, at Red naman kung Impossible. Kapag po umabot sa Red, automatic na hihinto ang system para sabihin sa user kung anong room ang kulang, kaya nakaka-save tayo ng oras.
+
+Kung feasible naman, ipapasa ito sa Box 8 para sa ating HC-24 Filter, o yung rule para sa mga maliliit na sections. Ang rule na ito ay para sa maliliit o irregular na sections na kakaunti lang ang subjects para hindi sila ma-penalize ng gaps o bakanteng oras. Parang pagbibigay lang 'yan ng pass sa isang estudyante na may physical injury para hindi na kailangang tumakbo sa marathon pero kasali pa rin. Ipapasa ko na po ang mikropono kay Speaker 2 para i-explain ang generation at evaluation."
+
+
+SPEAKER 2: POPULATION GENERATION & FITNESS EVALUATION (Boxes 9-20)
+Speak Time: ~2.7 Minutes | Word Count: ~395 Words
+
+[SLIDE: Phase 3 - Population Generation (Boxes 9-14)]
+Visual: Flowchart showing Box 9 (Create Genome), Box 10 (Copy Fixed Genes), Box 11 (Iterate Sections), Box 12 (Filter Rooms), Box 13 (Heuristic Placement), and Box 14 (Pool Full Check).
+
+SPEAKER 2:
+"Maraming salamat, Speaker 1. Ngayong verified na ang basic constraints natin, pwede na nating simulan ang Population Generation, o kung paano natin ginagawa ang simula ng mga schedule. Sa Box 9, gagawa tayo ng blank template para sa schedule—parang pagbili ng isang bagong blank calendar sa bookstore. 
+
+Sa Box 10 naman, ko-kopyahin natin ang Fixed Genes, o yung mga locked schedules na nilagay natin kanina sa bawat blank template. Sinisiguro nito na kahit gaano pa karaming random schedules ang gawin natin, ang locked schedule ng Dean at mga special lab times ay ma-preserve. Parang pagsusulat muna ng mga national holidays sa calendar bago ilagay ang sarili mong personal plans.
+
+Sa Box 11, magsisimula ang loop para isa-isang i-plot ang sections at courses. Sa Box 12, may filter tayo para sa valid rooms para siguraduhing ang Chemistry Lab ay pupunta lamang sa laboratory at hindi sa ordinaryong classroom. 
+
+At dito naman sa Box 13, andito ang major update ng ating system: ang Heuristic Placement, o yung matalinong pag-arrange ng klase. Sa halip na basta na lang i-random placement ang classes, gumagamit tayo ng matalinong Tetris-like heuristic para maiwasan ang gaps sa simula pa lang—halimbawa, isisingit agad ang 1-hour Math right after ng 2-hour English sa parehong room. Pagkatapos, iche-check sa Box 14 kung puno na ang population pool. Kung 100 schedules ang kailangan at mayroon pa lang tayong 45, babalik ang loop sa Box 10 para mag-generate pa ng mas marami."
+
+[SLIDE: Phase 4 - The Evolution Loop & Fitness Evaluation (Boxes 15-20)]
+Visual: Diagram of the Core Evolution Loop, showcasing Box 15 (Generation Increment), Box 16 (Dynamic Injection), Box 17 (Calculate Fitness), Box 18 (Bitmask Caching Scan), Box 19 (NSGA-II Sorting), and Box 20 (Best Schedule).
+
+SPEAKER 2:
+"Next naman po, magpo-proceed tayo sa Evolution Loop sa Box 15, kung saan tataas ang generation counter mula 1 hanggang sa limit natin na 1,000. 
+
+Habang tumatakbo ang algorithm sa background, mayroon tayong Box 16 para sa Dynamic Injection, o yung pagpasok ng bagong data. Halimbawa, kung biglang blinock ng user si Professor B tuwing Biyernes, hindi magka-crash ang process natin. Kusa nitong ihahalo ang bagong data na ito sa active population habang tumatakbo ang evolution. Parang pagdagdag ng bagong ingredient sa kumukulong sopas nang hindi pinapatay ang kalan.
+
+Dito naman sa Box 17, kakalkulahin ang Fitness score, o yung grade ng schedule. Kung madaming conflicts ang schedule, mababa ang score; pero kung compact o dikit-dikit ang oras ng classes, maganda ang score. Para itong panel of judges na binibigyan ng score ang mga atleta base sa criteria. 
+
+Para magawa ito sa loob ng isang microsecond, gumagamit tayo ng hardware-level Bitmask Caching Scan sa Box 18, o yung super fast scanner. Sa halip na ikumpara ang mga text o oras, kino-convert ng system ang buong schedule sa binary ones and zeros. Parang transparent stencil lang sa ibabaw ng mapa para makita agad kung aling areas ang magkatugma nang hindi na nagsusukat isa-isa. 
+
+Pagkatapos, sa Box 19 ay gagawin ang NSGA-II Sorting, o yung pag-sort ng schedule. I-ra-rank nito ang schedules mula pinakamahusay hanggang sa pinakamalala base sa zero conflicts at preference ng school. At sa Box 20 natin makikita ang best schedule mula sa Front 1. I-explain naman ni Speaker 3 kung paano natin tatapusin ang run o mag-evolve pa lalo."
+
+
+SPEAKER 3: TERMINATION & GENETIC OPERATORS (Boxes 21-35)
+Speak Time: ~2.6 Minutes | Word Count: ~395 Words
+
+[SLIDE: Phase 5 - Smart Termination & Refinement (Boxes 21-24)]
+Visual: Flowchart showing Box 21 (Is Flawless?), Box 22 (Auto-Stop), Box 23 (Local Search Refinement), and Box 24 (Return Best Schedule).
+
+SPEAKER 3:
+"Salamat po, Speaker 2. Ngayon naman po, magpo-proceed tayo sa pinaka-critical na part ng ating algorithm: ang Auto-Stop Check. Sa Box 21, itatanong ng system: 'Is it a Flawless Schedule?' Ibig sabihin, zero na ba ang hard conflicts at okay na ba ang academic preference scores nito? 
+
+Kapag po ang sagot ay Yes, agad na tatakbo ang Box 22 para sa Perfect Schedule Auto-Stop. Hindi na natin kailangang tapusin ang buong 1,000 rounds. Pwedeng sa Round 50 pa lang ay hihinto na ang program kapag flawless na ito. Parang maagang pagpasa ng exam paper dahil alam mong perfect ka naman sa test mo, kaya nakatipid tayo sa computer resources at processing power. 
+
+Bago natin tuluyang ibigay sa user ang schedule, dadaan muna ito sa Box 23 para sa Local Search Refinement. Ito po ang nagse-serve as diamond polish natin—gumagawa ito ng maliliit na swaps para tanggalin ang mga natitirang student gaps na maaaring nakaligtaan ng main algorithm. At sa Box 24 po, opisyal nang ibabalik ang best schedule para mai-save at mai-display sa screen."
+
+[SLIDE: Phase 6 - Breeding the Next Generation (Boxes 25-35)]
+Visual: Detailed flowchart of genetic operators showing Box 25 (Elitism), Box 27 (Tournament Selection), Box 28 (Crossover), Box 31 (Adaptive Mutation), Box 34 (Targeted Repair), and Box 35 (Replace Population).
+
+SPEAKER 3:
+"Subalit kung ang sagot sa Box 21 ay No o hindi pa perfect ang schedule natin, kailangan nating mag-breed ng bagong generation gamit ang Genetic Operators sa Boxes 25 hanggang 35. 
+
+Magsisimula ito sa Elitism Selection sa Box 25, o kung paano natin pinapasa yung pinakamagandang schedule sa susunod na round nang walang anumang pagbabago para hindi natin masayang ang ating progreso. Parang pag-exempt ng top students sa final exam dahil magaling na talaga sila.
+
+Pagkatapos, sa Box 26 at 27, gagamit tayo ng Tournament Selection para sa reproduction, o yung labanan ng mga schedule kung sino ang mananalo para magka-crossover sa Box 28. Ang Crossover naman ay ang pag-combine ng schedules, katulad ng paghahalo ng dalawang recipe upang makabuo ng mas masarap na putahe!
+
+Kapag puno na ang pool, dadako tayo sa Box 31 para sa Adaptive Mutation, o pagbabago ng mutation rate. Kapag nakita ng system na stagnant o nagkakakamukha na ang schedules, automatic nitong tataasan ang mutation rate o randomness para magkaroon ng bagong ideas. Parang pagtaas ng init sa kalan kapag hindi na kumukulo ang tubig.
+
+Kung wala namang conflicts ang schedule, mayroon tayong 10% Random Move sa Box 32 at 33 para makatuklas pa ng mas magandang layout. Pero kung may conflicts pa ito, tatakbo ang Box 34 na Targeted Repair, o kung paano natin inaayos yung conflicts. Parang isang mekaniko na pinapalitan ang partikular na sirang part sa halip na i-rebuild ang buong sasakyan, itatama nito ang double-booked na teacher papunta sa isang verified na empty slot. 
+
+Sa huli, sa Box 35, papalitan natin ang lumang population ng bagong breed at repaired population na ito, at iikot pabalik sa Box 15 para sa panibagong round ng evolution hanggang sa maging perperkto o flawless ang lahat!"
+
+[SLIDE: Conclusion Slide]
+Visual: Beautiful, premium summary graphic highlighting: Hardware Scaling, Heuristic Placement, Bitmask Caching, NSGA-II, and Auto-Stop Repair.
+
+SPEAKER 3:
+"Sa pangkalahatan po, dahil sa matalinong paghahati ng ating Genetic Algorithm sa mga optimized phases—mula sa hardware scaling hanggang sa smart heuristics, super-speed bitmask caching, at targeted repair—nasisiguro nating ang ating CvSU Scheduling System ay laging handa, very stable, at kayang magbigay ng flawless na schedule. Maraming salamat po sa inyong pakikinig, at open po kami para sa inyong mga katanungan."

@@ -1,0 +1,45 @@
+%%{init: {"flowchart": {"nodeSpacing": 15, "rankSpacing": 40}}}%%
+flowchart LR
+    %% 4-Tier Actor Hierarchy
+    SA["👤 Superadmin"]
+    DA["👤 Admin"]
+    UF["👤 User (Faculty)"]
+    ST["👤 Student"]
+
+    SA -. inherits .-> DA
+    DA -. inherits .-> UF
+    UF -. inherits .-> ST
+
+    %% Overall System Boundary
+    subgraph System ["Automated Scheduling System"]
+        VISUALIZATION([Schedule Visualization])
+        AUTH([Authentication & Security])
+        CURRICULUM([Curriculum Management])
+        HUB([Proposal Hub Workflow])
+        SOLVER([GA Schedule Generation])
+        ARCHIVE([Historical Archive Mode])
+        REPORTS([Reports Exporting])
+        MONITORING([Bantay-System Monitoring])
+    end
+
+    %% Direct Connections (Clean Horizontal Flow)
+    ST --> VISUALIZATION
+
+    UF --> AUTH
+    UF --> CURRICULUM
+    UF --> HUB
+    UF --> SOLVER
+
+    DA --> ARCHIVE
+    DA --> REPORTS
+
+    SA --> MONITORING
+
+    %% Styling
+    classDef actor fill:#f3f4f6,stroke:#4b5563,stroke-width:2px,color:#1f2937,font-weight:bold,font-size:18px;
+    classDef usecase fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1,font-weight:bold,font-size:18px;
+    classDef sys fill:#ffffff,stroke:#1e3a8a,stroke-width:3px,color:#1e3a8a,font-weight:bold,font-size:20px;
+
+    class SA,DA,UF,ST actor;
+    class VISUALIZATION,AUTH,CURRICULUM,HUB,SOLVER,ARCHIVE,REPORTS,MONITORING usecase;
+    class System sys;

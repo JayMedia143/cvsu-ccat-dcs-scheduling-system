@@ -1,0 +1,26 @@
+================================================================
+📊 ALPHA TESTS EVOLUTION TABLES
+================================================================
+
+This file documents the features added or modified in each test case transition.
+
+----------------------------------------------------------------
+🔄 TEST 2 ➔ TEST 3: FEASIBILITY CHECK & HC-24 FILTER
+----------------------------------------------------------------
+
+| Feature | Description | File |
+| :--- | :--- | :--- |
+| **Pre-Feasibility Check** | Added `check_room_feasibility()` using Greedy FFD to check capacity before running GA. | `alpha_test3_feasibility_check.py` |
+| **HC-24 Filter** | Exempts sections with < 12 slots from the 3-hour minimum rule to prevent impossible constraints. | `alpha_test3_feasibility_check.py` |
+
+----------------------------------------------------------------
+🔄 TEST 3 ➔ TEST 4: 3-PHASE OPTIMIZATION
+----------------------------------------------------------------
+
+| Feature | Description | File |
+| :--- | :--- | :--- |
+| **3-Phase Optimization** | Added logic to switch phases: HARD -> SC1 -> SC2 based on conflict resolution. | `alpha_test4_3_phase_optimization.py` |
+| **Phase-Specific Fitness** | Modified `calculate_fitness` to accept `hard_only` and `sc1_only` flags. | `alpha_test4_3_phase_optimization.py` |
+| **Evening Avoidance (SC1)** | Added as a soft constraint evaluated in the SC1 phase. | `alpha_test4_3_phase_optimization.py` |
+
+----------------------------------------------------------------

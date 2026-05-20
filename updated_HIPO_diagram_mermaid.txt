@@ -1,0 +1,66 @@
+flowchart TD
+    %% Root System Node
+    SYS["Automated Scheduling System using Genetic Algorithm"]
+
+    %% Level 1: Core Modules
+    SYS --- M1["1. User Authentication & Access Control"]
+    SYS --- M2["2. Curriculum & Data Management"]
+    SYS --- M3["3. AI Schedule Generation (GA)"]
+    SYS --- M4["4. Draft Workflow & Proposal Hub"]
+    SYS --- M5["5. Schedule Visualization & Diagnostics"]
+    SYS --- M6["6. Historical Snapshot & Archive Mode"]
+    SYS --- M7["7. Reports Generation & Exporting"]
+    SYS --- M8["8. System Monitoring & Security Auditing"]
+
+    %% Module 1 Flow
+    M1 --> M1_I["Input:<br>User Credentials, Role Selection,<br>IP Address"]
+    M1_I --> M1_P["Process:<br>1. Validate Credentials against DB Hash<br>2. Enforce Rate Limiting & Account Lockout<br>3. Establish Role-Based Session<br>4. Apply Dept Access Security Barrier"]
+    M1_P --> M1_O["Output:<br>Authenticated Session,<br>User Dashboard / Security Warning"]
+
+    %% Module 2 Flow
+    M2 --> M2_I["Input:<br>Master Data (Courses, Sections, Faculty, Rooms),<br>Irregular Students, Code Prefix Rules,<br>Permanent Day-Off Constraints"]
+    M2_I --> M2_P["Process:<br>1. Execute CRUD with XSS/Length Validation<br>2. Apply Search, Sort & Dept Filters<br>3. Assign Faculty Loadings & Pre-assignments<br>4. Manage Recycle Bin & Soft Deletion"]
+    M2_P --> M2_O["Output:<br>Master Curriculum Database,<br>Filtered Views, Configured Pre-assignments"]
+
+    %% Module 3 Flow
+    M3 --> M3_I["Input:<br>Scheduling Parameters (Pop Size, Mutation),<br>Master Loadings, Hard & Soft Constraints"]
+    M3_I --> M3_P["Process:<br>1. Gather Data & Initialize Population<br>2. Run Async Background GA Solver<br>3. Track Live Progress & Fitness Score<br>4. Enforce Global AI-Lock / Schedule Lock"]
+    M3_P --> M3_O["Output:<br>Optimized Timetable Data,<br>Conflict Score & Generation Reports"]
+
+    %% Module 4 Flow
+    M4 --> M4_I["Input:<br>Draft Versions, Schedule Edits, Chat Messages,<br>Proposal Attachments, Admin Decisions"]
+    M4_I --> M4_P["Process:<br>1. Create Dept-Scoped Schedule Drafts<br>2. Broadcast Live Hub Chat via SocketIO<br>3. Evaluate Proposals in Decision Terminal<br>4. Merge Approved Drafts to Master"]
+    M4_P --> M4_O["Output:<br>Version-Controlled Drafts, Hub Chatroom,<br>Published Master Schedule, Notifications"]
+
+    %% Module 5 Flow
+    M5 --> M5_I["Input:<br>Published / Draft Schedule Data,<br>Semester & Dept Filters, User Queries"]
+    M5_I --> M5_P["Process:<br>1. Render Interactive Timetable Grids<br>2. Execute Real-Time Diagnostics & Issues Checker<br>3. Filter Timetables by Role & Dept"]
+    M5_P --> M5_O["Output:<br>Interactive Timetable Grids,<br>Live Conflict Alerts, Personal Schedules"]
+
+    %% Module 6 Flow
+    M6 --> M6_I["Input:<br>Snapshot Requests (AY, Semester),<br>Selected Term Archive"]
+    M6_I --> M6_P["Process:<br>1. Capture Immutable Term Snapshot<br>2. Activate Ghost Mode (Historical View)<br>3. Engage Global Mutation Firewall<br>4. Reconstruct Archived Entities"]
+    M6_P --> M6_O["Output:<br>Immutable Term Archives,<br>Read-Only Historical Dashboard, Metadata"]
+
+    %% Module 7 Flow
+    M7 --> M7_I["Input:<br>Selected Report Type, Custom Layout Settings,<br>Dynamic Signatories, Margins & Image Settings"]
+    M7_I --> M7_P["Process:<br>1. Fetch Final Timetable Data<br>2. Format Official Templates (VPAA-QF-11)<br>3. Embed Dynamic Signatories & Styling"]
+    M7_P --> M7_O["Output:<br>Official Downloadable PDF Reports,<br>Formatted Excel Spreadsheets"]
+
+    %% Module 8 Flow
+    M8 --> M8_I["Input:<br>Web Requests, SocketIO Connections,<br>System Events (Logins, CRUD, Edits)"]
+    M8_I --> M8_P["Process:<br>1. Track Live User Presence (Viewing vs Editing)<br>2. Record Activity Logs & Security Events<br>3. Broadcast Real-Time Monitoring to Admins"]
+    M8_P --> M8_O["Output:<br>Live Bantay-System Dashboard,<br>Activity Audit Trail, Security Logs"]
+
+    %% Styling for better visualization in Mermaid / Draw.io
+    classDef sys fill:#1f2937,stroke:#3b82f6,stroke-width:3px,color:#ffffff,font-weight:bold;
+    classDef module fill:#3b82f6,stroke:#1e40af,stroke-width:2px,color:#ffffff,font-weight:bold;
+    classDef input fill:#f3f4f6,stroke:#9ca3af,stroke-width:1px,color:#1f2937;
+    classDef process fill:#e0f2fe,stroke:#38bdf8,stroke-width:1px,color:#0369a1;
+    classDef output fill:#fef3c7,stroke:#f59e0b,stroke-width:1px,color:#b45309;
+
+    class SYS sys;
+    class M1,M2,M3,M4,M5,M6,M7,M8 module;
+    class M1_I,M2_I,M3_I,M4_I,M5_I,M6_I,M7_I,M8_I input;
+    class M1_P,M2_P,M3_P,M4_P,M5_P,M6_P,M7_P,M8_P process;
+    class M1_O,M2_O,M3_O,M4_O,M5_O,M6_O,M7_O,M8_O output;

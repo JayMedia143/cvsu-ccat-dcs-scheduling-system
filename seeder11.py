@@ -411,7 +411,7 @@ def seed_database():
             {'code': 'COMPLETE_COURSE_SCHEDULING', 'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-16) Complete Course Plotting', 'desc': 'All curriculum subjects must be plotted.'},
             {'code': 'PREASSIGNMENT_EXCLUSIVITY',  'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-17) Pre-assignment Exclusivity', 'desc': 'Locked slots cannot be overwritten.'},
             {'code': 'FACULTY_DAY_SPLIT',          'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-18) Faculty Day Split Rule', 'desc': 'Sessions must land on designated split days.'},
-            {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-19) Lunch Break Allocation', 'desc': '1-hour break for all (Students & Faculty) between 10 AM-2 PM.'},
+            {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-19) Lunch Break Allocation', 'desc': '1-hour break after 1 class, or after max 6 consecutive hours.'},
 
             # A2: Evaluated Constraints (HC-20 to HC-25)
             {'code': 'MAX_CONSECUTIVE_STUDENT',    'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-20) Max Consecutive Student Load', 'desc': 'Max 6 consecutive hours for students.'},

@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CvSU CCAT DCS Scheduling System - Login</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/X Logo.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
@@ -18,7 +19,7 @@
 
     <!-- Loader overlay -->
     <div id="auth-loader">
-        <img src="{{ url_for('static', filename='assets/loader.gif') }}" alt="Loading...">
+        <img src="{{ url_for('static', filename='assets/X-Logo-GIF.gif') }}" alt="Loading...">
     </div>
     <script>
         var _showLoader = !sessionStorage.getItem('loginSubmitted');
@@ -34,8 +35,8 @@
     <div class="auth-right">
         <div class="auth-form-box">
 
-            <div class="auth-system-badge">
-                <span class="auth-badge-dot"></span> CvSU-CCAT DCS
+            <div class="auth-system-badge" style="display: inline-flex; align-items: center; justify-content: center; padding: 8px 12px;">
+                <img src="{{ url_for('static', filename='assets/GenX Logo.png') }}" alt="GenX Logo" style="height: 26px; object-fit: contain;">
             </div>
 
             <!-- Accent line -->

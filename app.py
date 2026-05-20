@@ -337,7 +337,13 @@ generation_status = {
     'done': False,
     'stop_requested': False,
     'hardware': None,
-    'gen_per_sec': 0
+    'gen_per_sec': 0,
+    'requester_sid': None,       # SID of the tab that started the GA
+    'requester_uid': None,       # User ID that started the GA
+    'last_heartbeat': 0,         # Last timestamp of client heartbeat
+    'auto_stopped': False,       # Flag to know if GA was stopped automatically on disconnect
+    'auto_saved_gen': None,      # Gen number that was auto-saved
+    'auto_saved_draft_id': None, # Draft ID that was auto-saved
 }
 section_courses = db.Table('section_courses',
     db.Column('section_id', db.Integer, db.ForeignKey('section.id'), primary_key=True),
@@ -1102,6 +1108,32 @@ def on_handle_disconnect():
         
         broadcast_monitoring_update()
         print(f"SID {sid} disconnected for user {uid}")
+
+    # ── GA Auto-Stop on Client Disconnect ──
+    if (generation_status.get('running')
+            and generation_status.get('requester_sid') == sid):
+        print(f"⚠️ GA requester SID {sid} disconnected — triggering auto-stop")
+        generation_status['stop_requested'] = True
+        generation_status['auto_stopped'] = True
+        try:
+            ga_stop_event.send(True)
+        except:
+            pass
+        # Write signal file (nuclear option, same as manual stop)
+        try:
+            sig_path = os.path.join(basedir, "ga_stop.signal")
+            with open(sig_path, "w") as f:
+                f.write("STOP_AUTO")
+        except:
+            pass
+
+@socketio.on('ga_heartbeat')
+def on_ga_heartbeat(data):
+    """Client pings every 15s while GA is running to prove it's still alive."""
+    import time
+    if (generation_status.get('running')
+            and generation_status.get('requester_sid') == request.sid):
+        generation_status['last_heartbeat'] = time.time()
 
 # Module 7: MONITORING SOCKET HANDLERS
 @socketio.on('join_monitoring')
@@ -7047,7 +7079,7 @@ def sync_constraints():
         {'code': 'COMPLETE_COURSE_SCHEDULING', 'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-16) Complete Course Plotting', 'desc': 'All curriculum subjects must be plotted.'},
         {'code': 'PREASSIGNMENT_EXCLUSIVITY',  'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-17) Pre-assignment Exclusivity', 'desc': 'Locked slots cannot be overwritten.'},
         {'code': 'FACULTY_DAY_SPLIT',          'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-18) Faculty Day Split Rule', 'desc': 'Sessions must land on designated split days.'},
-        {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-19) Lunch Break Allocation', 'desc': '1-hour break for all (Students & Faculty) between 10 AM-2 PM.'},
+        {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-19) Lunch Break Allocation', 'desc': '1-hour break after 1 class, or after max 6 consecutive hours.'},
 
         # A2: Evaluated Constraints (HC-20 to HC-25)
         {'code': 'MAX_CONSECUTIVE_STUDENT',    'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-20) Max Consecutive Student Load', 'desc': 'Max 6 consecutive hours for students.'},
@@ -7102,6 +7134,146 @@ def sync_constraints():
     flash(f"Constraints Synced: {updated} updated, {added} added, {deleted} removed.", "success")
     return redirect(url_for('manage_constraints'))
 
+
+def _save_best_schedule_to_db(scheduler, best_schedule, target_semester, draft_id):
+    if not best_schedule:
+        return
+    # 1. Replace only THIS semester's schedule (other semesters untouched)
+    if draft_id:
+        db.session.query(ScheduledClass).filter_by(semester=target_semester, draft_version_id=draft_id, is_draft=True).delete()
+    else:
+        db.session.query(ScheduledClass).filter_by(semester=target_semester, is_draft=False).delete()
+    db.session.commit()
+
+    # 2. Convert GA genes -> DB records with semester tag
+    #    Detect room-conflict genes by re-scanning the final chromosome.
+    objects_to_save = []
+    days_list = scheduler.days
+
+    # Build a simple occupancy map to detect overlapping assignments
+    from collections import defaultdict
+    room_slots_seen = defaultdict(set)  # (room_id, day_idx) -> set of occupied slot indices
+    fac_slots_seen  = defaultdict(set)  # (faculty_id, day_idx) -> set of occupied slot indices
+    sec_slots_seen  = defaultdict(set)  # (section_id, day_idx) -> set of occupied slot indices
+
+    for gene in best_schedule.genes:
+        if gene.day_idx < 0 or gene.day_idx >= len(days_list):
+            continue
+        day_str   = days_list[gene.day_idx]
+        start_str = scheduler.slot_to_time(gene.start_idx)
+        end_str   = scheduler.slot_to_time(gene.end_idx)
+
+        # Check if this gene's room+day+slots collide with a previously seen gene
+        slots_used = set(range(gene.start_idx, gene.end_idx))
+        key = (gene.room_id, gene.day_idx)
+        
+        # Room conflict check ---- SKIP if it's the University Field
+        room_info = scheduler.room_map.get(gene.room_id, {})
+        room_name = room_info.get('room_name', '')
+        is_field  = "FIELD" in room_name.upper()
+        
+        conflict = False
+        if not is_field:
+            # 1. Check Room Overlap
+            conflict = bool(slots_used & room_slots_seen[key])
+            room_slots_seen[key] |= slots_used
+            
+        # 2. Check Faculty Overlap (Skip if T.B.A.)
+        if not conflict and gene.faculty_id:
+            fac_info = scheduler.faculty_map.get(gene.faculty_id, {})
+            fac_name = fac_info.get('full_name', '')
+            if fac_name.upper() != 'T.B.A.':
+                fac_key = (gene.faculty_id, gene.day_idx)
+                if slots_used & fac_slots_seen[fac_key]:
+                    conflict = True
+                fac_slots_seen[fac_key] |= slots_used
+
+        # 3. HC-16: Section overlap (same section double-booked at same time)
+        if not conflict:
+            sec_key = (gene.section_id, gene.day_idx)
+            if slots_used & sec_slots_seen[sec_key]:
+                conflict = True
+            sec_slots_seen[sec_key] |= slots_used
+
+        # Infer proper session_type for Fixed (pre-assigned) genes from room type
+        if gene.gene_type == 'Fixed':
+            _caps = room_info.get('capabilities', '')
+            _stype = 'Lab' if 'Computer Lab' in _caps else 'Lec'
+        else:
+            _stype = gene.gene_type
+
+        objects_to_save.append(ScheduledClass(
+            course_id=gene.course_id,
+            section_id=gene.section_id,
+            faculty_id=gene.faculty_id,
+            room_id=gene.room_id,
+            day=day_str,
+            start_time=start_str,
+            end_time=end_str,
+            semester=target_semester,
+            has_conflict=conflict,
+            session_type=_stype,
+            source='ga',      # Module 3: mark as GA-generated
+            is_draft=True if draft_id else False,
+            draft_version_id=draft_id if draft_id else None,
+        ))
+
+    issues_count = sum(1 for o in objects_to_save if o.has_conflict)
+    print(f"------------------------  {issues_count} conflicting gene(s) flagged as issues.")
+
+    # 3. Bulk insert
+    db.session.bulk_save_objects(objects_to_save)
+    db.session.commit()
+    print(f"---------------- Saved {len(objects_to_save)} genes for '{target_semester}' ({issues_count} issues).")
+
+    # 4. T.B.A. Sequential Consolidation
+    # Redistribute T.B.A.-assigned classes: fill TBA-01 first, then TBA-02, etc.
+    # T.B.A. faculty bypass all time-conflict HCs so redistribution is conflict-safe.
+    import re
+    tba_all = Faculty.query.filter_by(full_name='T.B.A.').all()
+    if len(tba_all) > 1:
+        tba_sorted = sorted(
+            tba_all,
+            key=lambda f: int(re.search(r'\d+', f.employee_id or '0').group() or 0)
+        )
+        tba_id_list = [t.id for t in tba_sorted]
+        if draft_id:
+            tba_classes = (
+                ScheduledClass.query
+                .filter(
+                    ScheduledClass.faculty_id.in_(tba_id_list),
+                    ScheduledClass.semester == target_semester,
+                    ScheduledClass.draft_version_id == draft_id,
+                    ScheduledClass.is_draft == True
+                )
+                .order_by(ScheduledClass.section_id, ScheduledClass.course_id)
+                .all()
+            )
+        else:
+            tba_classes = (
+                ScheduledClass.query
+                .filter(
+                    ScheduledClass.faculty_id.in_(tba_id_list),
+                    ScheduledClass.semester == target_semester,
+                    ScheduledClass.is_draft == False
+                )
+                .order_by(ScheduledClass.section_id, ScheduledClass.course_id)
+                .all()
+            )
+        if tba_classes:
+            _idx = 0
+            for _tba in tba_sorted:
+                # Threshold = 80% of (max_weekly_hours / 3 hrs per class)
+                _threshold = max(1, int((_tba.max_weekly_hours or 999) * 0.8 / 3))
+                _count = 0
+                while _idx < len(tba_classes) and _count < _threshold:
+                    tba_classes[_idx].faculty_id = _tba.id
+                    _idx += 1
+                    _count += 1
+                if _idx >= len(tba_classes):
+                    break
+            db.session.commit()
+            print(f"---------------- T.B.A. consolidation: {len(tba_classes)} class(es) concentrated to TBA-01 first.")
 
 # --- REAL-TIME GENERATION ROUTES ---
 # app.py
@@ -7177,6 +7349,14 @@ def run_ga_in_background(scheduler, target_semester='1st Semester', draft_id=Non
                     'violation_codes': v_codes
                 })
 
+            # Heartbeat watchdog — if client has been silent > 30s, auto-stop
+            import time
+            if (generation_status.get('requester_sid')
+                    and time.time() - generation_status.get('last_heartbeat', time.time()) > 30):
+                print("⚠️  GA heartbeat lost (>30s) — auto-stopping")
+                generation_status['stop_requested'] = True
+                generation_status['auto_stopped']   = True
+
             if generation_status['stop_requested']: raise Exception("StoppedByUser")
 
         # ------------------------------------ Warm start: load THIS semester's saved schedule as seed ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -7234,6 +7414,8 @@ def run_ga_in_background(scheduler, target_semester='1st Semester', draft_id=Non
             import traceback
             print(f"------------- GA error: {e}\n{traceback.format_exc()}")
             best_schedule = None
+            generation_status['error'] = str(e)
+            generation_status['done'] = True
 
         # ------------------------------------ C-3: Diagnostic print when HC > 0 at end of run ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         if best_schedule and best_schedule.hard_conflicts > 0:
@@ -7258,147 +7440,24 @@ def run_ga_in_background(scheduler, target_semester='1st Semester', draft_id=Non
 
         try:
             if best_schedule:
-                # 1. Replace only THIS semester's schedule (other semesters untouched)
-                if draft_id:
-                    db.session.query(ScheduledClass).filter_by(semester=target_semester, draft_version_id=draft_id, is_draft=True).delete()
-                else:
-                    db.session.query(ScheduledClass).filter_by(semester=target_semester, is_draft=False).delete()
-                db.session.commit()
-
-                # 2. Convert GA genes -> DB records with semester tag
-                #    Detect room-conflict genes by re-scanning the final chromosome.
-                objects_to_save = []
-                days_list = scheduler.days
-
-                # Build a simple occupancy map to detect overlapping assignments
-                from collections import defaultdict
-                room_slots_seen = defaultdict(set)  # (room_id, day_idx) -> set of occupied slot indices
-                fac_slots_seen  = defaultdict(set)  # (faculty_id, day_idx) -> set of occupied slot indices
-                sec_slots_seen  = defaultdict(set)  # (section_id, day_idx) -> set of occupied slot indices
-
-
-
-                for gene in best_schedule.genes:
-                    if gene.day_idx < 0 or gene.day_idx >= len(days_list):
-                        continue
-                    day_str   = days_list[gene.day_idx]
-                    start_str = scheduler.slot_to_time(gene.start_idx)
-                    end_str   = scheduler.slot_to_time(gene.end_idx)
-
-                    # Check if this gene's room+day+slots collide with a previously seen gene
-                    slots_used = set(range(gene.start_idx, gene.end_idx))
-                    key = (gene.room_id, gene.day_idx)
-                    
-                    # Room conflict check ---- SKIP if it's the University Field
-                    room_info = scheduler.room_map.get(gene.room_id, {})
-                    room_name = room_info.get('room_name', '')
-                    is_field  = "FIELD" in room_name.upper()
-                    
-                    conflict = False
-                    if not is_field:
-                        # 1. Check Room Overlap
-                        conflict = bool(slots_used & room_slots_seen[key])
-                        room_slots_seen[key] |= slots_used
-                        
-                    # 2. Check Faculty Overlap (Skip if T.B.A.)
-                    if not conflict and gene.faculty_id:
-                        fac_info = scheduler.faculty_map.get(gene.faculty_id, {})
-                        fac_name = fac_info.get('full_name', '')
-                        if fac_name.upper() != 'T.B.A.':
-                            fac_key = (gene.faculty_id, gene.day_idx)
-                            if slots_used & fac_slots_seen[fac_key]:
-                                conflict = True
-                            fac_slots_seen[fac_key] |= slots_used
-
-                    # 3. HC-16: Section overlap (same section double-booked at same time)
-                    if not conflict:
-                        sec_key = (gene.section_id, gene.day_idx)
-                        if slots_used & sec_slots_seen[sec_key]:
-                            conflict = True
-                        sec_slots_seen[sec_key] |= slots_used
-
-                    # Infer proper session_type for Fixed (pre-assigned) genes from room type
-                    if gene.gene_type == 'Fixed':
-                        _caps = room_info.get('capabilities', '')
-                        _stype = 'Lab' if 'Computer Lab' in _caps else 'Lec'
-                    else:
-                        _stype = gene.gene_type
-
-                    objects_to_save.append(ScheduledClass(
-                        course_id=gene.course_id,
-                        section_id=gene.section_id,
-                        faculty_id=gene.faculty_id,
-                        room_id=gene.room_id,
-                        day=day_str,
-                        start_time=start_str,
-                        end_time=end_str,
-                        semester=target_semester,
-                        has_conflict=conflict,
-                        session_type=_stype,
-                        source='ga',      # Module 3: mark as GA-generated
-                        is_draft=True if draft_id else False,
-                        draft_version_id=draft_id if draft_id else None,
-                    ))
-
-                issues_count = sum(1 for o in objects_to_save if o.has_conflict)
-                print(f"------------------------  {issues_count} conflicting gene(s) flagged as issues.")
-
-                # 3. Bulk insert
-                db.session.bulk_save_objects(objects_to_save)
-                db.session.commit()
-                print(f"---------------- Saved {len(objects_to_save)} genes for '{target_semester}' ({issues_count} issues).")
-
-                # 4. T.B.A. Sequential Consolidation
-                # Redistribute T.B.A.-assigned classes: fill TBA-01 first, then TBA-02, etc.
-                # T.B.A. faculty bypass all time-conflict HCs so redistribution is conflict-safe.
-                tba_all = Faculty.query.filter_by(full_name='T.B.A.').all()
-                if len(tba_all) > 1:
-                    tba_sorted = sorted(
-                        tba_all,
-                        key=lambda f: int(re.search(r'\d+', f.employee_id or '0').group() or 0)
-                    )
-                    tba_id_list = [t.id for t in tba_sorted]
-                    if draft_id:
-                        tba_classes = (
-                            ScheduledClass.query
-                            .filter(
-                                ScheduledClass.faculty_id.in_(tba_id_list),
-                                ScheduledClass.semester == target_semester,
-                                ScheduledClass.draft_version_id == draft_id,
-                                ScheduledClass.is_draft == True
-                            )
-                            .order_by(ScheduledClass.section_id, ScheduledClass.course_id)
-                            .all()
-                        )
-                    else:
-                        tba_classes = (
-                            ScheduledClass.query
-                            .filter(
-                                ScheduledClass.faculty_id.in_(tba_id_list),
-                                ScheduledClass.semester == target_semester,
-                                ScheduledClass.is_draft == False
-                            )
-                            .order_by(ScheduledClass.section_id, ScheduledClass.course_id)
-                            .all()
-                        )
-                    if tba_classes:
-                        _idx = 0
-                        for _tba in tba_sorted:
-                            # Threshold = 80% of (max_weekly_hours / 3 hrs per class)
-                            _threshold = max(1, int((_tba.max_weekly_hours or 999) * 0.8 / 3))
-                            _count = 0
-                            while _idx < len(tba_classes) and _count < _threshold:
-                                tba_classes[_idx].faculty_id = _tba.id
-                                _idx += 1
-                                _count += 1
-                            if _idx >= len(tba_classes):
-                                break
-                        db.session.commit()
-                        print(f"---------------- T.B.A. consolidation: {len(tba_classes)} class(es) concentrated to TBA-01 first.")
+                _save_best_schedule_to_db(scheduler, best_schedule, target_semester, draft_id)
         except Exception as e:
             import traceback
             print(f"------------- Save error: {e}\n{traceback.format_exc()}")
         finally:
+            # ── Auto-Save on Disconnect/Heartbeat-Loss ──
+            if generation_status.get('auto_stopped') and best_schedule:
+                _auto_draft_id = generation_status.get('auto_saved_draft_id') or draft_id
+                _auto_gen = generation_status.get('generation', 0)
+                print(f"💾 Auto-saving at Generation {_auto_gen} to draft_id={_auto_draft_id}...")
+                try:
+                    _save_best_schedule_to_db(scheduler, best_schedule, target_semester, _auto_draft_id)
+                    generation_status['auto_saved_gen'] = _auto_gen
+                    generation_status['auto_saved_draft_id'] = _auto_draft_id
+                    print(f"✅ Auto-save complete.")
+                except Exception as _ae:
+                    print(f"❌ Auto-save failed: {_ae}")
+
             generation_status['running'] = False
             generation_status['total_time'] = round(time.time() - _gen_start_time, 1)
             generation_status['total_generations'] = generation_status.get('generation', 0)
@@ -7664,6 +7723,15 @@ def start_generation():
     # Associate hardware profile with status
     generation_status['hardware'] = scheduler.hardware_profile
     
+    # Store who started this run for disconnect detection
+    import time
+    generation_status['requester_sid'] = req_data.get('socket_id')
+    generation_status['requester_uid'] = session.get('user_id')
+    generation_status['last_heartbeat'] = time.time()
+    generation_status['auto_stopped'] = False
+    generation_status['auto_saved_gen'] = None
+    generation_status['auto_saved_draft_id'] = draft_id
+    
     # 3. START THREAD (pass semester so save/seed are scoped correctly)
     thread = threading.Thread(target=run_ga_in_background, args=(scheduler, target_semester, draft_id))
     thread.start()
@@ -7702,6 +7770,28 @@ def stop_generation():
 @role_required('admin', 'superadmin')
 def get_generation_status():
     return jsonify(generation_status)
+
+@app.route('/api/ga/auto-save-status')
+@login_required
+def api_ga_auto_save_status():
+    gen = generation_status.get('auto_saved_gen')
+    draft_id_saved = generation_status.get('auto_saved_draft_id')
+    draft_name = None
+    if draft_id_saved:
+        dv = DraftVersion.query.get(draft_id_saved)
+        draft_name = dv.name if dv else None
+    return jsonify({
+        'auto_saved_gen': gen,
+        'auto_saved_draft_id': draft_id_saved,
+        'auto_saved_draft_name': draft_name
+    })
+
+@app.route('/api/ga/clear-auto-save-status', methods=['POST'])
+@login_required
+def api_ga_clear_auto_save_status():
+    generation_status['auto_saved_gen']      = None
+    generation_status['auto_saved_draft_id'] = None
+    return jsonify({'ok': True})
 
 
 @app.route('/api/check-feasibility', methods=['POST'])
@@ -9944,7 +10034,7 @@ def check_constraints():
 
     # Sanitize and filter out orphaned schedules whose course or section was deleted
     clean_schedules = []
-    for s in ScheduledClass.query.all():
+    for s in ScheduledClass.query.filter_by(is_draft=False).all():
         if not s.course or not s.section:
             continue
         # Ensure room and faculty are not None by substituting dummy objects
@@ -9971,8 +10061,38 @@ def check_constraints():
     else:
         schedules = all_schedules
     all_sections = Section.query.all()
+    section_weekly_hours = {}
+    for sec in all_sections:
+        total_h = 0
+        for course in sec.courses:
+            if target_semester != 'All' and course.semester_offered != target_semester:
+                continue
+            lec_h = course.synchronous_lec_hours if course.synchronous_lec_hours > 0 else course.lec_units
+            lab_h = course.synchronous_lab_hours if course.synchronous_lab_hours > 0 else course.lab_units
+            total_h += (lec_h or 0) + (lab_h or 0)
+        section_weekly_hours[sec.id] = total_h
+
     constraints_db = Constraint.query.all()
     settings = {c.logic_code: c.constraint_type for c in constraints_db}
+    constraints_map = {c.logic_code: c for c in constraints_db}
+
+    # Built-in structural / overlap constraints are ALWAYS active, regardless of database NC status
+    _built_in = {
+        'SECTION_OVERLAP', 'FACULTY_OVERLAP', 'ROOM_OVERLAP',
+        'SINGLE_FACULTY_PER_TIMESLOT', 'MAX_CONSECUTIVE_STUDENT',
+        'MAX_CONSECUTIVE_FACULTY'
+    }
+
+    def is_active(code):
+        if code in _built_in:
+            return True
+        return settings.get(code, 'HC') != 'NC'
+
+    def get_type(code):
+        if code in _built_in:
+            db_type = settings.get(code)
+            return db_type if db_type and db_type != 'NC' else 'HC'
+        return settings.get(code, 'HC')
 
     violations = []
 
@@ -9983,15 +10103,12 @@ def check_constraints():
         except:
             return 0
 
-    def is_active(code):
-        return settings.get(code, 'HC') != 'NC'
-
     # Pre-identify virtual rooms (TBA/Virtual/Online) to exempt from physical-only constraints
     _v_rooms = {r.id for r in Room.query.filter(
         (Room.room_name.ilike('%TBA%')) | (Room.room_name.ilike('%Virtual%')) | (Room.room_name.ilike('%Online%'))
     ).all()}
 
-    # DYNAMIC ROOM IDLE GAP THRESHOLD (SC-I-04)
+    # DYNAMIC ROOM IDLE GAP THRESHOLD (SC-I-03)
     # Short-circuit scan: if any scheduled course is 1-hour, threshold is 30 mins.
     # Otherwise, threshold is 90 mins (1.5 hours).
     _min_dur_m = 120
@@ -10002,9 +10119,18 @@ def check_constraints():
             break
     _idle_gap_limit = _min_dur_m - 30
 
-    def add_v(code, rule, desc, ca, cb=None):
+    def add_v(code, default_rule, desc, ca, cb=None):
         if is_active(code):
-            violations.append({'type': settings.get(code, 'HC'), 'rule': rule, 'desc': desc, 'class_a': ca, 'class_b': cb})
+            c_obj = constraints_map.get(code)
+            rule_name = c_obj.name if c_obj else default_rule
+            c_type = get_type(code)
+            violations.append({
+                'type': c_type,
+                'rule': rule_name,
+                'desc': desc,
+                'class_a': ca,
+                'class_b': cb
+            })
 
     # Fake schedule object for allocation-only violations (no actual ScheduledClass row)
     class Fake:
@@ -10138,23 +10264,27 @@ def check_constraints():
         dur_h   = (end_m - start_m) / 60
         code_up = s.course.course_code.upper()
 
-        # HC-03: Global Day Restriction (no Sunday classes)
-        if s.day == 'Sunday':
-            add_v('GLOBAL_DAY_RESTRICTION', 'Global Day Restriction', 'No classes on Sunday.', s)
+        # HC-02: Global Day Restriction (no Sunday classes or non-academic days)
+        if s.day == 'Sunday' or (allowed_days_set and s.day not in allowed_days_set):
+            add_v('GLOBAL_DAY_RESTRICTION', 'Global Day Restriction', f'Class scheduled on restricted day ({s.day}).', s)
 
-        # HC-23: Operating Hours (7:00 AM — 9:00 PM)
+        # HC-14: Operating Hours (7:00 AM — 9:00 PM)
         if start_m < 420 or end_m > 1260:
             add_v('OPERATING_HOURS', 'Operating Hours Compliance', 'Class scheduled outside 7 AM—9 PM.', s)
 
-        # HC-24: Hourly Alignment (start on the hour or half-hour)
-        if start_m % 30 != 0:
-            add_v('HOURLY_ALIGNMENT', 'Hourly Time Alignment', 'Class must start on the hour or half-hour.', s)
+        # HC-15: Hourly Alignment (start exactly on the hour to match GA)
+        if start_m % 60 != 0:
+            add_v('HOURLY_ALIGNMENT', 'Hourly Time Alignment', 'Class must start exactly on the hour.', s)
 
-        # HC-22: Room Availability
+        # HC-12: Single Room per Session (Session cannot use 2 rooms at once)
+        if not s.room_id or s.room.room_name == 'N/A':
+            add_v('SINGLE_ROOM_PER_SESSION', 'Single Room per Session', 'Class session has no room allocated.', s)
+
+        # HC-13: Room Availability
         if s.room.status != 'Available':
             add_v('ROOM_AVAILABILITY', 'Room Availability', f"Room is marked '{s.room.status}'.", s)
 
-        # HC-21: Room Type Suitability (lab session must be in a Computer Lab)
+        # HC-25: Room Type Suitability (lab session must be in a Computer Lab)
         if s.room.room_name not in special_rooms:
             is_lab_r = 'Computer Lab' in (s.room.capabilities or '')
             is_lec_r = 'Lecture' in (s.room.capabilities or '')
@@ -10166,13 +10296,13 @@ def check_constraints():
                 # Lab in a non-lab room is still a Hard Conflict
                 add_v('ROOM_SUITABILITY', 'Room Type Suitability', f'Lab session assigned to non-lab room ({s.room.room_name}).', s)
             elif not is_lab_session and is_lab_r and not is_lec_r:
-                # Lec in a pure Lab room is now a SOFT Fallback
+                # Lec in a pure Lab room is now a fallback
                 add_v('LEC_IN_LAB_FALLBACK', 'Lecture in Lab Fallback', f'Lecture session is using a Lab room ({s.room.room_name}) as fallback.', s)
             elif not is_lab_session and is_lab_r and is_lec_r and s.room.room_name[:1] == 'B':
                 # B-rooms (Labs with Lec capability) are also reported as fallbacks for Lec sessions
                 add_v('LEC_IN_LAB_FALLBACK', 'Lecture in Lab Fallback', f'Lecture is in Lab room {s.room.room_name}.', s)
 
-        # SC-II-05: Room Capacity Allocation (Absolute Fit)
+        # SC-II-01: Room Capacity Allocation (Absolute Fit)
         r_name_up = (s.room.room_name or '').upper()
         if not any(ex in r_name_up for ex in ['COURT', 'GYM', 'T.B.A.', 'ONLINE', 'VIRTUAL']):
             diff = abs(s.room.capacity - s.section.number_of_students)
@@ -10180,9 +10310,12 @@ def check_constraints():
                 add_v('ROOM_CAPACITY_PROPORTIONAL', 'Room Capacity Allocation',
                       f'Room {s.room.room_name} capacity ({s.room.capacity}) is not a close fit for {s.section.number_of_students} students (Diff: {diff}).', s)
 
-        # SC-II-04: Lunch Break ---- checked at section-day level in GROUP 3 below
+        # SC-I-01: Virtual Room Usage (Synchronous class in virtual room Online/TBA)
+        if s.session_type in ['Lec', 'Lab'] and s.room.room_name in ['Online Room', 'T.B.A.']:
+            add_v('VIRTUAL_ROOM_USAGE', 'Virtual Room Usage',
+                  f'Synchronous {s.session_type} session is scheduled in a virtual room ({s.room.room_name}).', s)
 
-        # SC-I-03: Evening Avoidance (Physical Room Only)
+        # SC-I-02: Evening Avoidance (Physical Room Only)
         if s.room_id not in _v_rooms:
             if start_m >= 1140: # 7:00 PM onwards
                 add_v('EVENING_AVOIDANCE', 'Evening Avoidance',
@@ -10195,14 +10328,14 @@ def check_constraints():
         pass
 
 
-        # HC-18: Faculty Availability (faculty must be available on the scheduled day)
+        # HC-11: Faculty Availability (faculty must be available on the scheduled day)
         if s.faculty_id and s.faculty.full_name != 'T.B.A.':
             fac_avail = set((s.faculty.available_days or '').split(','))
             if fac_avail and s.day not in fac_avail:
                 add_v('FACULTY_AVAILABILITY', 'Faculty Availability',
                       f'{s.faculty.full_name} is not available on {s.day}.', s)
 
-        # HC-27: Faculty Day Split (session must land on its designated split day)
+        # HC-18: Faculty Day Split (session must land on its designated split day)
         if s.faculty_id and s.section_id and s.course_id:
             _split_key = (s.faculty_id, s.course_id, s.section_id)
             _split_days = _split_map_cc.get(_split_key)
@@ -10214,50 +10347,56 @@ def check_constraints():
                           f'{s.section.section_name} is on {s.day} but split requires '
                           f'{" or ".join(_allowed_days)}.', s)
 
-        # HC-08 / HC-09 / HC-10 / HC-11: Strict Duration Checks
+        # HC-03 / HC-04 / HC-05 / HC-06: Duration Checks
         if s.room and s.room.room_name not in special_rooms:
             req_sl_d    = s.course.synchronous_lec_hours if s.course.synchronous_lec_hours > 0 else s.course.lec_units
             req_slab_d  = s.course.synchronous_lab_hours if s.course.synchronous_lab_hours > 0 else s.course.lab_units
             async_lec_d = s.course.asynchronous_lec_hours or 0
             async_lab_d = s.course.asynchronous_lab_hours or 0
             async_d     = async_lec_d + async_lab_d
-            is_lab_r    = s.room and 'Computer Lab' in (s.room.capabilities or '')
             stype       = s.session_type or 'Lec'
-            if stype == 'Lab' and req_slab_d > 0:
-                # HC-09: Lab session duration ---- use group sum to handle day-split sessions
-                # (e.g. 3h+3h split -> total 6h = expected 6h -> no violation)
-                _hc09_pair = (s.course_id, s.section_id)
-                if _hc09_pair not in _hc09_seen:
-                    _hc09_seen.add(_hc09_pair)
-                    _total_lab_h = _lab_dur_sum.get(_hc09_pair, dur_h)
-                    if abs(_total_lab_h - req_slab_d) > 0.5:
-                        add_v('STRICT_LAB_DURATION', 'Strict Laboratory Duration',
-                              f'Lab for {s.course.course_code} is {_total_lab_h:.1f}h total, expected {req_slab_d}h.', s)
-            elif stype == 'Async' and async_d > 0:
-                # Async session ---- check HC-10 and HC-11 independently
-                if abs(dur_h - async_d) > 0.5:
-                    # HC-10: Async Lecture Duration (fires if course has async lec component)
-                    if async_lec_d > 0:
-                        add_v('STRICT_ASYNC_LEC_DUR', 'Strict Async Lecture Duration',
-                              f'Async session for {s.course.course_code} is {dur_h:.1f}h; '
-                              f'async lec component expects {async_lec_d}h.', s)
-                    # HC-11: Async Lab Duration (fires if course has async lab component)
-                    if async_lab_d > 0:
-                        add_v('STRICT_ASYNC_LAB_DUR', 'Strict Async Laboratory Duration',
-                              f'Async session for {s.course.course_code} is {dur_h:.1f}h; '
-                              f'async lab component expects {async_lab_d}h.', s)
-            elif stype == 'Lec' and req_sl_d > 0:
-                # HC-08: Lecture session duration ---- use group sum to handle day-split sessions
-                _hc08_pair = (s.course_id, s.section_id)
-                if _hc08_pair not in _hc08_seen:
-                    _hc08_seen.add(_hc08_pair)
-                    _total_lec_h = _lec_dur_sum.get(_hc08_pair, dur_h)
-                    if abs(_total_lec_h - req_sl_d) > 0.5:
-                        add_v('STRICT_LEC_DURATION', 'Strict Lecture Duration',
-                              f'Lecture for {s.course.course_code} is {_total_lec_h:.1f}h total, expected {req_sl_d}h.', s)
+            
+            if stype == 'Lab':
+                if req_slab_d == 0:
+                    add_v('STRICT_LAB_DURATION', 'Invalid Laboratory Component',
+                          f'Laboratory for {s.course.course_code} is scheduled, but curriculum expects 0h.', s)
+                else:
+                    _hc09_pair = (s.course_id, s.section_id)
+                    if _hc09_pair not in _hc09_seen:
+                        _hc09_seen.add(_hc09_pair)
+                        _total_lab_h = _lab_dur_sum.get(_hc09_pair, dur_h)
+                        if abs(_total_lab_h - req_slab_d) > 0.5:
+                            add_v('STRICT_LAB_DURATION', 'Strict Laboratory Duration',
+                                  f'Lab for {s.course.course_code} is {_total_lab_h:.1f}h total, expected {req_slab_d}h.', s)
+            elif stype == 'Async':
+                if async_d == 0:
+                    add_v('COMPLETE_COURSE_SCHEDULING', 'Invalid Async Component',
+                          f'Async session for {s.course.course_code} is scheduled, but curriculum expects 0h.', s)
+                else:
+                    if abs(dur_h - async_d) > 0.5:
+                        if async_lec_d > 0:
+                            add_v('STRICT_ASYNC_LEC_DUR', 'Strict Async Lecture Duration',
+                                  f'Async session for {s.course.course_code} is {dur_h:.1f}h; '
+                                  f'async lec component expects {async_lec_d}h.', s)
+                        if async_lab_d > 0:
+                            add_v('STRICT_ASYNC_LAB_DUR', 'Strict Async Laboratory Duration',
+                                  f'Async session for {s.course.course_code} is {dur_h:.1f}h; '
+                                  f'async lab component expects {async_lab_d}h.', s)
+            elif stype == 'Lec':
+                if req_sl_d == 0:
+                    add_v('STRICT_LEC_DURATION', 'Invalid Lecture Component',
+                          f'Lecture for {s.course.course_code} is scheduled, but curriculum expects 0h.', s)
+                else:
+                    _hc08_pair = (s.course_id, s.section_id)
+                    if _hc08_pair not in _hc08_seen:
+                        _hc08_seen.add(_hc08_pair)
+                        _total_lec_h = _lec_dur_sum.get(_hc08_pair, dur_h)
+                        if abs(_total_lec_h - req_sl_d) > 0.5:
+                            add_v('STRICT_LEC_DURATION', 'Strict Lecture Duration',
+                                  f'Lecture for {s.course.course_code} is {_total_lec_h:.1f}h total, expected {req_sl_d}h.', s)
 
     # =========================================================
-    # GROUP 2: PAIRWISE OVERLAP CHECKS
+    # GROUP 2: PAIRWISE OVERLAP CHECKS (Built-in!)
     # =========================================================
     count = len(schedules)
     for i in range(count):
@@ -10270,23 +10409,23 @@ def check_constraints():
             if max(start1, start2) >= min(end1, end2):
                 continue
 
-            # HC-16: No Multiple Sections in One Room (was ROOM_CONFLICT)
+            # HC-09: No Multiple Sections in One Room
             if s1.room_id == s2.room_id and s1.room.room_name not in special_rooms:
                 add_v('ROOM_OVERLAP', 'No Room Conflict',
                       f'Room {s1.room.room_name} is double-booked.', s1, s2)
 
-            # HC-13: No Faculty Course Conflict
+            # HC-08: No Faculty Course Conflict
             if s1.faculty_id and s2.faculty_id and s1.faculty_id == s2.faculty_id:
                 if s1.faculty.full_name != 'T.B.A.':
                     add_v('FACULTY_OVERLAP', 'No Faculty Conflict',
                           f'Prof. {s1.faculty.full_name} is double-booked.', s1, s2)
 
-            # HC-12: No Section Course Conflict
+            # HC-07: No Section Course Conflict
             if s1.section_id == s2.section_id:
                 add_v('SECTION_OVERLAP', 'No Section Conflict',
                       f'Section {s1.section.section_name} has overlapping classes.', s1, s2)
 
-            # HC-17: Single Faculty per Section Timeslot
+            # HC-10: Single Faculty per Section Timeslot
             if s1.section_id == s2.section_id:
                 if (s1.faculty_id and s2.faculty_id and s1.faculty_id != s2.faculty_id
                         and s1.faculty.full_name != 'T.B.A.' and s2.faculty.full_name != 'T.B.A.'):
@@ -10350,23 +10489,52 @@ def check_constraints():
     for fac_id, items in faculty_loads.items():
         check_consecutive(list(items), 'Max Consecutive Faculty Load', 'MAX_CONSECUTIVE_FACULTY')
         
-        # SC-II-04: Faculty Lunch Break (10 AM - 2 PM)
+        # HC-19: Faculty Lunch Break (Dynamic)
         daily_fac = {}
         for s in items: daily_fac.setdefault(s.day, []).append(s)
         for day, day_classes in daily_fac.items():
-            _LUNCH_START = 600; _LUNCH_END = 840
-            occ = set()
-            for _c in day_classes:
-                _s = to_minutes(_c.start_time); _e = to_minutes(_c.end_time)
-                for _m in range(max(_s, _LUNCH_START), min(_e, _LUNCH_END), 30): occ.add(_m)
-            if occ and not any(_m not in occ and (_m+30) not in occ for _m in range(_LUNCH_START, _LUNCH_END-30, 30)):
+            if len(day_classes) <= 1:
+                continue
+            total_hours = sum((to_minutes(x.end_time) - to_minutes(x.start_time)) / 60 for x in day_classes)
+            if total_hours <= 3.0:
+                continue
+            
+            # Check for any 1-hour gap (60 consecutive minutes) between classes
+            sorted_classes = sorted(day_classes, key=lambda x: to_minutes(x.start_time))
+            has_one_hour_gap = False
+            for i in range(len(sorted_classes) - 1):
+                prev_end = to_minutes(sorted_classes[i].end_time)
+                next_start = to_minutes(sorted_classes[i + 1].start_time)
+                if next_start - prev_end >= 60:
+                    has_one_hour_gap = True
+                    break
+                    
+            if has_one_hour_gap:
+                continue
+                
+            # Check consecutive hours streak
+            streak = 0
+            last_end = -999
+            has_violation = False
+            for x in sorted_classes:
+                dur = (to_minutes(x.end_time) - to_minutes(x.start_time)) / 60
+                if abs(to_minutes(x.start_time) - last_end) <= 15:
+                    streak += dur
+                else:
+                    streak = dur
+                last_end = to_minutes(x.end_time)
+                if streak > 6:
+                    has_violation = True
+                    break
+            
+            if total_hours > 6.0 or has_violation:
                 add_v('LUNCH_BREAK', 'Faculty Lunch Break',
-                      f'Faculty {day_classes[0].faculty.full_name} has no 1-hr break between 10 AM-2 PM on {day}.', day_classes[0])
+                      f'Faculty {day_classes[0].faculty.full_name} has no 1-hr break after a class or exceeds 6 consecutive hours on {day}.', day_classes[0])
 
     for items in section_loads.values():
         check_consecutive(list(items), 'Max Consecutive Student Load', 'MAX_CONSECUTIVE_STUDENT')
 
-    # HC-04: Lec-before-Lab sequence + SC-I-01/SC-I-03 proximity checks
+    # HC-24: Lec-before-Lab sequence + SC-I-04 Weekly Distribution
     for sec_id, classes in section_courses_map.items():
         subject_map = {}
         for c in classes:
@@ -10382,7 +10550,6 @@ def check_constraints():
             lec_time_rank = day_rank.get(lec.day, 0) * 1440 + to_minutes(lec.start_time)
             lab_time_rank = day_rank.get(lab.day, 0) * 1440 + to_minutes(lab.start_time)
 
-            # HC-04: Lab must not come before Lecture (time-wise)
             if lab_time_rank < lec_time_rank:
                 add_v('LEC_LAB_SEQUENCE', 'Lecture-Laboratory Sequence',
                       f'Lab for {base} is scheduled before its Lecture.', lab, lec)
@@ -10390,40 +10557,59 @@ def check_constraints():
             lec_day = day_rank.get(lec.day, 0)
             lab_day = day_rank.get(lab.day, 0)
 
-            # SC-I-08: Lecture and Lab should be scheduled on different days (Weekly Distribution)
             if lab_day > 0 and lec_day > 0 and lab_day == lec_day:
                 add_v('LEC_LAB_WEEKLY_DIST', 'Lecture-Lab Weekly Distribution',
                       f'Lecture and Lab for {base} are scheduled on the same day.', lab, lec)
 
-
-
-    # SC-I-05/SC-I-06: No isolated lecture/lab; SC-II-02: Min daily section load
+    # Lunch Break and Minimum Daily Section Load
     for sec_id, classes in section_courses_map.items():
         daily = {}
         for c in classes:
             daily.setdefault(c.day, []).append(c)
 
         for day, day_classes in daily.items():
-            # SC-I-08: Lunch Break ---- section must have ---------------1 free hour in 10:00 AM----2:00 PM window
-            # Build set of occupied minute-intervals within the window for this section+day
-            _LUNCH_START = 600   # 10:00 AM in minutes
-            _LUNCH_END   = 840   # 2:00 PM in minutes
-            _SLOT = 60           # 1-hour minimum break
-            occupied_mins = set()
-            for _c in day_classes:
-                _s = to_minutes(_c.start_time)
-                _e = to_minutes(_c.end_time)
-                for _m in range(max(_s, _LUNCH_START), min(_e, _LUNCH_END), 30):
-                    occupied_mins.add(_m)
-            if occupied_mins and not any(
-                _m not in occupied_mins and (_m + 30) not in occupied_mins
-                for _m in range(_LUNCH_START, _LUNCH_END - 30, 30)
-            ):
-                add_v('LUNCH_BREAK', 'Lunch Break Preference',
-                      f'Section {day_classes[0].section.section_name} has no free hour in the 10 AM----2 PM '
-                      f'lunch window on {day}.', day_classes[0])
+            # HC-19: Lunch Break (Dynamic)
+            if len(day_classes) > 1:
+                total_hours = sum((to_minutes(x.end_time) - to_minutes(x.start_time)) / 60 for x in day_classes)
+                if total_hours > 3.0:
+                    sorted_classes = sorted(day_classes, key=lambda x: to_minutes(x.start_time))
+                    has_one_hour_gap = False
+                    for i in range(len(sorted_classes) - 1):
+                        prev_end = to_minutes(sorted_classes[i].end_time)
+                        next_start = to_minutes(sorted_classes[i + 1].start_time)
+                        if next_start - prev_end >= 60:
+                            has_one_hour_gap = True
+                            break
+                    
+                    if not has_one_hour_gap:
+                        # Check consecutive hours streak
+                        streak = 0
+                        last_end = -999
+                        has_violation = False
+                        for x in sorted_classes:
+                            dur = (to_minutes(x.end_time) - to_minutes(x.start_time)) / 60
+                            if abs(to_minutes(x.start_time) - last_end) <= 15:
+                                streak += dur
+                            else:
+                                streak = dur
+                            last_end = to_minutes(x.end_time)
+                            if streak > 6:
+                                has_violation = True
+                                break
+                        
+                        if total_hours > 6.0 or has_violation:
+                            add_v('LUNCH_BREAK', 'Lunch Break Preference',
+                                  f'Section {day_classes[0].section.section_name} has no 1-hr break after a class or exceeds 6 consecutive hours on {day}.', day_classes[0])
 
-            # SC-I-07: Minimum Daily Section Load (Target >= 3.0 Hours)
+            # HC-22: Minimum Daily Section Load (Target >= 3.0 Hours)
+            # EXEMPTION 1: Section total weekly curriculum hours < 6.0h (impossible load to satisfy split minimums)
+            if section_weekly_hours.get(sec_id, 0) < 6.0:
+                continue
+            
+            # EXEMPTION 2: If any class in this section-day is Async, it is exempted
+            if any(s.session_type == 'Async' or (s.room and s.room.capabilities and 'Async' in s.room.capabilities) for s in day_classes):
+                continue
+
             total_dur_h = sum((to_minutes(s.end_time) - to_minutes(s.start_time))/60 for s in day_classes)
             if total_dur_h < 3.0:
                 add_v('MIN_DAILY_SECTION_LOAD', 'Min Daily Section Load',
@@ -10432,13 +10618,12 @@ def check_constraints():
 
 
     # =========================================================
-    # GROUP 4: STRICT ALLOCATION CHECKS (HC-05/06/07) & HC-25
+    # GROUP 4: STRICT ALLOCATION CHECKS (HC-03/04/16)
     # =========================================================
     allocation_audit = {}
     for s in schedules:
         key = (s.section_id, s.course_id)
         allocation_audit.setdefault(key, set())
-        # Use stored session_type directly ---- no more room-type guessing
         allocation_audit[key].add(s.session_type or 'Lec')
 
     scheduled_pairs = {(s.section_id, s.course_id) for s in schedules}
@@ -10450,23 +10635,23 @@ def check_constraints():
             found_types = allocation_audit.get((sec.id, course.id), set())
             fake_obj = Fake(sec, course)
 
-            # HC-03: Missing Lecture
+            # HC-03: Strict Lecture Duration (Missing Lecture)
             if (course.synchronous_lec_hours > 0 or course.lec_units > 0) and 'Lec' not in found_types:
                 add_v('STRICT_LEC_DURATION', 'Missing Lecture',
                       f'Lecture for {course.course_code} ({sec.section_name}) is not scheduled.', fake_obj)
 
-            # HC-04: Missing Laboratory
+            # HC-04: Strict Laboratory Duration (Missing Laboratory)
             if (course.synchronous_lab_hours > 0 or course.lab_units > 0) and 'Lab' not in found_types:
                 add_v('STRICT_LAB_DURATION', 'Missing Laboratory',
                       f'Laboratory for {course.course_code} ({sec.section_name}) is not scheduled.', fake_obj)
 
-            # HC-16: Missing Async
+            # HC-16: Complete Course Plotting (Missing Async)
             has_async = ((course.asynchronous_lec_hours or 0) + (course.asynchronous_lab_hours or 0)) > 0
             if has_async and 'Async' not in found_types:
                 add_v('COMPLETE_COURSE_SCHEDULING', 'Missing Async',
                       f'Async session for {course.course_code} ({sec.section_name}) is not scheduled.', fake_obj)
 
-            # HC-25: Complete Course Scheduling (no session at all for this sec/course pair)
+            # HC-16: Complete Course Plotting (Unscheduled Course)
             if (sec.id, course.id) not in scheduled_pairs:
                 add_v('COMPLETE_COURSE_SCHEDULING', 'Unscheduled Course',
                       f'{course.course_code} for section {sec.section_name} has no scheduled session.', fake_obj)
@@ -10501,7 +10686,7 @@ def check_constraints():
                            if pa.course.semester_offered == target_semester]
 
     if pre_assignments:
-        # HC-01: Locked Schedules ---- pre-assigned class must not have been moved
+        # HC-01: Locked Schedules
         for pa in pre_assignments:
             matching = [s for s in schedules
                         if s.section_id == pa.section_id and s.course_id == pa.course_id]
@@ -10513,48 +10698,37 @@ def check_constraints():
                           f'was changed: expected {pa.day} {pa.start_time}----{pa.end_time} '
                           f'but found {s.day} {s.start_time}----{s.end_time}.', s)
 
-        # HC-18: Pre-assignment Exclusivity ---- no other class may overlap a pre-assigned slot
+        # HC-17: Pre-assignment Exclusivity (checks overlaps with any preassigned slots of any department)
         for pa in pre_assignments:
             pa_start = to_minutes(pa.start_time)
             pa_end   = to_minutes(pa.end_time)
             for s in schedules:
-                if s.section_id != pa.section_id or s.day != pa.day:
+                if s.day != pa.day:
                     continue
                 s_start = to_minutes(s.start_time)
                 s_end   = to_minutes(s.end_time)
                 if max(pa_start, s_start) >= min(pa_end, s_end):
                     continue
-                # Skip if this IS the pre-assigned class itself
-                is_same = (s.course_id == pa.course_id and s.day == pa.day
-                           and s.start_time == pa.start_time and s.end_time == pa.end_time)
-                if not is_same:
+                
+                is_same_class = (s.course_id == pa.course_id and s.section_id == pa.section_id)
+                
+                # Check section overlap
+                if s.section_id == pa.section_id and not is_same_class:
                     add_v('PREASSIGNMENT_EXCLUSIVITY', 'Pre-assignment Exclusivity',
-                          f'Class overlaps a pre-assigned slot for {pa.course.course_code} '
+                          f'Class overlaps a pre-assigned section slot for {pa.course.course_code} '
                           f'({pa.section.section_name}) on {pa.day} {pa.start_time}----{pa.end_time}.', s)
-
-    # =========================================================
-    # GROUP 6: HC-02 ---- MINOR SUBJECT GAP CHECK
-    # =========================================================
-    # "Minor subjects" = courses from departments NOT included in the last generation run.
-    # Each section must have enough free time gaps to accommodate their assigned minor courses.
-    active_scheduled_depts = set(session.get('scheduled_depts', SCHEDULED_DEPARTMENTS))
-    minor_dept_courses = {}  # section_id -> total minor hours needed
-
-    for sec in all_sections:
-        minor_hours = 0
-        for course in sec.courses:
-            if target_semester != 'All' and course.semester_offered != target_semester:
-                continue
-            if course.department and course.department not in active_scheduled_depts:
-                total_h = (
-                    (course.synchronous_lec_hours or course.lec_units or 0) +
-                    (course.synchronous_lab_hours or course.lab_units or 0) +
-                    (course.asynchronous_lec_hours or 0) +
-                    (course.asynchronous_lab_hours or 0)
-                )
-                minor_hours += total_h
-        if minor_hours > 0:
-            minor_dept_courses[sec.id] = minor_hours
+                
+                # Check room overlap
+                if s.room_id == pa.room_id and s.room.room_name not in special_rooms and not is_same_class:
+                    add_v('PREASSIGNMENT_EXCLUSIVITY', 'Pre-assignment Exclusivity',
+                          f'Class in room {s.room.room_name} overlaps a pre-assigned room slot for {pa.course.course_code} '
+                          f'({pa.section.section_name}) on {pa.day} {pa.start_time}----{pa.end_time}.', s)
+                
+                # Check faculty overlap
+                if s.faculty_id and pa.faculty_id and s.faculty_id == pa.faculty_id and s.faculty.full_name != 'T.B.A.' and not is_same_class:
+                    add_v('PREASSIGNMENT_EXCLUSIVITY', 'Pre-assignment Exclusivity',
+                          f'Class for Prof. {s.faculty.full_name} overlaps a pre-assigned faculty slot for {pa.course.course_code} '
+                          f'({pa.section.section_name}) on {pa.day} {pa.start_time}----{pa.end_time}.', s)
 
 
 
@@ -12303,9 +12477,9 @@ def render_a4_page(html_content, table_px, margins=None, for_canvas=False, domin
     overflow: visible;
     position: relative;
   }}
-  /* Debug grid ---- faint outline on every cell */
+  /* Debug grid ---- faint outline disabled for clean printable looks */
   table td, table th {{
-    outline: 0.5px solid rgba(0,0,0,0.10);
+    outline: none;
   }}
   /* Overlap badge ---- cursor only, tooltip via JS */
   .sched-overlap-badge {{ cursor: pointer; }}
@@ -13031,9 +13205,9 @@ def render_viewer_page(html_content, table_px, margins=None, for_canvas=False, d
     overflow: visible;
     position: relative;
   }}
-  /* Debug grid ---- faint outline on every cell */
+  /* Debug grid ---- faint outline disabled for clean printable looks */
   table td, table th {{
-    outline: 0.5px solid rgba(0,0,0,0.10);
+    outline: none;
   }}
   /* Overlap badge ---- cursor only, tooltip via JS */
   .sched-overlap-badge {{ cursor: pointer; }}

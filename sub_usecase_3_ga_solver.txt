@@ -1,0 +1,39 @@
+%%{init: {"flowchart": {"nodeSpacing": 25, "rankSpacing": 50}}}%%
+flowchart LR
+    %% Actors (Strict Vertical Order: SA top, DA middle, UF bottom)
+    SA["👤 Superadmin"]
+    DA["👤 Admin"]
+    UF["👤 User"]
+
+    SA -. inherits .-> DA
+    DA -. inherits .-> UF
+
+    %% Subsystem Boundary
+    subgraph Subsystem ["AI Schedule Generation GA Solver"]
+        LOCK([Lock Master Schedule])
+        PARAMS([Configure GA Params])
+        INIT([Init Population])
+        SOLVER([Run Async GA Solver])
+        FITNESS([Calculate Fitness])
+        AUTO([Run Auto-Schedule])
+        PROGRESS([Track Live Progress])
+    end
+
+    %% Connections (Admin directly manages Lock, Superadmin inherits)
+    DA --> LOCK
+    DA --> PARAMS
+    DA --> INIT
+    DA --> SOLVER
+    DA --> FITNESS
+
+    UF --> AUTO
+    UF --> PROGRESS
+
+    %% Styling
+    classDef actor fill:#f3f4f6,stroke:#4b5563,stroke-width:2px,color:#1f2937,font-weight:bold,font-size:18px;
+    classDef usecase fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1,font-weight:bold,font-size:18px;
+    classDef sys fill:#ffffff,stroke:#1e3a8a,stroke-width:3px,color:#1e3a8a,font-weight:bold,font-size:20px;
+
+    class SA,DA,UF actor;
+    class LOCK,PARAMS,INIT,SOLVER,FITNESS,AUTO,PROGRESS usecase;
+    class Subsystem sys;

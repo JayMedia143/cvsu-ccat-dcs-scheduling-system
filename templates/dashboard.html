@@ -402,6 +402,15 @@
             let autoFocused = false;
 
             socket.on('ga_live_progress', function (data) {
+                if (data.error) {
+                    const indicator = document.getElementById('live-status-indicator');
+                    if (indicator) indicator.classList.add('d-none');
+                    const statsText = document.getElementById('live-stats-text');
+                    if (statsText) {
+                        statsText.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i> <strong>Stopped:</strong> ${data.error}</span>`;
+                    }
+                    return;
+                }
                 if (data.running) {
                     // 1. Show "Optimization Active" UI
                     const indicator = document.getElementById('live-status-indicator');
@@ -462,6 +471,15 @@
             {% if session['role'] == 'user' %}
             socket.emit('join', { room: "user_{{ session['user_id'] }}" });
             socket.on('user_ga_progress', function (data) {
+                if (data.error) {
+                    const indicator = document.getElementById('live-status-indicator');
+                    if (indicator) indicator.classList.add('d-none');
+                    const statsText = document.getElementById('live-stats-text');
+                    if (statsText) {
+                        statsText.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i> <strong>Stopped:</strong> ${data.error}</span>`;
+                    }
+                    return;
+                }
                 const indicator = document.getElementById('live-status-indicator');
                 if (indicator) indicator.classList.remove('d-none');
 

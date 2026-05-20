@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{% block title %}{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/X Logo.png') }}">
     <!-- Dependencies -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -38,8 +39,8 @@
 <body>
     <!-- Post-login loader overlay -->
     <div id="page-loader"
-        style="display:none; position:fixed; inset:0; background:#fff; z-index:9999; align-items:center; justify-content:center;">
-        <img src="{{ url_for('static', filename='assets/loader.gif') }}" style="width:150px; height:150px;"
+        style="display:none; position:fixed; inset:0; background:#06322c; z-index:9999; align-items:center; justify-content:center;">
+        <img src="{{ url_for('static', filename='assets/X-Logo-GIF.gif') }}" style="width:300px; height:300px;"
             alt="Loading...">
     </div>
 
@@ -326,11 +327,17 @@
             }
 
             /* ARCHIVE MODE SIDEBAR FIX */
-            {% if is_hist %}
+                {
+                % if is_hist %
+            }
+
             #offcanvasNavbar {
                 height: 100vh !important;
             }
-            {% endif %}
+
+                {
+                % endif %
+            }
         }
 
         /* Hide footer text on mobile, but keep nav buttons */
@@ -481,14 +488,8 @@
     <!-- MENU BAR (Unified & Responsive) -->
     <nav class="navbar navbar-expand-lg sheets-menubar sticky-top shadow-sm">
         <div class="container-fluid px-3 align-items-center">
-
-            <!-- Mobile Brand/Logo (Visible only on < lg) -->
-            <a class="navbar-brand d-lg-none fw-bold text-success fs-6" href="{{ url_for('dashboard') }}">
-                <i class="bi bi-calendar3 me-1"></i> CvSU Schedule
-            </a>
-
             <!-- Hamburger Toggle (Visible only on < lg) -->
-            <button class="navbar-toggler border-0 p-1 ms-auto me-2" type="button" data-bs-toggle="offcanvas"
+            <button class="navbar-toggler border-0 p-1 me-auto ms-0" type="button" data-bs-toggle="offcanvas"
                 data-bs-target="#offcanvasNavbar" aria-controls="offcanvasNavbar">
                 <i class="bi bi-list fs-3"></i>
             </button>
@@ -989,11 +990,16 @@
                             <div class="col-4">
                                 <label class="form-label text-muted small fw-bold">EVENING START</label>
                                 <select name="evening_start_hour" class="form-select">
-                                    <option value="17" {% if global_settings.evening_start_hour == 17 %}selected{% endif %}>5:00 PM</option>
-                                    <option value="18" {% if global_settings.evening_start_hour == 18 %}selected{% endif %}>6:00 PM</option>
-                                    <option value="19" {% if global_settings.evening_start_hour == 19 or not global_settings.evening_start_hour %}selected{% endif %}>7:00 PM</option>
-                                    <option value="20" {% if global_settings.evening_start_hour == 20 %}selected{% endif %}>8:00 PM</option>
-                                    <option value="21" {% if global_settings.evening_start_hour == 21 %}selected{% endif %}>9:00 PM</option>
+                                    <option value="17" {% if global_settings.evening_start_hour==17 %}selected{% endif
+                                        %}>5:00 PM</option>
+                                    <option value="18" {% if global_settings.evening_start_hour==18 %}selected{% endif
+                                        %}>6:00 PM</option>
+                                    <option value="19" {% if global_settings.evening_start_hour==19 or not
+                                        global_settings.evening_start_hour %}selected{% endif %}>7:00 PM</option>
+                                    <option value="20" {% if global_settings.evening_start_hour==20 %}selected{% endif
+                                        %}>8:00 PM</option>
+                                    <option value="21" {% if global_settings.evening_start_hour==21 %}selected{% endif
+                                        %}>9:00 PM</option>
                                 </select>
                                 <div class="form-text">Avoidance Limit</div>
                             </div>
@@ -1518,6 +1524,13 @@
                 }
             }
 
+            // Hide editor mode modal if open to prevent layering conflict
+            const editorModalEl = document.getElementById('editorModeModal');
+            if (editorModalEl) {
+                const inst = bootstrap.Modal.getInstance(editorModalEl);
+                if (inst) inst.hide();
+            }
+
             // Show modal
             const modalEl = document.getElementById('archiveSnapshotModal');
             if (modalEl) new bootstrap.Modal(modalEl).show();
@@ -1901,9 +1914,44 @@
             updateBadge(unreadCount);
         });
 
-        // Initial fetch
+        // ── Heartbeat Monitoring for Genetic Algorithm ──
+        setInterval(() => {
+            if (window.socket && window.socket.connected) {
+                window.socket.emit('ga_heartbeat', {});
+            }
+        }, 15000);
+
+        // ── Auto-save Status Check on Page Load ──
+        async function checkAutoSaveStatus() {
+            try {
+                const response = await fetch('/api/ga/auto-save-status');
+                const data = await response.json();
+                if (data.auto_saved_gen) {
+                    let msg = `Your previous schedule optimization run was automatically saved at <strong>Generation ${data.auto_saved_gen}</strong> due to a disconnection.`;
+                    if (data.auto_saved_draft_name) {
+                        msg += ` Saved under draft: <strong>${data.auto_saved_draft_name}</strong>.`;
+                    }
+                    showToast(msg, 'warning', '⚡ Auto-Save Recovered');
+                    
+                    // Clear the status so it doesn't show again on next refresh
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                    await fetch('/api/ga/clear-auto-save-status', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to check auto-save status:', err);
+            }
+        }
+
+        // Initial fetch & checks
         if ({{ 'true' if 'user_id' in session else 'false' }}) {
             fetchNotifications();
+            checkAutoSaveStatus();
         }
     </script>
 

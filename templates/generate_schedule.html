@@ -864,6 +864,18 @@
     </div>
 </div>
 
+<!-- FEASIBILITY ERROR MODAL -->
+<div class="victory-overlay" id="feasibilityErrorScreen" style="display: none; z-index: 4000;">
+    <div class="modal-box" style="border-top: 5px solid #d93025; max-width: 500px; width: 90%; text-align: center; padding: 30px;">
+        <div class="mb-3 text-danger"><i class="bi bi-exclamation-triangle-fill display-2"></i></div>
+        <h3 class="fw-bold text-danger mb-2" style="font-size: 1.4rem;">Impossible Room Allocation!</h3>
+        <p style="color:#444; font-size: 0.88rem; line-height: 1.6; text-align: left; background: #fff8f8; padding: 15px; border-radius: 8px; border-left: 4px solid #d93025;" id="feasibilityErrorText">
+            It is not possible to generate a conflict-free schedule without using Virtual/Online Rooms because there are not enough physical classrooms. Please consider changing 'Virtual Room Usage' to a Soft Constraint or disabling it to allow online classes.
+        </p>
+        <button onclick="location.reload()" class="btn-primary w-100 mt-3" style="background: #d93025; border: none; font-weight: 600; font-size: 0.9rem; padding: 10px; border-radius: 6px;">Adjust Constraints / Settings</button>
+    </div>
+</div>
+
 
 <style>
     @keyframes slideIn {
@@ -1828,16 +1840,35 @@
             while (log.firstChild) log.removeChild(log.firstChild);
             t0 = Date.now(); tInt = setInterval(function () { var d = Date.now() - t0, dt = new Date(d); tmr.innerText = dt.toISOString().substr(11, 8); }, 1000);
 
+            var socketId = (window.socket && window.socket.id) ? window.socket.id : null;
             fetch('/start-generation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content },
-                body: JSON.stringify({ semester: sem, fresh_start: isFresh, scheduled_depts: selectedDepts, draft_version_id: draftId })
+                body: JSON.stringify({ semester: sem, fresh_start: isFresh, scheduled_depts: selectedDepts, draft_version_id: draftId, socket_id: socketId })
             })
                 .then(r => r.json())
                 .then(function () {
                     var lastG = 0;
                     pInt = setInterval(function () {
                         fetch('/get-generation-status').then(r => r.json()).then(d => {
+                            if (d.error) {
+                                clearInterval(pInt);
+                                clearInterval(tInt);
+                                running = false;
+                                stat.innerText = 'Stopped';
+                                fx.innerText = '=ERROR("' + d.error + '")';
+                                
+                                const errScreen = document.getElementById('feasibilityErrorScreen');
+                                const errText = document.getElementById('feasibilityErrorText');
+                                if (errScreen && errText) {
+                                    errText.innerText = d.error;
+                                    errScreen.style.display = 'flex';
+                                } else {
+                                    alert("🛑 Generation Stopped:\n\n" + d.error);
+                                    location.reload();
+                                }
+                                return;
+                            }
                             if (d.visual_matrix) mat = d.visual_matrix;
                             var hc = d.hard_conflicts || 0, sc1 = d.sc1_violations || 0, sc2 = d.sc2_violations || 0;
                             hG.innerText = d.generation;
