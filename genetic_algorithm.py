@@ -643,6 +643,7 @@ class GeneticScheduler:
 
         # Pre-cache section available day indices
         self._sec_avail_days = {}
+        self._sec_blocked_bitmasks = {}  # {(section_id, day_idx): bitmask}
         for s in sections:
             avail_str = s.get('available_days', '')
             if avail_str:
@@ -653,6 +654,30 @@ class GeneticScheduler:
                         avail_set.add(self.day_map[day])
                 if avail_set:
                     self._sec_avail_days[s['id']] = avail_set
+
+            raw_blocked = s.get('blocked_slots') or []
+            if isinstance(raw_blocked, str):
+                import json
+                try:
+                    raw_blocked = json.loads(raw_blocked)
+                except Exception:
+                    raw_blocked = []
+
+            for blk in (raw_blocked or []):
+                dname = blk.get('day', '')
+                didx = self.day_map.get(dname)
+                if didx is not None:
+                    try:
+                        sh, sm = map(int, blk['start'].split(':'))
+                        eh, em = map(int, blk['end'].split(':'))
+                        s_slot = max(0, (sh - start_time) * 2 + (1 if sm >= 30 else 0))
+                        e_slot = min((end_time - start_time) * 2, (eh - start_time) * 2 + (1 if em >= 30 else 0))
+                        if e_slot > s_slot:
+                            mask = ((1 << (e_slot - s_slot)) - 1) << s_slot
+                            key = (s['id'], didx)
+                            self._sec_blocked_bitmasks[key] = self._sec_blocked_bitmasks.get(key, 0) | mask
+                    except Exception:
+                        pass
 
         # Precompute time-boundary slots
         self.noon_slot          = (12 - start_time) * 2
@@ -666,7 +691,7 @@ class GeneticScheduler:
         self.lunch_window_end   = (14 - start_time) * 2   # 2pm
 
         self.tba_room_ids = {r['id'] for r in rooms if r.get('room_name', '') == 'T.B.A.'}
-        self.online_room_ids = {r['id'] for r in rooms if r.get('room_name', '') == 'Online Room'}
+        self.online_room_ids = {r['id'] for r in rooms if r.get('room_name', '') == 'Online Room' or r.get('building', '') == 'Online Room'}
         self.online_room_id = next(iter(self.online_room_ids), None)
 
         # Pre-cache valid rooms by gene_type (computed once)
@@ -1689,7 +1714,8 @@ class GeneticScheduler:
                     | (occ_fac.get((fac_id, d), 0)
                        if fac_id and fac_id not in self.multi_assignment_faculty
                        else 0)
-                    | self._blocked_bitmasks.get(d, 0))
+                    | self._blocked_bitmasks.get(d, 0)
+                    | self._sec_blocked_bitmasks.get((sec_id, d), 0))
 
         start = _compact_gap_scan(combined, slots, self.total_slots)
         while start >= 0:
@@ -1797,6 +1823,9 @@ class GeneticScheduler:
                         key=lambda d: occ_sec.get((g.section_id, d), 0).bit_count()
                     )
                     for d in _days_reclaim:
+                        sec_avail_set = self._sec_avail_days.get(g.section_id)
+                        if sec_avail_set and d not in sec_avail_set:
+                            continue
                         if fa_avail and d not in fa_avail:
                             continue
                         combined = (occ_room.get((rid, d), 0)
@@ -1805,7 +1834,8 @@ class GeneticScheduler:
                                        if g.faculty_id and g.faculty_id
                                        not in self.multi_assignment_faculty
                                        else 0)
-                                    | self._blocked_bitmasks.get(d, 0))
+                                    | self._blocked_bitmasks.get(d, 0)
+                                    | self._sec_blocked_bitmasks.get((g.section_id, d), 0))
 
                         start = _compact_gap_scan(combined, slots, total_slots)
                         if start < 0:
@@ -1830,70 +1860,194 @@ class GeneticScheduler:
     def _try_compact_place(self, gene, occ_room, occ_fac, occ_sec,
                             min_day=0, min_start_sd=-1, pref_fac=None, hc24_src_day=-1):
         """
-        Compact placement: tries to append immediately after the last session
-        in the gene's current room-day, then tries same room other days,
-        then tries other rooms in order (gravity logic, A1→A6/B1→B6).
-        Much faster than exhaustive scan and keeps rooms packed.
+        Gap-fill placement for a gene into a physical room.
+
+        Strategy:
+          - Lab genes  : lab rooms first, then lec rooms (unchanged)
+          - Lec genes  : TWO explicit phases —
+              Phase 1: scan ALL lecture rooms for any interior gap (full
+                       _compact_gap_scan, not just append-to-tail).
+                       Only if every lec room fails on every day…
+              Phase 2: scan lab rooms as a true last-resort overflow.
+
+        This guarantees lecture rooms are filled to capacity (interior gaps
+        included) before a single Lec gene touches a lab room.
         """
-        slots = gene.duration_slots
+        slots     = gene.duration_slots
         mask_full = (1 << slots) - 1
-        dept = self.course_map.get(gene.course_id, {}).get('department', '')
-        
+        dept      = self.course_map.get(gene.course_id, {}).get('department', '')
+
+        # ── Room pools ─────────────────────────────────────────────────────
         if gene.gene_type == 'Lab':
-            room_order = self._seq_lab_rooms + self._seq_lec_rooms
+            # Lab genes: lab rooms first, lec rooms as overflow (original behaviour)
+            room_phases = [self._seq_lab_rooms, self._seq_lec_rooms]
         else:
-            room_order = self._seq_lec_rooms + self._seq_lab_rooms
+            # Lec genes: Phase 1 always = lec rooms.
+            # Phase 2 (lab fallback) only included when HC-23 is active —
+            # mirrors the same guard in randomize_gene_fast so both paths
+            # behave identically when HC-23 is OFF.
+            _hc23_active = self._pen_type.get('LEC_IN_LAB_FALLBACK', 'NC') != 'NC'
+            room_phases = [self._seq_lec_rooms] + ([self._seq_lab_rooms] if _hc23_active else [])
 
-        # Filter by dept exclusivity
-        valid_rooms = []
-        for rid in room_order:
-            rd_set = self._room_depts.get(rid)
-            if rd_set:
-                norm_dept = _norm_dept(dept)
-                if not any(_norm_dept(d_name) == norm_dept for d_name in rd_set):
-                    continue
-            valid_rooms.append(rid)
-        room_order = valid_rooms
-
-        fac_id = pref_fac or gene.faculty_id
+        fac_id       = pref_fac or gene.faculty_id
         fa_avail_set = (self._fac_avail_days.get(fac_id)
                         if fac_id and fac_id not in self.multi_assignment_faculty else None)
 
-        for rid in room_order:
-            if rid in self.online_room_ids: continue
-            day_order = self._get_density_guided_days(gene.section_id, occ_sec, min_day, priority_day=hc24_src_day)
-            for d in day_order:
-                sec_avail_set = self._sec_avail_days.get(gene.section_id)
-                if sec_avail_set and d not in sec_avail_set: continue
-                if fa_avail_set and d not in fa_avail_set: continue
-                blocked = self._blocked_bitmasks.get(d, 0)
-                # Compact: start right after what's already in this room-day
-                existing_bits = occ_room.get((rid, d), 0)
-                if existing_bits == 0:
-                    last_end = 0   # Empty room: start from slot 0
-                else:
-                    last_end = existing_bits.bit_length()
-                    if last_end % 2 != 0: last_end += 1
+        norm_dept = _norm_dept(dept)
 
-                while last_end + slots <= self.total_slots:
-                    m = mask_full << last_end
-                    if (blocked & m) != 0: last_end += 2; continue
-                    if d == min_day and min_start_sd >= 0 and last_end <= min_start_sd:
-                        last_end += 2; continue
-                    if rid not in self.multi_assignment_rooms:
-                        if (occ_room.get((rid, d), 0) & m) != 0: last_end += 2; continue
-                    if fac_id and fac_id not in self.multi_assignment_faculty:
-                        if (occ_fac.get((fac_id, d), 0) & m) != 0: last_end += 2; continue
-                    if (occ_sec.get((gene.section_id, d), 0) & m) != 0: last_end += 2; continue
+        def _dept_ok(rid):
+            rd_set = self._room_depts.get(rid)
+            if not rd_set:
+                return True
+            return any(_norm_dept(d_name) == norm_dept for d_name in rd_set)
 
-                    # Place it
-                    gene.day_idx = d
-                    gene.start_idx = last_end
-                    gene.end_idx = last_end + slots
-                    gene.room_id = rid
+        def _try_room_day(rid, d):
+            """
+            Full interior gap scan for (rid, d).
+            Uses _compact_gap_scan so mid-room holes are found, not just the tail.
+            Returns True and mutates gene if placed, else False.
+            """
+            sec_avail_set = self._sec_avail_days.get(gene.section_id)
+            if sec_avail_set and d not in sec_avail_set:
+                return False
+            if fa_avail_set and d not in fa_avail_set:
+                return False
+
+            combined = (occ_room.get((rid, d), 0)
+                        | occ_sec.get((gene.section_id, d), 0)
+                        | (occ_fac.get((fac_id, d), 0)
+                           if fac_id and fac_id not in self.multi_assignment_faculty else 0)
+                        | self._blocked_bitmasks.get(d, 0)
+                        | self._sec_blocked_bitmasks.get((gene.section_id, d), 0))
+
+            # Start scan from min_start_sd constraint if applicable
+            scan_from = (min_start_sd + 2) if (d == min_day and min_start_sd >= 0) else 0
+
+            start = _compact_gap_scan(combined, slots, self.total_slots, scan_from)
+            while start >= 0:
+                m = mask_full << start
+                # Consecutive-hours guard (section + faculty)
+                new_sec = occ_sec.get((gene.section_id, d), 0) | m
+                new_fac = (occ_fac.get((fac_id, d), 0)
+                           if fac_id and fac_id not in self.multi_assignment_faculty else 0) | m
+                if _is_valid_break_mask(new_sec) and _is_valid_break_mask(new_fac):
+                    gene.day_idx   = d
+                    gene.start_idx = start
+                    gene.end_idx   = start + slots
+                    gene.room_id   = rid
                     gene.faculty_id = fac_id
-                    gene.bitmask = m
+                    gene.bitmask   = m
                     return True
+                start = _compact_gap_scan(combined, slots, self.total_slots, start + 2)
+            return False
+
+        # ── Two-phase scan ─────────────────────────────────────────────────
+        for phase_rooms in room_phases:
+            for rid in phase_rooms:
+                if rid in self.online_room_ids:
+                    continue
+                if not _dept_ok(rid):
+                    continue
+                day_order = self._get_density_guided_days(
+                    gene.section_id, occ_sec, min_day, priority_day=hc24_src_day)
+                for d in day_order:
+                    if _try_room_day(rid, d):
+                        return True
+        return False
+
+    def _is_any_physical_slot_feasible(self, gene, room_bits, fac_bits, sec_bits):
+        """
+        Fast scan to check if there is at least one physical timeslot/room combo
+        where 'gene' could be placed without causing room overlap, faculty overlap,
+        section overlap, consecutive hours, lunch break, or minimum daily load violations.
+        """
+        if not gene.section_id:
+            return False
+            
+        dept = self.course_map.get(gene.course_id, {}).get('department', '')
+        
+        # Get Lec and Lab rooms suitable for this department
+        lec_rooms = self._dept_rooms_lec.get(dept) or []
+        lab_rooms = self._dept_rooms_lab.get(dept) or []
+        candidate_rooms = lec_rooms + lab_rooms
+        
+        slots = gene.duration_slots
+        mask_needed = (1 << slots) - 1
+        
+        # Available days filter for section and faculty
+        sec_avail = self._sec_avail_days.get(gene.section_id)
+        fac_avail = self._fac_avail_days.get(gene.faculty_id) if gene.faculty_id else None
+        
+        _lw_mask = self._lunch_window_mask
+        
+        for d in range(len(self.days)):
+            if sec_avail and d not in sec_avail:
+                continue
+            if fac_avail and d not in fac_avail:
+                continue
+                
+            # Faculty and section bitmasks for this day
+            f_cur = fac_bits.get((gene.faculty_id, d), 0) if gene.faculty_id else 0
+            s_cur = sec_bits.get((gene.section_id, d), 0)
+            
+            # Since classes start on even slots, step by 2
+            for start in range(0, self.total_slots - slots + 1, 2):
+                mask = mask_needed << start
+                
+                # 1. Faculty overlap check
+                if gene.faculty_id and gene.faculty_id not in self.multi_assignment_faculty:
+                    if (f_cur & mask) != 0:
+                        continue
+                # 2. Section overlap check
+                if (s_cur & mask) != 0:
+                    continue
+                    
+                # 3. Consecutive-hours check
+                new_s = s_cur | mask
+                if not _is_valid_break_mask(new_s):
+                    continue
+                new_f = f_cur | mask
+                if gene.faculty_id and gene.faculty_id not in self.multi_assignment_faculty:
+                    if not _is_valid_break_mask(new_f):
+                        continue
+                        
+                # 4. Lunch Break check (HC-19)
+                # Check section lunch break
+                _sec_occ_lunch = new_s & _lw_mask
+                if _sec_occ_lunch:
+                    _sec_free_lunch = (~_sec_occ_lunch) & _lw_mask
+                    if not (_sec_free_lunch & (_sec_free_lunch >> 1)):
+                        continue
+                
+                # Check faculty lunch break
+                if gene.faculty_id and gene.faculty_id not in self.multi_assignment_faculty:
+                    _fac_occ_lunch = new_f & _lw_mask
+                    if _fac_occ_lunch:
+                        _fac_free_lunch = (~_fac_occ_lunch) & _lw_mask
+                        if not (_fac_free_lunch & (_fac_free_lunch >> 1)):
+                            continue
+                            
+                # 5. Min Daily Section Load check (HC-22)
+                if gene.section_id not in self._hc24_exempt_sections:
+                    if 0 < new_s.bit_count() < 6:
+                        continue
+                        
+                # 6. Room check
+                for rid in candidate_rooms:
+                    if rid in self.online_room_ids:
+                        continue
+                    # Department Exclusivity Rule
+                    r_depts_set = self._room_depts.get(rid)
+                    if r_depts_set:
+                        _c_info = self.course_map.get(gene.course_id, {})
+                        gene_dept = _norm_dept(_c_info.get('department', ''))
+                        if gene_dept not in r_depts_set:
+                            continue
+                            
+                    r_cur = room_bits.get((rid, d), 0)
+                    if (r_cur & mask) == 0:
+                        # Found a completely legal, conflict-free physical room slot!
+                        return True
         return False
 
     # ------------------------------------------------------------------ #
@@ -1981,6 +2135,18 @@ class GeneticScheduler:
                 if ctype == 'SC1': sc1_violations += 1
                 else: sc2_violations += 1
 
+        full_room_bits = defaultdict(int)
+        full_fac_bits  = defaultdict(int)
+        full_sec_bits  = defaultdict(int)
+        for _g in genes:
+            _m = _g.bitmask
+            _d = _g.day_idx
+            if _g.room_id not in self.online_room_ids and _g.room_id not in self.multi_assignment_rooms:
+                full_room_bits[(_g.room_id, _d)] |= _m
+            if _g.faculty_id and _g.faculty_id not in self.multi_assignment_faculty:
+                full_fac_bits[(_g.faculty_id, _d)] |= _m
+            full_sec_bits[(_g.section_id, _d)] |= _m
+
         for i, g in enumerate(genes):
             # Absolute Stop Check (Every 10 genes for near-instant response)
             if i % 10 == 0:
@@ -2014,46 +2180,27 @@ class GeneticScheduler:
                     #   (a) All Lab rooms are full at that timeslot, OR
                     #   (b) Moving to Lab would cause faculty/section overlap, OR
                     #   (c) Moving to Lab would violate Max Consecutive Hours (faculty or section)
-                    if (g.gene_type == 'Lec'
-                            and g.room_id in self.online_room_ids
-                            and g.duration_slots in (2, 4)):  # 1hr=2slots, 2hr=4slots only
-                        p = pen.get('LEC_IN_LAB_FALLBACK', 0)
-                        if p:
-                            _dept_fb = self.course_map.get(g.course_id, {}).get('department', '')
-                            _lab_rooms_fb = self._dept_rooms_lab.get(_dept_fb) or []
-                            _day_fb, _gmask_fb = g.day_idx, g.bitmask
-                            _fac_cur  = fac_bits.get((g.faculty_id, _day_fb), 0) if g.faculty_id else 0
-                            _sec_cur  = sec_bits.get((g.section_id, _day_fb), 0)
-                            _new_fac  = _fac_cur | _gmask_fb
-                            _new_sec  = _sec_cur | _gmask_fb
-                            # Pre-check: would placing anywhere on this day violate consecutive hours?
-                            # If yes, no point scanning Lab rooms — terminate penalty immediately.
-                            _consec_ok = (
-                                (g.faculty_id is None or g.faculty_id in self.multi_assignment_faculty
-                                 or _is_valid_break_mask(_new_fac))
-                                and _is_valid_break_mask(_new_sec)
-                            )
-                            _any_lab_feasible = False
-                            if _consec_ok:
-                                _any_lab_feasible = any(
-                                    (room_bits.get((rid, _day_fb), 0) & _gmask_fb) == 0
-                                    and (g.faculty_id is None
-                                         or g.faculty_id in self.multi_assignment_faculty
-                                         or (_fac_cur & _gmask_fb) == 0)
-                                    and (_sec_cur & _gmask_fb) == 0
-                                    for rid in _lab_rooms_fb
-                                )
-                            if _any_lab_feasible:
-                                # A conflict-free Lab slot exists (no overlap, no consecutive violation)
-                                # → gene should be there, not Online → penalize
-                                _apply_violation('LEC_IN_LAB_FALLBACK', p, [i], [g.is_fixed])
-                            # else: Lab infeasible (puno, conflict, or consecutive hours) → 0 penalty (terminate)
+                    # HC-23 Online Fallback completely deactivated to prevent hard deadlocks and optimize performance.
+                    pass
 
                     # ── VIRTUAL_ROOM_USAGE ──
                     if g.gene_type in ['Lec', 'Lab'] and g.room_id in self.online_room_ids:
                         p = pen.get('VIRTUAL_ROOM_USAGE', 100)
                         if p:
-                            _apply_violation('VIRTUAL_ROOM_USAGE', p, [i], [g.is_fixed])
+                            # Temporarily subtract this gene's occupancy so it doesn't block itself
+                            _d, _m = g.day_idx, g.bitmask
+                            if g.faculty_id and g.faculty_id not in self.multi_assignment_faculty:
+                                full_fac_bits[(g.faculty_id, _d)] &= ~_m
+                            full_sec_bits[(g.section_id, _d)] &= ~_m
+
+                            # Only penalize if at least one physical room slot was actually feasible in the entire week
+                            if self._is_any_physical_slot_feasible(g, full_room_bits, full_fac_bits, full_sec_bits):
+                                _apply_violation('VIRTUAL_ROOM_USAGE', p, [i], [g.is_fixed])
+
+                            # Restore the occupancy
+                            if g.faculty_id and g.faculty_id not in self.multi_assignment_faculty:
+                                full_fac_bits[(g.faculty_id, _d)] |= _m
+                            full_sec_bits[(g.section_id, _d)] |= _m
 
                     # ── ROOM_SUITABILITY (HC) ──
                     else:
@@ -2069,19 +2216,8 @@ class GeneticScheduler:
                     # ── HC-23: Lecture in Lab Fallback (Intelligent Check) ──
                     # Penalize ONLY if a Lec room was free at this gene's day+timeslot.
                     # If all Lec rooms were occupied → true fallback → 0 penalty.
-                    if g.gene_type == 'Lec' and 'Computer Lab' in r.get('capabilities', ''):
-                        p = pen.get('LEC_IN_LAB_FALLBACK', 0)
-                        if p:
-                            _lec_rooms = self._lec_room_set
-                            _day, _gmask = g.day_idx, g.bitmask
-                            _any_lec_free = any(
-                                (room_bits.get((rid, _day), 0) & _gmask) == 0
-                                for rid in _lec_rooms
-                            )
-                            if _any_lec_free:
-                                # A Lec room WAS available → unnecessary Lab usage → penalize
-                                _apply_violation('LEC_IN_LAB_FALLBACK', p, [i], [g.is_fixed])
-                            # else: All Lec rooms were full → true fallback → 0 penalty
+                    # HC-23 Lec-in-Lab Fallback completely deactivated to prevent hard deadlocks and optimize performance.
+                    pass
 
 
                     _cap_hc = pen_type.get('ROOM_CAPACITY_PROPORTIONAL', 'SC2') == 'HC'
@@ -2913,6 +3049,7 @@ class GeneticScheduler:
                     f_mask = (occ_fac.get((fac_id, d), 0) if fac_id is not None else 0)
                     f_mask |= occ_sec.get((sec_id, d), 0)
                     f_mask |= self._blocked_bitmasks.get(d, 0)
+                    f_mask |= self._sec_blocked_bitmasks.get((sec_id, d), 0)
 
                     for rid in sorted_pool:
                         if rid in self.multi_assignment_rooms: continue
@@ -2953,9 +3090,11 @@ class GeneticScheduler:
             for fac_id in fac_candidates:
                 for d in range(days_count):
                     if _locked_day >= 0 and d != _locked_day: continue
+                    sec_avail_set = self._sec_avail_days.get(sec_id)
+                    if sec_avail_set and d not in sec_avail_set: continue
                     fa_mask  = (occ_fac.get((fac_id, d), 0) if fac_id is not None else 0)
                     sec_mask = occ_sec.get((sec_id, d), 0)
-                    combined = fa_mask | sec_mask
+                    combined = fa_mask | sec_mask | self._sec_blocked_bitmasks.get((sec_id, d), 0)
                     for start in starts:
                         mask = ((1 << slots_needed) - 1) << start
                         if (combined & mask) == 0:

@@ -204,6 +204,17 @@ class MockPagination:
                 last = num
 
 
+def redirect_to_referrer(default_endpoint, safe_path):
+    """
+    Safely redirects back to the referrer URL (retaining page, search, sort, filters)
+    if it matches the expected safe sub-path; otherwise redirects to the default endpoint.
+    """
+    referrer = request.referrer
+    if referrer and safe_path in referrer:
+        return redirect(referrer)
+    return redirect(url_for(default_endpoint))
+
+
 def sanitize_input(text):
     """
     XSS Protection: Strips all HTML tags from user input to ensure 
@@ -578,6 +589,7 @@ class Section(db.Model):
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     courses = db.relationship('Course', secondary=section_courses, lazy='subquery', backref=db.backref('sections', lazy=True))
     available_days = db.Column(db.Text, nullable=False, default='Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday')
+    blocked_slots = db.Column(db.Text, nullable=True, default='[]')
 
 class Faculty(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1110,30 +1122,57 @@ def on_handle_disconnect():
         print(f"SID {sid} disconnected for user {uid}")
 
     # ── GA Auto-Stop on Client Disconnect ──
-    if (generation_status.get('running')
-            and generation_status.get('requester_sid') == sid):
-        print(f"⚠️ GA requester SID {sid} disconnected — triggering auto-stop")
-        generation_status['stop_requested'] = True
-        generation_status['auto_stopped'] = True
-        try:
-            ga_stop_event.send(True)
-        except:
-            pass
-        # Write signal file (nuclear option, same as manual stop)
-        try:
-            sig_path = os.path.join(basedir, "ga_stop.signal")
-            with open(sig_path, "w") as f:
-                f.write("STOP_AUTO")
-        except:
-            pass
+    # Note: We commented out immediate socket auto-stop so tab-switching won't kill the generation.
+    # The background generation will continue to rely on the Web Worker heartbeat pings
+    # and the 45-second server watchdog timer, or the explicit client_leaving event below.
+    #
+    # if (generation_status.get('running')
+    #         and generation_status.get('requester_sid') == sid):
+    #     print(f"⚠️ GA requester SID {sid} disconnected — triggering auto-stop")
+    #     generation_status['stop_requested'] = True
+    #     generation_status['auto_stopped'] = True
+    #     try:
+    #         ga_stop_event.send(True)
+    #     except:
+    #         pass
+    #     # Write signal file (nuclear option, same as manual stop)
+    #     try:
+    #         sig_path = os.path.join(basedir, "ga_stop.signal")
+    #         with open(sig_path, "w") as f:
+    #             f.write("STOP_AUTO")
+    #     except:
+    #         pass
 
 @socketio.on('ga_heartbeat')
 def on_ga_heartbeat(data):
     """Client pings every 15s while GA is running to prove it's still alive."""
     import time
     if (generation_status.get('running')
-            and generation_status.get('requester_sid') == request.sid):
+            and generation_status.get('requester_uid') == session.get('user_id')):
         generation_status['last_heartbeat'] = time.time()
+        # Dynamically update the active socket session ID upon a reconnection
+        if generation_status.get('requester_sid') != request.sid:
+            print(f"🔄 Socket reconnect detected. Updating requester_sid to {request.sid}")
+            generation_status['requester_sid'] = request.sid
+
+@socketio.on('client_leaving')
+def on_client_leaving(data=None):
+    """Fires when the client explicitly closes the tab or navigates away."""
+    global generation_status
+    if generation_status.get('running'):
+        print(f"👋 Client explicitly leaving page (via Socket) — triggering instant auto-stop and save")
+        generation_status['stop_requested'] = True
+        generation_status['auto_stopped'] = True
+        try:
+            ga_stop_event.send(True)
+        except:
+            pass
+        try:
+            sig_path = os.path.join(basedir, "ga_stop.signal")
+            with open(sig_path, "w") as f:
+                f.write("STOP_AUTO")
+        except:
+            pass
 
 # Module 7: MONITORING SOCKET HANDLERS
 @socketio.on('join_monitoring')
@@ -2742,7 +2781,7 @@ def update_course(course_id):
     if not verify_department_access(course):
         flash("You are not authorized to update this course as it belongs to another department.", "danger")
         log_security('Unauthorized Access Attempt', details=f"User {session.get('username')} tried to update course id {course_id} in {course.department}")
-        return redirect(url_for('manage_courses'))
+        return redirect_to_referrer('manage_courses', '/manage/courses')
 
     # 1. Length Validation
     constraints = {
@@ -2753,7 +2792,7 @@ def update_course(course_id):
     ok, err = validate_lengths(request.form, constraints)
     if not ok:
         flash(err, "danger")
-        return redirect(url_for('manage_courses'))
+        return redirect_to_referrer('manage_courses', '/manage/courses')
 
     new_code = sanitize_input(request.form.get('course_code', '').strip())
     new_name = sanitize_input(request.form.get('course_name', '').strip())
@@ -2762,7 +2801,7 @@ def update_course(course_id):
     existing = Course.query.filter(Course.course_code == new_code, Course.id != course_id, Course.is_archived == False).first()
     if existing:
         flash(f"Course code '{new_code}' is already taken.", "danger")
-        return redirect(url_for('manage_courses'))
+        return redirect_to_referrer('manage_courses', '/manage/courses')
     
     course.course_code = new_code
     course.course_name = new_name
@@ -2794,7 +2833,8 @@ def update_course(course_id):
     # Module 7: Log action
     log_activity('Update Course', f"Updated course {new_code}")
     
-    return redirect(url_for('manage_courses'))
+    flash('Course updated successfully.', 'success')
+    return redirect_to_referrer('manage_courses', '/manage/courses')
 
 @app.route('/manage/courses/archive')
 @login_required
@@ -2841,7 +2881,7 @@ def archive_course(course_id):
     # Role-based access check
     if session.get('role') == 'user' and course.created_by_id != session.get('user_id'):
         flash("You are not authorized to archive this course.", "danger")
-        return redirect(url_for('manage_courses'))
+        return redirect_to_referrer('manage_courses', '/manage/courses')
 
     course.is_archived = True
     course.deleted_at = datetime.utcnow()
@@ -2851,7 +2891,7 @@ def archive_course(course_id):
     log_activity('Archive Course', f"Archived course {course.course_code}")
     
     flash('Course moved to Recycle Bin.', 'success')
-    return redirect(url_for('manage_courses'))
+    return redirect_to_referrer('manage_courses', '/manage/courses')
 
 @app.route('/manage/course/restore/<int:course_id>', methods=['POST'])
 @login_required
@@ -3760,10 +3800,10 @@ def update_room(room_id):
     if not verify_department_access(room):
         flash("You are not authorized to update this room as it belongs to another department.", "danger")
         log_security('Unauthorized Access Attempt', details=f"User {session.get('username')} tried to update room id {room_id}")
-        return redirect(url_for('manage_rooms'))
+        return redirect_to_referrer('manage_rooms', '/manage/rooms')
     if room.room_name == 'T.B.A.':
         flash('T.B.A. room cannot be edited.', 'warning')
-        return redirect(url_for('manage_rooms'))
+        return redirect_to_referrer('manage_rooms', '/manage/rooms')
     # 1. Length Validation
     constraints = {
         'room_name': 50,
@@ -3772,7 +3812,7 @@ def update_room(room_id):
     ok, err = validate_lengths(request.form, constraints)
     if not ok:
         flash(err, "danger")
-        return redirect(url_for('manage_rooms'))
+        return redirect_to_referrer('manage_rooms', '/manage/rooms')
 
     new_name = sanitize_input(request.form.get('room_name', '').strip())
     new_building = sanitize_input(request.form.get('building', '').strip())
@@ -3780,7 +3820,7 @@ def update_room(room_id):
     existing = Room.query.filter(Room.room_name == new_name, Room.id != room_id, Room.is_archived == False).first()
     if existing:
         flash(f"Error: Room name '{new_name}' is already taken.", 'danger')
-        return redirect(url_for('manage_rooms'))
+        return redirect_to_referrer('manage_rooms', '/manage/rooms')
     
     room.room_name = new_name
     room.building = new_building
@@ -3806,7 +3846,8 @@ def update_room(room_id):
     # Module 7: Log action
     log_activity('Update Room', f"Updated room {new_name}")
     
-    return redirect(url_for('manage_rooms'))
+    flash('Room updated successfully.', 'success')
+    return redirect_to_referrer('manage_rooms', '/manage/rooms')
 
 # =====================================================================
 # MODULE 4: ARCHIVE MANAGEMENT (NEW)
@@ -4005,9 +4046,9 @@ def rooms_archive():
 @login_required
 def archive_room(room_id):
     room = Room.query.get_or_404(room_id)
-    if room.room_name in ['T.B.A.', 'Online Room']:
+    if room.room_name in ['T.B.A.', 'Online Room'] or room.building == 'Online Room':
         flash(f'{room.room_name} room cannot be archived.', 'warning')
-        return redirect(url_for('manage_rooms'))
+        return redirect_to_referrer('manage_rooms', '/manage/rooms')
     room.is_archived = True
     room.deleted_at = datetime.utcnow()
     db.session.commit()
@@ -4016,7 +4057,7 @@ def archive_room(room_id):
     log_activity('Archive Room', f"Archived room {room.room_name}")
     
     flash('Room moved to Recycle Bin.', 'success')
-    return redirect(url_for('manage_rooms'))
+    return redirect_to_referrer('manage_rooms', '/manage/rooms')
 
 @app.route('/manage/room/restore/<int:room_id>', methods=['POST'])
 @login_required
@@ -4037,7 +4078,7 @@ def restore_room(room_id):
 @login_required
 def delete_room(room_id):
     room = Room.query.get_or_404(room_id)
-    if room.room_name in ['T.B.A.', 'Online Room']:
+    if room.room_name in ['T.B.A.', 'Online Room'] or room.building == 'Online Room':
         flash(f'{room.room_name} room cannot be deleted.', 'warning')
         return redirect(url_for('manage_rooms'))
     ScheduledClass.query.filter_by(room_id=room_id).update({'room_id': None}, synchronize_session=False)
@@ -4178,12 +4219,14 @@ def add_section():
 
     avail_days = request.form.getlist('available_days')
     avail_days_str = ','.join(avail_days) if avail_days else 'Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'
+    blocked_slots = request.form.get('blocked_slots', '[]') or '[]'
 
     db.session.add(Section(
         section_name=section_name, 
         year_level=int(request.form.get('year_level')), 
         number_of_students=int(request.form.get('number_of_students', 40)),
         available_days=avail_days_str,
+        blocked_slots=blocked_slots,
         created_by_id=session.get('user_id') # Track creator
     ))
     db.session.commit()
@@ -4208,14 +4251,14 @@ def update_section(section_id):
     ok, err = validate_lengths(request.form, constraints)
     if not ok:
         flash(err, "danger")
-        return redirect(url_for('manage_sections'))
+        return redirect_to_referrer('manage_sections', '/manage/sections')
 
     new_name = sanitize_input(request.form.get('section_name', '').strip())
     
     existing = Section.query.filter(Section.section_name == new_name, Section.id != section_id, Section.is_archived == False).first()
     if existing:
         flash(f"Error: Section name '{new_name}' is already taken.", 'danger')
-        return redirect(url_for('manage_sections'))
+        return redirect_to_referrer('manage_sections', '/manage/sections')
     
     section.section_name = new_name
     section.year_level = int(request.form.get('year_level'))
@@ -4226,6 +4269,8 @@ def update_section(section_id):
     # Conditional update for hidden fields
     if 'number_of_students' in request.form:
         section.number_of_students = int(request.form.get('number_of_students', 40))
+    if 'blocked_slots' in request.form:
+        section.blocked_slots = request.form.get('blocked_slots', '[]') or '[]'
         
     db.session.commit()
     
@@ -4233,7 +4278,7 @@ def update_section(section_id):
     log_activity('Update Section', f"Updated section {new_name}")
     
     flash('Section updated successfully.', 'success')
-    return redirect(url_for('manage_sections'))
+    return redirect_to_referrer('manage_sections', '/manage/sections')
 
 # app.py
 
@@ -4384,7 +4429,7 @@ def archive_section(section_id):
     section = Section.query.get_or_404(section_id)
     if section.section_name == 'T.B.A.':
         flash('The T.B.A. section is a system section and cannot be moved to Recycle Bin.', 'warning')
-        return redirect(url_for('manage_sections'))
+        return redirect_to_referrer('manage_sections', '/manage/sections')
     section.is_archived = True
     section.deleted_at = datetime.utcnow()
     db.session.commit()
@@ -4393,7 +4438,7 @@ def archive_section(section_id):
     log_activity('Archive Section', f"Archived section {section.section_name}")
     
     flash('Section moved to Recycle Bin.', 'success')
-    return redirect(url_for('manage_sections'))
+    return redirect_to_referrer('manage_sections', '/manage/sections')
 
 @app.route('/manage/section/restore/<int:section_id>', methods=['POST'])
 @login_required
@@ -4938,7 +4983,7 @@ def update_faculty(faculty_id):
     if not verify_department_access(faculty):
         flash("You are not authorized to update this faculty member as they belong to another department.", "danger")
         log_security('Unauthorized Access Attempt', details=f"User {session.get('username')} tried to update faculty id {faculty_id}")
-        return redirect(url_for('manage_faculty'))
+        return redirect_to_referrer('manage_faculty', '/manage/faculty')
     # 1. Length Validation
     constraints = {
         'employee_id': 20,
@@ -4950,7 +4995,7 @@ def update_faculty(faculty_id):
     ok, err = validate_lengths(request.form, constraints)
     if not ok:
         flash(err, 'danger')
-        return redirect(url_for('manage_faculty'))
+        return redirect_to_referrer('manage_faculty', '/manage/faculty')
 
     new_id = sanitize_input(request.form.get('employee_id', '').strip())
     new_name = sanitize_input(request.form.get('full_name', '').strip())
@@ -4961,7 +5006,7 @@ def update_faculty(faculty_id):
     existing = Faculty.query.filter(Faculty.employee_id == new_id, Faculty.id != faculty_id, Faculty.is_archived == False).first()
     if existing:
         flash(f"Faculty Employee ID '{new_id}' is already taken.", "danger")
-        return redirect(url_for('manage_faculty'))
+        return redirect_to_referrer('manage_faculty', '/manage/faculty')
 
     faculty.employee_id = new_id
     faculty.full_name = new_name
@@ -4986,7 +5031,7 @@ def update_faculty(faculty_id):
     log_activity('Update Faculty', f"Updated faculty {faculty.full_name}")
     
     flash('Faculty updated successfully.', 'success')
-    return redirect(url_for('manage_faculty'))
+    return redirect_to_referrer('manage_faculty', '/manage/faculty')
 
 # --- BULK ACTIONS FOR FACULTY ---
 
@@ -5086,7 +5131,7 @@ def archive_faculty(faculty_id):
     log_activity('Archive Faculty', f"Archived faculty {faculty.full_name}")
     
     flash('Faculty moved to Recycle Bin.', 'success')
-    return redirect(url_for('manage_faculty'))
+    return redirect_to_referrer('manage_faculty', '/manage/faculty')
 
 @app.route('/manage/faculty/restore/<int:faculty_id>', methods=['POST'])
 @login_required
@@ -6517,7 +6562,7 @@ def export_excel_bulk():
                 
                 # FIRST LAYER ONLY FILTER FOR ONLINE ROOMS
                 # Prevents overlapping visual blocks and merges for virtual rooms on the visual grid.
-                is_online_room = (report_type == 'room' and display_name and "ONLINE" in display_name.upper())
+                is_online_room = (report_type == 'room' and display_name and ("ONLINE" in display_name.upper() or (sc.room and sc.room.building == 'Online Room')))
                 if is_online_room:
                     # Check if there is already a plotted slot on this day that overlaps with this range
                     has_overlap = False
@@ -7349,11 +7394,11 @@ def run_ga_in_background(scheduler, target_semester='1st Semester', draft_id=Non
                     'violation_codes': v_codes
                 })
 
-            # Heartbeat watchdog — if client has been silent > 30s, auto-stop
+            # Heartbeat watchdog — if client has been silent > 45s, auto-stop
             import time
             if (generation_status.get('requester_sid')
-                    and time.time() - generation_status.get('last_heartbeat', time.time()) > 30):
-                print("⚠️  GA heartbeat lost (>30s) — auto-stopping")
+                    and time.time() - generation_status.get('last_heartbeat', time.time()) > 45):
+                print("⚠️  GA heartbeat lost (>45s) — auto-stopping")
                 generation_status['stop_requested'] = True
                 generation_status['auto_stopped']   = True
 
@@ -7594,7 +7639,7 @@ def start_generation():
     raw_rooms = Room.query.filter(
         Room.is_archived == False
     ).all()
-    rooms = [{'id': r.id, 'room_name': r.room_name, 'capabilities': r.capabilities, 'status': r.status, 'capacity': r.capacity, 'special_course_ids': r.special_course_ids or '', 'room_departments': r.room_departments or ''} for r in raw_rooms]
+    rooms = [{'id': r.id, 'room_name': r.room_name, 'capabilities': r.capabilities, 'status': r.status, 'capacity': r.capacity, 'special_course_ids': r.special_course_ids or '', 'room_departments': r.room_departments or '', 'building': r.building, 'room_type': r.room_type} for r in raw_rooms]
     
     # --- UPDATED FACULTY FILTERING ---
     # Only include faculty who have workload assigned for this semester (via FacultyAssignment),
@@ -7622,7 +7667,7 @@ def start_generation():
     # Sections (All active - algorithm will only schedule courses assigned to them that match the semester)
     raw_sections = Section.query.filter_by(is_archived=False).all()
     # Note: We still pass all course_ids assigned to section, but the algorithm only schedules those present in 'courses' list
-    sections = [{'id': s.id, 'course_ids': [c.id for c in s.courses], 'number_of_students': s.number_of_students, 'available_days': s.available_days} for s in raw_sections]
+    sections = [{'id': s.id, 'course_ids': [c.id for c in s.courses], 'number_of_students': s.number_of_students, 'available_days': s.available_days, 'blocked_slots': s.blocked_slots} for s in raw_sections]
     
     # Pre-assignments: Filter by ID AND matching the courses in the current semester
     # Logic: Only lock schedules if the course is actually running this sem
@@ -7771,6 +7816,28 @@ def stop_generation():
 def get_generation_status():
     return jsonify(generation_status)
 
+@app.route('/api/ga/client-leaving', methods=['POST'])
+@csrf.exempt
+def api_ga_client_leaving():
+    """Beacon sent by client when browser tab is closed/unloaded during generation."""
+    global generation_status
+    if generation_status.get('running'):
+        print(f"👋 Client explicitly closed the tab (via sendBeacon) — triggering instant auto-stop and save")
+        generation_status['stop_requested'] = True
+        generation_status['auto_stopped'] = True
+        try:
+            ga_stop_event.send(True)
+        except:
+            pass
+        # Write signal file (nuclear option, same as manual stop)
+        try:
+            sig_path = os.path.join(basedir, "ga_stop.signal")
+            with open(sig_path, "w") as f:
+                f.write("STOP_AUTO")
+        except:
+            pass
+    return jsonify({'status': 'stop_initiated'})
+
 @app.route('/api/ga/auto-save-status')
 @login_required
 def api_ga_auto_save_status():
@@ -7852,7 +7919,8 @@ def check_feasibility():
     rooms = [{'id': r.id, 'room_name': r.room_name, 'capabilities': r.capabilities, 
               'status': r.status, 'capacity': r.capacity, 
               'special_course_ids': r.special_course_ids or '', 
-              'room_departments': r.room_departments or ''} for r in raw_rooms]
+              'room_departments': r.room_departments or '',
+              'building': r.building, 'room_type': r.room_type} for r in raw_rooms]
 
     _fa_faculty_ids = (
         db.session.query(FacultyAssignment.faculty_id)
@@ -7872,7 +7940,7 @@ def check_feasibility():
 
     # Sections (All active)
     raw_sections = Section.query.filter_by(is_archived=False).all()
-    sections = [{'id': s.id, 'course_ids': [c.id for c in s.courses], 'number_of_students': s.number_of_students or 0, 'available_days': s.available_days} for s in raw_sections]
+    sections = [{'id': s.id, 'course_ids': [c.id for c in s.courses], 'number_of_students': s.number_of_students or 0, 'available_days': s.available_days, 'blocked_slots': s.blocked_slots} for s in raw_sections]
 
 
     pre_assignments_raw = PreAssignment.query.filter_by(is_archived=False).all()
@@ -10145,6 +10213,9 @@ def check_constraints():
     day_rank = {'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6}
     pe_keywords = ('PE', 'FITT')
     special_rooms = {'T.B.A.', 'University Field', 'Online Room'}
+    for r_obj in Room.query.filter_by(is_archived=False).all():
+        if r_obj.building == 'Online Room':
+            special_rooms.add(r_obj.room_name)
 
     # Pre-load allowed days for HC-14
     _sys = SystemSettings.query.first()
@@ -10311,7 +10382,7 @@ def check_constraints():
                       f'Room {s.room.room_name} capacity ({s.room.capacity}) is not a close fit for {s.section.number_of_students} students (Diff: {diff}).', s)
 
         # SC-I-01: Virtual Room Usage (Synchronous class in virtual room Online/TBA)
-        if s.session_type in ['Lec', 'Lab'] and s.room.room_name in ['Online Room', 'T.B.A.']:
+        if s.session_type in ['Lec', 'Lab'] and (s.room.room_name in ['Online Room', 'T.B.A.'] or s.room.building == 'Online Room'):
             add_v('VIRTUAL_ROOM_USAGE', 'Virtual Room Usage',
                   f'Synchronous {s.session_type} session is scheduled in a virtual room ({s.room.room_name}).', s)
 
@@ -15490,7 +15561,7 @@ def update_student(student_pk):
 
     if not sid or not name or not year:
         flash('Student ID, full name, and year level are required.', 'danger')
-        return redirect(url_for('manage_students'))
+        return redirect_to_referrer('manage_students', '/manage/students')
 
     # 1. Length Validation
     constraints = {
@@ -15501,7 +15572,7 @@ def update_student(student_pk):
     ok, err = validate_lengths(request.form, constraints)
     if not ok:
         flash(err, 'danger')
-        return redirect(url_for('manage_students'))
+        return redirect_to_referrer('manage_students', '/manage/students')
 
     # 2. XSS Sanitization
     sid = sanitize_input(sid)
@@ -15510,16 +15581,16 @@ def update_student(student_pk):
 
     if year not in (1, 2, 3, 4):
         flash('Year level must be 1, 2, 3, or 4.', 'danger')
-        return redirect(url_for('manage_students'))
+        return redirect_to_referrer('manage_students', '/manage/students')
     if email and not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
         flash('Please enter a valid email address.', 'danger')
-        return redirect(url_for('manage_students'))
+        return redirect_to_referrer('manage_students', '/manage/students')
 
     # Check duplicate student_id (excluding self)
     existing = Student.query.filter_by(student_id=sid).first()
     if existing and existing.id != student_pk:
         flash(f'Student ID "{sid}" is already used by another student.', 'danger')
-        return redirect(url_for('manage_students'))
+        return redirect_to_referrer('manage_students', '/manage/students')
 
     s.student_id  = sid
     s.full_name   = name
@@ -15528,7 +15599,7 @@ def update_student(student_pk):
     s.email       = email
     db.session.commit()
     flash('Student updated successfully.', 'success')
-    return redirect(url_for('manage_students'))
+    return redirect_to_referrer('manage_students', '/manage/students')
 
 
 @app.route('/manage/student/archive/<int:student_pk>', methods=['POST'])
@@ -15540,7 +15611,7 @@ def archive_student(student_pk):
     s.deleted_at  = datetime.utcnow()
     db.session.commit()
     flash('Student moved to Recycle Bin.', 'success')
-    return redirect(url_for('manage_students'))
+    return redirect_to_referrer('manage_students', '/manage/students')
 
 
 @app.route('/manage/students/bulk_archive', methods=['POST'])
@@ -16901,6 +16972,11 @@ with app.app_context():
                 if _col not in _fa_cols:
                     _conn.execute(f'ALTER TABLE faculty_assignment ADD COLUMN {_col} {_col_def}')
                     _conn.commit()
+            # Section table migration ---- blocked_slots
+            _sec_cols = [row[1] for row in _conn.execute('PRAGMA table_info(section)').fetchall()]
+            if 'blocked_slots' not in _sec_cols:
+                _conn.execute("ALTER TABLE section ADD COLUMN blocked_slots TEXT DEFAULT '[]'")
+                _conn.commit()
             # Faculty table migration
             _fac_cols_needed = {'academic_rank': 'VARCHAR(100)', 'sex': 'VARCHAR(1)'}
             _fac_cols = [row[1] for row in _conn.execute('PRAGMA table_info(faculty)').fetchall()]
@@ -17059,7 +17135,7 @@ def reset_user_password(user_id):
 def archive_user(user_id):
     if user_id == session.get('user_id'):
         flash("You cannot archive your own account.", "warning")
-        return redirect(url_for('manage_users'))
+        return redirect_to_referrer('manage_users', '/manage/users')
         
     user = User.query.get_or_404(user_id)
     user.is_deleted = True
@@ -17068,7 +17144,7 @@ def archive_user(user_id):
     
     log_security('Archive User', details=f"Superadmin archived user {user.username}")
     flash(f"User {user.username} moved to Recycle Bin.", "success")
-    return redirect(url_for('manage_users'))
+    return redirect_to_referrer('manage_users', '/manage/users')
 
 @app.route('/manage/user/restore/<int:user_id>', methods=['POST'])
 @login_required
@@ -17606,7 +17682,7 @@ def _generate_individual_excel_internal(item, schedules, report_type, semester):
             
             # FIRST LAYER ONLY FILTER FOR ONLINE ROOMS
             # Prevents overlapping visual blocks and merges for virtual rooms on the visual grid.
-            is_online_room = (report_type == 'room' and display_name and "ONLINE" in display_name.upper())
+            is_online_room = (report_type == 'room' and display_name and ("ONLINE" in display_name.upper() or (sc.room and sc.room.building == 'Online Room')))
             if is_online_room:
                 # Check if there is already a plotted slot on this day that overlaps with this range
                 has_overlap = False
@@ -18139,7 +18215,8 @@ def api_user_generate():
             sections.append({
                 'id': s.id, 'section_name': s.section_name, 
                 'course_ids': [c.id for c in dept_courses],
-                'available_days': s.available_days
+                'available_days': s.available_days,
+                'blocked_slots': s.blocked_slots
             })
 
     # Courses data (global map for scheduler)
@@ -18162,7 +18239,7 @@ def api_user_generate():
     for r in all_rooms:
         r_name = (r.room_name or '').lower()
         r_caps = (r.capabilities or '').lower()
-        is_online = 'online' in r_name or 'online' in r_caps
+        is_online = 'online' in r_name or 'online' in r_caps or r.building == 'Online Room'
         is_tba = 'tba' in r_name or 'tba' in r_caps
         
         is_dept_room = False
@@ -18319,7 +18396,8 @@ def api_user_check_feasibility():
                 sections.append({
                     'id': s.id, 'section_name': s.section_name, 
                     'course_ids': [c.id for c in dept_courses],
-                    'available_days': s.available_days
+                    'available_days': s.available_days,
+                    'blocked_slots': s.blocked_slots
                 })
 
         all_courses = Course.query.filter_by(is_archived=False).all()
@@ -18337,7 +18415,7 @@ def api_user_check_feasibility():
         for r in all_rooms:
             r_name = (r.room_name or '').lower()
             r_caps = (r.capabilities or '').lower()
-            is_online = 'online' in r_name or 'online' in r_caps
+            is_online = 'online' in r_name or 'online' in r_caps or r.building == 'Online Room'
             is_tba = 'tba' in r_name or 'tba' in r_caps
             
             is_dept_room = False

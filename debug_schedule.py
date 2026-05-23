@@ -83,6 +83,8 @@ def build_scheduler(selected_semester, start_hour, end_hour, allowed_days, selec
         'status': r.status, 'capacity': r.capacity or 0,
         'special_course_ids': r.special_course_ids or '',
         'room_departments': r.room_departments or '',
+        'building': r.building or '',
+        'room_type': r.room_type or '',
     } for r in raw_rooms]
 
     valid_course_ids = {c['id'] for c in courses_data}

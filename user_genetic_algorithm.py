@@ -652,7 +652,7 @@ class UserGeneticScheduler:
         self.lunch_window_end   = (14 - start_time) * 2   # 2pm
 
         self.tba_room_ids = {r['id'] for r in rooms if r.get('room_name', '') == 'T.B.A.'}
-        self.online_room_ids = {r['id'] for r in rooms if r.get('room_name', '') == 'Online Room'}
+        self.online_room_ids = {r['id'] for r in rooms if r.get('room_name', '') == 'Online Room' or r.get('building', '') == 'Online Room'}
         self.async_room_ids = {r['id'] for r in rooms if r.get('room_type') == 'Async' and r['id'] not in self.tba_room_ids and r['id'] not in self.online_room_ids}
 
         # Pre-cache valid rooms by gene_type (computed once)
