@@ -11,7 +11,11 @@ We have successfully updated the system's database schema and loaded the **Offic
 * Safely handled empty/merged course code rows (such as `Object Oriented Programming` for Bautista, Renato A.) by carrying forward the primary course keys.
 * Programmatically validated all sections, credit units, and contact hours to ensure 100% parity with your source sheet.
 
-### 2. Comprehensive TBA Faculty Setup
+### 2. Unique Employee IDs
+- **Changes**: Integrated a dynamic identifier parser checking if a faculty's name starts with `"DCS Teacher"`. If so, it extracts the unique suffix letter (e.g. `'A'`, `'B'`, `'G'`, etc.) and assigns a clean distinct employee ID like `DCS-TCH-A`, `DCS-TCH-G`, etc.
+- **Validation**: Seeder execution reported **0 ID collisions found**, meaning all DCS Teachers now have perfectly distinct and unique primary key representations in `site.db`!
+
+### 3. Comprehensive TBA Faculty Setup
 As requested, we configured specific TBA instructors with their status and assignment status set to `TBA` so they show up beautifully in your frontend selection dropdowns:
 * `DCS Teacher A (IT)`
 * `DCS Teacher B (CS)`
@@ -21,7 +25,7 @@ As requested, we configured specific TBA instructors with their status and assig
 * `DCS Teacher F (JM) - IT`
 * A generic fallback `T.B.A.` record has also been added to the system as a global unassigned options dropdown.
 
-### 3. Strict Permanent Faculty Availability Restrictions (UPDATED)
+### 4. Strict Permanent Faculty Availability Restrictions (UPDATED)
 We applied the exact day-off combinations you requested:
 * **ESTONILO, MUYOT, GELERA, NABABLIT, LESTER, NOCON**: Available strictly on **Monday, Tuesday, Wednesday** (strictly **NO Thursday, Friday, Saturday, Sunday**).
 * **OBON, ANA MARIE C.**: Available strictly on **Monday, Tuesday, Wednesday, Thursday** (strictly **NO Friday, Saturday, Sunday**).

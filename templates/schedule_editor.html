@@ -4009,8 +4009,7 @@
         renderPickerDrafts();
     }
     function renderPickerDrafts() {
-        const unpublished = DRAFTS_DATA.filter(d => !d.is_published);
-        const shown = unpublished.slice(0, 2);
+        const shown = DRAFTS_DATA.slice(0, 2);
         const container = document.getElementById('mpDraftList');
         container.innerHTML = '';
 
@@ -4028,7 +4027,10 @@
                 const item = document.createElement('div');
                 item.className = 'draft-item transition-all';
                 item.innerHTML = `
-                <div class="draft-name">${d.name}</div>
+                <div class="draft-name d-flex justify-content-between align-items-center">
+                    <span>${d.name}</span>
+                    ${d.is_published ? '<span class="badge bg-success" style="font-size:0.65rem">Published</span>' : ''}
+                </div>
                 <div class="draft-meta small text-muted">${d.semester}${d.department ? ' · ' + d.department : ''}</div>`;
                 item.onclick = () => chooseDraft(d.id, d.name);
                 container.appendChild(item);
@@ -4258,7 +4260,7 @@
                 }
 
                 tr.innerHTML = `
-                <td class="ps-3 fw-bold text-success text-truncate" style="max-width:250px">${d.name}</td>
+                <td class="ps-3 fw-bold text-success text-truncate" style="max-width:250px">${d.name}${d.is_published ? ' <span class="badge bg-success ms-1" style="font-size:.65rem">Published</span>' : ''}</td>
                 <td class="text-center">${semBadge}</td>
                 <td class="small text-muted text-truncate" style="max-width:180px">${d.department || '—'}</td>
                 <td class="small text-muted text-truncate" style="max-width:150px">${d.notes || '—'}</td>
@@ -5012,7 +5014,19 @@
 
         // ── Existing init ──
         currentSemester = document.getElementById('semesterSel').value;
-        if (IS_ADMIN) {
+        
+        // CHECK URL DRAFT ID to bypass modal
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlDraftId = urlParams.get('draft_id');
+        
+        if (urlDraftId) {
+            editorMode = 'draft';
+            const draftSel = document.getElementById('draftSel');
+            if (draftSel) {
+                draftSel.value = urlDraftId;
+            }
+            onDraftChange();
+        } else if (IS_ADMIN) {
             // Admin/superadmin must consciously choose a mode before anything loads
             openModePicker();
         } else {
@@ -5886,8 +5900,12 @@
 
         if (urlDraftId || (draftSel && draftSel.value)) {
             editorMode = 'draft';
+            if (urlDraftId && draftSel) {
+                draftSel.value = urlDraftId;
+            }
             currentDraftId = parseInt(urlDraftId || draftSel.value);
             updateModeBadge();
+            onDraftChange();
             // Don't open picker if already in a draft
         } else {
             // Open Mode Picker on Load if no draft is selected

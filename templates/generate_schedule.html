@@ -797,6 +797,17 @@
             </div>
         </div>
 
+        <!-- SMART GUESSER -->
+        <div
+            style="margin-top: 15px; text-align: left; padding: 12px; background: #e8f0fe; border-radius: 6px; border-left: 4px solid #1a73e8;">
+            <label
+                style="display: flex; align-items: center; cursor: pointer; font-size: 0.85rem; color: #3c4043; gap: 12px; line-height: 1.3;">
+                <input type="checkbox" id="smartGuesserCheck" checked
+                    style="width: 18px; height: 18px; cursor: pointer; accent-color: #1a73e8;">
+                <span><strong>Smart Guesser</strong> (Compress workloads to minimize teaching days)</span>
+            </label>
+        </div>
+
         <!-- FRESH START -->
         <div
             style="margin-top: 15px; text-align: left; padding: 12px; background: #fff8e1; border-radius: 6px; border-left: 4px solid #ffc107;">
@@ -804,8 +815,7 @@
                 style="display: flex; align-items: center; cursor: pointer; font-size: 0.85rem; color: #555; gap: 12px; line-height: 1.3;">
                 <input type="checkbox" id="freshStartCheck"
                     style="width: 18px; height: 18px; cursor: pointer; accent-color: #ffc107;">
-                <span><strong>Fresh Start</strong> (Burahin ang dating schedule ng semester na ito bago
-                    mag-start)</span>
+                <span><strong>Fresh Start</strong> (Delete previous schedule before starting)</span>
             </label>
         </div>
 
@@ -857,7 +867,7 @@
         <p style="color:#bbb; font-size:0.78rem; margin-top:2px;">
             <span id="finalGenerations">--</span> generations &nbsp;·&nbsp; <span id="finalTime">--</span>
         </p>
-        <a href="{{ url_for('view_timetable') }}" class="btn-primary" style="text-decoration:none; display:block;">View
+        <a href="#" id="btnViewSchedule" class="btn-primary" style="text-decoration:none; display:block;" onclick="navigateToSelectedDraft(); return false;">View
             Schedule</a>
         <button onclick="location.reload()" class="btn-stop w-100 mt-2"
             style="border:1px solid #ccc; color:#333;">Generate New</button>
@@ -866,13 +876,13 @@
 
 <!-- FEASIBILITY ERROR MODAL -->
 <div class="victory-overlay" id="feasibilityErrorScreen" style="display: none; z-index: 4000;">
-    <div class="modal-box" style="border-top: 5px solid #d93025; max-width: 500px; width: 90%; text-align: center; padding: 30px;">
-        <div class="mb-3 text-danger"><i class="bi bi-exclamation-triangle-fill display-2"></i></div>
-        <h3 class="fw-bold text-danger mb-2" style="font-size: 1.4rem;">Impossible Room Allocation!</h3>
+    <div class="modal-box" id="feasibilityErrorBox" style="border-top: 5px solid #d93025; max-width: 500px; width: 90%; text-align: center; padding: 30px;">
+        <div class="mb-3 text-danger" id="feasibilityErrorIconContainer"><i class="bi bi-exclamation-triangle-fill display-2" id="feasibilityErrorIcon"></i></div>
+        <h3 class="fw-bold text-danger mb-2" style="font-size: 1.4rem;" id="feasibilityErrorTitle">Impossible Room Allocation!</h3>
         <p style="color:#444; font-size: 0.88rem; line-height: 1.6; text-align: left; background: #fff8f8; padding: 15px; border-radius: 8px; border-left: 4px solid #d93025;" id="feasibilityErrorText">
             It is not possible to generate a conflict-free schedule without using Virtual/Online Rooms because there are not enough physical classrooms. Please consider changing 'Virtual Room Usage' to a Soft Constraint or disabling it to allow online classes.
         </p>
-        <button onclick="location.reload()" class="btn-primary w-100 mt-3" style="background: #d93025; border: none; font-weight: 600; font-size: 0.9rem; padding: 10px; border-radius: 6px;">Adjust Constraints / Settings</button>
+        <button onclick="location.reload()" id="feasibilityErrorButton" class="btn-primary w-100 mt-3" style="background: #d93025; border: none; font-weight: 600; font-size: 0.9rem; padding: 10px; border-radius: 6px;">Adjust Constraints / Settings</button>
     </div>
 </div>
 
@@ -1244,6 +1254,12 @@
         if (label) label.innerText = val;
         if (input) input.value = val;
 
+        try {
+            localStorage.setItem('retry_semester', val);
+        } catch(e) {
+            console.error("Failed to save semester to localStorage", e);
+        }
+
         // Clear other active states in semester menu
         if (el) {
             const menu = el.closest('.dropdown-menu');
@@ -1262,6 +1278,13 @@
         const dInput = document.getElementById('draftSelect');
         if (dLabel) dLabel.innerText = label;
         if (dInput) dInput.value = id;
+
+        try {
+            localStorage.setItem('selected_draft_id', id);
+            localStorage.setItem('selected_draft_label', label);
+        } catch(e) {
+            console.error("Failed to save draft to localStorage", e);
+        }
 
         // Clear other active states in draft menu
         if (el) {
@@ -1419,6 +1442,16 @@
         });
     };
 
+    window.navigateToSelectedDraft = function() {
+        const draftIdInput = document.getElementById('draftSelect');
+        const draftId = draftIdInput ? draftIdInput.value : '';
+        if (draftId) {
+            window.location.href = `/schedule-editor?draft_id=${draftId}`;
+        } else {
+            window.location.href = `/schedule-editor`;
+        }
+    };
+
     document.addEventListener('DOMContentLoaded', function () {
         var cvs = document.getElementById('mainCanvas'), ctx = cvs.getContext('2d');
         var ov = document.getElementById('appOverlay'), ss = document.getElementById('startScreen');
@@ -1427,7 +1460,7 @@
         var log = document.getElementById('logStream'), tmr = document.getElementById('timer');
         var fx = document.getElementById('formulaText'), vs = document.getElementById('victoryScreen');
         var stat = document.getElementById('sysStatus');
-        var running = false, mat = null, t0, tInt, pInt, vP = 0, wC2 = 0;
+        var running = false, mat = null, t0, tInt, pInt, vP = 0, wC2 = 0, gaWorker = null;
         var SH = parseInt(cvs.dataset.startHour) || 7;
         var LOGS = ["Evaluating population fitness...", "Checking constraints HC-01 to HC-28...", "Resolving Room Overlaps...", "Optimizing Faculty Load...", "Mutating Gene Sequence...", "Calculating Penalty Score...", "Verifying Section Time Blocks...", "Swapping Time Slots...", "Cross-over phase initiated..."];
         var fakeBlocks = [], lastFakeUpdate = 0;
@@ -1459,14 +1492,18 @@
         window.toggleView = function () { ov.classList.toggle('minimized'); setTimeout(rsz, 400); };
         window.confirmAbort = function () {
             if (confirm('Stop generation?')) {
-                if (pInt) clearInterval(pInt);
-                if (tInt) clearInterval(tInt);
+                // Show stopping status to user immediately
+                var statEl = document.getElementById('sysStatus');
+                if (statEl) {
+                    statEl.innerText = 'Stopping & Saving... Please wait.';
+                    statEl.style.color = '#f0ad4e';
+                }
+                
                 fetch('/stop-generation', {
                     method: 'POST',
                     headers: { 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content },
                     keepalive: true
                 });
-                location.reload();
             }
         };
 
@@ -1836,6 +1873,7 @@
                 alert("Please select or create an Active Draft Version before proceeding.");
                 return;
             }
+            var isSmart = document.getElementById('smartGuesserCheck') ? document.getElementById('smartGuesserCheck').checked : false;
             ss.style.display = 'none'; running = true; stat.innerText = 'Running...'; rsz(); requestAnimationFrame(draw);
             while (log.firstChild) log.removeChild(log.firstChild);
             t0 = Date.now(); tInt = setInterval(function () { var d = Date.now() - t0, dt = new Date(d); tmr.innerText = dt.toISOString().substr(11, 8); }, 1000);
@@ -1844,10 +1882,25 @@
             fetch('/start-generation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('meta[name=csrf-token]').content },
-                body: JSON.stringify({ semester: sem, fresh_start: isFresh, scheduled_depts: selectedDepts, draft_version_id: draftId, socket_id: socketId })
+                body: JSON.stringify({ semester: sem, fresh_start: isFresh, enable_smart_guesser: isSmart, scheduled_depts: selectedDepts, draft_version_id: draftId, socket_id: socketId })
             })
                 .then(r => r.json())
                 .then(function () {
+                    // Initialize background unthrottled Web Worker heartbeat
+                    if (window.Worker) {
+                        if (gaWorker) { gaWorker.terminate(); }
+                        gaWorker = new Worker('/static/js/ga_worker.js');
+                        gaWorker.onmessage = function (e) {
+                            if (e.data === 'ping') {
+                                if (window.socket && window.socket.connected) {
+                                    window.socket.emit('ga_heartbeat', {});
+                                }
+                            }
+                        };
+                        gaWorker.postMessage('start');
+                        console.log("Web Worker unthrottled heartbeat spawned.");
+                    }
+
                     var lastG = 0;
                     pInt = setInterval(function () {
                         fetch('/get-generation-status').then(r => r.json()).then(d => {
@@ -1857,11 +1910,47 @@
                                 running = false;
                                 stat.innerText = 'Stopped';
                                 fx.innerText = '=ERROR("' + d.error + '")';
+
+                                // Terminate Web Worker
+                                if (gaWorker) {
+                                    gaWorker.postMessage('stop');
+                                    gaWorker.terminate();
+                                    gaWorker = null;
+                                    console.log("Web Worker unthrottled heartbeat terminated on error.");
+                                }
                                 
                                 const errScreen = document.getElementById('feasibilityErrorScreen');
                                 const errText = document.getElementById('feasibilityErrorText');
+                                const errBox = document.getElementById('feasibilityErrorBox');
+                                const errTitle = document.getElementById('feasibilityErrorTitle');
+                                const errIconContainer = document.getElementById('feasibilityErrorIconContainer');
+                                const errIcon = document.getElementById('feasibilityErrorIcon');
+                                const errButton = document.getElementById('feasibilityErrorButton');
+
                                 if (errScreen && errText) {
                                     errText.innerText = d.error;
+
+                                    if (errTitle && errBox && errIconContainer && errIcon && errButton) {
+                                        // Check if error is due to manual/auto disconnection or stop event
+                                        if (d.error.includes("Eventlet stop") || d.error.includes("disconnect") || d.error.includes("StoppedByUser")) {
+                                            errTitle.innerText = "Generation Stopped / Connection Lost";
+                                            errTitle.className = "fw-bold text-warning mb-2";
+                                            errBox.style.borderTop = "5px solid #f0ad4e";
+                                            errIconContainer.className = "mb-3 text-warning";
+                                            errIcon.className = "bi bi-wifi-off display-2";
+                                            errButton.style.backgroundColor = "#f0ad4e";
+                                            errButton.innerText = "Back to Generator";
+                                        } else {
+                                            errTitle.innerText = "Impossible Room Allocation!";
+                                            errTitle.className = "fw-bold text-danger mb-2";
+                                            errBox.style.borderTop = "5px solid #d93025";
+                                            errIconContainer.className = "mb-3 text-danger";
+                                            errIcon.className = "bi bi-exclamation-triangle-fill display-2";
+                                            errButton.style.backgroundColor = "#d93025";
+                                            errButton.innerText = "Adjust Constraints / Settings";
+                                        }
+                                    }
+
                                     errScreen.style.display = 'flex';
                                 } else {
                                     alert("🛑 Generation Stopped:\n\n" + d.error);
@@ -1916,6 +2005,14 @@
                             }
                             if (d.done) {
                                 clearInterval(pInt); clearInterval(tInt); running = false; stat.innerText = 'Saved'; fx.innerText = '=COMPLETE()';
+                                
+                                // Terminate Web Worker
+                                if (gaWorker) {
+                                    gaWorker.postMessage('stop');
+                                    gaWorker.terminate();
+                                    gaWorker = null;
+                                    console.log("Web Worker unthrottled heartbeat terminated on completion.");
+                                }
                                 document.getElementById('finalConflictCount').innerText = hc;
                                 var fb = document.getElementById('finalConflictBreakdown');
                                 if (fb) fb.innerText = 'HC: ' + hc + '  |  SC-I: ' + sc1 + '  |  SC-II: ' + sc2;
@@ -1932,35 +2029,88 @@
                     }, 100);
                 });
         }
+
+        // Send immediate stop and save notification when tab/browser is closed
+        window.addEventListener('beforeunload', function (e) {
+            if (running) {
+                if (window.socket && window.socket.connected) {
+                    window.socket.emit('client_leaving', {});
+                }
+                var fd = new FormData();
+                var csrfMeta = document.querySelector('meta[name=csrf-token]');
+                if (csrfMeta) {
+                    fd.append('csrf_token', csrfMeta.content);
+                }
+                navigator.sendBeacon('/api/ga/client-leaving', fd);
+            }
+        });
     });
 
-    // ── Auto-trigger Feasibility Check on page reload (state restoration) ──────────────────
     document.addEventListener('DOMContentLoaded', function () {
         try {
-            if (localStorage.getItem('autoTriggerFeasibility') === 'true') {
-                localStorage.removeItem('autoTriggerFeasibility'); // Prevent infinite loops
-
-                var savedSem = localStorage.getItem('retry_semester');
-                var savedFresh = localStorage.getItem('retry_fresh');
-                var savedDeptsStr = localStorage.getItem('retry_depts');
-
-                if (savedSem && document.getElementById('semesterSelect')) {
-                    document.getElementById('semesterSelect').value = savedSem;
-                }
-                if (savedFresh && document.getElementById('freshStartCheck')) {
-                    document.getElementById('freshStartCheck').checked = (savedFresh === 'true');
-                }
-                if (savedDeptsStr) {
-                    var savedDepts = JSON.parse(savedDeptsStr);
-                    document.querySelectorAll('.dept-checkbox').forEach(function (cb) {
-                        cb.checked = savedDepts.includes(cb.value);
-                    });
-                    if (typeof updateDeptCount === 'function') {
-                        updateDeptCount();
+            // Restore Semester (Always)
+            var savedSem = localStorage.getItem('retry_semester');
+            if (savedSem && document.getElementById('semesterSelect')) {
+                document.getElementById('semesterSelect').value = savedSem;
+                const semLabel = document.getElementById('selectedSemesterLabel');
+                if (semLabel) semLabel.innerText = savedSem;
+                
+                // Update active selection in dropdown menu
+                const semDropdown = document.getElementById('semesterDropdown');
+                if (semDropdown) {
+                    const menu = semDropdown.nextElementSibling;
+                    if (menu) {
+                        menu.querySelectorAll('.dropdown-item').forEach(item => {
+                            if (item.innerText.trim() === savedSem) {
+                                item.classList.add('active-selection');
+                            } else {
+                                item.classList.remove('active-selection');
+                            }
+                        });
                     }
                 }
+            }
 
-                // Trigger the check after a short delay to let the page fully settle
+            // Restore Draft Selection (Always)
+            var savedDraftId = localStorage.getItem('selected_draft_id');
+            var savedDraftLabel = localStorage.getItem('selected_draft_label');
+            if (savedDraftId && document.getElementById('draftSelect')) {
+                document.getElementById('draftSelect').value = savedDraftId;
+                const draftLabel = document.getElementById('selectedDraftLabel');
+                if (draftLabel && savedDraftLabel) draftLabel.innerText = savedDraftLabel;
+
+                // Update active selection in dropdown menu
+                const draftMenu = document.getElementById('draftDropdownMenu');
+                if (draftMenu) {
+                    draftMenu.querySelectorAll('.dropdown-item').forEach(item => {
+                        if (item.getAttribute('onclick') && item.getAttribute('onclick').includes("'" + savedDraftId + "'")) {
+                            item.classList.add('active-selection');
+                        } else {
+                            item.classList.remove('active-selection');
+                        }
+                    });
+                }
+            }
+
+            // Restore Fresh Start Checkbox and Department selection
+            var savedFresh = localStorage.getItem('retry_fresh');
+            if (savedFresh && document.getElementById('freshStartCheck')) {
+                document.getElementById('freshStartCheck').checked = (savedFresh === 'true');
+            }
+            var savedDeptsStr = localStorage.getItem('retry_depts');
+            if (savedDeptsStr) {
+                var savedDepts = JSON.parse(savedDeptsStr);
+                document.querySelectorAll('.dept-checkbox').forEach(function (cb) {
+                    cb.checked = savedDepts.includes(cb.value);
+                });
+                if (typeof updateDeptCount === 'function') {
+                    updateDeptCount();
+                }
+            }
+
+            // Auto-trigger Capacity Check if marked
+            if (localStorage.getItem('autoTriggerFeasibility') === 'true') {
+                localStorage.removeItem('autoTriggerFeasibility'); // Prevent infinite loops
                 setTimeout(function () {
                     var igniteBtn = document.getElementById('igniteBtn');
                     if (igniteBtn) {
@@ -1970,7 +2120,7 @@
                 }, 400);
             }
         } catch (err) {
-            console.error("Error during auto-trigger restoration:", err);
+            console.error("Error during state restoration:", err);
         }
     });
 </script>

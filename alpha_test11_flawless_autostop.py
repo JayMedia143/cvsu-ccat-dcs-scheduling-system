@@ -2297,11 +2297,14 @@ class GeneticScheduler:
                 fac_avail = self._fac_avail_days.get(g.faculty_id) \
                             if g.faculty_id and g.faculty_id not in self.multi_assignment_faculty \
                             else None
+                sec_avail = self._sec_avail_days.get(g.section_id)
                 op_mask = (1 << self.total_slots) - 1
                 g.allowed_mask = []
                 for d_idx in range(len(self.days)):
                     m_val = op_mask
                     if fac_avail and d_idx not in fac_avail:
+                        m_val = 0
+                    if sec_avail and d_idx not in sec_avail:
                         m_val = 0
                     day_blocked = self._blocked_bitmasks.get(d_idx, 0)
                     if day_blocked:
@@ -2486,11 +2489,14 @@ class GeneticScheduler:
                 fac_avail = self._fac_avail_days.get(g.faculty_id) \
                             if g.faculty_id and g.faculty_id not in self.multi_assignment_faculty \
                             else None
+                sec_avail = self._sec_avail_days.get(g.section_id)
                 op_mask = (1 << self.total_slots) - 1
                 g.allowed_mask = []
                 for d_idx in range(len(self.days)):
                     m_val = op_mask
                     if fac_avail and d_idx not in fac_avail:
+                        m_val = 0
+                    if sec_avail and d_idx not in sec_avail:
                         m_val = 0
                     day_blocked = self._blocked_bitmasks.get(d_idx, 0)
                     if day_blocked:
@@ -3421,14 +3427,21 @@ class GeneticScheduler:
             fa = gene.faculty_id
             fa_avail = (self._fac_avail_days.get(fa)
                         if fa and fa not in self.multi_assignment_faculty else None)
+            sec_avail = self._sec_avail_days.get(gene.section_id)
 
             for d in range(len(self.days)):
                 if fa_avail and d not in fa_avail:
                     continue
+                # Guard: Section Day Availability Check
+                if sec_avail is not None and d not in sec_avail:
+                    continue
                 fa_mask  = (occ_fac.get((fa, d), 0)
                             if fa and fa not in self.multi_assignment_faculty else 0)
                 sec_mask = occ_sec.get((gene.section_id, d), 0)
-                combined = fa_mask | sec_mask
+                
+                # Guard: Blocked Time Slots Check
+                blocked_mask = self._blocked_bitmasks.get(d, 0)
+                combined = fa_mask | sec_mask | blocked_mask
 
                 start = _compact_gap_scan(combined, slots, self.total_slots)
                 if start >= 0:
@@ -3442,9 +3455,18 @@ class GeneticScheduler:
         # Absolute last resort: spread across any day with section check only
         slots = gene.duration_slots
         rid = list(self.online_room_ids)[0] if self.online_room_ids else gene.room_id
+        sec_avail = self._sec_avail_days.get(gene.section_id)
         for d in range(len(self.days)):
+            # Guard: Section Day Availability Check
+            if sec_avail is not None and d not in sec_avail:
+                continue
             sec_mask = occ_sec.get((gene.section_id, d), 0)
-            start = _compact_gap_scan(sec_mask, slots, self.total_slots)
+            
+            # Guard: Blocked Time Slots Check
+            blocked_mask = self._blocked_bitmasks.get(d, 0)
+            combined = sec_mask | blocked_mask
+            
+            start = _compact_gap_scan(combined, slots, self.total_slots)
             if start >= 0:
                 mask = ((1 << slots) - 1) << start
                 gene.day_idx, gene.start_idx = d, start
@@ -3538,6 +3560,12 @@ class GeneticScheduler:
         if phys_rooms:
             for _ in range(20):
                 d = random.choice(days)
+                
+                # Guard: Section Day Availability Check
+                sec_avail = self._sec_avail_days.get(sec_id)
+                if sec_avail is not None and d not in sec_avail:
+                    continue
+
                 s = random.choice(starts)
                 r = random.choice(phys_rooms)
                 
@@ -3547,6 +3575,12 @@ class GeneticScheduler:
                 # Fast validation
                 end = s + slots_needed
                 mask = ((1 << slots_needed) - 1) << s
+
+                # Guard: Blocked Time Slots Check
+                day_blocked = self._blocked_bitmasks.get(d, 0)
+                if day_blocked & mask:
+                    continue
+
                 if (occ_sec.get((sec_id, d), 0) & mask) == 0:
                     if orig_fac is None or orig_fac in self.multi_assignment_faculty or (occ_fac.get((orig_fac, d), 0) & mask) == 0:
                         new_sec_mask = occ_sec.get((sec_id, d), 0) | mask
@@ -3565,6 +3599,12 @@ class GeneticScheduler:
                 if getattr(self, 'force_stop', False):
                     raise AlgorithmStopException("Stop in exhaustive place.")
                 self._check_stop(stop_event, raise_exception=True)
+
+                # Guard: Section Day Availability Check
+                sec_avail = self._sec_avail_days.get(sec_id)
+                if sec_avail is not None and day not in sec_avail:
+                    continue
+
                 for s_idx, start in enumerate(starts):
                     if s_idx % 5 == 0 and self.force_stop:
                         raise AlgorithmStopException("Stop in exhaustive physical inner.")
@@ -3576,6 +3616,11 @@ class GeneticScheduler:
                         
                     end = start + slots_needed
                     mask = ((1 << slots_needed) - 1) << start
+
+                    # Guard: Blocked Time Slots Check
+                    day_blocked = self._blocked_bitmasks.get(day, 0)
+                    if day_blocked & mask:
+                        continue
 
                     if (occ_sec.get((sec_id, day), 0) & mask) != 0:
                         continue
@@ -3602,6 +3647,12 @@ class GeneticScheduler:
                 if getattr(self, 'force_stop', False):
                     raise AlgorithmStopException("Stop in exhaustive place.")
                 self._check_stop(stop_event, raise_exception=True)
+
+                # Guard: Section Day Availability Check
+                sec_avail = self._sec_avail_days.get(sec_id)
+                if sec_avail is not None and day not in sec_avail:
+                    continue
+
                 for s_idx, start in enumerate(starts):
                     if s_idx % 5 == 0 and self.force_stop:
                         raise AlgorithmStopException("Stop in exhaustive virtual inner.")
@@ -3609,6 +3660,11 @@ class GeneticScheduler:
                         continue
                     end = start + slots_needed
                     mask = ((1 << slots_needed) - 1) << start
+
+                    # Guard: Blocked Time Slots Check
+                    day_blocked = self._blocked_bitmasks.get(day, 0)
+                    if day_blocked & mask:
+                        continue
 
                     if (occ_sec.get((sec_id, day), 0) & mask) != 0:
                         continue
@@ -3658,12 +3714,22 @@ class GeneticScheduler:
                 if _alt_avail is not None and day not in _alt_avail:
                     continue
                 
+                # Guard: Section Day Availability Check
+                sec_avail = self._sec_avail_days.get(sec_id)
+                if sec_avail is not None and day not in sec_avail:
+                    continue
+
                 start = random.choice(_starts)
                 if day == min_day and min_start_same_day >= 0 and start <= min_start_same_day:
                     continue
                 
                 end = start + slots_needed
                 mask = ((1 << slots_needed) - 1) << start
+
+                # Guard: Blocked Time Slots Check
+                day_blocked = self._blocked_bitmasks.get(day, 0)
+                if day_blocked & mask:
+                    continue
 
                 if (occ_sec.get((sec_id, day), 0) & mask) != 0:
                     continue
@@ -4330,11 +4396,13 @@ class GeneticScheduler:
         
         multi_fac = self.multi_assignment_faculty
         fac_avail = self._fac_avail_days
+        sec_avail = self._sec_avail_days
         blocked   = self._blocked_bitmasks
 
         for g in genes:
             g.allowed_mask = []
             f_avail = fac_avail.get(g.faculty_id) if g.faculty_id and g.faculty_id not in multi_fac else None
+            s_avail = sec_avail.get(g.section_id)
             
             # Non-fixed genes are restricted to daytime if avoid_evening is True.
             # Pre-assignments (fixed genes) bypass evening restrictions.
@@ -4345,6 +4413,9 @@ class GeneticScheduler:
                 # HC-17/18: Faculty Availability
                 if f_avail is not None and d not in f_avail:
                     mask = 0 
+                # HC-11: Section Day Availability
+                if s_avail is not None and d not in s_avail:
+                    mask = 0
                 # Blocked Time Slots
                 day_blocked = blocked.get(d, 0)
                 if day_blocked:

@@ -2487,37 +2487,39 @@ def dashboard():
     
     print(f"DEBUG DASHBOARD: semester={selected_semester}, dept_list={dept_list}")
 
-    # total_needed calculation
-    from sqlalchemy import text as sa_text
+    # total_needed and total_scheduled calculation grouped by assignment & splits
     total_needed = 0
-    if target_depts:
-        placeholders = ','.join([f':d{i}' for i in range(len(target_depts))])
-        params = {f'd{i}': v for i, v in enumerate(target_depts)}
-
-        sql = f"""
-            SELECT SUM(
-                CASE WHEN c.synchronous_lec_hours > 0 THEN 1 ELSE 0 END +
-                CASE WHEN c.synchronous_lab_hours > 0 THEN 1 ELSE 0 END +
-                CASE WHEN (c.asynchronous_lec_hours > 0 OR c.asynchronous_lab_hours > 0) THEN 1 ELSE 0 END
-            ) FROM section_courses sc
-            JOIN section s ON sc.section_id = s.id
-            JOIN course c ON sc.course_id = c.id
-            WHERE s.is_archived = 0 AND c.is_archived = 0
-              AND c.department IN ({placeholders})
-        """
-        if selected_semester != 'All':
-            sql += " AND c.semester_offered = :semester"
-            params['semester'] = selected_semester
-
-        result = db.session.execute(sa_text(sql), params).fetchone()
-        total_needed = int(result[0] or 0)
-
-    # total_scheduled calculation (Deduplicated for AI training data)
     total_scheduled = 0
+
     if target_depts:
+        # Load curriculum assignments
+        curriculum_q = db.session.query(Section, Course).join(Section.courses).filter(
+            Section.is_archived == False,
+            Course.is_archived == False,
+            Course.department.in_(target_depts)
+        )
+        if selected_semester != 'All':
+            curriculum_q = curriculum_q.filter(Course.semester_offered == selected_semester)
+        curriculum_assignments = curriculum_q.all()
+
+        # Load faculty assignments to detect splits
+        fa_list = FacultyAssignment.query.all()
+        split_map = {}
+        for fa in fa_list:
+            # Lec splits
+            lec_split = (fa.split_lec_hours_1 or 0) > 0 and (fa.split_lec_hours_2 or 0) > 0
+            if lec_split:
+                split_map[(fa.course_id, fa.section_id, 'Lec')] = 2
+            # Lab splits
+            lab_split = (fa.split_hours_1 or 0) > 0 and (fa.split_hours_2 or 0) > 0
+            if lab_split:
+                split_map[(fa.course_id, fa.section_id, 'Lab')] = 2
+
+        # Query all scheduled active classes
         sched_q = (db.session.query(
                        ScheduledClass.course_id,
                        ScheduledClass.section_id,
+                       ScheduledClass.session_type,
                        ScheduledClass.day,
                        ScheduledClass.start_time,
                        ScheduledClass.end_time
@@ -2526,7 +2528,38 @@ def dashboard():
                    .filter(Course.department.in_(target_depts), ScheduledClass.is_draft == False))
         if selected_semester != 'All':
             sched_q = sched_q.filter(ScheduledClass.semester == selected_semester)
-        total_scheduled = sched_q.distinct().count()
+
+        from collections import defaultdict
+        scheduled_groups = defaultdict(set)
+        for row in sched_q.all():
+            slot_key = (row.day, row.start_time, row.end_time)
+            scheduled_groups[(row.course_id, row.section_id, row.session_type)].add(slot_key)
+
+        # Loop and count logically
+        for section, course in curriculum_assignments:
+            # Lec
+            if course.synchronous_lec_hours and course.synchronous_lec_hours > 0:
+                total_needed += 1
+                expected = split_map.get((course.id, section.id, 'Lec'), 1)
+                actual = len(scheduled_groups.get((course.id, section.id, 'Lec'), set()))
+                if actual >= expected:
+                    total_scheduled += 1
+
+            # Lab
+            if course.synchronous_lab_hours and course.synchronous_lab_hours > 0:
+                total_needed += 1
+                expected = split_map.get((course.id, section.id, 'Lab'), 1)
+                actual = len(scheduled_groups.get((course.id, section.id, 'Lab'), set()))
+                if actual >= expected:
+                    total_scheduled += 1
+
+            # Async
+            if (course.asynchronous_lec_hours and course.asynchronous_lec_hours > 0) or \
+               (course.asynchronous_lab_hours and course.asynchronous_lab_hours > 0):
+                total_needed += 1
+                actual = len(scheduled_groups.get((course.id, section.id, 'Async'), set()))
+                if actual >= 1:
+                    total_scheduled += 1
 
     completion_rate = 0
     if total_needed > 0:
@@ -6516,7 +6549,7 @@ def export_excel_bulk():
                     if label_found:
                         dr, dc = l_target[label_found]
                         target_val = v_target.get(label_found)
-                        if target_val:
+                        if target_val is not None:
                             # Write raw value (Cleanup for the key 5 dynamic values)
                             # User only wants to remove hashes from dynamic VALUES, keeping them for labels.
                             _safe_write_to_cell(target_ws, r_idx + dr, c_idx + dc, str(target_val))
@@ -7116,7 +7149,7 @@ def sync_constraints():
         {'code': 'FACULTY_OVERLAP',            'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-08) Faculty Overlap Prevention', 'desc': 'Faculty cannot teach 2 courses at once.'},
         {'code': 'ROOM_OVERLAP',               'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-09) Room Overlap Prevention', 'desc': 'Room cannot host 2 sections at once.'},
         {'code': 'SINGLE_FACULTY_PER_TIMESLOT','cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-10) Single Faculty per Section Slot', 'desc': 'Section cannot have 2 faculty at once.'},
-        {'code': 'FACULTY_AVAILABILITY',       'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-11) Faculty Day Off / Availability', 'desc': 'Faculty must be available.'},
+        {'code': 'FACULTY_AVAILABILITY',       'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-11) Faculty & Section Day Availability', 'desc': 'Faculty and student sections must be available on scheduled days.'},
         {'code': 'SINGLE_ROOM_PER_SESSION',    'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-12) Single Room per Session', 'desc': 'Session cannot use 2 rooms at once.'},
         {'code': 'ROOM_AVAILABILITY',          'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-13) Room Calendar Availability', 'desc': 'Room must be available.'},
         {'code': 'OPERATING_HOURS',            'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-14) Operating Hours Compliance', 'desc': 'Sessions must be within campus hours.'},
@@ -7126,19 +7159,17 @@ def sync_constraints():
         {'code': 'FACULTY_DAY_SPLIT',          'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-18) Faculty Day Split Rule', 'desc': 'Sessions must land on designated split days.'},
         {'code': 'LUNCH_BREAK',                'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-19) Lunch Break Allocation', 'desc': '1-hour break after 1 class, or after max 6 consecutive hours.'},
 
-        # A2: Evaluated Constraints (HC-20 to HC-25)
+        # A2: Evaluated Constraints (HC-20 to HC-23)
         {'code': 'MAX_CONSECUTIVE_STUDENT',    'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-20) Max Consecutive Student Load', 'desc': 'Max 6 consecutive hours for students.'},
         {'code': 'MAX_CONSECUTIVE_FACULTY',    'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-21) Max Consecutive Faculty Load', 'desc': 'Max 6 consecutive hours for faculty.'},
-        {'code': 'MIN_DAILY_SECTION_LOAD',     'cat': 'Section',        'type': 'NC',  'weight': 1,   'name': '(HC-22) Min Daily Section Load', 'desc': 'Ensure at least 3 hours of class per active day.'},
-        {'code': 'LEC_IN_LAB_FALLBACK',        'cat': 'Room',           'type': 'NC',  'weight': 1,   'name': '(HC-23) Lecture in Lab Fallback', 'desc': 'Allow lectures in labs only if no classrooms are free.'},
-        {'code': 'LEC_LAB_SEQUENCE',           'cat': 'Course',         'type': 'NC',  'weight': 1,   'name': '(HC-24) Lec-Lab Sequence', 'desc': 'Lecture should be scheduled before Laboratory.'},
-        {'code': 'ROOM_SUITABILITY',           'cat': 'Room',           'type': 'NC',  'weight': 1,   'name': '(HC-25) Room Type Suitability', 'desc': 'Match subject type with room capabilities.'},
+        {'code': 'LEC_LAB_SEQUENCE',           'cat': 'Course',         'type': 'NC',  'weight': 1,   'name': '(HC-22) Lec-Lab Sequence', 'desc': 'Lecture should be scheduled before Laboratory.'},
+        {'code': 'ROOM_SUITABILITY',           'cat': 'Room',           'type': 'NC',  'weight': 1,   'name': '(HC-23) Room Type Suitability', 'desc': 'Match subject type with room capabilities.'},
 
         # ── SOFT CONSTRAINTS I (SC-I-01 to SC-I-04) ────────────────────────────────
         {'code': 'VIRTUAL_ROOM_USAGE',         'cat': 'Room',           'type': 'NC',  'weight': 10,  'name': '(SC-I-01) Virtual Room (Online) Penalty', 'desc': 'Avoid Online rooms for physical classes.'},
-        {'code': 'EVENING_AVOIDANCE',          'cat': 'Time',           'type': 'NC',  'weight': 1,   'name': '(SC-I-02) Evening Class Avoidance', 'desc': 'Avoid scheduling classes late in the evening.'},
-        {'code': 'ROOM_IDLE_GAP',              'cat': 'Room',           'type': 'NC',  'weight': 10,  'name': '(SC-I-03) Room Idle Gap Penalty', 'desc': 'Incentivize compact room usage.'},
-        {'code': 'LEC_LAB_WEEKLY_DIST',        'cat': 'Course',         'type': 'NC',  'weight': 1,   'name': '(SC-I-04) Lec-Lab Weekly Dist.', 'desc': 'Lec and Lab must be scheduled on different days.'},
+        {'code': 'ROOM_IDLE_GAP',              'cat': 'Room',           'type': 'NC',  'weight': 10,  'name': '(SC-I-02) Room Idle Gap Penalty', 'desc': 'Incentivize compact room usage.'},
+        {'code': 'LEC_LAB_WEEKLY_DIST',        'cat': 'Course',         'type': 'NC',  'weight': 1,   'name': '(SC-I-03) Lec-Lab Weekly Dist.', 'desc': 'Lec and Lab must be scheduled on different days.'},
+        {'code': 'FACULTY_DAY_COMPACTION',     'cat': 'Faculty',        'type': 'NC',  'weight': 10,  'name': '(SC-I-04) Faculty Day Compaction', 'desc': 'Intelligently cluster faculty classes to ideal two-per-day balanced format.'},
 
         # ── SOFT CONSTRAINTS II (SC-II-01) ───────────────────────────────
         {'code': 'ROOM_CAPACITY_PROPORTIONAL', 'cat': 'Room',           'type': 'NC',  'weight': 1,   'name': '(SC-II-01) Room Capacity Allocation', 'desc': 'Prioritize closest absolute fit for room capacity.'},
@@ -7458,8 +7489,17 @@ def run_ga_in_background(scheduler, target_semester='1st Semester', draft_id=Non
         except Exception as e:
             import traceback
             print(f"------------- GA error: {e}\n{traceback.format_exc()}")
-            best_schedule = None
-            generation_status['error'] = str(e)
+            if str(e) == "StoppedByUser":
+                best_schedule = generation_status.get('best_chromosome')
+                if best_schedule:
+                    print(f"💾 User clicked STOP. Recovered and saving the best chromosome found so far (HC={best_schedule.hard_conflicts}, SC={best_schedule.soft_score})...")
+                    generation_status['error'] = "StoppedByUser: The best schedule found up to Generation " + str(generation_status.get('generation', 0)) + " has been successfully saved to the database."
+                else:
+                    best_schedule = None
+                    generation_status['error'] = "StoppedByUser: No schedule could be formed before the generation was stopped."
+            else:
+                best_schedule = None
+                generation_status['error'] = str(e)
             generation_status['done'] = True
 
         # ------------------------------------ C-3: Diagnostic print when HC > 0 at end of run ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -7719,10 +7759,10 @@ def start_generation():
             continue
         # Lab splits (existing columns)
         lab_splits = []
-        if fa.split_day_1 and fa.split_hours_1:
-            lab_splits.append({'day': fa.split_day_1, 'hours': fa.split_hours_1})
-        if fa.split_day_2 and fa.split_hours_2:
-            lab_splits.append({'day': fa.split_day_2, 'hours': fa.split_hours_2})
+        if fa.split_hours_1:
+            lab_splits.append({'day': fa.split_day_1 or '', 'hours': fa.split_hours_1})
+        if fa.split_hours_2:
+            lab_splits.append({'day': fa.split_day_2 or '', 'hours': fa.split_hours_2})
         if lab_splits:
             split_assignments.append({
                 'faculty_id': fa.faculty_id,
@@ -7733,10 +7773,10 @@ def start_generation():
             })
         # Lec splits (new columns)
         lec_splits = []
-        if fa.split_lec_day_1 and fa.split_lec_hours_1:
-            lec_splits.append({'day': fa.split_lec_day_1, 'hours': fa.split_lec_hours_1})
-        if fa.split_lec_day_2 and fa.split_lec_hours_2:
-            lec_splits.append({'day': fa.split_lec_day_2, 'hours': fa.split_lec_hours_2})
+        if fa.split_lec_hours_1:
+            lec_splits.append({'day': fa.split_lec_day_1 or '', 'hours': fa.split_lec_hours_1})
+        if fa.split_lec_hours_2:
+            lec_splits.append({'day': fa.split_lec_day_2 or '', 'hours': fa.split_lec_hours_2})
         if lec_splits:
             split_assignments.append({
                 'faculty_id': fa.faculty_id,
@@ -7764,6 +7804,15 @@ def start_generation():
         blocked_slots=_blocked_slots,
         evening_start_hour=settings_db.evening_start_hour or 19
     )
+    
+    # Run Smart Guesser if requested
+    enable_smart_guesser = req_data.get('enable_smart_guesser', False)
+    if enable_smart_guesser:
+        print("[Smart Guesser] Running autonomous availability day optimization...")
+        opt_days = scheduler.autonomous_compress_availability()
+        generation_status['smart_guesser_days'] = opt_days
+    else:
+        generation_status['smart_guesser_days'] = None
     
     # Associate hardware profile with status
     generation_status['hardware'] = scheduler.hardware_profile
@@ -7991,19 +8040,19 @@ def check_feasibility():
         
         # Lec Splits
         lec_splits = []
-        if fa.split_lec_day_1 and fa.split_lec_hours_1:
-            lec_splits.append({'day': fa.split_lec_day_1, 'hours': fa.split_lec_hours_1})
-        if fa.split_lec_day_2 and fa.split_lec_hours_2:
-            lec_splits.append({'day': fa.split_lec_day_2, 'hours': fa.split_lec_hours_2})
+        if fa.split_lec_hours_1:
+            lec_splits.append({'day': fa.split_lec_day_1 or '', 'hours': fa.split_lec_hours_1})
+        if fa.split_lec_hours_2:
+            lec_splits.append({'day': fa.split_lec_day_2 or '', 'hours': fa.split_lec_hours_2})
         if lec_splits:
             split_assignments.append({'faculty_id': fa.faculty_id, 'course_id': fa.course_id, 'section_id': fa.section_id, 'gtype': 'Lec', 'splits': lec_splits})
             
         # Lab Splits
         lab_splits = []
-        if fa.split_day_1 and fa.split_hours_1:
-            lab_splits.append({'day': fa.split_day_1, 'hours': fa.split_hours_1})
-        if fa.split_day_2 and fa.split_hours_2:
-            lab_splits.append({'day': fa.split_day_2, 'hours': fa.split_hours_2})
+        if fa.split_hours_1:
+            lab_splits.append({'day': fa.split_day_1 or '', 'hours': fa.split_hours_1})
+        if fa.split_hours_2:
+            lab_splits.append({'day': fa.split_day_2 or '', 'hours': fa.split_hours_2})
         if lab_splits:
             split_assignments.append({'faculty_id': fa.faculty_id, 'course_id': fa.course_id, 'section_id': fa.section_id, 'gtype': 'Lab', 'splits': lab_splits})
 
@@ -10268,10 +10317,14 @@ def check_constraints():
     _split_map_cc = {}
     for _fa in FacultyAssignment.query.all():
         _splits = []
-        if _fa.split_day_1 and _fa.split_hours_1:
+        if _fa.split_hours_1:
             _splits.append((_fa.split_day_1, _fa.split_hours_1))
-        if _fa.split_day_2 and _fa.split_hours_2:
+        if _fa.split_hours_2:
             _splits.append((_fa.split_day_2, _fa.split_hours_2))
+        if _fa.split_lec_hours_1:
+            _splits.append((_fa.split_lec_day_1, _fa.split_lec_hours_1))
+        if _fa.split_lec_hours_2:
+            _splits.append((_fa.split_lec_day_2, _fa.split_lec_hours_2))
         if _splits:
             _split_map_cc[(_fa.faculty_id, _fa.course_id, _fa.section_id)] = _splits
 
@@ -10366,12 +10419,6 @@ def check_constraints():
             if is_lab_session and not is_lab_r:
                 # Lab in a non-lab room is still a Hard Conflict
                 add_v('ROOM_SUITABILITY', 'Room Type Suitability', f'Lab session assigned to non-lab room ({s.room.room_name}).', s)
-            elif not is_lab_session and is_lab_r and not is_lec_r:
-                # Lec in a pure Lab room is now a fallback
-                add_v('LEC_IN_LAB_FALLBACK', 'Lecture in Lab Fallback', f'Lecture session is using a Lab room ({s.room.room_name}) as fallback.', s)
-            elif not is_lab_session and is_lab_r and is_lec_r and s.room.room_name[:1] == 'B':
-                # B-rooms (Labs with Lec capability) are also reported as fallbacks for Lec sessions
-                add_v('LEC_IN_LAB_FALLBACK', 'Lecture in Lab Fallback', f'Lecture is in Lab room {s.room.room_name}.', s)
 
         # SC-II-01: Room Capacity Allocation (Absolute Fit)
         r_name_up = (s.room.room_name or '').upper()
@@ -10386,33 +10433,30 @@ def check_constraints():
             add_v('VIRTUAL_ROOM_USAGE', 'Virtual Room Usage',
                   f'Synchronous {s.session_type} session is scheduled in a virtual room ({s.room.room_name}).', s)
 
-        # SC-I-02: Evening Avoidance (Physical Room Only)
-        if s.room_id not in _v_rooms:
-            if start_m >= 1140: # 7:00 PM onwards
-                add_v('EVENING_AVOIDANCE', 'Evening Avoidance',
-                      f'Class in {s.room.room_name} starts at {s.start_time} (7:00 PM or later).', s)
-            elif start_m >= 1020: # 5:00 PM onwards
-                add_v('EVENING_AVOIDANCE', 'Evening Avoidance',
-                      f'Class in {s.room.room_name} starts at {s.start_time} (5:00 PM or later).', s)
-
         # Strategic Async Placement is disabled
         pass
 
 
-        # HC-11: Faculty Availability (faculty must be available on the scheduled day)
+        # HC-11: Faculty & Section Day Availability
         if s.faculty_id and s.faculty.full_name != 'T.B.A.':
             fac_avail = set((s.faculty.available_days or '').split(','))
             if fac_avail and s.day not in fac_avail:
-                add_v('FACULTY_AVAILABILITY', 'Faculty Availability',
+                add_v('FACULTY_AVAILABILITY', 'Faculty Day Off / Availability',
                       f'{s.faculty.full_name} is not available on {s.day}.', s)
+
+        if s.section_id:
+            sec_avail = set((s.section.available_days or '').split(','))
+            if sec_avail and s.day not in sec_avail:
+                add_v('FACULTY_AVAILABILITY', 'Section Day Availability',
+                      f'Section {s.section.section_name} is not available on {s.day}.', s)
 
         # HC-18: Faculty Day Split (session must land on its designated split day)
         if s.faculty_id and s.section_id and s.course_id:
             _split_key = (s.faculty_id, s.course_id, s.section_id)
             _split_days = _split_map_cc.get(_split_key)
             if _split_days:
-                _allowed_days = [d for d, _ in _split_days]
-                if s.day not in _allowed_days:
+                _allowed_days = [d for d, _ in _split_days if d]
+                if _allowed_days and s.day not in _allowed_days:
                     add_v('FACULTY_DAY_SPLIT', 'Faculty Day Split',
                           f'{s.faculty.full_name} ---- {s.course.course_code} in section '
                           f'{s.section.section_name} is on {s.day} but split requires '
@@ -10524,6 +10568,46 @@ def check_constraints():
                       f'Room {s1.room.room_name} on {day} has a {gap_min}-minute gap '
                       f'between {s1.course.course_code} and {s2.course.course_code}.', s1, s2)
 
+    # =========================================================
+    # SC-I-05: FACULTY DAY COMPACTION (Ideal two-classes-per-day compaction)
+    # =========================================================
+    _fac_schedules = {}
+    for s in schedules:
+        if s.faculty_id and s.faculty.full_name != 'T.B.A.':
+            if s.room_id not in _v_rooms and s.room.room_name not in special_rooms:
+                _fac_schedules.setdefault(s.faculty_id, []).append(s)
+
+    for fac_id, fac_schedules in _fac_schedules.items():
+        total_classes = len(fac_schedules)
+        if total_classes <= 1:
+            continue
+        
+        # Skip faculty members with > 20 workload hours
+        workload_hours = sum((to_minutes(s.end_time) - to_minutes(s.start_time)) / 60 for s in fac_schedules)
+        if workload_hours > 20:
+            continue
+        
+        day_counts = {}
+        for s in fac_schedules:
+            day_counts[s.day] = day_counts.get(s.day, 0) + 1
+            
+        actual_days = len(day_counts)
+        ideal_days = (total_classes + 1) // 2
+        
+        excess_days = actual_days - ideal_days if actual_days > ideal_days else 0
+        loner_days = sum(1 for d, count in day_counts.items() if count == 1)
+        
+        violation_score = (excess_days * 2) + (loner_days * 1)
+        if violation_score > 0:
+            problem_classes = []
+            for s in fac_schedules:
+                if day_counts[s.day] == 1 or excess_days > 0:
+                    problem_classes.append(s)
+            
+            if problem_classes:
+                add_v('FACULTY_DAY_COMPACTION', 'Faculty Day Compaction',
+                      f'Faculty {problem_classes[0].faculty.full_name} has uncompacted class distribution ({actual_days} days used instead of ideal {ideal_days} days for {total_classes} classes). Target: 2 classes/day balance.',
+                      problem_classes[0])
 
     # =========================================================
     # GROUP 3: LOAD, SEQUENCE & DAILY DISTRIBUTION CHECKS
@@ -10672,19 +10756,7 @@ def check_constraints():
                             add_v('LUNCH_BREAK', 'Lunch Break Preference',
                                   f'Section {day_classes[0].section.section_name} has no 1-hr break after a class or exceeds 6 consecutive hours on {day}.', day_classes[0])
 
-            # HC-22: Minimum Daily Section Load (Target >= 3.0 Hours)
-            # EXEMPTION 1: Section total weekly curriculum hours < 6.0h (impossible load to satisfy split minimums)
-            if section_weekly_hours.get(sec_id, 0) < 6.0:
-                continue
-            
-            # EXEMPTION 2: If any class in this section-day is Async, it is exempted
-            if any(s.session_type == 'Async' or (s.room and s.room.capabilities and 'Async' in s.room.capabilities) for s in day_classes):
-                continue
 
-            total_dur_h = sum((to_minutes(s.end_time) - to_minutes(s.start_time))/60 for s in day_classes)
-            if total_dur_h < 3.0:
-                add_v('MIN_DAILY_SECTION_LOAD', 'Min Daily Section Load',
-                      f'Section {day_classes[0].section.section_name} has only {total_dur_h:.1f} hours of class on {day} (Target: >= 3.0h).', day_classes[0])
 
 
 
@@ -17650,7 +17722,7 @@ def _generate_individual_excel_internal(item, schedules, report_type, semester):
             if label_found:
                 dr, dc = l_target[label_found]
                 target_val = v_target.get(label_found)
-                if target_val:
+                if target_val is not None:
                     _safe_write_to_cell_indiv(target_ws, r_idx + dr, c_idx + dc, str(target_val))
 
     # 3. Grid Plotting (DUPLICATED FROM BULK)
@@ -18274,10 +18346,10 @@ def api_user_generate():
             continue
         # Lab splits
         lab_splits = []
-        if fa.split_day_1 and fa.split_hours_1:
-            lab_splits.append({'day': fa.split_day_1, 'hours': fa.split_hours_1})
-        if fa.split_day_2 and fa.split_hours_2:
-            lab_splits.append({'day': fa.split_day_2, 'hours': fa.split_hours_2})
+        if fa.split_hours_1:
+            lab_splits.append({'day': fa.split_day_1 or '', 'hours': fa.split_hours_1})
+        if fa.split_hours_2:
+            lab_splits.append({'day': fa.split_day_2 or '', 'hours': fa.split_hours_2})
         if lab_splits:
             split_assignments.append({
                 'faculty_id': fa.faculty_id,
@@ -18288,10 +18360,10 @@ def api_user_generate():
             })
         # Lec splits
         lec_splits = []
-        if fa.split_lec_day_1 and fa.split_lec_hours_1:
-            lec_splits.append({'day': fa.split_lec_day_1, 'hours': fa.split_lec_hours_1})
-        if fa.split_lec_day_2 and fa.split_lec_hours_2:
-            lec_splits.append({'day': fa.split_lec_day_2, 'hours': fa.split_lec_hours_2})
+        if fa.split_lec_hours_1:
+            lec_splits.append({'day': fa.split_lec_day_1 or '', 'hours': fa.split_lec_hours_1})
+        if fa.split_lec_hours_2:
+            lec_splits.append({'day': fa.split_lec_day_2 or '', 'hours': fa.split_lec_hours_2})
         if lec_splits:
             split_assignments.append({
                 'faculty_id': fa.faculty_id,
@@ -18319,6 +18391,15 @@ def api_user_generate():
         user_id=user_id,
         evening_start_hour=settings_db.evening_start_hour or 19
     )
+    
+    # Run Smart Guesser if requested
+    enable_smart_guesser = req_data.get('enable_smart_guesser', False)
+    if enable_smart_guesser:
+        print("[Smart Guesser] Running autonomous availability day optimization (User)...")
+        opt_days = scheduler.autonomous_compress_availability()
+        user_generation_status[user_id]['smart_guesser_days'] = opt_days
+    else:
+        user_generation_status[user_id]['smart_guesser_days'] = None
     
     # If fresh_start, delete this department's existing schedule for the semester inside the draft
     if fresh_start:
@@ -18447,10 +18528,10 @@ def api_user_check_feasibility():
                 continue
             # Lab splits
             lab_splits = []
-            if fa.split_day_1 and fa.split_hours_1:
-                lab_splits.append({'day': fa.split_day_1, 'hours': fa.split_hours_1})
-            if fa.split_day_2 and fa.split_hours_2:
-                lab_splits.append({'day': fa.split_day_2, 'hours': fa.split_hours_2})
+            if fa.split_hours_1:
+                lab_splits.append({'day': fa.split_day_1 or '', 'hours': fa.split_hours_1})
+            if fa.split_hours_2:
+                lab_splits.append({'day': fa.split_day_2 or '', 'hours': fa.split_hours_2})
             if lab_splits:
                 split_assignments.append({
                     'faculty_id': fa.faculty_id,
@@ -18461,10 +18542,10 @@ def api_user_check_feasibility():
                 })
             # Lec splits
             lec_splits = []
-            if fa.split_lec_day_1 and fa.split_lec_hours_1:
-                lec_splits.append({'day': fa.split_lec_day_1, 'hours': fa.split_lec_hours_1})
-            if fa.split_lec_day_2 and fa.split_lec_hours_2:
-                lec_splits.append({'day': fa.split_lec_day_2, 'hours': fa.split_lec_hours_2})
+            if fa.split_lec_hours_1:
+                lec_splits.append({'day': fa.split_lec_day_1 or '', 'hours': fa.split_lec_hours_1})
+            if fa.split_lec_hours_2:
+                lec_splits.append({'day': fa.split_lec_day_2 or '', 'hours': fa.split_lec_hours_2})
             if lec_splits:
                 split_assignments.append({
                     'faculty_id': fa.faculty_id,
@@ -18522,5 +18603,5 @@ if __name__ == '__main__':
 
 
     port = int(os.environ.get('PORT', 5000))
-    socketio.run(app, host='0.0.0.0', port=port, debug=os.environ.get('FLASK_DEBUG', 'False') == 'True', allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=port, debug=os.environ.get('FLASK_DEBUG', 'False') == 'True', log_output=True, allow_unsafe_werkzeug=True)
 

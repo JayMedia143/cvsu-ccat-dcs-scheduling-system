@@ -403,7 +403,7 @@ def seed_database():
             {'code': 'FACULTY_OVERLAP',            'cat': 'Course',         'type': 'HC',  'weight': 1,   'name': '(HC-08) Faculty Overlap Prevention', 'desc': 'Faculty cannot teach 2 courses at once.'},
             {'code': 'ROOM_OVERLAP',               'cat': 'Section',        'type': 'HC',  'weight': 1,   'name': '(HC-09) Room Overlap Prevention', 'desc': 'Room cannot host 2 sections at once.'},
             {'code': 'SINGLE_FACULTY_PER_TIMESLOT','cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-10) Single Faculty per Section Slot', 'desc': 'Section cannot have 2 faculty at once.'},
-            {'code': 'FACULTY_AVAILABILITY',       'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-11) Faculty Day Off / Availability', 'desc': 'Faculty must be available.'},
+            {'code': 'FACULTY_AVAILABILITY',       'cat': 'Faculty',        'type': 'HC',  'weight': 1,   'name': '(HC-11) Faculty & Section Day Availability', 'desc': 'Faculty and student sections must be available on scheduled days.'},
             {'code': 'SINGLE_ROOM_PER_SESSION',    'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-12) Single Room per Session', 'desc': 'Session cannot use 2 rooms at once.'},
             {'code': 'ROOM_AVAILABILITY',          'cat': 'Room',           'type': 'HC',  'weight': 1,   'name': '(HC-13) Room Calendar Availability', 'desc': 'Room must be available.'},
             {'code': 'OPERATING_HOURS',            'cat': 'Time',           'type': 'HC',  'weight': 1,   'name': '(HC-14) Operating Hours Compliance', 'desc': 'Sessions must be within campus hours.'},

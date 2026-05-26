@@ -1,0 +1,1701 @@
+=== Slide 1 ===
+
+=== Slide 2 ===
+
+=== Slide 3 ===
+DEVELOPING AUTOMATED SCHEDULING SYSTEM TO MAXIMIZE
+ROOM UTILIZATION AT CVSU-CCAT CAMPUS DEPARTMENT
+OF COMPUTER STUDIES USING GENETIC ALGORITHM
+AND CONSTRAINT PROGRAMMING
+
+=== Slide 4 ===
+GENETIC ALGORITHM:
+SCHEDULING SYSTEM FLOW
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+
+=== Slide 5 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 1: Hardware Scaling
+Checks how powerful your computer is. Sample: A fast laptop makes 200 schedules at once.
+
+=== Slide 6 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 2: Start Execution
+The formal entry point of the algorithm. Sample: Setting the timer to 0 and preparing the logs.
+
+=== Slide 7 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 3: Query Database
+Gets the list of classes, teachers, and rooms from the database. Sample: Querying the list of 87 courses and 29 professors.
+
+=== Slide 8 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 4: Load Campus Data
+Counts and organizes the data pulled from the database. Sample: Loaded 87 courses, 43 sections, 29 faculty, 17 rooms.
+
+=== Slide 9 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 5: Parse Pre-assignments
+Locks in schedules that cannot be changed. Sample: Locking Prof A's class to Monday 8 AM.
+
+=== Slide 10 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 6: check_room_feasibility()
+A quick sanity check to see if all classes can fit in the rooms. Sample: 500 hours needed but only 300 hours room space = Error.
+
+=== Slide 11 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 7: Is it Feasible?
+Decision box for the feasibility result. Returns Green if everything fits perfectly.
+
+=== Slide 12 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 8: HC-24 Filter
+Gives a pass to sections with very few available time slots. Sample: Exempting Section X from the no-gap rule because they only have 2 classes.
+
+=== Slide 13 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 9: create_genome()
+Creates a blank template for a single schedule. Sample: A blank grid with 5 days and 12 hours per day.
+
+=== Slide 14 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 10: Copy Fixed Genes
+Places the locked schedules into the blank template. Sample: Copying Prof A's Monday 8 AM class.
+
+=== Slide 15 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 11: Iterate Sections
+Loops through all remaining classes to find them a spot. Sample: Processing Data Structures for Section A.
+
+=== Slide 16 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 12: Filter Valid Rooms
+Ensures a class goes to the correct type of room. Sample: Putting a Lab class in a Lab room.
+
+=== Slide 17 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 13: Heuristic Placement
+Smartly places classes to avoid gaps and pack them tightly. Sample: Putting a 1-hour class in a 1-hour gap.
+
+=== Slide 18 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 14: Population Full?
+Checks if counter reached population size. Sample: Checking if we have reached the 200 schedules limit.
+
+=== Slide 19 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 15: Start Loop
+Starts the main generational NSGA-II loop. Sample: Generation counter sets to 1.
+
+=== Slide 20 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 16: Inject New Data
+Inserts user edits made while the program is running. Sample: User blocks Prof B on Fridays mid-run.
+
+=== Slide 21 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 17: Calculate Fitness
+Scores each schedule based on conflicts and preferences. Sample: 10 conflicts and 85% soft score.
+
+=== Slide 22 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 18: Bitmask Caching
+A super-fast scanner to check for schedule overlaps. Sample: Checks 8 hours of conflicts in one microsecond.
+
+=== Slide 23 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 19: NSGA-II Sorting
+Sorts schedules from best to worst based on multiple goals. Sample: Ranked into Front 1, Front 2.
+
+=== Slide 24 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 20: Identify Best
+Picks the top-ranked schedule from the batch. Sample: 0 hard conflicts and highest soft score.
+
+=== Slide 25 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 21: Flawless Schedule?
+Checks if Hard Conflicts are exactly 0 and preferences are met.
+
+=== Slide 26 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 22: Perfect Auto-Stop!
+Stops the program early if a perfect schedule is found. Sample: Stops at Round 50 instead of 1000.
+
+=== Slide 27 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 23: Local Search
+Polishes the final schedule to remove any small remaining gaps. Sample: Swapping two classes to remove a 1-hour student gap.
+
+=== Slide 28 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 24: Return Best Schedule
+Saves the schedule and returns it to the user.
+
+=== Slide 29 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 25: Elitism Selection
+Carries over the best schedules to the next round without changing them.
+
+=== Slide 30 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 26: Refill New Pool
+Prepares the evolutionary canvas. We refill the new pool to begin passing on genes.
+
+=== Slide 31 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 27: select_parents()
+Tournament Selection: Small groups compete, and the best win. Sample: Comparing 2 random schedules.
+
+=== Slide 32 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 28: crossover(p1, p2)
+Combines the best parts of two parent schedules.
+
+=== Slide 33 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 29: Append Child
+Appends the newly formed child schedule into the new population pool.
+
+=== Slide 34 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 30: Pool Full?
+Checks if the new generation pool is completely filled before proceeding to mutation.
+
+=== Slide 35 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 31: proportional_mutate()
+Changes the mutation rate based on how boring the population is.
+
+=== Slide 36 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 32: Has Conflicts?
+Checks if the newly mutated schedule still has conflicts inside it.
+
+=== Slide 37 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 33: 10% Random Move
+Forces a random change to explore new ideas.
+
+=== Slide 38 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 34: Targeted Repair
+Fixing conflicts by placing it to a conflict free slot.
+
+=== Slide 39 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 35: Replace Population
+Replaces the old population with the new improved one, and loops back to evaluate them again.
+
+=== Slide 40 ===
+1. Initialization Phase
+2. Pre-Feasibility Check
+3. Population Generation
+4. NSGA-II Evolution
+5. Termination Check
+6. Genetic Operators
+1. Hardware Scaling
+2. Start Execution
+3. Query Database
+4. Load Campus Data
+5. Parse Pre-assignments
+6. check_room_feasibility()
+7. Is it Feasible?
+STOP Execution
+8. HC-24 Filter
+9. create_genome()
+10. Copy Fixed Genes
+11. Iterate Sections
+12. Filter Valid Rooms
+13. Heuristic Placement
+14. Population Full?
+15. Start Loop
+16. Inject New Data
+17. Calculate Fitness
+18. Bitmask Caching
+19. NSGA-II Sorting
+20. Identify Best
+21. Flawless Schedule?
+22. Perfect Auto-Stop!
+23. Local Search
+24. Return Best Schedule
+25. Elitism Selection
+26. Refill New Pool
+27. select_parents()
+28. crossover(p1, p2)
+29. Append Child
+30. Pool Full?
+31. proportional_mutate()
+32. Has Conflicts?
+33. 10% Random Move
+34. Targeted Repair
+35. Replace Population
+BOX 15: Start Loop
+Starts the main generational NSGA-II loop. Sample: Generation counter sets to 1.
+
+=== Slide 41 ===
+CONCLUSION
+
+=== Slide 42 ===
+1. Initialize the System
+2. Perform Pre-Feasibility Check
+3. Generate Initial Population
+4. Evaluate and Sort Schedules
+5. Check for Active Conflicts
+6. Evolve Schedules (If Conflicts Persist)
+CONCLUSION
+
+=== Slide 43 ===
+THANK YOU
+Q&A
+
+=== Slide 44 ===
+DEMO
+
+=== Slide 45 ===
+USERS
+STUDENTS
+
+=== Slide 46 ===
+

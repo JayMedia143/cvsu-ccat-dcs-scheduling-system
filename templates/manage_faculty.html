@@ -1165,8 +1165,9 @@
             const allDayOpts = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
             function buildSplitPanel(pair, sfx, hours, savedDay1, savedHours1, savedDay2, savedHours2) {
-                const dayOpts1 = allDayOpts.map(d => `<option value="${d}" ${d === savedDay1 ? 'selected' : ''}>${d}</option>`).join('');
-                const dayOpts2 = '<option value="">-- none --</option>' +
+                const dayOpts1 = '<option value="">-- GA Decides (Random) --</option>' +
+                    allDayOpts.map(d => `<option value="${d}" ${d === savedDay1 ? 'selected' : ''}>${d}</option>`).join('');
+                const dayOpts2 = '<option value="">-- GA Decides (Random) --</option>' +
                     allDayOpts.map(d => `<option value="${d}" ${d === savedDay2 ? 'selected' : ''}>${d}</option>`).join('');
                 return `
                               <div class="split-panel ps-3 pb-2 pt-1" id="splitpanel_${facultyId}_${pair.replace('-', '_')}_${sfx}">
@@ -1340,7 +1341,7 @@
                 const d2 = panel.querySelector(`[name="split_${pair}_${sfx}day_2"]`);
                 const h2 = panel.querySelector(`[name="split_${pair}_${sfx}hours_2"]`);
                 if (d1 && h1 && h1.value) { addH(d1.name, d1.value); addH(h1.name, h1.value); }
-                if (d2 && h2 && d2.value && h2.value) { addH(d2.name, d2.value); addH(h2.name, h2.value); }
+                if (d2 && h2 && h2.value) { addH(d2.name, d2.value); addH(h2.name, h2.value); }
             });
         });
         document.body.appendChild(submissionForm);

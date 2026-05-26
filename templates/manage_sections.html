@@ -246,6 +246,13 @@
                                     title="{{ avail_list | join(', ') if avail_list else 'No days set' }}">
                                     {{ avail_count }} Days
                                 </span>
+                                {% set blocked_count = section.blocked_slots.count('"day"') if section.blocked_slots else 0 %}
+                                {% if blocked_count > 0 %}
+                                <span class="badge bg-danger rounded-pill cursor-help text-white fw-bold ms-1" style="padding: 5px 10px; font-size: 0.75rem;"
+                                    title="Has custom blocked/busy hours configured. Click Edit to manage.">
+                                    {{ blocked_count }} Blocked
+                                </span>
+                                {% endif %}
                             </td>
 
                             <!-- Compact Course List -->
@@ -611,6 +618,104 @@
         transform: scale(1.2);
     }
 
+    .hover-white {
+        transition: color 0.15s ease-in-out;
+    }
+    .hover-white:hover {
+        color: #fff !important;
+    }
+
+    /* Blocked Slots Section */
+    .blocked-slots-section {
+        background: #f6fdf9;
+        border: 1px solid #c3e6cb;
+        border-left: 4px solid #217346;
+        border-radius: 6px;
+        padding: 12px 14px 10px 14px;
+    }
+
+    .blocked-slots-section .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+
+    .blocked-slots-section .section-title {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: #217346;
+        text-transform: uppercase;
+    }
+
+    .blocked-slots-section .section-hint {
+        font-size: 0.71rem;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .blocked-slots-container {
+        background: #fff;
+        border: 1px solid #d4edda;
+        border-radius: 4px;
+        min-height: 42px;
+        padding: 6px 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .blocked-slot-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: #fff;
+        border: 1px solid #217346;
+        color: #217346;
+        font-size: 0.73rem;
+        font-weight: 600;
+        padding: 3px 9px 3px 9px;
+        border-radius: 4px;
+        font-family: ui-monospace, SFMono-Regular, monospace;
+        white-space: nowrap;
+    }
+
+    .blocked-slot-pill .pill-remove {
+        cursor: pointer;
+        color: #a3c4a8;
+        transition: color 0.15s;
+        line-height: 1;
+        font-size: 0.8rem;
+    }
+    .blocked-slot-pill .pill-remove:hover {
+        color: #217346;
+    }
+
+    .blocked-slots-adder select {
+        font-size: 0.8rem;
+    }
+
+    .btn-add-slot {
+        background: #217346;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 0.25rem 0.6rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        transition: background 0.15s;
+        width: 100%;
+    }
+    .btn-add-slot:hover {
+        background: #185c38;
+        color: #fff;
+    }
+
     #sectionInfoModal {
         z-index: 1060 !important;
     }
@@ -655,6 +760,54 @@
                                 <label class="form-check-label small" for="add_day_{{ day }}">{{ day[:3] }}</label>
                             </div>
                             {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-1 pt-3 border-top">
+                        <div class="blocked-slots-section">
+                            <div class="section-header">
+                                <span class="section-title"><i class="bi bi-slash-circle me-1"></i>Blocked Slots</span>
+                                <span class="section-hint"><i class="bi bi-info-circle"></i> Will not be scheduled</span>
+                            </div>
+                            <input type="hidden" name="blocked_slots" id="add_blocked_slots_input" value="[]">
+                            <div id="add_blocked_slots_container" class="blocked-slots-container">
+                                <span class="text-muted small fst-italic w-100 text-center" style="font-size:0.78rem;">No busy slots configured.</span>
+                            </div>
+                            <div class="row g-2 blocked-slots-adder align-items-center">
+                                <div class="col-4">
+                                    <select id="add_block_day" class="form-select form-select-sm">
+                                        <option value="Monday">Monday</option>
+                                        <option value="Tuesday">Tuesday</option>
+                                        <option value="Wednesday">Wednesday</option>
+                                        <option value="Thursday">Thursday</option>
+                                        <option value="Friday" selected>Friday</option>
+                                        <option value="Saturday">Saturday</option>
+                                        <option value="Sunday">Sunday</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <div class="input-group input-group-sm">
+                                        <select id="add_block_start" class="form-select form-select-sm">
+                                            {% for hour in range(7, 19) %}
+                                            <option value="{{ '%02d'|format(hour) }}:00">{{ '%02d'|format(hour) }}:00</option>
+                                            <option value="{{ '%02d'|format(hour) }}:30">{{ '%02d'|format(hour) }}:30</option>
+                                            {% endfor %}
+                                        </select>
+                                        <span class="input-group-text px-1 text-muted" style="font-size:0.72rem;">–</span>
+                                        <select id="add_block_end" class="form-select form-select-sm">
+                                            {% for hour in range(7, 19) %}
+                                            <option value="{{ '%02d'|format(hour) }}:00">{{ '%02d'|format(hour) }}:00</option>
+                                            <option value="{{ '%02d'|format(hour) }}:30">{{ '%02d'|format(hour) }}:30</option>
+                                            {% endfor %}
+                                            <option value="19:00">19:00</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-2">
+                                    <button type="button" class="btn-add-slot" onclick="addBlockedSlotRow('add')" title="Add blocked slot">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -709,6 +862,54 @@
                                 <label class="form-check-label small" for="edit_day_{{ section.id }}_{{ day }}">{{ day[:3] }}</label>
                             </div>
                             {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-1 pt-3 border-top">
+                        <div class="blocked-slots-section">
+                            <div class="section-header">
+                                <span class="section-title"><i class="bi bi-slash-circle me-1"></i>Blocked Slots</span>
+                                <span class="section-hint"><i class="bi bi-info-circle"></i> Will not be scheduled</span>
+                            </div>
+                            <input type="hidden" name="blocked_slots" id="edit_blocked_slots_input_{{ section.id }}" value="{{ section.blocked_slots or '[]' }}">
+                            <div id="edit_blocked_slots_container_{{ section.id }}" class="blocked-slots-container">
+                                <!-- Filled by JS on show -->
+                            </div>
+                            <div class="row g-2 blocked-slots-adder align-items-center">
+                                <div class="col-4">
+                                    <select id="edit_block_day_{{ section.id }}" class="form-select form-select-sm">
+                                        <option value="Monday">Monday</option>
+                                        <option value="Tuesday">Tuesday</option>
+                                        <option value="Wednesday">Wednesday</option>
+                                        <option value="Thursday">Thursday</option>
+                                        <option value="Friday" selected>Friday</option>
+                                        <option value="Saturday">Saturday</option>
+                                        <option value="Sunday">Sunday</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <div class="input-group input-group-sm">
+                                        <select id="edit_block_start_{{ section.id }}" class="form-select form-select-sm">
+                                            {% for hour in range(7, 19) %}
+                                            <option value="{{ '%02d'|format(hour) }}:00">{{ '%02d'|format(hour) }}:00</option>
+                                            <option value="{{ '%02d'|format(hour) }}:30">{{ '%02d'|format(hour) }}:30</option>
+                                            {% endfor %}
+                                        </select>
+                                        <span class="input-group-text px-1 text-muted" style="font-size:0.72rem;">–</span>
+                                        <select id="edit_block_end_{{ section.id }}" class="form-select form-select-sm">
+                                            {% for hour in range(7, 19) %}
+                                            <option value="{{ '%02d'|format(hour) }}:00">{{ '%02d'|format(hour) }}:00</option>
+                                            <option value="{{ '%02d'|format(hour) }}:30">{{ '%02d'|format(hour) }}:30</option>
+                                            {% endfor %}
+                                            <option value="19:00">19:00</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-2">
+                                    <button type="button" class="btn-add-slot" onclick="addBlockedSlotRow({{ section.id }})" title="Add blocked slot">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1399,6 +1600,105 @@
                 }
             });
         }
+
+        // Render blocked slots for all edit forms and add form on load
+        renderBlockedSlots('add');
+        document.querySelectorAll('[id^="edit_blocked_slots_input_"]').forEach(input => {
+            const prefixOrId = input.id.replace('edit_blocked_slots_input_', '');
+            renderBlockedSlots(prefixOrId);
+        });
     });
+
+    // ==========================================
+    // 7. SECTION-SPECIFIC BLOCKED SLOTS SYSTEM
+    // ==========================================
+    window.renderBlockedSlots = function(prefixOrId) {
+        const inputId = prefixOrId === 'add' ? 'add_blocked_slots_input' : `edit_blocked_slots_input_${prefixOrId}`;
+        const containerId = prefixOrId === 'add' ? 'add_blocked_slots_container' : `edit_blocked_slots_container_${prefixOrId}`;
+        
+        const inputEl = document.getElementById(inputId);
+        const containerEl = document.getElementById(containerId);
+        if (!inputEl || !containerEl) return;
+        
+        let slots = [];
+        try {
+            slots = JSON.parse(inputEl.value || '[]');
+        } catch (e) {
+            slots = [];
+        }
+        
+        containerEl.innerHTML = '';
+        if (slots.length === 0) {
+            containerEl.innerHTML = '<span class="text-muted small fst-italic w-100 text-center" style="font-size:0.78rem;">No busy slots configured.</span>';
+            return;
+        }
+        
+        slots.forEach((slot, index) => {
+            const pill = document.createElement('span');
+            pill.className = 'blocked-slot-pill';
+            pill.innerHTML = `
+                <span>${slot.day.substring(0, 3)}&nbsp;${slot.start}–${slot.end}</span>
+                <i class="bi bi-x pill-remove" onclick="removeBlockedSlotRow('${prefixOrId}', ${index})" title="Remove"></i>
+            `;
+            containerEl.appendChild(pill);
+        });
+    };
+
+    window.addBlockedSlotRow = function(prefixOrId) {
+        const dayId = prefixOrId === 'add' ? 'add_block_day' : `edit_block_day_${prefixOrId}`;
+        const startId = prefixOrId === 'add' ? 'add_block_start' : `edit_block_start_${prefixOrId}`;
+        const endId = prefixOrId === 'add' ? 'add_block_end' : `edit_block_end_${prefixOrId}`;
+        const inputId = prefixOrId === 'add' ? 'add_blocked_slots_input' : `edit_blocked_slots_input_${prefixOrId}`;
+        
+        const day = document.getElementById(dayId).value;
+        const start = document.getElementById(startId).value;
+        const end = document.getElementById(endId).value;
+        const inputEl = document.getElementById(inputId);
+        
+        if (!day || !start || !end || !inputEl) return;
+        
+        // Validation: end time must be strictly after start time
+        const [sh, sm] = start.split(':').map(Number);
+        const [eh, em] = end.split(':').map(Number);
+        if (eh < sh || (eh === sh && em <= sm)) {
+            alert("End time must be after start time!");
+            return;
+        }
+        
+        let slots = [];
+        try {
+            slots = JSON.parse(inputEl.value || '[]');
+        } catch (e) {
+            slots = [];
+        }
+        
+        // Check for exact duplicates
+        const exists = slots.some(s => s.day === day && s.start === start && s.end === end);
+        if (exists) {
+            alert("This busy slot is already blocked!");
+            return;
+        }
+        
+        slots.push({ day, start, end });
+        inputEl.value = JSON.stringify(slots);
+        renderBlockedSlots(prefixOrId);
+    };
+
+    window.removeBlockedSlotRow = function(prefixOrId, index) {
+        const inputId = prefixOrId === 'add' ? 'add_blocked_slots_input' : `edit_blocked_slots_input_${prefixOrId}`;
+        const inputEl = document.getElementById(inputId);
+        if (!inputEl) return;
+        
+        let slots = [];
+        try {
+            slots = JSON.parse(inputEl.value || '[]');
+        } catch (e) {
+            slots = [];
+        }
+        
+        slots.splice(index, 1);
+        inputEl.value = JSON.stringify(slots);
+        renderBlockedSlots(prefixOrId);
+    };
 </script>
 {% endblock %}
